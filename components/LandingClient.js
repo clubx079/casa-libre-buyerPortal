@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
+import AuthButton from '@/components/AuthButton';
 import { useRouter } from 'next/navigation';
 import { typeLabel } from '@/lib/propertyType';
 import { fmtUsd, fmtPyg } from '@/lib/ui';
@@ -92,6 +93,7 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
           <div className="flex items-center border border-ink/30 rounded-pill p-[3px] text-[12px] font-semibold">
             {['es', 'en'].map((l) => <button key={l} onClick={() => setLang(l)} className={`px-3 py-1.5 rounded-pill ${lang === l ? 'bg-ink text-paper' : 'text-ink/55'}`}>{l.toUpperCase()}</button>)}
           </div>
+          <AuthButton />
           <Link href="/propiedades" className="text-[14px] font-semibold px-[22px] py-2.5 bg-ink text-paper rounded-pill">{t.navCta}</Link>
         </div>
       </nav>

@@ -6,6 +6,8 @@ import { NextResponse } from 'next/server';
 import { insert, update } from '@/lib/db';
 import { put } from '@/lib/b2';
 import { getUsdToPyg } from '@/lib/fx';
+import { getSession } from '@/lib/auth';
+import { stripe } from '@/lib/stripe';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -44,10 +46,15 @@ async function geocode(neighborhood, city) {
 }
 
 export async function POST(req) {
+  // Require login so every published deal has a known owner.
+  const session = getSession();
+  if (!session) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+
   let form;
   try { form = await req.formData(); } catch { return NextResponse.json({ error: 'invalid_form' }, { status: 400 }); }
 
   const get = (k) => { const v = form.get(k); return v == null ? '' : String(v).trim(); };
+  const paymentIntent = get('payment_intent') || null;
   const mode = get('mode') === 'alquiler' ? 'alquiler' : 'venta';
   const ptype = get('ptype').toLowerCase();
   const neighborhood = get('neighborhood');
@@ -57,7 +64,8 @@ export async function POST(req) {
   const currency = get('currency').toUpperCase() === 'PYG' || mode === 'alquiler' ? 'PYG' : 'USD';
   const area = Number(get('area').replace(/[^\d.]/g, '')) || null;
   const description = get('description');
-  const contactName = get('contact_name') || null;
+  // Default the public contact to the logged-in user's name/email when not given.
+  const contactName = get('contact_name') || session.name || null;
   const contactPhone = get('contact_phone') || null;
   const plan = get('plan') || 'destacado';
 
@@ -65,6 +73,19 @@ export async function POST(req) {
   if (!TYPE_MAP[ptype]) return NextResponse.json({ error: 'missing_type' }, { status: 400 });
   if (!neighborhood) return NextResponse.json({ error: 'missing_neighborhood' }, { status: 400 });
   if (!Number.isFinite(price) || price <= 0) return NextResponse.json({ error: 'missing_price' }, { status: 400 });
+
+  // Verify the plan was actually paid for (can't publish by calling this directly).
+  if (stripe) {
+    if (!paymentIntent) return NextResponse.json({ error: 'payment_required' }, { status: 402 });
+    try {
+      const pi = await stripe.paymentIntents.retrieve(paymentIntent);
+      const paid = pi && (pi.status === 'succeeded' || pi.status === 'processing');
+      const ownerOk = pi?.metadata?.user_id === session.uid;
+      if (!paid || !ownerOk) return NextResponse.json({ error: 'payment_not_verified' }, { status: 402 });
+    } catch {
+      return NextResponse.json({ error: 'payment_not_verified' }, { status: 402 });
+    }
+  }
 
   const property_type = TYPE_MAP[ptype];
   const isLand = ptype === 'terreno';
@@ -99,7 +120,9 @@ export async function POST(req) {
     origin: 'user',
     seller_type: 'owner',
     is_delisted: false,
-    raw_data: { published_via: 'buyer-portal', plan },
+    created_by: session.uid,   // who published this deal
+    posted_by: session.uid,
+    raw_data: { published_via: 'buyer-portal', plan, user_id: session.uid, user_email: session.email, payment_intent: paymentIntent },
   };
 
   let created;

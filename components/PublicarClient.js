@@ -1,7 +1,9 @@
 'use client';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
+import { useAuth } from '@/components/AuthProvider';
+import StripePayment from '@/components/StripePayment';
 
 const TIERS = {
   basico: { gs: 75000, usd: 10, dur: 30 },
@@ -31,10 +33,13 @@ const DICT = {
       premium: ['Publicación por 60 días', 'Fotos ilimitadas', 'Destacado en la portada', 'Primero en el mapa y búsquedas', 'Asesor dedicado'],
     },
     pickLabel: 'Elegir', pickedLabel: 'Elegido ✓',
-    s3Title: 'Pago seguro.', s3Sub: 'Maqueta de pago — tu propiedad se publica igual al confirmar.',
-    fCard: 'Número de tarjeta', fExp: 'Vencimiento', stripeNote: 'pago seguro — maqueta, integración próximamente',
+    s3Title: 'Pago seguro.', s3Sub: 'Pagá con tarjeta. Procesado por Stripe. Tu propiedad se publica al confirmar.',
     sumTitle: 'Resumen', sumPlanLabel: 'Plan', sumDurLabel: 'Duración', dur: (d) => `${d} días`,
-    payBtn: 'Pagar y publicar', paying: 'Publicando…', payNote: 'Se publica al instante en el marketplace',
+    payBtn: 'Pagar y publicar', paying: 'Procesando…', payNote: 'Se publica al instante en el marketplace',
+    testCard: 'modo prueba · usá la tarjeta 4242 4242 4242 4242', payError: 'No se pudo procesar el pago. Revisá los datos.',
+    initError: 'No se pudo iniciar el pago. Intentá de nuevo.', loadingPay: 'Cargando pago seguro…', needLogin: 'Ingresá para pagar y publicar.',
+    gateTitle: 'Ingresá para publicar', gateSub: 'Creá tu cuenta o ingresá para publicar y gestionar tus propiedades.', gateBtn: 'Ingresar / Crear cuenta',
+    publishError: 'El pago se procesó pero hubo un error al publicar. Escribinos y lo resolvemos.',
     s4Title: '¡Tu propiedad está', s4TitleSerif: 'publicada!',
     s4Sub: 'Ya aparece en el marketplace de Casa Libre. Compartí el enlace con quien quieras.',
     s4View: 'Ver mi propiedad', s4Btn1: 'Ver propiedades', s4Btn2: 'Publicar otra',
@@ -64,10 +69,13 @@ const DICT = {
       premium: ['Live for 60 days', 'Unlimited photos', 'Featured on the homepage', 'First on map & search', 'Dedicated advisor'],
     },
     pickLabel: 'Choose', pickedLabel: 'Selected ✓',
-    s3Title: 'Secure payment.', s3Sub: 'Payment mockup — your listing publishes on confirm either way.',
-    fCard: 'Card number', fExp: 'Expiry', stripeNote: 'secure payment — mockup, integration coming soon',
+    s3Title: 'Secure payment.', s3Sub: 'Pay by card. Processed by Stripe. Your listing publishes on confirm.',
     sumTitle: 'Summary', sumPlanLabel: 'Plan', sumDurLabel: 'Duration', dur: (d) => `${d} days`,
-    payBtn: 'Pay & publish', paying: 'Publishing…', payNote: 'Goes live in the marketplace instantly',
+    payBtn: 'Pay & publish', paying: 'Processing…', payNote: 'Goes live in the marketplace instantly',
+    testCard: 'test mode · use card 4242 4242 4242 4242', payError: 'Payment could not be processed. Check your details.',
+    initError: 'Could not start payment. Please try again.', loadingPay: 'Loading secure payment…', needLogin: 'Log in to pay & publish.',
+    gateTitle: 'Log in to post', gateSub: 'Create an account or log in to post and manage your properties.', gateBtn: 'Log in / Sign up',
+    publishError: 'Payment went through but publishing failed. Contact us and we’ll fix it.',
     s4Title: 'Your listing is', s4TitleSerif: 'live!',
     s4Sub: 'It already shows in the Casa Libre marketplace. Share the link with anyone.',
     s4View: 'View my listing', s4Btn1: 'Browse listings', s4Btn2: 'List another',
@@ -83,6 +91,7 @@ const labelCls = 'flex flex-col gap-[7px] text-[13px] font-semibold';
 
 export default function PublicarClient() {
   const [lang, setLang] = useLang();
+  const { user, loading, openAuth } = useAuth();
   const [step, setStep] = useState(1);
   const [mode, setMode] = useState('venta');
   const [tier, setTier] = useState('destacado');
@@ -93,6 +102,12 @@ export default function PublicarClient() {
   const [result, setResult] = useState(null); // {ref, slug}
   const fileRef = useRef(null);
   const t = DICT[lang];
+
+  // Prefill contact from the logged-in user (only if the fields are still empty).
+  useEffect(() => {
+    if (!user) return;
+    setF((s) => ({ ...s, contact_name: s.contact_name || user.full_name || '', contact_phone: s.contact_phone || user.phone || '' }));
+  }, [user]);
 
   const set = (k) => (e) => setF((s) => ({ ...s, [k]: e.target.value }));
   const addPhotos = (list) => {
@@ -119,7 +134,8 @@ export default function PublicarClient() {
   };
   const back = () => { setErr(''); setStep((s) => Math.max(1, s - 1)); };
 
-  const submit = async () => {
+  // Called by StripePayment after a successful charge — now create the listing.
+  const publishListing = async (paymentIntentId) => {
     setBusy(true); setErr('');
     try {
       const fd = new FormData();
@@ -134,6 +150,7 @@ export default function PublicarClient() {
       fd.set('contact_name', f.contact_name);
       fd.set('contact_phone', f.contact_phone);
       fd.set('plan', tier);
+      if (paymentIntentId) fd.set('payment_intent', paymentIntentId);
       photos.forEach((p) => fd.append('photos', p.file));
       const res = await fetch('/api/publish', { method: 'POST', body: fd });
       const j = await res.json();
@@ -141,7 +158,7 @@ export default function PublicarClient() {
       setResult({ ref: j.ref, slug: j.slug });
       setStep(4);
     } catch {
-      setErr(t.errSubmit);
+      setErr(t.publishError);
     } finally {
       setBusy(false);
     }
@@ -158,20 +175,39 @@ export default function PublicarClient() {
     return { n: done ? '✓' : String(n), label, active, done, go: () => { if (n < step) setStep(n); } };
   });
 
+  const nav = (
+    <nav className="flex items-center justify-between flex-wrap gap-3 px-5 md:px-11 py-5 border-b border-ink/12">
+      <Link href="/" className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif not-italic italic font-normal">.py</em></Link>
+      <div className="flex items-center gap-3.5">
+        <div className="flex items-center border border-ink/30 rounded-pill p-[3px] text-[12px] font-semibold">
+          {['es', 'en'].map((l) => (
+            <button key={l} onClick={() => setLang(l)} className={`px-3 py-1.5 rounded-pill ${lang === l ? 'bg-ink text-paper' : 'text-ink/55'}`}>{l.toUpperCase()}</button>
+          ))}
+        </div>
+        <Link href="/propiedades" className="text-[14px] font-medium px-[18px] py-2.5 border border-ink rounded-pill">{t.navBack}</Link>
+      </div>
+    </nav>
+  );
+
+  // Gate the whole flow behind login so every published deal has an owner.
+  if (!loading && !user) {
+    return (
+      <div className="max-w-[1440px] mx-auto min-h-screen">
+        {nav}
+        <div className="max-w-[520px] mx-auto px-5 py-24 text-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/mascot.png" alt="" className="w-[130px] object-contain mx-auto mb-4" />
+          <h1 className="text-[clamp(30px,4.5vw,42px)] font-bold tracking-display leading-tight mb-2">{t.gateTitle}</h1>
+          <p className="text-[16px] text-ink/55 mb-7">{t.gateSub}</p>
+          <button onClick={() => openAuth()} className="px-8 py-4 bg-ink text-paper font-semibold text-[15px] rounded-pill shadow-hard-soft">{t.gateBtn}</button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-[1440px] mx-auto min-h-screen">
-      {/* NAV */}
-      <nav className="flex items-center justify-between flex-wrap gap-3 px-5 md:px-11 py-5 border-b border-ink/12">
-        <Link href="/" className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif not-italic italic font-normal">.py</em></Link>
-        <div className="flex items-center gap-3.5">
-          <div className="flex items-center border border-ink/30 rounded-pill p-[3px] text-[12px] font-semibold">
-            {['es', 'en'].map((l) => (
-              <button key={l} onClick={() => setLang(l)} className={`px-3 py-1.5 rounded-pill ${lang === l ? 'bg-ink text-paper' : 'text-ink/55'}`}>{l.toUpperCase()}</button>
-            ))}
-          </div>
-          <Link href="/propiedades" className="text-[14px] font-medium px-[18px] py-2.5 border border-ink rounded-pill">{t.navBack}</Link>
-        </div>
-      </nav>
+      {nav}
 
       <div className="max-w-[860px] mx-auto px-5 md:px-11 pt-10 pb-24">
         {/* STEPPER */}
@@ -280,33 +316,23 @@ export default function PublicarClient() {
           </div>
         )}
 
-        {/* STEP 3 — PAYMENT */}
+        {/* STEP 3 — PAYMENT (real Stripe Payment Element) */}
         {step === 3 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-7 items-start">
-            <div>
-              <h1 className="text-[clamp(34px,4.5vw,48px)] font-bold tracking-display leading-[1.05] mb-2">{t.s3Title}</h1>
-              <p className="text-[16px] text-ink/55 mb-7">{t.s3Sub}</p>
-              <div className="bg-card border-[1.5px] border-ink/35 rounded-[18px] p-6 flex flex-col gap-3.5">
-                <label className={labelCls}>{t.fCard}
-                  <input placeholder="4242 4242 4242 4242" className="px-4 py-[13px] border-[1.5px] border-ink/25 rounded-[12px] font-mono text-[15px] outline-none focus:border-ink" />
-                </label>
-                <div className="grid grid-cols-2 gap-3.5">
-                  <label className={labelCls}>{t.fExp}<input placeholder="MM / AA" className="px-4 py-[13px] border-[1.5px] border-ink/25 rounded-[12px] font-mono text-[15px] outline-none focus:border-ink" /></label>
-                  <label className={labelCls}>CVC<input placeholder="123" className="px-4 py-[13px] border-[1.5px] border-ink/25 rounded-[12px] font-mono text-[15px] outline-none focus:border-ink" /></label>
-                </div>
-                <div className="font-mono text-[11px] text-ink/45 flex items-center gap-2"><span className="border border-ink/30 rounded-[6px] px-2 py-0.5 font-medium">stripe</span>{t.stripeNote}</div>
-              </div>
-            </div>
-            <div className="bg-ink text-paper rounded-[20px] p-[26px]">
-              <div className="font-mono text-[11px] uppercase tracking-label text-paper/50 mb-3.5">{t.sumTitle}</div>
-              <div className="flex justify-between text-[15px] mb-2"><span>{t.sumPlanLabel}</span><span className="font-semibold">{t.tierNames[tier]}</span></div>
-              <div className="flex justify-between text-[15px] mb-2"><span>{t.sumDurLabel}</span><span className="font-semibold">{t.dur(sel.dur)}</span></div>
-              <div className="flex justify-between text-[15px] pb-3.5 border-b border-paper/25 mb-3.5"><span>IVA (10%)</span><span className="font-semibold">{t.fmtGs(iva)}</span></div>
-              <div className="flex justify-between items-baseline mb-5"><span className="text-[15px]">Total</span><span className="text-[28px] font-bold tracking-head">{t.fmtGs(total)}</span></div>
-              <button onClick={submit} disabled={busy} className="w-full text-center py-4 bg-paper text-ink rounded-pill font-bold text-[15px] disabled:opacity-60">{busy ? t.paying : t.payBtn}</button>
-              <div className="text-center font-mono text-[10.5px] text-paper/40 mt-3">{t.payNote}</div>
-            </div>
-          </div>
+          busy
+            ? <div className="text-center text-ink/50 py-16">{t.paying}</div>
+            : <StripePayment
+                plan={tier}
+                tierName={t.tierNames[tier]}
+                durLabel={t.dur(sel.dur)}
+                ivaStr={t.fmtGs(iva)}
+                totalStr={t.fmtGs(total)}
+                onPaid={publishListing}
+                labels={{
+                  s3Title: t.s3Title, s3Sub: t.s3Sub, sumTitle: t.sumTitle, sumPlanLabel: t.sumPlanLabel,
+                  sumDurLabel: t.sumDurLabel, payBtn: t.payBtn, paying: t.paying, payNote: t.payNote,
+                  testCard: t.testCard, payError: t.payError, initError: t.initError, loadingPay: t.loadingPay, needLogin: t.needLogin,
+                }}
+              />
         )}
 
         {/* STEP 4 — CONFIRMATION */}

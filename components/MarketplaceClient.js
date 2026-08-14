@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { typeLabel } from '@/lib/propertyType';
 import { T, fmtUsd, fmtPyg, shortUsd } from '@/lib/ui';
 import { useLang } from '@/lib/useLang';
+import AuthButton from '@/components/AuthButton';
 
 export default function MarketplaceClient({ listings, initialOp = 'all' }) {
   const [lang, setLang] = useLang();
@@ -111,12 +112,6 @@ export default function MarketplaceClient({ listings, initialOp = 'all' }) {
     }
   }
 
-  const flyTo = (l) => {
-    const ref = mapRef.current;
-    if (!ref || l.lat == null) return;
-    ref.map.flyTo([l.lat, l.lng], 15, { duration: 0.6 });
-    markersRef.current[l.id]?.openPopup();
-  };
   useEffect(() => {
     Object.entries(markersRef.current).forEach(([id, m]) => {
       const el = m.getElement()?.querySelector('.marker-pill');
@@ -140,6 +135,7 @@ export default function MarketplaceClient({ listings, initialOp = 'all' }) {
               <button key={l} onClick={() => setLang(l)} className={`px-3 py-1.5 rounded-pill ${lang === l ? 'bg-ink text-paper' : 'text-ink/55'}`}>{l.toUpperCase()}</button>
             ))}
           </div>
+          <AuthButton />
           <Link href="/publicar" className="px-[18px] py-2.5 rounded-pill bg-ink text-paper text-[14px] font-medium">{t.cta}</Link>
         </div>
       </nav>
@@ -161,7 +157,7 @@ export default function MarketplaceClient({ listings, initialOp = 'all' }) {
           {visible.map((l) => (
             <Link
               key={l.id} href={`/propiedad/${l.slug}`}
-              onMouseEnter={() => { setHot(l.id); flyTo(l); }} onMouseLeave={() => setHot(null)}
+              onMouseEnter={() => setHot(l.id)} onMouseLeave={() => setHot(null)}
               className={`grid grid-cols-[140px_minmax(0,1fr)] min-h-[120px] bg-card border rounded-[18px] overflow-hidden transition-all ${hot === l.id ? 'border-ink -translate-y-0.5 shadow-hard-sm' : 'border-ink/15'}`}
             >
               <div className="relative cl-hatch flex items-center justify-center">
