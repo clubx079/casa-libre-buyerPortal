@@ -158,15 +158,15 @@ export default function MarketplaceClient({ listings, initialOp = 'all' }) {
             <Link
               key={l.id} href={`/propiedad/${l.slug}`}
               onMouseEnter={() => setHot(l.id)} onMouseLeave={() => setHot(null)}
-              className={`grid grid-cols-[140px_minmax(0,1fr)] min-h-[120px] bg-card border rounded-[18px] overflow-hidden transition-all ${hot === l.id ? 'border-ink -translate-y-0.5 shadow-hard-sm' : 'border-ink/15'}`}
+              className={`flex items-stretch shrink-0 min-h-[120px] bg-card border rounded-[18px] transition-all ${hot === l.id ? 'border-ink -translate-y-0.5 shadow-hard-sm' : 'border-ink/15'}`}
             >
-              <div className="relative cl-hatch overflow-hidden flex items-center justify-center">
+              <div className="relative w-[140px] shrink-0 cl-hatch overflow-hidden rounded-l-[17px] flex items-center justify-center">
                 {l.image
                   ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={l.image} alt="" className="absolute inset-0 w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                   : <span className="font-mono text-[10px] text-ink/45 text-center px-2">{t.noImg}</span>}
                 <span className="absolute top-2 left-2 text-[10px] font-semibold bg-ink text-paper px-2.5 py-1 rounded-pill z-10">{l.mode === 'alquiler' ? t.forRent : t.forSale}</span>
               </div>
-              <div className="p-3.5 min-w-0">
+              <div className="flex-1 min-w-0 p-3.5">
                 <div className="text-[18px] font-bold tracking-head whitespace-nowrap">{fmtUsd(l.usd, lang) || '—'}{sfx(l)}</div>
                 <div className="text-[12px] font-semibold text-ink/55">{fmtPyg(l.pyg, lang) || ''}{l.pyg ? sfx(l) : ''}</div>
                 <div className="text-[14px] font-medium mt-1 line-clamp-1">{title(l)}</div>
