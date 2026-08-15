@@ -15,7 +15,7 @@ const M = {
     prices: { all: 'Precio: todos', p1: 'Hasta US$ 100k', p2: 'US$ 100k – 200k', p3: 'Más de US$ 200k' },
     beds: { all: 'Dormitorios: todos', b1: '1+', b2: '2+', b3: '3+' },
     sort: { relevancia: 'Relevancia', precio_asc: 'Precio: menor a mayor', precio_desc: 'Precio: mayor a menor', area_desc: 'Superficie: mayor primero' },
-    dorm: 'dorm', bath: 'baños', park: 'coch.',
+    dorm: 'dorm', bath: 'baños', park: 'coch.', listView: 'Lista', mapView: 'Mapa',
   },
   en: {
     searchPh: 'Search by neighborhood or type…',
@@ -24,7 +24,7 @@ const M = {
     prices: { all: 'Price: any', p1: 'Under US$ 100k', p2: 'US$ 100k – 200k', p3: 'Over US$ 200k' },
     beds: { all: 'Bedrooms: any', b1: '1+', b2: '2+', b3: '3+' },
     sort: { relevancia: 'Relevance', precio_asc: 'Price: low to high', precio_desc: 'Price: high to low', area_desc: 'Area: largest first' },
-    dorm: 'bd', bath: 'ba', park: 'park',
+    dorm: 'bd', bath: 'ba', park: 'park', listView: 'List', mapView: 'Map',
   },
 };
 
@@ -40,6 +40,7 @@ export default function MarketplaceClient({ listings, initialOp = 'all' }) {
   const [bedF, setBedF] = useState('all');
   const [sortBy, setSortBy] = useState('relevancia');
   const [sortOpen, setSortOpen] = useState(false);
+  const [mobileView, setMobileView] = useState('list'); // mobile: 'list' | 'map'
   const [hot, setHot] = useState(null);
   const mapEl = useRef(null);
   const mapRef = useRef(null);
@@ -167,6 +168,16 @@ export default function MarketplaceClient({ listings, initialOp = 'all' }) {
     });
   }, [hot]);
 
+  // On mobile, the map lives in a hidden panel until its tab is selected — Leaflet
+  // must recalc its size once it becomes visible or it renders grey/blank.
+  useEffect(() => {
+    if (mobileView === 'map' && mapRef.current) {
+      const { map } = mapRef.current;
+      setTimeout(() => { map.invalidateSize(); }, 60);
+      setTimeout(() => { map.invalidateSize(); }, 250);
+    }
+  }, [mobileView]);
+
   const chipCls = (on) => `px-4 py-2 rounded-pill text-[13px] font-medium border cursor-pointer ${on ? 'bg-ink text-paper border-ink' : 'bg-card border-ink/30'}`;
   const selCls = 'cl-select pr-8 pl-4 py-2 rounded-pill text-[13px] font-medium border border-ink/30 bg-card outline-none cursor-pointer';
 
@@ -215,9 +226,16 @@ export default function MarketplaceClient({ listings, initialOp = 'all' }) {
         </select>
       </div>
 
-      {/* SPLIT */}
-      <div className="flex-1 min-h-0 flex flex-col-reverse md:flex-row">
-        <div className="md:w-[44%] md:min-w-[400px] flex-1 md:flex-initial min-h-0 flex flex-col">
+      {/* mobile Map/List toggle */}
+      <div className="md:hidden flex gap-1 mx-4 mt-3 p-1 bg-hatch1 rounded-pill">
+        {[['list', m.listView], ['map', m.mapView]].map(([v, label]) => (
+          <button key={v} onClick={() => setMobileView(v)} className={`flex-1 py-2 rounded-pill text-[13px] font-semibold transition-colors ${mobileView === v ? 'bg-card shadow-hard-sm text-ink' : 'text-ink/55'}`}>{label}</button>
+        ))}
+      </div>
+
+      {/* SPLIT — desktop: side-by-side; mobile: one panel per selected tab */}
+      <div className="flex-1 min-h-0 flex flex-col md:flex-row">
+        <div className={`min-h-0 flex-col md:flex md:w-[44%] md:min-w-[400px] md:flex-none ${mobileView === 'map' ? 'hidden' : 'flex flex-1'}`}>
           {/* list head: count + sort */}
           <div className="flex items-center justify-between gap-2.5 px-4 md:px-7 pt-3.5">
             <span className="font-mono text-[12px] text-ink/50">{t.results(rows.length)}</span>
@@ -249,7 +267,7 @@ export default function MarketplaceClient({ listings, initialOp = 'all' }) {
               >
                 <div className="relative w-[150px] shrink-0 cl-hatch overflow-hidden flex items-center justify-center">
                   {l.image
-                    ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={l.image} alt="" className="absolute inset-0 w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                    ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={l.image} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                     : <span className="font-mono text-[10px] text-ink/45 text-center px-2">{t.noImg}</span>}
                   <span className="absolute top-2 left-2 text-[10px] font-semibold bg-ink text-paper px-2.5 py-1 rounded-pill z-10">{l.mode === 'alquiler' ? t.forRent : t.forSale}</span>
                 </div>
@@ -263,7 +281,7 @@ export default function MarketplaceClient({ listings, initialOp = 'all' }) {
             ))}
           </div>
         </div>
-        <div ref={mapEl} className="h-[42vh] md:h-auto md:flex-1 min-h-0 border-b md:border-b-0 md:border-l border-ink/12" />
+        <div ref={mapEl} className={`min-h-0 md:block md:flex-1 md:border-l border-ink/12 ${mobileView === 'list' ? 'hidden' : 'block flex-1'}`} />
       </div>
     </div>
   );
