@@ -97,8 +97,8 @@ export default function MarketplaceClient({ listings, initialOp = 'all' }) {
       const L = (await import('leaflet')).default;
       await import('leaflet.markercluster');
       if (cancelled || !mapEl.current || mapRef.current) return;
-      const map = L.map(mapEl.current, { scrollWheelZoom: true, zoomControl: true }).setView([-25.29, -57.6], 12);
-      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 19 }).addTo(map);
+      const map = L.map(mapEl.current, { scrollWheelZoom: true, zoomControl: true, attributionControl: false }).setView([-25.29, -57.6], 12);
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
       const cluster = L.markerClusterGroup({
         maxClusterRadius: 46,
         showCoverageOnHover: false,
