@@ -5,7 +5,7 @@ import { useLang } from '@/lib/useLang';
 const DICT = {
   es: {
     emailTitle: 'Ingresá o creá tu cuenta', emailSub: 'Publicá y gestioná tus propiedades con Casa Libre.',
-    email: 'Email', emailPh: 'tu@email.com', continue: 'Continuar',
+    email: 'Email', emailPh: 'tu@email.com', continue: 'Continuar', googleBtn: 'Continuar con Google', orText: 'o',
     loginTitle: 'Bienvenido de nuevo', password: 'Contraseña', passwordPh: '••••••••', login: 'Ingresar',
     signupTitle: 'Creá tu cuenta', signupSub: 'Un paso más para empezar a publicar.',
     name: 'Nombre completo', namePh: 'Ana Giménez', phone: 'WhatsApp / teléfono', phonePh: '0981 123 456',
@@ -21,7 +21,7 @@ const DICT = {
   },
   en: {
     emailTitle: 'Log in or sign up', emailSub: 'Post and manage your properties with Casa Libre.',
-    email: 'Email', emailPh: 'you@email.com', continue: 'Continue',
+    email: 'Email', emailPh: 'you@email.com', continue: 'Continue', googleBtn: 'Continue with Google', orText: 'or',
     loginTitle: 'Welcome back', password: 'Password', passwordPh: '••••••••', login: 'Log in',
     signupTitle: 'Create your account', signupSub: 'One more step to start posting.',
     name: 'Full name', namePh: 'Ana Giménez', phone: 'WhatsApp / phone', phonePh: '0981 123 456',
@@ -63,6 +63,28 @@ export default function AuthModal({ onAuthed, onClose }) {
   useEffect(() => { firstField.current?.focus(); }, [step]);
 
   const post = (url, body) => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+
+  const googleSignIn = async () => {
+    setErr('');
+    try {
+      const r = await fetch('/api/auth/google', { method: 'POST' });
+      const j = await r.json();
+      if (j.url) window.location.href = j.url;
+      else setErr(t.errGeneric);
+    } catch { setErr(t.errGeneric); }
+  };
+
+  const googleBtn = (
+    <>
+      <button type="button" onClick={googleSignIn} className="w-full flex items-center justify-center gap-2.5 py-3 border-[1.5px] border-ink/25 rounded-pill font-semibold text-[14px] bg-card hover:border-ink transition-colors">
+        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.4 30.2 0 24 0 14.6 0 6.4 5.4 2.5 13.2l7.9 6.1C12.2 13.2 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.5 3-2.2 5.5-4.7 7.2l7.3 5.7c4.3-4 6.9-9.9 6.9-17.4z"/><path fill="#FBBC05" d="M10.4 28.3c-.5-1.4-.8-2.9-.8-4.3s.3-3 .8-4.3l-7.9-6.1C.9 16.6 0 20.2 0 24s.9 7.4 2.5 10.6l7.9-6.3z"/><path fill="#34A853" d="M24 48c6.2 0 11.5-2 15.3-5.6l-7.3-5.7c-2 1.4-4.6 2.3-8 2.3-6.4 0-11.8-3.7-13.6-9.1l-7.9 6.3C6.4 42.6 14.6 48 24 48z"/></svg>
+        {t.googleBtn}
+      </button>
+      <div className="flex items-center gap-3 my-4">
+        <span className="flex-1 h-px bg-ink/12" /><span className="text-[12px] text-ink/40 font-mono">{t.orText}</span><span className="flex-1 h-px bg-ink/12" />
+      </div>
+    </>
+  );
 
   const submitEmail = async (e) => {
     e.preventDefault(); setErr('');
@@ -129,6 +151,7 @@ export default function AuthModal({ onAuthed, onClose }) {
           <form onSubmit={submitEmail}>
             <h2 className="text-[24px] font-bold tracking-head leading-tight">{t.emailTitle}</h2>
             <p className="text-[14px] text-ink/55 mt-1 mb-5">{t.emailSub}</p>
+            {googleBtn}
             <label className="block text-[13px] font-semibold mb-1.5">{t.email}</label>
             <input ref={firstField} type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t.emailPh} className={inputCls} autoComplete="email" />
             <button type="submit" disabled={busy} className={`${btnCls} mt-5`}>{busy ? t.checking : t.continue}</button>

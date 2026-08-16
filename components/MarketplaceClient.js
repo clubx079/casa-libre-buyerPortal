@@ -5,6 +5,7 @@ import { typeLabel } from '@/lib/propertyType';
 import { T, fmtUsd, fmtPyg, shortUsd } from '@/lib/ui';
 import { useLang } from '@/lib/useLang';
 import AuthButton from '@/components/AuthButton';
+import SaveButton from '@/components/SaveButton';
 
 // Marketplace-specific bilingual strings (search / filters / sort).
 const M = {
@@ -31,10 +32,10 @@ const M = {
 // accent- and case-insensitive text for search ("asuncion" should match "Asunción")
 const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
-export default function MarketplaceClient({ listings, initialOp = 'all' }) {
+export default function MarketplaceClient({ listings, initialOp = 'all', initialQuery = '' }) {
   const [lang, setLang] = useLang();
   const [filter, setFilter] = useState(['all', 'venta', 'alquiler'].includes(initialOp) ? initialOp : 'all');
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(initialQuery || '');
   const [typeF, setTypeF] = useState('all');
   const [priceF, setPriceF] = useState('all');
   const [bedF, setBedF] = useState('all');
@@ -270,6 +271,7 @@ export default function MarketplaceClient({ listings, initialOp = 'all' }) {
                     ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={l.image} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                     : <span className="font-mono text-[10px] text-ink/45 text-center px-2">{t.noImg}</span>}
                   <span className="absolute top-2 left-2 text-[10px] font-semibold bg-ink text-paper px-2.5 py-1 rounded-pill z-10">{l.mode === 'alquiler' ? t.forRent : t.forSale}</span>
+                  <SaveButton id={l.id} className="absolute top-1.5 right-1.5 z-10 !w-8 !h-8" />
                 </div>
                 <div className="flex-1 min-w-0 px-4 py-3.5">
                   <div className="text-[18px] font-bold tracking-head whitespace-nowrap">{priceMain(l)}</div>

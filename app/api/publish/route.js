@@ -7,7 +7,6 @@ import { insert, update } from '@/lib/db';
 import { put } from '@/lib/b2';
 import { getUsdToPyg } from '@/lib/fx';
 import { getSession } from '@/lib/auth';
-import { stripe } from '@/lib/stripe';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -54,7 +53,6 @@ export async function POST(req) {
   try { form = await req.formData(); } catch { return NextResponse.json({ error: 'invalid_form' }, { status: 400 }); }
 
   const get = (k) => { const v = form.get(k); return v == null ? '' : String(v).trim(); };
-  const paymentIntent = get('payment_intent') || null;
   const mode = get('mode') === 'alquiler' ? 'alquiler' : 'venta';
   const ptype = get('ptype').toLowerCase();
   const neighborhood = get('neighborhood');
@@ -67,25 +65,14 @@ export async function POST(req) {
   // Default the public contact to the logged-in user's name/email when not given.
   const contactName = get('contact_name') || session.name || null;
   const contactPhone = get('contact_phone') || null;
-  const plan = get('plan') || 'destacado';
 
   // minimal validation — the fields the mockup marks as required
   if (!TYPE_MAP[ptype]) return NextResponse.json({ error: 'missing_type' }, { status: 400 });
   if (!neighborhood) return NextResponse.json({ error: 'missing_neighborhood' }, { status: 400 });
   if (!Number.isFinite(price) || price <= 0) return NextResponse.json({ error: 'missing_price' }, { status: 400 });
 
-  // Verify the plan was actually paid for (can't publish by calling this directly).
-  if (stripe) {
-    if (!paymentIntent) return NextResponse.json({ error: 'payment_required' }, { status: 402 });
-    try {
-      const pi = await stripe.paymentIntents.retrieve(paymentIntent);
-      const paid = pi && (pi.status === 'succeeded' || pi.status === 'processing');
-      const ownerOk = pi?.metadata?.user_id === session.uid;
-      if (!paid || !ownerOk) return NextResponse.json({ error: 'payment_not_verified' }, { status: 402 });
-    } catch {
-      return NextResponse.json({ error: 'payment_not_verified' }, { status: 402 });
-    }
-  }
+  // Listings are FREE — no payment required. Login (above) is the only gate, so
+  // every published deal is tied to a known user.
 
   const property_type = TYPE_MAP[ptype];
   const isLand = ptype === 'terreno';
@@ -122,7 +109,7 @@ export async function POST(req) {
     is_delisted: false,
     created_by: session.uid,   // who published this deal
     posted_by: session.uid,
-    raw_data: { published_via: 'buyer-portal', plan, user_id: session.uid, user_email: session.email, payment_intent: paymentIntent },
+    raw_data: { published_via: 'buyer-portal', user_id: session.uid, user_email: session.email },
   };
 
   let created;

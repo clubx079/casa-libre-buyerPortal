@@ -8,5 +8,6 @@ export default async function PropiedadesPage({ searchParams }) {
   // count, filters and map reflect the full catalogue.
   const { listings } = await getListings({ limit: 5000 });
   const initialOp = searchParams?.op === 'alquiler' ? 'alquiler' : searchParams?.op === 'venta' ? 'venta' : 'all';
-  return <MarketplaceClient listings={listings} initialOp={initialOp} />;
+  const initialQuery = typeof searchParams?.q === 'string' ? searchParams.q : '';
+  return <MarketplaceClient listings={listings} initialOp={initialOp} initialQuery={initialQuery} />;
 }

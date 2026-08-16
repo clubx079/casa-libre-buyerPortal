@@ -4,12 +4,50 @@ import { getListing } from '@/lib/listings';
 import { typeLabel } from '@/lib/propertyType';
 import { fmtUsd, fmtPyg } from '@/lib/ui';
 import Gallery from '@/components/Gallery';
+import SaveButton from '@/components/SaveButton';
+import { SITE } from '@/lib/site';
 
 export const dynamic = 'force-dynamic';
+
+const listingTitle = (l) => `${typeLabel(l.type, 'es') || 'Propiedad'}${l.beds ? ` de ${l.beds} dorm.` : ''} en ${l.neighborhood || l.city || 'Paraguay'}`;
+
+export async function generateMetadata({ params }) {
+  const l = await getListing(params.slug);
+  if (!l) return { title: 'Propiedad no encontrada' };
+  const title = `${listingTitle(l)} — ${fmtUsd(l.usd, 'es') || ''}${l.mode === 'alquiler' ? '/mes' : ''}`;
+  const description = (l.description || `${listingTitle(l)}. ${[l.area && `${l.area} m²`, l.baths && `${l.baths} baños`, l.parking && `${l.parking} cocheras`].filter(Boolean).join(', ')}. Ver en Casa Libre.`).slice(0, 160);
+  const url = `${SITE}/propiedad/${l.slug}`;
+  return {
+    title, description, alternates: { canonical: url },
+    openGraph: { title, description, url, siteName: 'Casa Libre', type: 'website', locale: 'es_PY', images: l.image ? [{ url: l.image, alt: title }] : [] },
+    twitter: { card: 'summary_large_image', title, description, images: l.image ? [l.image] : [] },
+  };
+}
 
 export default async function PropiedadPage({ params }) {
   const l = await getListing(params.slug);
   if (!l) notFound();
+
+  const url = `${SITE}/propiedad/${l.slug}`;
+  const jsonLd = {
+    '@context': 'https://schema.org', '@type': 'RealEstateListing',
+    name: listingTitle(l), description: l.description || listingTitle(l), url,
+    image: (l.images || []).slice(0, 6),
+    ...(l.lat != null && l.lng != null ? { geo: { '@type': 'GeoCoordinates', latitude: l.lat, longitude: l.lng } } : {}),
+    address: { '@type': 'PostalAddress', streetAddress: l.address || undefined, addressLocality: l.city || undefined, addressRegion: l.province || undefined, addressCountry: 'PY' },
+    ...(l.beds ? { numberOfRooms: l.beds } : {}),
+    ...(l.area ? { floorSize: { '@type': 'QuantitativeValue', value: l.area, unitCode: 'MTK' } } : {}),
+    ...(l.usd ? { offers: { '@type': 'Offer', price: l.usd, priceCurrency: 'USD', availability: 'https://schema.org/InStock', url } } : {}),
+  };
+  const breadcrumb = {
+    '@context': 'https://schema.org', '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Casa Libre', item: SITE },
+      { '@type': 'ListItem', position: 2, name: 'Propiedades', item: `${SITE}/propiedades` },
+      ...(l.city ? [{ '@type': 'ListItem', position: 3, name: l.city, item: `${SITE}/propiedades?q=${encodeURIComponent(l.city)}` }] : []),
+      { '@type': 'ListItem', position: l.city ? 4 : 3, name: listingTitle(l), item: url },
+    ],
+  };
 
   const sfx = l.mode === 'alquiler' ? '/mes' : '';
   const specs = [
@@ -21,6 +59,8 @@ export default async function PropiedadPage({ params }) {
 
   return (
     <div className="min-h-screen bg-paper text-ink">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumb) }} />
       <nav className="flex items-center justify-between px-5 md:px-11 py-4 border-b border-ink/12 max-w-[1200px] mx-auto">
         <Link href="/" className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif italic font-normal">.py</em></Link>
         <Link href="/propiedades" className="text-[13px] font-semibold px-4 py-2 rounded-pill border-[1.5px] border-ink">← Volver</Link>
@@ -43,6 +83,7 @@ export default async function PropiedadPage({ params }) {
             <div className="text-[18px] font-semibold text-ink/55 mt-0.5">{fmtPyg(l.pyg, 'es') || ''}{l.pyg ? sfx : ''}</div>
             <h1 className="text-[22px] font-semibold mt-2 mb-1 tracking-head">{l.neighborhood || ''}{l.neighborhood && l.city ? ' · ' : ''}{l.city || ''}</h1>
             <p className="text-ink/60 text-[15px] m-0">{l.address}</p>
+            <div className="mt-4"><SaveButton id={l.id} variant="detail" /></div>
 
             {specs.length > 0 && (
               <div className="flex flex-wrap gap-8 mt-6 pt-6 border-t border-ink/10">
