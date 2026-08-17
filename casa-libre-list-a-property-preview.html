@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Casa Libre — List a Property (UI Preview)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Instrument+Serif:ital@1&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --ink:#111111; --paper:#F9F4EE; --card:#FFFFFF;
+    --hatch1:#EAE6DD; --hatch2:#F4F1EA;
+    --line:rgba(17,17,17,.12); --muted:rgba(17,17,17,.55); --faint:rgba(17,17,17,.45);
+    --danger:#b42318; --danger-bg:#fef3f2; --danger-bd:#fecaca;
+    --shadow-btn:2px 2px 0 rgba(17,17,17,.18);
+    --sans:'Space Grotesk',system-ui,Helvetica,Arial,sans-serif;
+    --serif:'Instrument Serif',Georgia,serif;
+    --mono:'IBM Plex Mono',ui-monospace,monospace;
+    --r-pill:999px; --r-card:20px; --r-input:12px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;-webkit-font-smoothing:antialiased;line-height:1.45}
+  a{color:inherit;text-decoration:none}
+  em{font-family:var(--serif);font-style:italic;font-weight:400}
+  button{font-family:inherit;cursor:pointer}
+  ::selection{background:var(--ink);color:var(--paper)}
+
+  .wrap{max-width:1440px;margin:0 auto;min-height:100vh}
+  /* Nav */
+  nav.top{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:18px 20px;border-bottom:1px solid var(--line)}
+  @media(min-width:768px){nav.top{padding:20px 44px}}
+  .logo{font-size:22px;font-weight:700;letter-spacing:-.03em}
+  .nav-right{display:flex;align-items:center;gap:14px}
+  .lang-toggle{display:flex;align-items:center;border:1px solid rgba(17,17,17,.3);border-radius:var(--r-pill);padding:3px;font-size:12px;font-weight:600}
+  .lang-btn{padding:6px 12px;border-radius:var(--r-pill);border:none;background:none;color:rgba(17,17,17,.55)}
+  .lang-btn.on{background:var(--ink);color:var(--paper)}
+  .nav-link{font-size:14px;font-weight:500;padding:10px 18px;border:1px solid var(--ink);border-radius:var(--r-pill)}
+
+  .container{max-width:860px;margin:0 auto;padding:40px 20px 96px}
+  @media(min-width:768px){.container{padding:40px 44px 96px}}
+
+  /* Stepper */
+  .stepper{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:44px}
+  .step{display:flex;align-items:center;gap:8px;background:none;border:none;padding:0}
+  .step .dot{width:28px;height:28px;border-radius:var(--r-pill);display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;border:1.5px solid rgba(17,17,17,.3);color:rgba(17,17,17,.4)}
+  .step.on .dot,.step.done .dot{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+  .step .lbl{font-size:13.5px;font-weight:500;color:rgba(17,17,17,.45)}
+  .step.on .lbl{font-weight:700;color:var(--ink)}
+
+  h1.title{font-size:clamp(32px,4.5vw,46px);font-weight:700;letter-spacing:-.03em;line-height:1.05;margin:0 0 8px}
+  h1.title em{font-family:var(--serif)}
+  .lead{font-size:16px;color:var(--muted);margin:0 0 30px}
+
+  /* Mode toggle */
+  .mode-row{display:flex;gap:10px;margin-bottom:24px}
+  .mode-btn{padding:10px 22px;border-radius:var(--r-pill);font-size:14px;font-weight:600;border:1.5px solid var(--ink);background:none;color:var(--ink)}
+  .mode-btn.on{background:var(--ink);color:var(--paper)}
+
+  /* Form */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:600px){.grid{grid-template-columns:1fr}}
+  .field{display:flex;flex-direction:column;gap:7px;font-size:13px;font-weight:600}
+  .field.full{grid-column:1/-1}
+  .input,select.input,textarea.input{padding:13px 16px;border:1.5px solid rgba(17,17,17,.35);border-radius:var(--r-input);background:var(--card);font-family:inherit;font-weight:500;font-size:15px;color:var(--ink);outline:none;width:100%}
+  .input:focus{border-color:var(--ink)}
+  select.input{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23111' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px}
+  textarea.input{resize:vertical;min-height:110px}
+  .price-row{display:flex;gap:8px}
+  .price-row .input:first-child{flex:1;min-width:0}
+  .price-row select.input{width:92px}
+  .desc-wrap{margin-top:16px}
+
+  /* Photos */
+  .dropzone{margin-top:22px;border:1.5px dashed rgba(17,17,17,.35);border-radius:18px;padding:26px;text-align:center;background:var(--card);cursor:pointer;transition:border-color .12s}
+  .dropzone:hover,.dropzone.drag{border-color:var(--ink)}
+  .dz-title{font-size:15px;font-weight:600;margin-bottom:4px}
+  .dz-sub{font-family:var(--mono);font-size:12px;color:var(--faint)}
+  .photos-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:12px}
+  @media(max-width:600px){.photos-grid{grid-template-columns:repeat(4,1fr)}}
+  .photo{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;border:1px solid rgba(17,17,17,.15)}
+  .photo img{width:100%;height:100%;object-fit:cover;display:block}
+  .photo .rm{position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:var(--r-pill);background:var(--ink);color:var(--paper);border:none;font-size:12px;line-height:1;display:flex;align-items:center;justify-content:center}
+  .photo .first{position:absolute;bottom:4px;left:4px;font-size:9px;font-weight:600;background:var(--ink);color:var(--paper);padding:2px 6px;border-radius:var(--r-pill)}
+
+  .err{margin-top:24px;font-size:14px;font-weight:500;color:var(--danger);background:var(--danger-bg);border:1px solid var(--danger-bd);border-radius:12px;padding:12px 16px}
+
+  .foot{display:flex;justify-content:flex-end;margin-top:44px;padding-top:24px;border-top:1px solid rgba(17,17,17,.15)}
+  .btn-publish{padding:14px 32px;background:var(--ink);color:var(--paper);border:none;border-radius:var(--r-pill);font-weight:700;font-size:14px;box-shadow:var(--shadow-btn)}
+  .btn-publish:disabled{opacity:.6}
+
+  /* Done step */
+  .done{text-align:center;padding:24px 0}
+  .done .check{width:96px;height:96px;border-radius:var(--r-pill);background:var(--ink);color:var(--paper);display:flex;align-items:center;justify-content:center;margin:0 auto 18px}
+  .done .check svg{width:44px;height:44px;stroke:var(--paper);fill:none;stroke-width:2.5}
+  h1.done-title{font-size:clamp(34px,5vw,52px);font-weight:700;letter-spacing:-.03em;line-height:1.03;margin:0 0 10px}
+  h1.done-title em{font-family:var(--serif)}
+  .done-sub{font-size:17px;color:var(--muted);max-width:440px;margin:0 auto 10px}
+  .done-ref{font-family:var(--mono);font-size:12px;color:var(--faint);margin-bottom:28px}
+  .done-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+  .btn-ink-lg{padding:15px 30px;background:var(--ink);color:var(--paper);border:none;border-radius:var(--r-pill);font-weight:600;font-size:15px;box-shadow:var(--shadow-btn)}
+  .btn-outline-lg{padding:15px 30px;background:none;border:2px solid var(--ink);color:var(--ink);border-radius:var(--r-pill);font-weight:600;font-size:15px}
+
+  .note{max-width:860px;margin:0 auto;padding:10px 20px;font-family:var(--mono);font-size:11px;color:var(--faint);border-top:1px dashed var(--line)}
+  [hidden]{display:none !important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="top">
+    <a href="casa-libre-buyer-portal-preview.html" class="logo">casa-libre<em>.py</em></a>
+    <div class="nav-right">
+      <div class="lang-toggle">
+        <button class="lang-btn" onclick="setLang('es')" id="lang-es">ES</button>
+        <button class="lang-btn on" onclick="setLang('en')" id="lang-en">EN</button>
+      </div>
+      <a href="casa-libre-buyer-portal-preview.html" class="nav-link" data-es="Ver propiedades" data-en="Browse listings">Browse listings</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <!-- Stepper -->
+    <div class="stepper">
+      <button class="step on" id="step1" onclick="goStep(1)">
+        <span class="dot" id="dot1">1</span><span class="lbl" data-es="Detalles" data-en="Details">Details</span>
+      </button>
+      <button class="step" id="step2">
+        <span class="dot" id="dot2">2</span><span class="lbl" data-es="Listo" data-en="Done">Done</span>
+      </button>
+    </div>
+
+    <!-- ============ STEP 1: DETAILS ============ -->
+    <section id="page-details">
+      <h1 class="title"><span data-es="Publicá tu propiedad" data-en="List your property">List your property</span> <em data-es="en minutos." data-en="in minutes.">in minutes.</em></h1>
+      <p class="lead" data-es="Contanos sobre tu propiedad. Se publica al instante en el marketplace." data-en="Tell us about your property. It goes live in the marketplace instantly.">Tell us about your property. It goes live in the marketplace instantly.</p>
+
+      <div class="mode-row">
+        <button class="mode-btn on" id="mode-venta" onclick="setMode('venta')" data-es="Vender" data-en="Sell">Sell</button>
+        <button class="mode-btn" id="mode-alquiler" onclick="setMode('alquiler')" data-es="Alquilar" data-en="Rent out">Rent out</button>
+      </div>
+
+      <div class="grid">
+        <label class="field"><span data-es="Tipo de propiedad" data-en="Property type">Property type</span>
+          <select class="input">
+            <option data-es="Casa" data-en="House">House</option>
+            <option data-es="Departamento" data-en="Apartment">Apartment</option>
+            <option data-es="Dúplex" data-en="Duplex">Duplex</option>
+            <option data-es="Terreno" data-en="Lot">Lot</option>
+          </select>
+        </label>
+        <label class="field"><span data-es="Barrio" data-en="Neighborhood">Neighborhood</span>
+          <input class="input" placeholder="Villa Morra, Recoleta…" />
+        </label>
+        <label class="field"><span data-es="Ciudad" data-en="City">City</span>
+          <input class="input" placeholder="Asunción" />
+        </label>
+        <label class="field"><span id="price-label" data-es="Precio" data-en="Price">Price</span>
+          <div class="price-row">
+            <input class="input" id="price-input" inputmode="numeric" placeholder="145,000" />
+            <select class="input">
+              <option value="USD">US$</option>
+              <option value="PYG">₲</option>
+            </select>
+          </div>
+        </label>
+        <label class="field"><span data-es="Superficie (m²)" data-en="Area (m²)">Area (m²)</span>
+          <input class="input" inputmode="numeric" placeholder="120" />
+        </label>
+        <label class="field"><span data-es="Tu nombre" data-en="Your name">Your name</span>
+          <input class="input" placeholder="Ana Giménez" />
+        </label>
+        <label class="field"><span data-es="WhatsApp / teléfono" data-en="WhatsApp / phone">WhatsApp / phone</span>
+          <input class="input" placeholder="0981 123 456" />
+        </label>
+      </div>
+
+      <label class="field full desc-wrap"><span data-es="Descripción" data-en="Description">Description</span>
+        <textarea class="input" data-es-ph="Depto luminoso con balcón, a 2 cuadras del Shopping del Sol…" data-en-ph="Bright apartment with balcony, 2 blocks from Shopping del Sol…" placeholder="Bright apartment with balcony, 2 blocks from Shopping del Sol…"></textarea>
+      </label>
+
+      <!-- Photos -->
+      <div class="dropzone" id="dropzone" onclick="document.getElementById('file').click()">
+        <div class="dz-title" data-es="Arrastrá o elegí tus fotos" data-en="Drag or choose your photos">Drag or choose your photos</div>
+        <div class="dz-sub" id="dz-sub" data-es="mín. 4 fotos · JPG o PNG · las fotos reales venden más rápido" data-en="min. 4 photos · JPG or PNG · real photos sell faster">min. 4 photos · JPG or PNG · real photos sell faster</div>
+        <input type="file" id="file" accept="image/*" multiple hidden />
+      </div>
+      <div class="photos-grid" id="photos"></div>
+
+      <div class="err" id="err" hidden></div>
+
+      <div class="foot">
+        <button class="btn-publish" id="publishBtn" onclick="publish()" data-es="Publicar gratis" data-en="Publish for free">Publish for free</button>
+      </div>
+    </section>
+
+    <!-- ============ STEP 2: DONE ============ -->
+    <section id="page-done" hidden>
+      <div class="done">
+        <div class="check"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></div>
+        <h1 class="done-title"><span data-es="¡Tu propiedad está" data-en="Your listing is">Your listing is</span> <em data-es="publicada!" data-en="live!">live!</em></h1>
+        <p class="done-sub" data-es="Ya aparece en el marketplace de Casa Libre. Compartí el enlace con quien quieras." data-en="It already shows in the Casa Libre marketplace. Share the link with anyone.">It already shows in the Casa Libre marketplace. Share the link with anyone.</p>
+        <div class="done-ref" id="done-ref">REF: CL-8F3K2A</div>
+        <div class="done-actions">
+          <a href="casa-libre-buyer-portal-preview.html" class="btn-ink-lg" data-es="Ver mi propiedad" data-en="View my listing">View my listing</a>
+          <a href="casa-libre-buyer-portal-preview.html" class="btn-outline-lg" data-es="Ver propiedades" data-en="Browse listings">Browse listings</a>
+          <button class="btn-outline-lg" onclick="restart()" data-es="Publicar otra" data-en="List another">List another</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="note" data-es="Vista previa de UI — datos de ejemplo. Publicar es gratis y requiere iniciar sesión." data-en="UI preview — sample data. Listing is free and requires login.">UI preview — sample data. Listing is free and requires login.</div>
+</div>
+
+<script>
+  var lang='en', mode='venta';
+  var priceText={es:{venta:'Precio',alquiler:'Alquiler mensual'},en:{venta:'Price',alquiler:'Monthly rent'}};
+  var pricePh={venta:{USD:'145,000',PYG:'4,500,000'},alquiler:{USD:'900',PYG:'4,500,000'}};
+
+  /* ---- Language ---- */
+  function setLang(l){
+    lang=l;
+    document.getElementById('lang-es').classList.toggle('on',l==='es');
+    document.getElementById('lang-en').classList.toggle('on',l==='en');
+    document.querySelectorAll('[data-es]').forEach(function(el){
+      if(el.children.length===0) el.textContent=el.getAttribute('data-'+l);
+    });
+    document.querySelectorAll('[data-es-ph]').forEach(function(el){ el.placeholder=el.getAttribute('data-'+l+'-ph'); });
+    document.getElementById('price-label').textContent=priceText[l][mode];
+    document.documentElement.lang=l;
+  }
+
+  /* ---- Mode (Sell / Rent) ---- */
+  function setMode(m){
+    mode=m;
+    document.getElementById('mode-venta').classList.toggle('on',m==='venta');
+    document.getElementById('mode-alquiler').classList.toggle('on',m==='alquiler');
+    document.getElementById('price-label').textContent=priceText[lang][m];
+    document.getElementById('price-input').placeholder=(m==='venta'?'145,000':'4,500,000');
+  }
+
+  /* ---- Photos ---- */
+  var photos=[];
+  var fileInput=document.getElementById('file');
+  fileInput.addEventListener('change',function(e){ addPhotos(e.target.files); });
+  var dz=document.getElementById('dropzone');
+  dz.addEventListener('dragover',function(e){ e.preventDefault(); dz.classList.add('drag'); });
+  dz.addEventListener('dragleave',function(){ dz.classList.remove('drag'); });
+  dz.addEventListener('drop',function(e){ e.preventDefault(); dz.classList.remove('drag'); addPhotos(e.dataTransfer.files); });
+  function addPhotos(list){
+    Array.prototype.slice.call(list||[]).forEach(function(file){
+      if(!file.type||file.type.indexOf('image/')!==0) return;
+      if(photos.length>=20) return;
+      photos.push(URL.createObjectURL(file));
+    });
+    renderPhotos();
+  }
+  function removePhoto(i){ photos.splice(i,1); renderPhotos(); }
+  function renderPhotos(){
+    var g=document.getElementById('photos');
+    g.innerHTML=photos.map(function(url,i){
+      return '<div class="photo"><img src="'+url+'" alt=""/><button class="rm" onclick="removePhoto('+i+')">×</button>'+(i===0?'<span class="first">'+(lang==='es'?'1ª':'1st')+'</span>':'')+'</div>';
+    }).join('');
+    var sub=document.getElementById('dz-sub');
+    if(photos.length){
+      sub.textContent = lang==='es' ? (photos.length+' foto'+(photos.length===1?'':'s')+' seleccionada'+(photos.length===1?'':'s'))
+                                    : (photos.length+' photo'+(photos.length===1?'':'s')+' selected');
+    } else {
+      sub.textContent = sub.getAttribute('data-'+lang);
+    }
+  }
+
+  /* ---- Publish (free, instant) ---- */
+  function publish(){
+    var btn=document.getElementById('publishBtn');
+    var err=document.getElementById('err');
+    err.hidden=true;
+    btn.disabled=true;
+    btn.textContent = lang==='es' ? 'Publicando…' : 'Publishing…';
+    setTimeout(function(){
+      btn.disabled=false;
+      btn.textContent = btn.getAttribute('data-'+lang);
+      document.getElementById('done-ref').textContent='REF: CL-'+Math.random().toString(36).slice(2,8).toUpperCase();
+      goStep(2);
+    },700);
+  }
+
+  /* ---- Stepper ---- */
+  function goStep(n){
+    document.getElementById('page-details').hidden = n!==1;
+    document.getElementById('page-done').hidden = n!==2;
+    document.getElementById('step1').classList.toggle('on',n===1);
+    document.getElementById('step1').classList.toggle('done',n>1);
+    document.getElementById('dot1').textContent = n>1 ? '✓' : '1';
+    document.getElementById('step2').classList.toggle('on',n===2);
+    window.scrollTo(0,0);
+  }
+  function restart(){
+    photos=[]; renderPhotos();
+    document.querySelectorAll('#page-details .input').forEach(function(el){ if(el.tagName!=='SELECT') el.value=''; });
+    setMode('venta');
+    goStep(1);
+  }
+</script>
+</body>
+</html>

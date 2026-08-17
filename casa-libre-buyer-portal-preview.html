@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Casa Libre — Buyer Portal (UI Preview)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Instrument+Serif:ital@1&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --ink:#111111; --paper:#F9F4EE; --card:#FFFFFF;
+    --hatch1:#EAE6DD; --hatch2:#F4F1EA;
+    --line:rgba(17,17,17,.12); --muted:rgba(17,17,17,.55); --faint:rgba(17,17,17,.45);
+    --danger:#b42318; --danger-bd:#f3b4ad; --danger-bg:#fef3f2;
+    --ok:#1a7f37; --ok-bg:#f0fdf4; --ok-bd:#bbf7d0;
+    --shadow:3px 3px 0 rgba(17,17,17,.14);
+    --shadow-btn:2px 2px 0 rgba(17,17,17,.18);
+    --sans:'Space Grotesk',system-ui,Helvetica,Arial,sans-serif;
+    --serif:'Instrument Serif',Georgia,serif;
+    --mono:'IBM Plex Mono',ui-monospace,monospace;
+    --r-pill:999px; --r-card:20px; --r-input:12px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;-webkit-font-smoothing:antialiased;line-height:1.45}
+  a{color:inherit;text-decoration:none}
+  em{font-family:var(--serif);font-style:italic;font-weight:400}
+  button{font-family:inherit;cursor:pointer}
+  .tight{letter-spacing:-.03em}
+  .head{letter-spacing:-.02em}
+  .display{letter-spacing:-.03em}
+  .mono{font-family:var(--mono)}
+  ::selection{background:var(--ink);color:var(--paper)}
+
+  /* ---------- Layout ---------- */
+  .app{display:flex;min-height:100vh}
+  .sidebar{position:sticky;top:0;width:248px;height:100vh;flex-shrink:0;background:var(--card);border-right:1px solid var(--line);display:flex;flex-direction:column}
+  .side-head{display:flex;align-items:center;height:68px;padding:0 20px;border-bottom:1px solid rgba(17,17,17,.10);flex-shrink:0}
+  .logo{font-size:20px;font-weight:700;letter-spacing:-.03em}
+  .nav{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:4px}
+  .nav-item{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:var(--r-input);font-size:14px;font-weight:500;color:var(--muted);transition:background .12s,color .12s;border:none;background:none;text-align:left;width:100%}
+  .nav-item svg{width:18px;height:18px;flex-shrink:0;color:rgba(17,17,17,.55)}
+  .nav-item:hover{background:rgba(17,17,17,.05)}
+  .nav-item.active{background:var(--ink);color:var(--paper)}
+  .nav-item.active svg{color:var(--paper)}
+  .nav-div{margin:10px 2px;border-top:1px solid rgba(17,17,17,.10)}
+  .side-foot{padding:12px;border-top:1px solid rgba(17,17,17,.10);flex-shrink:0}
+  .user-card{display:flex;align-items:center;gap:10px;padding:6px 8px}
+  .avatar{width:36px;height:36px;flex-shrink:0;border-radius:var(--r-pill);background:var(--ink);color:var(--paper);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700}
+  .user-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .user-mail{font-size:11px;color:rgba(17,17,17,.5);font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .logout-btn{width:100%;margin-top:4px;padding:10px 14px;border-radius:var(--r-input);font-size:14px;font-weight:500;color:var(--muted);background:none;border:none;text-align:left}
+  .logout-btn:hover{background:rgba(17,17,17,.05)}
+
+  .content{flex:1;min-width:0;display:flex;flex-direction:column}
+  .topbar{display:flex;align-items:center;justify-content:flex-end;gap:12px;height:68px;padding:0 20px;border-bottom:1px solid var(--line)}
+  .topbar .mobile-brand{display:none;margin-right:auto;font-size:18px;font-weight:700;letter-spacing:-.03em}
+  .hamburger{display:none;width:36px;height:36px;border-radius:var(--r-pill);border:1px solid rgba(17,17,17,.2);background:none;align-items:center;justify-content:center}
+  .lang-toggle{display:flex;align-items:center;border:1px solid rgba(17,17,17,.3);border-radius:var(--r-pill);padding:3px;font-size:12px;font-weight:600}
+  .lang-btn{padding:6px 12px;border-radius:var(--r-pill);border:none;background:none;color:rgba(17,17,17,.55)}
+  .lang-btn.on{background:var(--ink);color:var(--paper)}
+  main{max-width:1040px;margin:0 auto;width:100%;padding:32px 20px 56px}
+
+  /* ---------- Buttons ---------- */
+  .btn-ink{display:inline-block;padding:12px 22px;border-radius:var(--r-pill);background:var(--ink);color:var(--paper);font-weight:600;font-size:14px;border:none;box-shadow:var(--shadow-btn)}
+  .btn-outline{display:inline-block;padding:11px 20px;border-radius:var(--r-pill);border:1.5px solid var(--ink);background:none;color:var(--ink);font-weight:600;font-size:14px}
+
+  /* ---------- Typography blocks ---------- */
+  h1.page-title{font-size:clamp(26px,4vw,38px);font-weight:700;letter-spacing:-.03em;line-height:1.08;margin:0}
+  .page-sub{font-size:15px;color:var(--muted);margin:6px 0 28px}
+  .sec-label{font-size:13px;font-weight:600;color:rgba(17,17,17,.5);text-transform:uppercase;letter-spacing:.08em}
+
+  /* ---------- Stat cards ---------- */
+  .stat-row{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:32px}
+  .stat-card{flex:1;min-width:150px;background:var(--card);border:1px solid rgba(17,17,17,.15);border-radius:var(--r-card);padding:20px;transition:transform .12s,border-color .12s;text-align:left}
+  .stat-card:hover{border-color:var(--ink);transform:translateY(-2px)}
+  .stat-num{font-size:32px;font-weight:700;letter-spacing:-.02em;line-height:1}
+  .stat-lbl{font-size:13px;color:var(--muted);font-weight:500;margin-top:6px}
+
+  .quick{display:flex;flex-wrap:wrap;gap:12px;margin:12px 0 36px}
+  .row-between{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:12px}
+  .link-strong{font-size:13px;font-weight:600}
+
+  /* ---------- Listing cards ---------- */
+  .card-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  @media(max-width:900px){.card-grid{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:600px){.card-grid{grid-template-columns:1fr}}
+  .listing{background:var(--card);border:1px solid rgba(17,17,17,.15);border-radius:18px;overflow:hidden;display:flex;flex-direction:column}
+  .listing-img{position:relative;height:150px;display:flex;align-items:center;justify-content:center;
+    background-color:var(--hatch2);
+    background-image:repeating-linear-gradient(45deg,var(--hatch1) 0,var(--hatch1) 1px,transparent 1px,transparent 9px)}
+  .listing-img .soon{font-family:var(--mono);font-size:10px;color:var(--faint)}
+  .badge{position:absolute;top:8px;left:8px;font-size:10px;font-weight:600;background:var(--ink);color:var(--paper);padding:4px 10px;border-radius:var(--r-pill)}
+  .badge-status{left:auto;right:8px;background:var(--paper);color:var(--ink);border:1px solid rgba(17,17,17,.2);text-transform:capitalize}
+  .listing-body{padding:14px;flex:1;display:flex;flex-direction:column}
+  .price{font-size:17px;font-weight:700;letter-spacing:-.02em;white-space:nowrap}
+  .l-title{font-size:13px;font-weight:500;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .l-place{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .l-meta{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:4px}
+  .l-action{margin-top:12px;padding-top:12px;border-top:1px solid rgba(17,17,17,.1)}
+
+  /* Save button (detail variant) — light bg, filled ink heart, bold border. Never all-black. */
+  .save-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:8px 16px;border-radius:var(--r-pill);
+    background:var(--hatch2);border:1.5px solid var(--ink);color:var(--ink);font-weight:600;font-size:13px}
+  .save-btn svg{width:15px;height:15px;fill:var(--ink);stroke:var(--ink)}
+  .act-2{display:flex;gap:8px}
+  .act-2 .btn-view{flex:1;text-align:center;padding:8px 0;border-radius:var(--r-pill);border:1.5px solid var(--ink);font-size:13px;font-weight:600}
+  .act-2 .btn-del{flex:1;padding:8px 0;border-radius:var(--r-pill);border:1.5px solid var(--danger-bd);color:var(--danger);background:none;font-size:13px;font-weight:600}
+  .act-2 .btn-del:hover{background:var(--danger-bg)}
+
+  /* ---------- Settings ---------- */
+  .settings-wrap{max-width:560px}
+  .settings-card{background:var(--card);border:1px solid rgba(17,17,17,.15);border-radius:var(--r-card);padding:24px;margin-bottom:20px}
+  .settings-card h2{font-size:17px;font-weight:700;letter-spacing:-.02em;margin:0 0 16px}
+  .form{display:flex;flex-direction:column;gap:14px}
+  label.fl{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+  .input{width:100%;padding:12px 16px;border:1.5px solid rgba(17,17,17,.3);border-radius:var(--r-input);background:var(--card);font-family:inherit;font-weight:500;font-size:15px;outline:none;color:var(--ink)}
+  .input:focus{border-color:var(--ink)}
+  .input.code{letter-spacing:6px;font-family:var(--mono);text-align:center}
+  .cur-mail{font-family:var(--mono);font-size:13px;color:var(--muted);padding:2px 2px}
+  .btn-form{padding:12px 24px;border-radius:var(--r-pill);background:var(--ink);color:var(--paper);font-weight:700;font-size:14px;border:none;box-shadow:var(--shadow-btn);align-self:flex-start}
+  .msg{margin-top:4px;font-size:13px;font-weight:500;border-radius:10px;padding:10px 14px}
+  .msg.ok{color:var(--ok);background:var(--ok-bg);border:1px solid var(--ok-bd)}
+
+  /* ---------- Modal ---------- */
+  .overlay{position:fixed;inset:0;background:rgba(17,17,17,.35);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;z-index:2000;padding:20px}
+  .overlay.show{display:flex}
+  .modal{background:var(--card);border:1.5px solid rgba(17,17,17,.14);border-radius:var(--r-card);box-shadow:var(--shadow);max-width:380px;width:100%;padding:26px}
+  .modal h3{font-size:19px;font-weight:700;letter-spacing:-.02em;margin:0 0 8px}
+  .modal p{font-size:14px;color:var(--muted);margin:0 0 22px;line-height:1.5}
+  .modal-actions{display:flex;gap:10px;justify-content:flex-end}
+  .modal-cancel{padding:10px 18px;border-radius:var(--r-pill);border:1.5px solid rgba(17,17,17,.25);background:none;font-weight:600;font-size:14px}
+  .modal-confirm{padding:10px 18px;border-radius:var(--r-pill);border:none;background:var(--ink);color:var(--paper);font-weight:600;font-size:14px}
+  .modal-confirm.danger{background:var(--danger)}
+
+  .note{max-width:1040px;margin:0 auto;width:100%;padding:10px 20px;font-family:var(--mono);font-size:11px;color:var(--faint);border-top:1px dashed var(--line)}
+
+  /* ---------- Mobile ---------- */
+  .backdrop{position:fixed;inset:0;background:rgba(17,17,17,.3);backdrop-filter:blur(2px);z-index:90;display:none}
+  @media(max-width:1000px){
+    .sidebar{position:fixed;left:0;top:0;z-index:100;transform:translateX(-100%);transition:transform .2s}
+    .sidebar.open{transform:translateX(0)}
+    .backdrop.show{display:block}
+    .hamburger{display:flex}
+    .topbar .mobile-brand{display:block}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="backdrop" id="backdrop" onclick="closeSide()"></div>
+
+  <!-- ===================== SIDEBAR ===================== -->
+  <aside class="sidebar" id="sidebar">
+    <div class="side-head">
+      <span class="logo">casa-libre<em>.py</em></span>
+    </div>
+    <nav class="nav">
+      <button class="nav-item active" data-page="dash" onclick="go('dash')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        <span data-es="Panel" data-en="Dashboard">Dashboard</span>
+      </button>
+      <button class="nav-item" data-page="saved" onclick="go('saved')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 1 0-7.8 7.8l1.1 1L12 21l7.7-7.5 1.1-1a5.5 5.5 0 0 0 0-7.9z"/></svg>
+        <span data-es="Guardadas" data-en="Saved">Saved</span>
+      </button>
+      <button class="nav-item" data-page="mine" onclick="go('mine')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9.5 21v-6h5v6"/></svg>
+        <span data-es="Mis publicaciones" data-en="My listings">My listings</span>
+      </button>
+      <button class="nav-item" data-page="settings" onclick="go('settings')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.2a1.6 1.6 0 0 0-2.7-1.1l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 4.6 15H4.4a2 2 0 1 1 0-4h.2a1.6 1.6 0 0 0 1.1-2.7l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 11 4.6V4.4a2 2 0 1 1 4 0v.2a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8Z"/></svg>
+        <span data-es="Ajustes" data-en="Settings">Settings</span>
+      </button>
+      <div class="nav-div"></div>
+      <button class="nav-item" data-es="Ver propiedades" data-en="Browse listings">Browse listings</button>
+      <a href="casa-libre-list-a-property-preview.html" class="btn-ink" style="text-align:center;margin-top:4px" data-es="Publicar propiedad" data-en="List a property">List a property</a>
+    </nav>
+    <div class="side-foot">
+      <div class="user-card">
+        <span class="avatar">O</span>
+        <div style="min-width:0">
+          <div class="user-name">Omar Faiz</div>
+          <div class="user-mail">omar@example.com</div>
+        </div>
+      </div>
+      <button class="logout-btn" onclick="openLogout()" data-es="Cerrar sesión" data-en="Log out">Log out</button>
+    </div>
+  </aside>
+
+  <!-- ===================== CONTENT ===================== -->
+  <div class="content">
+    <div class="topbar">
+      <button class="hamburger" onclick="openSide()" aria-label="Menu">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+      <span class="mobile-brand">casa-libre<em>.py</em></span>
+      <div class="lang-toggle">
+        <button class="lang-btn" onclick="setLang('es')" id="lang-es">ES</button>
+        <button class="lang-btn on" onclick="setLang('en')" id="lang-en">EN</button>
+      </div>
+    </div>
+
+    <main>
+      <!-- ---------- DASHBOARD ---------- -->
+      <section class="page" id="page-dash">
+        <h1 class="page-title">
+          <span data-es="Hola, Omar" data-en="Hi, Omar">Hi, Omar</span> <em>👋</em>
+        </h1>
+        <p class="page-sub" data-es="Este es tu panel de Casa Libre." data-en="This is your Casa Libre dashboard.">This is your Casa Libre dashboard.</p>
+
+        <div class="stat-row">
+          <button class="stat-card" onclick="go('saved')">
+            <div class="stat-num">3</div>
+            <div class="stat-lbl" data-es="Guardadas" data-en="Saved">Saved</div>
+          </button>
+          <button class="stat-card" onclick="go('mine')">
+            <div class="stat-num">2</div>
+            <div class="stat-lbl" data-es="Mis publicaciones" data-en="My listings">My listings</div>
+          </button>
+        </div>
+
+        <div class="sec-label" data-es="Acciones rápidas" data-en="Quick actions">Quick actions</div>
+        <div class="quick">
+          <a href="#" class="btn-outline" data-es="Ver propiedades" data-en="Browse listings">Browse listings</a>
+          <a href="casa-libre-list-a-property-preview.html" class="btn-ink" data-es="Publicar propiedad" data-en="List a property">List a property</a>
+        </div>
+
+        <div class="row-between">
+          <div class="sec-label" data-es="Guardadas recientes" data-en="Recently saved">Recently saved</div>
+          <button class="link-strong" onclick="go('saved')" style="background:none;border:none" data-es="Ver todas →" data-en="See all →">See all →</button>
+        </div>
+        <div class="card-grid" id="dash-grid"></div>
+      </section>
+
+      <!-- ---------- SAVED ---------- -->
+      <section class="page" id="page-saved" hidden>
+        <h1 class="page-title" data-es="Guardadas" data-en="Saved">Saved</h1>
+        <p class="page-sub" data-es="3 propiedades guardadas" data-en="3 saved properties">3 saved properties</p>
+        <div class="card-grid" id="saved-grid"></div>
+      </section>
+
+      <!-- ---------- MY LISTINGS ---------- -->
+      <section class="page" id="page-mine" hidden>
+        <div class="row-between" style="align-items:flex-start;margin-bottom:28px">
+          <div>
+            <h1 class="page-title" data-es="Mis publicaciones" data-en="My listings">My listings</h1>
+            <p class="page-sub" style="margin-bottom:0" id="mine-sub" data-es="2 propiedades publicadas" data-en="2 published properties">2 published properties</p>
+          </div>
+          <a href="casa-libre-list-a-property-preview.html" class="btn-ink" style="flex-shrink:0" data-es="Publicar propiedad" data-en="List a property">List a property</a>
+        </div>
+        <div class="card-grid" id="mine-grid"></div>
+      </section>
+
+      <!-- ---------- SETTINGS ---------- -->
+      <section class="page" id="page-settings" hidden>
+        <h1 class="page-title" style="margin-bottom:24px" data-es="Ajustes" data-en="Settings">Settings</h1>
+        <div class="settings-wrap">
+          <div class="settings-card">
+            <h2 data-es="Perfil" data-en="Profile">Profile</h2>
+            <form class="form" onsubmit="return flash(this,'profile')">
+              <div><label class="fl" data-es="Nombre completo" data-en="Full name">Full name</label><input class="input" value="Omar Faiz" /></div>
+              <div><label class="fl" data-es="WhatsApp / teléfono" data-en="WhatsApp / phone">WhatsApp / phone</label><input class="input" value="+595 981 000 000" /></div>
+              <button type="submit" class="btn-form" data-es="Guardar" data-en="Save">Save</button>
+              <div class="msg ok" hidden data-es="Guardado ✓" data-en="Saved ✓">Saved ✓</div>
+            </form>
+          </div>
+
+          <div class="settings-card">
+            <h2 data-es="Cambiar email" data-en="Change email">Change email</h2>
+            <form class="form" onsubmit="return flash(this,'email')">
+              <div><label class="fl" data-es="Email actual" data-en="Current email">Current email</label><div class="cur-mail">omar@example.com</div></div>
+              <div><label class="fl" data-es="Nuevo email" data-en="New email">New email</label><input class="input" type="email" placeholder="nuevo@email.com" /></div>
+              <button type="submit" class="btn-form" data-es="Enviar código" data-en="Send code">Send code</button>
+              <div class="msg ok" hidden data-es="Enviamos un código al nuevo email." data-en="We sent a code to the new email.">We sent a code to the new email.</div>
+            </form>
+          </div>
+
+          <div class="settings-card">
+            <h2 data-es="Cambiar contraseña" data-en="Change password">Change password</h2>
+            <form class="form" onsubmit="return flash(this,'pw')">
+              <div><label class="fl" data-es="Contraseña actual" data-en="Current password">Current password</label><input class="input" type="password" value="••••••••" /></div>
+              <div><label class="fl" data-es="Nueva contraseña" data-en="New password">New password</label><input class="input" type="password" placeholder="••••••" /></div>
+              <button type="submit" class="btn-form" data-es="Cambiar contraseña" data-en="Change password">Change password</button>
+              <div class="msg ok" hidden data-es="Contraseña actualizada ✓" data-en="Password updated ✓">Password updated ✓</div>
+            </form>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div class="note" data-es="Vista previa de UI — datos de ejemplo. Portal de usuario de Casa Libre." data-en="UI preview — sample data. Casa Libre buyer portal.">UI preview — sample data. Casa Libre buyer portal.</div>
+  </div>
+</div>
+
+<!-- ===================== MODALS ===================== -->
+<div class="overlay" id="modal-logout">
+  <div class="modal">
+    <h3 data-es="Cerrar sesión" data-en="Log out">Log out</h3>
+    <p data-es="¿Querés cerrar tu sesión?" data-en="Are you sure you want to log out?">Are you sure you want to log out?</p>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeModal('modal-logout')" data-es="Cancelar" data-en="Cancel">Cancel</button>
+      <button class="modal-confirm" onclick="closeModal('modal-logout')" data-es="Cerrar sesión" data-en="Log out">Log out</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="modal-delete">
+  <div class="modal">
+    <h3 data-es="Eliminar publicación" data-en="Delete listing">Delete listing</h3>
+    <p data-es="Esta acción no se puede deshacer. ¿Querés eliminar esta propiedad?" data-en="This can't be undone. Delete this property?">This can't be undone. Delete this property?</p>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeModal('modal-delete')" data-es="Cancelar" data-en="Cancel">Cancel</button>
+      <button class="modal-confirm danger" onclick="confirmDelete()" data-es="Eliminar" data-en="Delete">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* ---------- Data ---------- */
+  var HEART = '<svg viewBox="0 0 24 24" stroke-width="1.6"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 1 0-7.8 7.8l1.1 1L12 21l7.7-7.5 1.1-1a5.5 5.5 0 0 0 0-7.9z"/></svg>';
+
+  var saved = [
+    {price:'US$ 145,000', es:'Casa · 3 dorm', en:'House · 3 bd', place:'Villa Morra, Asunción', metaEs:'120 m² · 2 baños', metaEn:'120 m² · 2 ba', mode:'sale'},
+    {price:'US$ 89,500', es:'Departamento · 2 dorm', en:'Apartment · 2 bd', place:'Las Mercedes, Asunción', metaEs:'75 m² · 1 baño', metaEn:'75 m² · 1 ba', mode:'sale'},
+    {price:'₲ 3.500.000/mes', es:'Departamento · 1 dorm', en:'Apartment · 1 bd', place:'Villa Elisa', metaEs:'45 m² · 1 baño', metaEn:'45 m² · 1 ba', mode:'rent'},
+  ];
+  var mine = [
+    {id:'m1', price:'US$ 210,000', es:'Casa · 4 dorm', en:'House · 4 bd', place:'San Bernardino', metaEs:'260 m² · 3 baños', metaEn:'260 m² · 3 ba', mode:'sale', status:''},
+    {id:'m2', price:'US$ 120,000', es:'Dúplex · 3 dorm', en:'Duplex · 3 bd', place:'Luque', metaEs:'140 m² · 2 baños', metaEn:'140 m² · 2 ba', mode:'sale', status:'pending'},
+  ];
+
+  var lang = 'en';
+  var pendingDelete = null;
+
+  /* ---------- Card rendering ---------- */
+  function imgBlock(p){
+    var soon = lang==='es' ? 'Foto próximamente' : 'Photo coming soon';
+    var badge = p.mode==='rent' ? (lang==='es'?'Alquiler':'Rent') : (lang==='es'?'Venta':'Sale');
+    var status = p.status ? '<span class="badge badge-status">'+p.status+'</span>' : '';
+    return '<div class="listing-img"><span class="badge">'+badge+'</span>'+status+'<span class="soon">'+soon+'</span></div>';
+  }
+  function body(p, action){
+    var title = lang==='es'?p.es:p.en;
+    var meta = lang==='es'?p.metaEs:p.metaEn;
+    return '<div class="listing-body"><div class="price">'+p.price+'</div>'+
+      '<div class="l-title">'+title+'</div><div class="l-place">'+p.place+'</div>'+
+      '<div class="l-meta">'+meta+'</div>'+(action?'<div class="l-action">'+action+'</div>':'')+'</div>';
+  }
+  function savedCard(p){
+    var lbl = lang==='es'?'Guardada':'Saved';
+    var act = '<button class="save-btn">'+HEART+'<span>'+lbl+'</span></button>';
+    return '<div class="listing">'+imgBlock(p)+body(p,act)+'</div>';
+  }
+  function plainCard(p){ return '<div class="listing">'+imgBlock(p)+body(p,null)+'</div>'; }
+  function mineCard(p){
+    var view = lang==='es'?'Ver':'View';
+    var del = lang==='es'?'Eliminar':'Delete';
+    var act = '<div class="act-2"><a href="#" class="btn-view">'+view+'</a>'+
+      '<button class="btn-del" onclick="askDelete(\''+p.id+'\')">'+del+'</button></div>';
+    return '<div class="listing" data-id="'+p.id+'">'+imgBlock(p)+body(p,act)+'</div>';
+  }
+
+  function render(){
+    document.getElementById('dash-grid').innerHTML = saved.map(plainCard).join('');
+    document.getElementById('saved-grid').innerHTML = saved.map(savedCard).join('');
+    document.getElementById('mine-grid').innerHTML = mine.map(mineCard).join('');
+    var n = mine.length;
+    var sub = document.getElementById('mine-sub');
+    sub.textContent = lang==='es' ? (n+(n===1?' propiedad publicada':' propiedades publicadas'))
+                                  : (n+' published '+(n===1?'property':'properties'));
+  }
+
+  /* ---------- Navigation ---------- */
+  function go(page){
+    document.querySelectorAll('.page').forEach(function(s){ s.hidden = true; });
+    document.getElementById('page-'+page).hidden = false;
+    document.querySelectorAll('.nav-item[data-page]').forEach(function(b){
+      b.classList.toggle('active', b.getAttribute('data-page')===page);
+    });
+    window.scrollTo(0,0);
+    closeSide();
+  }
+
+  /* ---------- Language ---------- */
+  function setLang(l){
+    lang = l;
+    document.getElementById('lang-es').classList.toggle('on', l==='es');
+    document.getElementById('lang-en').classList.toggle('on', l==='en');
+    // Swap only leaf text elements — never one containing child markup (icons, the 👋 em).
+    document.querySelectorAll('[data-es]').forEach(function(el){
+      if(el.children.length === 0) el.textContent = el.getAttribute('data-'+l);
+    });
+    document.documentElement.lang = l;
+    render();
+  }
+
+  /* ---------- Modals ---------- */
+  function askDelete(id){ pendingDelete = id; document.getElementById('modal-delete').classList.add('show'); }
+  function confirmDelete(){
+    mine = mine.filter(function(p){ return p.id !== pendingDelete; });
+    pendingDelete = null;
+    closeModal('modal-delete');
+    render();
+  }
+  function openLogout(){ document.getElementById('modal-logout').classList.add('show'); }
+  function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+  document.querySelectorAll('.overlay').forEach(function(o){
+    o.addEventListener('click', function(e){ if(e.target===o) o.classList.remove('show'); });
+  });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape') document.querySelectorAll('.overlay.show').forEach(function(o){o.classList.remove('show');}); });
+
+  /* ---------- Settings flash ---------- */
+  function flash(form, key){
+    var msg = form.querySelector('.msg');
+    if(msg){ msg.hidden = false; setTimeout(function(){ msg.hidden = true; }, 2500); }
+    return false;
+  }
+
+  /* ---------- Mobile sidebar ---------- */
+  function openSide(){ document.getElementById('sidebar').classList.add('open'); document.getElementById('backdrop').classList.add('show'); }
+  function closeSide(){ document.getElementById('sidebar').classList.remove('open'); document.getElementById('backdrop').classList.remove('show'); }
+
+  render();
+</script>
+</body>
+</html>

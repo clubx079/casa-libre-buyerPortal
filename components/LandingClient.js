@@ -11,7 +11,7 @@ const DICT = {
     navBuy: 'Comprar', navRent: 'Alquilar', navSell: 'Vender', navCta: 'Empezar →',
     heroLine1: 'Encontrá tu lugar,', heroLine2: 'libremente.',
     heroSub: 'La forma más amigable de comprar, alquilar y vender casas en Asunción.',
-    searchPlaceholder: '¿Dónde querés vivir? — “Carmelitas”, “Recoleta”…', searchBtn: 'Buscar',
+    searchPlaceholder: '¿Dónde querés vivir?', searchBtn: 'Buscar',
     mascotCaption: '“¡Vamos que se puede!” — Casi, tu guía',
     listingsTitle: 'Recién publicadas', listingsTitleSerif: 'lo más nuevo del mercado', listingsAll: 'Ver todas →',
     forSale: 'En venta', forRent: 'En alquiler', perMonth: '/mes', beds: 'dorm', baths: 'baños',
@@ -35,7 +35,7 @@ const DICT = {
     navBuy: 'Buy', navRent: 'Rent', navSell: 'Sell', navCta: 'Get started →',
     heroLine1: 'Find your place,', heroLine2: 'freely.',
     heroSub: 'The friendliest way to buy, rent and sell homes in Paraguay.',
-    searchPlaceholder: 'Where do you want to live? — “Carmelitas”, “Recoleta”…', searchBtn: 'Search',
+    searchPlaceholder: 'Where do you want to live?', searchBtn: 'Search',
     mascotCaption: '“Let’s go!” — Casi, your guide',
     listingsTitle: 'Just listed', listingsTitleSerif: 'fresh on the market', listingsAll: 'View all →',
     forSale: 'For sale', forRent: 'For rent', perMonth: '/mo', beds: 'bd', baths: 'ba',
@@ -82,19 +82,19 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
       </div>
 
       {/* NAV */}
-      <nav className="flex items-center justify-between flex-wrap gap-3 px-5 md:px-11 py-5">
-        <span className="font-bold text-[22px] tracking-head">casa-libre<em className="font-serif italic font-normal">.py</em></span>
-        <div className="hidden sm:flex gap-2 text-[14px] font-medium">
+      <nav className="flex items-center justify-between flex-nowrap gap-2 px-4 sm:px-5 md:px-11 py-4 sm:py-5">
+        <span className="font-bold text-[18px] sm:text-[22px] tracking-head shrink-0">casa-libre<em className="font-serif italic font-normal">.py</em></span>
+        <div className="hidden md:flex gap-2 text-[14px] font-medium">
           <Link href="/propiedades" className="px-[18px] py-2.5 border border-ink rounded-pill">{t.navBuy}</Link>
           <Link href="/propiedades?op=alquiler" className="px-[18px] py-2.5 border border-ink rounded-pill">{t.navRent}</Link>
           <Link href="/publicar" className="px-[18px] py-2.5 border border-ink rounded-pill">{t.navSell}</Link>
         </div>
-        <div className="flex items-center gap-3.5">
-          <div className="flex items-center border border-ink/30 rounded-pill p-[3px] text-[12px] font-semibold">
-            {['es', 'en'].map((l) => <button key={l} onClick={() => setLang(l)} className={`px-3 py-1.5 rounded-pill ${lang === l ? 'bg-ink text-paper' : 'text-ink/55'}`}>{l.toUpperCase()}</button>)}
+        <div className="flex items-center gap-1.5 sm:gap-3.5 shrink-0">
+          <div className="flex items-center border border-ink/30 rounded-pill p-[2px] sm:p-[3px] text-[11px] sm:text-[12px] font-semibold">
+            {['es', 'en'].map((l) => <button key={l} onClick={() => setLang(l)} className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-pill ${lang === l ? 'bg-ink text-paper' : 'text-ink/55'}`}>{l.toUpperCase()}</button>)}
           </div>
           <AuthButton />
-          <Link href="/propiedades" className="text-[14px] font-semibold px-[22px] py-2.5 bg-ink text-paper rounded-pill">{t.navCta}</Link>
+          <Link href="/propiedades" className="text-[13px] sm:text-[14px] font-semibold px-3 sm:px-[22px] py-2 sm:py-2.5 bg-ink text-paper rounded-pill whitespace-nowrap">{t.navCta}</Link>
         </div>
       </nav>
 
@@ -106,8 +106,11 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
           </h1>
           <p className="text-[19px] leading-relaxed text-ink/60 max-w-[460px] mb-9">{t.heroSub}</p>
           <form onSubmit={(e) => { e.preventDefault(); router.push('/propiedades'); }} className="flex items-center bg-card border-2 border-ink rounded-pill pl-6 pr-1.5 py-1.5 max-w-[560px] shadow-hard">
-            <input placeholder={t.searchPlaceholder} className="flex-1 bg-transparent outline-none text-[15px] py-2 placeholder:text-ink/40" />
-            <button type="submit" className="px-7 py-3.5 bg-ink text-paper rounded-pill text-[15px] font-semibold whitespace-nowrap">{t.searchBtn}</button>
+            <input placeholder={t.searchPlaceholder} className="flex-1 min-w-0 bg-transparent outline-none text-[15px] py-2 placeholder:text-ink/40" />
+            <button type="submit" aria-label={t.searchBtn} className="flex-none flex items-center justify-center bg-ink text-paper rounded-pill text-[15px] font-semibold whitespace-nowrap w-[44px] h-[44px] sm:w-auto sm:h-auto sm:px-7 sm:py-3.5">
+              <span className="hidden sm:inline">{t.searchBtn}</span>
+              <span className="sm:hidden" aria-hidden="true">→</span>
+            </button>
           </form>
           <div className="flex gap-2.5 mt-[18px] flex-wrap">
             {t.chips.map((c) => (

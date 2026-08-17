@@ -15,9 +15,9 @@ export default function SiteNav() {
     <nav className="flex items-center justify-between flex-wrap gap-3 px-5 md:px-11 py-4 border-b border-ink/12">
       <Link href="/" className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif not-italic italic font-normal">.py</em></Link>
       <div className="hidden sm:flex gap-2 text-[14px] font-medium">
-        <Link href="/comprar" className="px-[18px] py-2.5 border border-ink rounded-pill">{t.buy}</Link>
-        <Link href="/alquilar" className="px-[18px] py-2.5 border border-ink rounded-pill">{t.rent}</Link>
-        <Link href="/vender" className="px-[18px] py-2.5 border border-ink rounded-pill">{t.sell}</Link>
+        <Link href="/propiedades?op=venta" className="px-[18px] py-2.5 border border-ink rounded-pill">{t.buy}</Link>
+        <Link href="/propiedades?op=alquiler" className="px-[18px] py-2.5 border border-ink rounded-pill">{t.rent}</Link>
+        <Link href="/publicar" className="px-[18px] py-2.5 border border-ink rounded-pill">{t.sell}</Link>
       </div>
       <div className="flex items-center gap-3">
         <div className="hidden sm:flex items-center border border-ink/30 rounded-pill p-[3px] text-[12px] font-semibold">

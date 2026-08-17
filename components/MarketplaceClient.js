@@ -12,7 +12,7 @@ const M = {
   es: {
     searchPh: 'Buscar por barrio o tipo…',
     empty: 'Sin resultados — probá con otro barrio o filtro',
-    types: { all: 'Tipo: todos', depto: 'Departamento', casa: 'Casa', duplex: 'Dúplex', comercial: 'Comercial' },
+    types: { all: 'Tipo: todos', depto: 'Departamento', casa: 'Casa', duplex: 'Dúplex', comercial: 'Comercial', terreno: 'Terreno' },
     prices: { all: 'Precio: todos', p1: 'Hasta US$ 100k', p2: 'US$ 100k – 200k', p3: 'Más de US$ 200k' },
     beds: { all: 'Dormitorios: todos', b1: '1+', b2: '2+', b3: '3+' },
     sort: { relevancia: 'Relevancia', precio_asc: 'Precio: menor a mayor', precio_desc: 'Precio: mayor a menor', area_desc: 'Superficie: mayor primero' },
@@ -21,7 +21,7 @@ const M = {
   en: {
     searchPh: 'Search by neighborhood or type…',
     empty: 'No results — try another neighborhood or filter',
-    types: { all: 'Type: all', depto: 'Apartment', casa: 'House', duplex: 'Duplex', comercial: 'Commercial' },
+    types: { all: 'Type: all', depto: 'Apartment', casa: 'House', duplex: 'Duplex', comercial: 'Commercial', terreno: 'Land' },
     prices: { all: 'Price: any', p1: 'Under US$ 100k', p2: 'US$ 100k – 200k', p3: 'Over US$ 200k' },
     beds: { all: 'Bedrooms: any', b1: '1+', b2: '2+', b3: '3+' },
     sort: { relevancia: 'Relevance', precio_asc: 'Price: low to high', precio_desc: 'Price: high to low', area_desc: 'Area: largest first' },
@@ -58,6 +58,7 @@ export default function MarketplaceClient({ listings, initialOp = 'all', initial
     if (/d[uú]plex/.test(s)) return 'duplex';
     if (/comercial|\blocal\b|oficina|dep[oó]sito|galp[oó]n|edificio|office|warehouse|commercial|hotel/.test(s)) return 'comercial';
     if (/casa|residencial|residencia|chalet|vivienda|condominio|barrio\s*cerrado|\bhouse\b/.test(s)) return 'casa';
+    if (/terreno|\blote\b|loteamiento|\bsolar\b|parcela|fracci[oó]n|\bland\b|\blot\b/.test(s)) return 'terreno';
     return 'otro';
   };
   const usdVal = (l) => (l.usd != null ? l.usd : l.pyg != null ? l.pyg / 7500 : 0);
