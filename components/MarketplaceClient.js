@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { typeLabel } from '@/lib/propertyType';
+import { typeLabel, typeKey } from '@/lib/propertyType';
 import { T, fmtUsd, fmtPyg, shortUsd } from '@/lib/ui';
 import { useLang } from '@/lib/useLang';
 import AuthButton from '@/components/AuthButton';
@@ -12,8 +12,9 @@ const M = {
   es: {
     searchPh: 'Buscar por barrio o tipo…',
     empty: 'Sin resultados — probá con otro barrio o filtro',
-    types: { all: 'Tipo: todos', depto: 'Departamento', casa: 'Casa', duplex: 'Dúplex', comercial: 'Comercial', terreno: 'Terreno' },
-    prices: { all: 'Precio: todos', p1: 'Hasta US$ 100k', p2: 'US$ 100k – 200k', p3: 'Más de US$ 200k' },
+    types: { all: 'Tipo: todos', casa: 'Casa', depto: 'Departamento', duplex: 'Dúplex', terreno: 'Terreno', comercial: 'Local comercial', oficina: 'Oficina', deposito: 'Depósito', edificio: 'Edificio', condominio: 'Condominio', campo: 'Campo', otro: 'Otro' },
+    pricesUsd: { all: 'Precio: todos', p1: 'Hasta US$ 100k', p2: 'US$ 100k – 200k', p3: 'Más de US$ 200k' },
+    pricesPyg: { all: 'Precio: todos', p1: 'Hasta ₲ 3 M/mes', p2: '₲ 3 – 6 M/mes', p3: 'Más de ₲ 6 M/mes' },
     beds: { all: 'Dormitorios: todos', b1: '1+', b2: '2+', b3: '3+' },
     sort: { relevancia: 'Relevancia', precio_asc: 'Precio: menor a mayor', precio_desc: 'Precio: mayor a menor', area_desc: 'Superficie: mayor primero' },
     dorm: 'dorm', bath: 'baños', park: 'cocheras', listView: 'Lista', mapView: 'Mapa',
@@ -21,8 +22,9 @@ const M = {
   en: {
     searchPh: 'Search by neighborhood or type…',
     empty: 'No results — try another neighborhood or filter',
-    types: { all: 'Type: all', depto: 'Apartment', casa: 'House', duplex: 'Duplex', comercial: 'Commercial', terreno: 'Land' },
-    prices: { all: 'Price: any', p1: 'Under US$ 100k', p2: 'US$ 100k – 200k', p3: 'Over US$ 200k' },
+    types: { all: 'Type: all', casa: 'House', depto: 'Apartment', duplex: 'Duplex', terreno: 'Lot', comercial: 'Commercial', oficina: 'Office', deposito: 'Warehouse', edificio: 'Building', condominio: 'Condo', campo: 'Rural land', otro: 'Other' },
+    pricesUsd: { all: 'Price: any', p1: 'Under US$ 100k', p2: 'US$ 100k – 200k', p3: 'Over US$ 200k' },
+    pricesPyg: { all: 'Price: any', p1: 'Under ₲ 3 M/mo', p2: '₲ 3 – 6 M/mo', p3: 'Over ₲ 6 M/mo' },
     beds: { all: 'Bedrooms: any', b1: '1+', b2: '2+', b3: '3+' },
     sort: { relevancia: 'Relevance', precio_asc: 'Price: low to high', precio_desc: 'Price: high to low', area_desc: 'Area: largest first' },
     dorm: 'beds', bath: 'baths', park: 'parking', listView: 'List', mapView: 'Map',
@@ -50,17 +52,19 @@ export default function MarketplaceClient({ listings, initialOp = 'all', initial
   const didFit = useRef(false);
   const t = T[lang];
   const m = M[lang];
+  // Price buckets + value accessor switch together based on venta/alquiler mode:
+  // alquiler filters guaraníes/month (l.pyg), venta/todas keep USD (usdVal(l)).
+  const isRent = filter === 'alquiler';
+  const prices = isRent ? m.pricesPyg : m.pricesUsd;
+
+  // Reset a stale bucket selection whenever the operation mode changes so a USD
+  // bucket key (e.g. "p2" = US$100k-200k) never gets applied against ₲ data.
+  useEffect(() => { setPriceF('all'); }, [filter]);
 
   // ---- classification / value helpers (from real property fields) ----
-  const typeOf = (l) => {
-    const s = (l.type || '').toLowerCase();
-    if (/departamento|depto|apartment|monoambiente|penthouse|\bpiso\b|pozo/.test(s)) return 'depto';
-    if (/d[uú]plex/.test(s)) return 'duplex';
-    if (/comercial|\blocal\b|oficina|dep[oó]sito|galp[oó]n|edificio|office|warehouse|commercial|hotel/.test(s)) return 'comercial';
-    if (/casa|residencial|residencia|chalet|vivienda|condominio|barrio\s*cerrado|\bhouse\b/.test(s)) return 'casa';
-    if (/terreno|\blote\b|loteamiento|\bsolar\b|parcela|fracci[oó]n|\bland\b|\blot\b/.test(s)) return 'terreno';
-    return 'otro';
-  };
+  // Delegates to lib/propertyType.js's typeKey() so the DB-label -> bucket
+  // mapping lives in one place, shared with typeLabel()'s display rules.
+  const typeOf = (l) => typeKey(l.type);
   const usdVal = (l) => (l.usd != null ? l.usd : l.pyg != null ? l.pyg / 7500 : 0);
   const bedsOf = (l) => l.beds || 0;
   const areaVal = (l) => l.area || 0;
@@ -68,7 +72,10 @@ export default function MarketplaceClient({ listings, initialOp = 'all', initial
   const rows = useMemo(() => {
     let r = listings.filter((l) => filter === 'all' || l.mode === filter);
     if (typeF !== 'all') r = r.filter((l) => typeOf(l) === typeF);
-    if (priceF !== 'all') r = r.filter((l) => { const v = usdVal(l); return priceF === 'p1' ? v < 100000 : priceF === 'p2' ? v >= 100000 && v <= 200000 : v > 200000; });
+    if (priceF !== 'all') {
+      if (isRent) r = r.filter((l) => { const v = l.pyg || 0; return priceF === 'p1' ? v < 3000000 : priceF === 'p2' ? v >= 3000000 && v <= 6000000 : v > 6000000; });
+      else r = r.filter((l) => { const v = usdVal(l); return priceF === 'p1' ? v < 100000 : priceF === 'p2' ? v >= 100000 && v <= 200000 : v > 200000; });
+    }
     if (bedF !== 'all') r = r.filter((l) => bedsOf(l) >= Number(bedF.slice(1)));
     if (query) {
       const q = norm(query);
@@ -250,7 +257,7 @@ export default function MarketplaceClient({ listings, initialOp = 'all', initial
           {Object.entries(m.types).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
         <select value={priceF} onChange={(e) => setPriceF(e.target.value)} className={selCls}>
-          {Object.entries(m.prices).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          {Object.entries(prices).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
         <select value={bedF} onChange={(e) => setBedF(e.target.value)} className={selCls}>
           {Object.entries(m.beds).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
