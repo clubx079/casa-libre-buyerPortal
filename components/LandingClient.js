@@ -8,7 +8,7 @@ import { fmtUsd, fmtPyg } from '@/lib/ui';
 
 const DICT = {
   es: {
-    navBuy: 'Comprar', navRent: 'Alquilar', navSell: 'Vender', navCta: 'Empezar →',
+    navBuy: 'Comprar', navRent: 'Alquilar', navSell: 'Vender', navCta: 'Publicar gratis',
     heroLine1: 'Encontrá tu lugar,', heroLine2: 'libremente.',
     heroSub: 'La forma más amigable de comprar, alquilar y vender casas en Asunción.',
     searchPlaceholder: '¿Dónde querés vivir? — “Carmelitas”, “Recoleta”…', searchBtn: 'Buscar',
@@ -18,23 +18,23 @@ const DICT = {
     stepsTitle: 'Tres pasos y listo',
     steps: [
       { n: '1', t: 'Contanos qué buscás', d: 'Barrio, presupuesto, cantidad de dormitorios. Cuate te muestra solo lo que vale la pena.' },
-      { n: '2', t: 'Visitá sin vueltas', d: 'Agendá online, visitá acompañado. Sin llamadas raras ni fotos viejas.' },
-      { n: '3', t: 'Firmá y celebrá', d: 'Contrato digital con respaldo legal. Las llaves son tuyas.' },
+      { n: '2', t: 'Contactá al publicador', d: 'Escribile por WhatsApp o llamá directo desde el aviso. Sin intermediarios ni vueltas.' },
+      { n: '3', t: 'Cerrá el trato a tu manera', d: 'Coordinás la visita y la operación directamente con quien publica. Vos manejás los tiempos.' },
     ],
     stats: (c) => [
       { v: `${c.toLocaleString('es-PY')}+`, l: 'propiedades activas' }, { v: '0%', l: 'comisión al publicar' },
-      { v: 'Al instante', l: 'publicás tu aviso' }, { v: '4.9★', l: 'rating de usuarios' },
+      { v: 'Al instante', l: 'publicás tu aviso' },
     ],
     ctaTitle: 'Tu casa te está buscando', ctaTitleSerif: 'a vos.',
     ctaSub: 'Gratis para buscar, gratis para publicar. Empezá hoy.',
     ctaBtn1: 'Explorar propiedades', ctaBtn2: 'Publicar gratis',
     footerLine: `© ${new Date().getFullYear()} Casa Libre · www.casa-libre.com · Asunción PY · Términos · Privacidad`,
-    chips: ['Asunción', 'Villa Morra', 'Central', 'Luque', 'San Lorenzo'],
+    chips: ['Villa Morra', 'Carmelitas', 'Recoleta', 'Las Mercedes', 'Barrio Jara'],
   },
   en: {
-    navBuy: 'Buy', navRent: 'Rent', navSell: 'Sell', navCta: 'Get started →',
+    navBuy: 'Buy', navRent: 'Rent', navSell: 'Sell', navCta: 'List for free',
     heroLine1: 'Find your place,', heroLine2: 'freely.',
-    heroSub: 'The friendliest way to buy, rent and sell homes in Paraguay.',
+    heroSub: 'The friendliest way to buy, rent and sell homes in Asunción.',
     searchPlaceholder: 'Where do you want to live? — “Carmelitas”, “Recoleta”…', searchBtn: 'Search',
     mascotCaption: '“Let’s go!” — Cuate, your guide',
     listingsTitle: 'Just listed', listingsTitleSerif: 'fresh on the market', listingsAll: 'View all →',
@@ -42,18 +42,18 @@ const DICT = {
     stepsTitle: 'Three steps and you’re in',
     steps: [
       { n: '1', t: 'Tell us what you’re after', d: 'Neighborhood, budget, bedrooms. Cuate only shows you what’s worth your time.' },
-      { n: '2', t: 'Visit, no hassle', d: 'Book online, tour with a guide. No weird calls, no outdated photos.' },
-      { n: '3', t: 'Sign and celebrate', d: 'Digital contract with legal backing. The keys are yours.' },
+      { n: '2', t: 'Contact the publisher', d: 'Message them on WhatsApp or call straight from the listing. No middlemen, no runaround.' },
+      { n: '3', t: 'Close the deal your way', d: 'Arrange the visit and the deal directly with whoever posted it. You set the pace.' },
     ],
     stats: (c) => [
       { v: `${c.toLocaleString('en-US')}+`, l: 'active listings' }, { v: '0%', l: 'listing commission' },
-      { v: 'Instant', l: 'your listing goes live' }, { v: '4.9★', l: 'user rating' },
+      { v: 'Instant', l: 'your listing goes live' },
     ],
     ctaTitle: 'Your home is out there looking', ctaTitleSerif: 'for you.',
     ctaSub: 'Free to browse, free to list. Start today.',
     ctaBtn1: 'Explore homes', ctaBtn2: 'List for free',
     footerLine: `© ${new Date().getFullYear()} Casa Libre · www.casa-libre.com · Asunción PY · Terms · Privacy`,
-    chips: ['Asunción', 'Villa Morra', 'Central', 'Luque', 'San Lorenzo'],
+    chips: ['Villa Morra', 'Carmelitas', 'Recoleta', 'Las Mercedes', 'Barrio Jara'],
   },
 };
 
@@ -94,7 +94,7 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
             {['es', 'en'].map((l) => <button key={l} onClick={() => setLang(l)} className={`h-full flex items-center px-3 rounded-pill ${lang === l ? 'bg-ink text-paper' : 'text-ink/55'}`}>{l.toUpperCase()}</button>)}
           </div>
           <AuthButton />
-          <Link href="/propiedades" className="inline-flex items-center h-[40px] px-[22px] bg-ink text-paper rounded-pill text-[14px] font-semibold whitespace-nowrap">{t.navCta}</Link>
+          <Link href="/publicar" className="inline-flex items-center h-[40px] px-[22px] bg-ink text-paper rounded-pill text-[14px] font-semibold whitespace-nowrap">{t.navCta}</Link>
         </div>
       </nav>
 
@@ -124,7 +124,7 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
         </div>
         <div className="flex flex-row md:flex-col items-center justify-center gap-2.5 md:gap-3.5 mt-1.5 md:mt-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/mascot.png" alt="Casa Libre" className="w-[132px] md:w-[clamp(220px,28vw,420px)] max-w-[40vw] md:max-w-[70vw] object-contain" />
+          <img src="/mascot.png" alt="Cuate, la mascota de Casa Libre" className="w-[132px] md:w-[clamp(220px,28vw,420px)] max-w-[40vw] md:max-w-[70vw] object-contain" />
           <div className="font-mono text-[10.5px] md:text-[12px] leading-snug text-ink/45 border border-dashed border-ink/30 rounded-pill px-3 md:px-4 py-[5px] md:py-1.5 max-w-[46vw] md:max-w-none text-center md:text-left">{t.mascotCaption}</div>
         </div>
       </div>
