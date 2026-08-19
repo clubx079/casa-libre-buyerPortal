@@ -2,7 +2,6 @@ import { getListings } from '@/lib/listings';
 import { typeLabel } from '@/lib/propertyType';
 import { fmtUsd } from '@/lib/ui';
 import LandingClient from '@/components/LandingClient';
-import Footer from '@/components/Footer';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,7 +15,6 @@ export default async function Landing() {
   return (
     <>
       <LandingClient featured={featured} count={count || listings.length} tickerData={ticker} />
-      <Footer />
     </>
   );
 }

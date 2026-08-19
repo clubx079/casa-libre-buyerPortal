@@ -38,7 +38,7 @@ export default function Footer() {
       <div className="max-w-[1200px] mx-auto px-5 md:px-11 py-14">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
           <div className="col-span-2 md:col-span-1">
-            <Link href="/" className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif not-italic italic font-normal">.py</em></Link>
+            <Link href="/" className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif italic font-normal">.py</em></Link>
             <p className="text-[13px] text-paper/60 mt-3 leading-relaxed max-w-[220px]">{t.tagline}</p>
           </div>
           {sections.map((s) => (

@@ -28,7 +28,7 @@ const DICT = {
     ctaTitle: 'Tu casa te está buscando', ctaTitleSerif: 'a vos.',
     ctaSub: 'Gratis para buscar, gratis para publicar. Empezá hoy.',
     ctaBtn1: 'Explorar propiedades', ctaBtn2: 'Publicar gratis',
-    footerLine: `© ${new Date().getFullYear()} Casa Libre · www.casa-libre.com · Asunción PY · Términos · Privacidad`,
+    footerLine: `© ${new Date().getFullYear()} Casa Libre · hola@casa-libre.com · www.casa-libre.com · Asunción PY · Términos · Privacidad`,
     chips: ['Villa Morra', 'Carmelitas', 'Recoleta', 'Las Mercedes', 'Barrio Jara'],
   },
   en: {
@@ -52,7 +52,7 @@ const DICT = {
     ctaTitle: 'Your home is out there looking', ctaTitleSerif: 'for you.',
     ctaSub: 'Free to browse, free to list. Start today.',
     ctaBtn1: 'Explore homes', ctaBtn2: 'List for free',
-    footerLine: `© ${new Date().getFullYear()} Casa Libre · www.casa-libre.com · Asunción PY · Terms · Privacy`,
+    footerLine: `© ${new Date().getFullYear()} Casa Libre · hola@casa-libre.com · www.casa-libre.com · Asunción PY · Terms · Privacy`,
     chips: ['Villa Morra', 'Carmelitas', 'Recoleta', 'Las Mercedes', 'Barrio Jara'],
   },
 };
