@@ -4,7 +4,7 @@ import { useLang } from '@/lib/useLang';
 import AuthButton from '@/components/AuthButton';
 import { useRouter } from 'next/navigation';
 import { typeLabel } from '@/lib/propertyType';
-import { fmtUsd, fmtPyg } from '@/lib/ui';
+import { fmtUsd, fmtPyg, bathWord } from '@/lib/ui';
 
 const DICT = {
   es: {
@@ -65,7 +65,7 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
   const price = (l) => (fmtUsd(l.usd, lang) || '—') + (l.mode === 'alquiler' ? t.perMonth : '');
   const title = (l) => `${typeLabel(l.type, lang) || (lang === 'es' ? 'Propiedad' : 'Property')}${l.beds ? ` · ${l.beds} ${t.beds}` : ''}`;
   const place = (l) => [l.neighborhood, l.city].filter(Boolean).join(', ');
-  const meta = (l) => [l.area && `${l.area} m²`, l.baths && `${l.baths} ${t.baths}`].filter(Boolean).join(' · ');
+  const meta = (l) => [l.area && `${l.area} m²`, l.baths && `${l.baths} ${bathWord(l.baths, lang)}`].filter(Boolean).join(' · ');
   const ticker = tickerData.length ? tickerData : ['CASA LIBRE — PROPIEDADES EN PARAGUAY'];
 
   return (
@@ -101,15 +101,15 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
       {/* HERO */}
       <div className="grid md:grid-cols-2 gap-2.5 md:gap-6 items-center px-5 md:px-11 pt-6 md:pt-10 pb-11 md:pb-16">
         <div className="text-center md:text-left">
-          <h1 className="text-[clamp(40px,7.5vw,92px)] leading-[0.92] tracking-display font-bold m-0 mb-5">
+          <h1 className="text-[clamp(46px,7.5vw,92px)] max-[720px]:text-[clamp(38px,11vw,52px)] leading-[0.92] tracking-display font-bold m-0 mb-5">
             {t.heroLine1}<br /><span className="font-serif italic font-normal">{t.heroLine2}</span>
           </h1>
-          <p className="text-[clamp(16px,2vw,19px)] leading-relaxed text-ink/60 max-w-[460px] mx-auto md:mx-0 mb-7 md:mb-9">{t.heroSub}</p>
+          <p className="text-[clamp(16px,2vw,19px)] leading-relaxed text-ink/60 max-w-[460px] mx-auto md:mx-0 mb-7 md:mb-9 max-[720px]:mb-6">{t.heroSub}</p>
           <form onSubmit={(e) => { e.preventDefault(); router.push('/propiedades'); }} className="flex items-center bg-card border-2 border-ink rounded-pill pl-[26px] pr-1.5 py-1.5 max-w-[560px] mx-auto md:mx-0 shadow-hard">
             <input placeholder={t.searchPlaceholder} className="flex-1 min-w-0 bg-transparent outline-none text-[16px] text-ink placeholder:text-ink/40" />
             <button
               type="submit" aria-label={t.searchBtn}
-              className="flex-none flex items-center justify-center bg-ink text-paper rounded-pill font-semibold whitespace-nowrap w-[46px] h-[46px] sm:w-auto sm:h-auto sm:py-3.5 sm:px-7"
+              className="flex-none flex items-center justify-center bg-ink text-paper rounded-pill font-semibold whitespace-nowrap w-[46px] h-[46px] sm:w-auto sm:h-auto sm:py-3.5 sm:px-[clamp(18px,3vw,30px)]"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               <span className="hidden sm:inline text-[15px]">{t.searchBtn}</span>
@@ -118,20 +118,20 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
           </form>
           <div className="flex gap-2.5 mt-[18px] flex-wrap justify-center md:justify-start">
             {t.chips.map((c) => (
-              <Link key={c} href="/propiedades" className="text-[13px] font-medium px-3.5 py-1.5 border border-ink/25 rounded-pill bg-card">{c}</Link>
+              <Link key={c} href="/propiedades" className="text-[13px] font-medium px-3.5 py-[7px] border border-ink/25 rounded-pill bg-card">{c}</Link>
             ))}
           </div>
         </div>
         <div className="flex flex-row md:flex-col items-center justify-center gap-2.5 md:gap-3.5 mt-1.5 md:mt-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/mascot.png" alt="Cuate, la mascota de Casa Libre" className="w-[132px] md:w-[clamp(220px,28vw,420px)] max-w-[40vw] md:max-w-[70vw] object-contain" />
+          <img src="/mascot.png" alt="Cuate, la mascota de Casa Libre" className="w-[132px] md:w-[clamp(220px,32vw,420px)] max-w-[40vw] md:max-w-[76vw] max-[720px]:w-[132px] max-[720px]:max-w-[40vw] object-contain" />
           <div className="font-mono text-[10.5px] md:text-[12px] leading-snug text-ink/45 border border-dashed border-ink/30 rounded-pill px-3 md:px-4 py-[5px] md:py-1.5 max-w-[46vw] md:max-w-none text-center md:text-left">{t.mascotCaption}</div>
         </div>
       </div>
 
       {/* LISTINGS (dark) */}
-      <div className="px-5 md:px-11 py-14 bg-ink text-paper rounded-t-section">
-        <div className="flex justify-between items-baseline flex-wrap gap-3.5 mb-8">
+      <div className="px-5 md:px-11 py-14 bg-ink text-paper rounded-t-section max-[720px]:py-10 max-[720px]:rounded-t-[24px]">
+        <div className="flex justify-between items-baseline flex-wrap gap-3.5 mb-[30px]">
           <h2 className="text-[clamp(26px,4vw,34px)] tracking-head font-bold m-0">{t.listingsTitle} <span className="font-serif italic font-normal text-paper/60">{t.listingsTitleSerif}</span></h2>
           <Link href="/propiedades" className="text-paper text-[14px] font-semibold px-5 py-2.5 border border-paper/40 rounded-pill">{t.listingsAll}</Link>
         </div>
@@ -143,7 +143,7 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
                 <span className="absolute top-3 left-3 text-[11px] font-semibold bg-ink text-paper px-2.5 py-1 rounded-pill">{l.mode === 'alquiler' ? t.forRent : t.forSale}</span>
               </div>
               <div className="p-[18px] pt-4 pb-5">
-                <div className="text-[21px] font-bold tracking-head mb-1">{price(l)}</div>
+                <div className="text-[21px] font-bold tracking-[-0.02em] mb-1">{price(l)}</div>
                 <div className="text-[15px] font-medium mb-0.5 line-clamp-1">{title(l)}</div>
                 <div className="text-[13px] text-ink/55 line-clamp-1">{place(l)}{meta(l) ? ` · ${meta(l)}` : ''}</div>
               </div>
@@ -153,8 +153,8 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
       </div>
 
       {/* HOW IT WORKS (dark) */}
-      <div className="px-5 md:px-11 py-16 bg-ink text-paper">
-        <h2 className="text-[clamp(26px,4vw,34px)] tracking-head font-bold m-0 mb-9">{t.stepsTitle}</h2>
+      <div className="px-5 md:px-11 py-[60px] bg-ink text-paper max-[720px]:py-10">
+        <h2 className="text-[clamp(26px,4vw,34px)] tracking-head font-bold m-0 mb-[34px]">{t.stepsTitle}</h2>
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {t.steps.map((s) => (
             <div key={s.n} className="border border-paper/25 rounded-card p-[26px] pb-[30px]">
@@ -166,16 +166,16 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
         </div>
         <div className="flex gap-x-10 gap-y-6 flex-wrap mt-11 pt-8 border-t border-paper/20">
           {t.stats(count).map((st, i) => (
-            <div key={i}><span className="text-[30px] font-bold tracking-head">{st.v}</span><span className="font-mono text-[12px] text-paper/50 ml-2.5">{st.l}</span></div>
+            <div key={i}><span className="text-[30px] font-bold tracking-[-0.02em]">{st.v}</span><span className="font-mono text-[12px] text-paper/50 ml-2.5">{st.l}</span></div>
           ))}
         </div>
       </div>
 
       {/* CTA FOOTER */}
-      <div className="px-5 md:px-11 py-[70px] bg-paper text-center">
+      <div className="px-5 md:px-11 py-[70px] bg-paper text-center max-[720px]:py-10">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/mascot.png" alt="" className="w-24 object-contain mx-auto mb-3.5" />
-        <h2 className="text-[clamp(32px,5.5vw,52px)] tracking-display font-bold m-0 mb-3">{t.ctaTitle} <span className="font-serif italic font-normal">{t.ctaTitleSerif}</span></h2>
+        <h2 className="text-[clamp(32px,5.5vw,52px)] tracking-[-0.04em] font-bold m-0 mb-3">{t.ctaTitle} <span className="font-serif italic font-normal">{t.ctaTitleSerif}</span></h2>
         <p className="text-[17px] text-ink/55 m-0 mb-[30px]">{t.ctaSub}</p>
         <div className="flex gap-3 justify-center flex-wrap">
           <Link href="/propiedades" className="px-8 py-4 bg-ink text-paper font-semibold text-[16px] rounded-pill shadow-hard-soft">{t.ctaBtn1}</Link>
