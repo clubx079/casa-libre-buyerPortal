@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { useLang } from '@/lib/useLang';
+import { track } from '@/lib/analytics';
 
 const DICT = {
   es: {
@@ -66,6 +67,7 @@ export default function AuthModal({ onAuthed, onClose }) {
 
   const googleSignIn = async () => {
     setErr('');
+    track('oauth_login_clicked', { provider: 'google' });
     try {
       const r = await fetch('/api/auth/google', { method: 'POST' });
       const j = await r.json();
@@ -104,6 +106,7 @@ export default function AuthModal({ onAuthed, onClose }) {
       const r = await post('/api/auth/login', { email, password });
       const j = await r.json();
       if (!r.ok || !j.ok) { setErr(t.errCreds); return; }
+      track('user_logged_in', { method: 'password' });
       onAuthed(j.user);
     } catch { setErr(t.errGeneric); } finally { setBusy(false); }
   };
@@ -128,6 +131,7 @@ export default function AuthModal({ onAuthed, onClose }) {
       const r = await post('/api/auth/verify-otp', { email, code, password, fullName, phone });
       const j = await r.json();
       if (!r.ok || !j.ok) { setErr(t.errCode); return; }
+      track('user_signed_up', { method: 'email_otp' });
       onAuthed(j.user);
     } catch { setErr(t.errGeneric); } finally { setBusy(false); }
   };

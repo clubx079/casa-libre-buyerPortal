@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
 import { useAuth } from '@/components/AuthProvider';
+import { track } from '@/lib/analytics';
 
 const DICT = {
   es: {
@@ -140,6 +141,18 @@ export default function PublicarClient() {
       const res = await fetch('/api/publish', { method: 'POST', body: fd });
       const j = await res.json();
       if (!res.ok || !j.ok) throw new Error(j.error || 'failed');
+      track('listing_created', {
+        property_id: j.id,
+        slug: j.slug,
+        ref: j.ref,
+        operation: mode,
+        property_type: f.ptype,
+        city: f.city,
+        neighborhood: f.neighborhood,
+        price: f.price ? Number(f.price) : null,
+        currency: priceCurrency,
+        photos: photos.length,
+      });
       setResult({ ref: j.ref, slug: j.slug });
       setStep(2);
     } catch {

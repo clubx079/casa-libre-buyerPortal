@@ -5,6 +5,8 @@ import { typeLabel } from '@/lib/propertyType';
 import { fmtUsd, fmtPyg } from '@/lib/ui';
 import Gallery from '@/components/Gallery';
 import SaveButton from '@/components/SaveButton';
+import PropertyViewTracker from '@/components/PropertyViewTracker';
+import PropertyContactButton from '@/components/PropertyContactButton';
 import { SITE } from '@/lib/site';
 
 export const dynamic = 'force-dynamic';
@@ -66,8 +68,25 @@ export default async function PropiedadPage({ params }) {
   }
   const waUrl = waDigits ? `https://wa.me/${waDigits}?text=${encodeURIComponent(waText)}` : null;
 
+  // Shared analytics props for property_viewed + contact_seller_clicked.
+  const trackProps = {
+    property_id: l.id,
+    slug: l.slug,
+    address: l.address || null,
+    city: l.city || null,
+    neighborhood: l.neighborhood || null,
+    state: l.province || null,
+    price: l.usd ?? null,
+    currency: 'USD',
+    mode: l.mode,
+    type: l.type || null,
+    lat: l.lat ?? null,
+    lng: l.lng ?? null,
+  };
+
   return (
     <div className="min-h-screen bg-paper text-ink">
+      <PropertyViewTracker property={trackProps} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumb) }} />
       <nav className="flex items-center justify-between px-5 md:px-11 py-4 border-b border-ink/12 max-w-[1200px] mx-auto">
@@ -131,14 +150,7 @@ export default async function PropiedadPage({ params }) {
               <div className="text-[28px] font-bold tracking-head">{fmtUsd(l.usd, 'es') || '—'}{sfx}</div>
               <div className="text-[15px] font-semibold text-paper/60">{fmtPyg(l.pyg, 'es') || ''}{l.pyg ? sfx : ''}</div>
               <div className="text-paper/60 text-[13px] mt-1 mb-5">{l.city}</div>
-              {waUrl ? (
-                <a href={waUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 w-full px-6 py-3.5 bg-paper text-ink font-semibold rounded-pill">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.1-1.3A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8 8 0 1 1 12 20zm4.4-6c-.2-.1-1.4-.7-1.6-.8s-.4-.1-.6.1-.6.8-.7.9-.3.2-.5.1a6.5 6.5 0 0 1-3.2-2.8c-.2-.4.2-.4.6-1.2.1-.2 0-.3 0-.5s-.5-1.3-.7-1.7-.4-.4-.5-.4h-.5a1 1 0 0 0-.7.3A2.8 2.8 0 0 0 6.4 9c0 1.7 1.2 3.3 1.4 3.5s2.4 3.7 5.8 5c2 .9 2.4.7 2.9.6.5 0 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2z"/></svg>
-                  Contactar
-                </a>
-              ) : (
-                <button disabled aria-disabled="true" className="w-full px-6 py-3.5 bg-paper/40 text-ink/40 font-semibold rounded-pill cursor-not-allowed">Sin contacto</button>
-              )}
+              <PropertyContactButton waUrl={waUrl} property={trackProps} />
               {(l.contact_name || l.contact_phone) && (
                 <div className="font-mono text-[11px] text-paper/50 mt-3 text-center">{l.contact_name} {l.contact_phone}</div>
               )}

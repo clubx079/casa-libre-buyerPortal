@@ -6,6 +6,7 @@ import { T, fmtUsd, fmtPyg, shortUsd } from '@/lib/ui';
 import { useLang } from '@/lib/useLang';
 import AuthButton from '@/components/AuthButton';
 import SaveButton from '@/components/SaveButton';
+import { track } from '@/lib/analytics';
 
 // Marketplace-specific bilingual strings (search / filters / sort).
 const M = {
@@ -81,6 +82,24 @@ export default function MarketplaceClient({ listings, initialOp = 'all', initial
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listings, filter, typeF, priceF, bedF, query, sortBy]);
 
+  // Report the active filter set to analytics, debounced so free-text typing
+  // doesn't fire an event per keystroke. Captures the initial view too.
+  useEffect(() => {
+    const id = setTimeout(() => {
+      track('search_applied', {
+        operation: filter,
+        query: query || null,
+        property_type: typeF,
+        price_range: priceF,
+        bedrooms: bedF,
+        sort: sortBy,
+        results_count: rows.length,
+      });
+    }, 600);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter, typeF, priceF, bedF, query, sortBy]);
+
   // ---- display helpers ----
   const title = (l) => {
     const tp = typeLabel(l.type, lang) || (lang === 'es' ? 'Propiedad' : 'Property');
@@ -155,7 +174,18 @@ export default function MarketplaceClient({ listings, initialOp = 'all', initial
       marker.bindPopup(popupHtml(l), { closeButton: false, offset: [0, -4], minWidth: 210, maxWidth: 210 });
       marker.on('mouseover', () => { setHot(l.id); marker.openPopup(); });
       marker.on('mouseout', () => setHot(null));
-      marker.on('click', () => { window.location.href = `/propiedad/${l.slug}`; });
+      marker.on('click', () => {
+        track('map_pin_clicked', {
+          property_id: l.id,
+          location_name: l.neighborhood || l.city || l.address || null,
+          neighborhood: l.neighborhood || null,
+          city: l.city || null,
+          address: l.address || null,
+          province: l.province || null,
+          lat: l.lat, lng: l.lng,
+        });
+        window.location.href = `/propiedad/${l.slug}`;
+      });
       cluster.addLayer(marker);
       markersRef.current[l.id] = marker;
       pts.push([l.lat, l.lng]);

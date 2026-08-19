@@ -4,6 +4,7 @@
 // used to resume an action (e.g. continue to publish) once the user is in.
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import AuthModal from './AuthModal';
+import { identifyUser, resetUser } from '@/lib/analytics';
 
 const AuthContext = createContext(null);
 export const useAuth = () => useContext(AuthContext);
@@ -24,6 +25,10 @@ export default function AuthProvider({ children }) {
     return () => { alive = false; };
   }, []);
 
+  // Tie PostHog events to the user whenever the session resolves to someone
+  // logged in — covers session restore, email/OTP login, and Google OAuth.
+  useEffect(() => { if (user?.id) identifyUser(user); }, [user]);
+
   const openAuth = useCallback((cb) => { onDone.current = typeof cb === 'function' ? cb : null; setOpen(true); }, []);
   const closeAuth = useCallback(() => { onDone.current = null; setOpen(false); }, []);
 
@@ -37,6 +42,7 @@ export default function AuthProvider({ children }) {
   const logout = useCallback(async () => {
     try { await fetch('/api/auth/logout', { method: 'POST' }); } catch {}
     setUser(null);
+    resetUser();
   }, []);
 
   return (

@@ -1,4 +1,5 @@
 import './globals.css';
+import PostHogProvider from '@/components/PostHogProvider';
 import AuthProvider from '@/components/AuthProvider';
 import FavoritesProvider from '@/components/FavoritesProvider';
 import { SITE, SITE_NAME, SITE_DESC } from '@/lib/site';
@@ -48,9 +49,11 @@ export default function RootLayout({ children }) {
       <body>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgLd) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(siteLd) }} />
-        <AuthProvider>
-          <FavoritesProvider>{children}</FavoritesProvider>
-        </AuthProvider>
+        <PostHogProvider>
+          <AuthProvider>
+            <FavoritesProvider>{children}</FavoritesProvider>
+          </AuthProvider>
+        </PostHogProvider>
       </body>
     </html>
   );

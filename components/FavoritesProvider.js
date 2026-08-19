@@ -3,6 +3,7 @@
 // isSaved()/toggle(). Toggling while logged out opens the auth modal.
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { useAuth } from './AuthProvider';
+import { track } from '@/lib/analytics';
 
 const Ctx = createContext(null);
 export const useFavorites = () => useContext(Ctx) || { isSaved: () => false, toggle: () => {}, count: 0, ids: new Set() };
@@ -23,6 +24,7 @@ export default function FavoritesProvider({ children }) {
   const toggle = useCallback(async (id) => {
     if (!user) { openAuth(); return; }
     const wasSaved = ids.has(id);
+    track(wasSaved ? 'property_unsaved' : 'property_saved', { property_id: id });
     setIds((prev) => { const n = new Set(prev); wasSaved ? n.delete(id) : n.add(id); return n; });
     try {
       await fetch('/api/favorites', { method: wasSaved ? 'DELETE' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ property_id: id }) });
