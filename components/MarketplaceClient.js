@@ -5,7 +5,6 @@ import { typeLabel } from '@/lib/propertyType';
 import { T, fmtUsd, fmtPyg, shortUsd } from '@/lib/ui';
 import { useLang } from '@/lib/useLang';
 import AuthButton from '@/components/AuthButton';
-import SaveButton from '@/components/SaveButton';
 import { track } from '@/lib/analytics';
 
 // Marketplace-specific bilingual strings (search / filters / sort).
@@ -17,7 +16,7 @@ const M = {
     prices: { all: 'Precio: todos', p1: 'Hasta US$ 100k', p2: 'US$ 100k – 200k', p3: 'Más de US$ 200k' },
     beds: { all: 'Dormitorios: todos', b1: '1+', b2: '2+', b3: '3+' },
     sort: { relevancia: 'Relevancia', precio_asc: 'Precio: menor a mayor', precio_desc: 'Precio: mayor a menor', area_desc: 'Superficie: mayor primero' },
-    dorm: 'dorm', bath: 'baños', park: 'coch.', listView: 'Lista', mapView: 'Mapa',
+    dorm: 'dorm', bath: 'baños', park: 'cocheras', listView: 'Lista', mapView: 'Mapa',
   },
   en: {
     searchPh: 'Search by neighborhood or type…',
@@ -26,7 +25,7 @@ const M = {
     prices: { all: 'Price: any', p1: 'Under US$ 100k', p2: 'US$ 100k – 200k', p3: 'Over US$ 200k' },
     beds: { all: 'Bedrooms: any', b1: '1+', b2: '2+', b3: '3+' },
     sort: { relevancia: 'Relevance', precio_asc: 'Price: low to high', precio_desc: 'Price: high to low', area_desc: 'Area: largest first' },
-    dorm: 'bd', bath: 'ba', park: 'park', listView: 'List', mapView: 'Map',
+    dorm: 'beds', bath: 'baths', park: 'parking', listView: 'List', mapView: 'Map',
   },
 };
 
@@ -217,32 +216,32 @@ export default function MarketplaceClient({ listings, initialOp = 'all', initial
     <div className="h-screen flex flex-col overflow-hidden">
       {/* NAV */}
       <nav className="flex items-center justify-between flex-wrap gap-3 px-5 md:px-9 py-4 border-b border-ink/12">
-        <Link href="/" className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif not-italic italic font-normal">.py</em></Link>
+        <Link href="/" className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif italic font-normal">.py</em></Link>
         <div className="hidden sm:flex gap-2">
           {t.tabs.map(([label, href, op], i) => (
             op ? (
-              <button key={i} onClick={() => setFilter(op)} className={`px-4 py-2 rounded-pill text-[14px] font-medium border border-ink ${filter === op ? 'bg-ink text-paper' : ''}`}>{label}</button>
+              <button key={i} onClick={() => setFilter(op)} className={`inline-flex items-center h-[40px] px-[18px] rounded-pill text-[14px] font-medium border border-ink ${filter === op ? 'bg-ink text-paper' : ''}`}>{label}</button>
             ) : (
-              <Link key={i} href={href} className="px-4 py-2 rounded-pill text-[14px] font-medium border border-ink">{label}</Link>
+              <Link key={i} href={href} className="inline-flex items-center h-[40px] px-[18px] rounded-pill text-[14px] font-medium border border-ink">{label}</Link>
             )
           ))}
         </div>
         <div className="flex items-center gap-3.5">
-          <div className="flex items-center border border-ink/30 rounded-pill p-[3px] text-[12px] font-semibold">
+          <div className="flex items-center h-[40px] border border-ink/30 rounded-pill p-[3px] text-[12px] font-semibold">
             {['es', 'en'].map((l) => (
-              <button key={l} onClick={() => setLang(l)} className={`px-3 py-1.5 rounded-pill ${lang === l ? 'bg-ink text-paper' : 'text-ink/55'}`}>{l.toUpperCase()}</button>
+              <button key={l} onClick={() => setLang(l)} className={`h-full flex items-center px-3 rounded-pill ${lang === l ? 'bg-ink text-paper' : 'text-ink/55'}`}>{l.toUpperCase()}</button>
             ))}
           </div>
           <AuthButton />
-          <Link href="/publicar" className="px-[18px] py-2.5 rounded-pill bg-ink text-paper text-[14px] font-medium">{t.cta}</Link>
+          <Link href="/publicar" className="inline-flex items-center h-[40px] px-[22px] rounded-pill bg-ink text-paper text-[14px] font-semibold">{t.cta}</Link>
         </div>
       </nav>
 
       {/* FILTERS */}
       <div className="flex items-center gap-2.5 flex-wrap px-5 md:px-9 py-3 border-b border-ink/12">
         <form onSubmit={(e) => e.preventDefault()} className="flex items-center gap-2 bg-card border-[1.5px] border-ink rounded-pill pl-4 pr-1 py-1 min-w-[min(300px,100%)]">
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={m.searchPh} className="flex-1 min-w-0 bg-transparent outline-none font-medium text-[14px]" />
-          <button type="submit" aria-label="Buscar" className="w-[34px] h-[34px] flex-none flex items-center justify-center rounded-pill bg-ink text-paper text-[15px] font-semibold">→</button>
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={m.searchPh} className="flex-1 min-w-0 bg-transparent outline-none font-sans font-medium text-[14px] text-ink placeholder:text-[#757575] placeholder:font-normal" />
+          <button type="submit" aria-label="Buscar" className="w-[34px] h-[34px] flex-none flex items-center justify-center rounded-pill bg-ink text-paper" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: '15px', fontWeight: 600, lineHeight: 1 }}>→</button>
         </form>
         {['all', 'venta', 'alquiler'].map((f) => (
           <button key={f} onClick={() => setFilter(f)} className={chipCls(filter === f)}>{f === 'all' ? t.all : t[f]}</button>
@@ -256,13 +255,12 @@ export default function MarketplaceClient({ listings, initialOp = 'all', initial
         <select value={bedF} onChange={(e) => setBedF(e.target.value)} className={selCls}>
           {Object.entries(m.beds).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
-      </div>
-
-      {/* mobile Map/List toggle */}
-      <div className="md:hidden flex gap-1 mx-4 mt-3 p-1 bg-hatch1 rounded-pill">
-        {[['list', m.listView], ['map', m.mapView]].map(([v, label]) => (
-          <button key={v} onClick={() => setMobileView(v)} className={`flex-1 py-2 rounded-pill text-[13px] font-semibold transition-colors ${mobileView === v ? 'bg-card shadow-hard-sm text-ink' : 'text-ink/55'}`}>{label}</button>
-        ))}
+        {/* view toggle — mockup .view-toggle, right-aligned, mobile only */}
+        <div className="ml-auto md:hidden inline-flex items-center border-[1.5px] border-ink rounded-pill p-[3px] bg-card">
+          {[['list', m.listView], ['map', m.mapView]].map(([v, label]) => (
+            <button key={v} onClick={() => setMobileView(v)} className={`px-4 py-[7px] rounded-pill text-[13px] font-semibold ${mobileView === v ? 'bg-ink text-paper' : 'text-ink/55'}`}>{label}</button>
+          ))}
+        </div>
       </div>
 
       {/* SPLIT — desktop: side-by-side; mobile: one panel per selected tab */}
@@ -278,7 +276,7 @@ export default function MarketplaceClient({ listings, initialOp = 'all', initial
               {sortOpen && (
                 <>
                   <div className="fixed inset-0 z-[40]" onClick={() => setSortOpen(false)} />
-                  <div className="absolute right-0 top-[calc(100%+6px)] min-w-[220px] bg-card border-[1.5px] border-ink rounded-[14px] shadow-hard overflow-hidden z-[50]">
+                  <div className="absolute right-0 top-[calc(100%+6px)] min-w-[220px] bg-card border-[1.5px] border-ink rounded-[14px] shadow-hard-sm overflow-hidden z-[50]">
                     {Object.entries(m.sort).map(([k, v]) => (
                       <div key={k} onClick={() => { setSortBy(k); setSortOpen(false); }} className={`px-4 py-[11px] text-[13.5px] cursor-pointer ${sortBy === k ? 'bg-ink text-paper font-semibold' : 'font-medium hover:bg-hatch2'}`}>{v}</div>
                     ))}
@@ -297,18 +295,16 @@ export default function MarketplaceClient({ listings, initialOp = 'all', initial
                 onMouseEnter={() => setHot(l.id)} onMouseLeave={() => setHot(null)}
                 className={`flex items-stretch shrink-0 min-h-[120px] bg-card border rounded-[18px] overflow-hidden transition-all ${hot === l.id ? 'border-ink -translate-y-0.5 shadow-hard-sm' : 'border-ink/15'}`}
               >
-                <div className="relative w-[150px] shrink-0 cl-hatch overflow-hidden flex items-center justify-center">
+                <div className="relative w-[150px] max-[560px]:w-[110px] shrink-0 cl-hatch overflow-hidden flex items-center justify-center">
                   {l.image
                     ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={l.image} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                     : <span className="font-mono text-[10px] text-ink/45 text-center px-2">{t.noImg}</span>}
                   <span className="absolute top-2 left-2 text-[10px] font-semibold bg-ink text-paper px-2.5 py-1 rounded-pill z-10">{l.mode === 'alquiler' ? t.forRent : t.forSale}</span>
-                  <SaveButton id={l.id} className="absolute top-1.5 right-1.5 z-10 !w-8 !h-8" />
                 </div>
                 <div className="flex-1 min-w-0 px-4 py-3.5">
                   <div className="text-[18px] font-bold tracking-head whitespace-nowrap">{priceMain(l)}</div>
-                  {priceSub(l) && <div className="text-[12px] font-semibold text-ink/50">{priceSub(l)}{l.mode === 'alquiler' ? '' : ''}</div>}
-                  <div className="text-[14px] font-medium mt-1 line-clamp-1">{title(l)}</div>
-                  <div className="text-[12px] text-ink/55 mt-0.5 line-clamp-1">{meta(l)}</div>
+                  <div className="text-[14px] font-medium mt-[3px] line-clamp-1">{title(l)}</div>
+                  <div className="text-[12px] text-ink/55 mt-[3px] line-clamp-1">{meta(l)}</div>
                 </div>
               </Link>
             ))}

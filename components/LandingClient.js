@@ -11,48 +11,48 @@ const DICT = {
     navBuy: 'Comprar', navRent: 'Alquilar', navSell: 'Vender', navCta: 'Empezar →',
     heroLine1: 'Encontrá tu lugar,', heroLine2: 'libremente.',
     heroSub: 'La forma más amigable de comprar, alquilar y vender casas en Asunción.',
-    searchPlaceholder: '¿Dónde querés vivir?', searchBtn: 'Buscar',
-    mascotCaption: '“¡Vamos que se puede!” — Casi, tu guía',
+    searchPlaceholder: '¿Dónde querés vivir? — “Carmelitas”, “Recoleta”…', searchBtn: 'Buscar',
+    mascotCaption: '“¡Vamos que se puede!” — Cuate, tu guía',
     listingsTitle: 'Recién publicadas', listingsTitleSerif: 'lo más nuevo del mercado', listingsAll: 'Ver todas →',
     forSale: 'En venta', forRent: 'En alquiler', perMonth: '/mes', beds: 'dorm', baths: 'baños',
     stepsTitle: 'Tres pasos y listo',
     steps: [
-      { n: '1', t: 'Contanos qué buscás', d: 'Barrio, presupuesto, cantidad de dormitorios. Casi te muestra solo lo que vale la pena.' },
+      { n: '1', t: 'Contanos qué buscás', d: 'Barrio, presupuesto, cantidad de dormitorios. Cuate te muestra solo lo que vale la pena.' },
       { n: '2', t: 'Visitá sin vueltas', d: 'Agendá online, visitá acompañado. Sin llamadas raras ni fotos viejas.' },
       { n: '3', t: 'Firmá y celebrá', d: 'Contrato digital con respaldo legal. Las llaves son tuyas.' },
     ],
     stats: (c) => [
       { v: `${c.toLocaleString('es-PY')}+`, l: 'propiedades activas' }, { v: '0%', l: 'comisión al publicar' },
-      { v: '48 hs', l: 'verificación promedio' }, { v: '4.9★', l: 'rating de usuarios' },
+      { v: 'Al instante', l: 'publicás tu aviso' }, { v: '4.9★', l: 'rating de usuarios' },
     ],
     ctaTitle: 'Tu casa te está buscando', ctaTitleSerif: 'a vos.',
     ctaSub: 'Gratis para buscar, gratis para publicar. Empezá hoy.',
     ctaBtn1: 'Explorar propiedades', ctaBtn2: 'Publicar gratis',
-    footerLine: `© ${new Date().getFullYear()} Casa Libre · casa-libre.py · Asunción PY · Términos · Privacidad`,
+    footerLine: `© ${new Date().getFullYear()} Casa Libre · www.casa-libre.com · Asunción PY · Términos · Privacidad`,
     chips: ['Asunción', 'Villa Morra', 'Central', 'Luque', 'San Lorenzo'],
   },
   en: {
     navBuy: 'Buy', navRent: 'Rent', navSell: 'Sell', navCta: 'Get started →',
     heroLine1: 'Find your place,', heroLine2: 'freely.',
     heroSub: 'The friendliest way to buy, rent and sell homes in Paraguay.',
-    searchPlaceholder: 'Where do you want to live?', searchBtn: 'Search',
-    mascotCaption: '“Let’s go!” — Casi, your guide',
+    searchPlaceholder: 'Where do you want to live? — “Carmelitas”, “Recoleta”…', searchBtn: 'Search',
+    mascotCaption: '“Let’s go!” — Cuate, your guide',
     listingsTitle: 'Just listed', listingsTitleSerif: 'fresh on the market', listingsAll: 'View all →',
     forSale: 'For sale', forRent: 'For rent', perMonth: '/mo', beds: 'bd', baths: 'ba',
     stepsTitle: 'Three steps and you’re in',
     steps: [
-      { n: '1', t: 'Tell us what you’re after', d: 'Neighborhood, budget, bedrooms. Casi only shows you what’s worth your time.' },
+      { n: '1', t: 'Tell us what you’re after', d: 'Neighborhood, budget, bedrooms. Cuate only shows you what’s worth your time.' },
       { n: '2', t: 'Visit, no hassle', d: 'Book online, tour with a guide. No weird calls, no outdated photos.' },
       { n: '3', t: 'Sign and celebrate', d: 'Digital contract with legal backing. The keys are yours.' },
     ],
     stats: (c) => [
       { v: `${c.toLocaleString('en-US')}+`, l: 'active listings' }, { v: '0%', l: 'listing commission' },
-      { v: '48 hrs', l: 'avg. verification' }, { v: '4.9★', l: 'user rating' },
+      { v: 'Instant', l: 'your listing goes live' }, { v: '4.9★', l: 'user rating' },
     ],
     ctaTitle: 'Your home is out there looking', ctaTitleSerif: 'for you.',
     ctaSub: 'Free to browse, free to list. Start today.',
     ctaBtn1: 'Explore homes', ctaBtn2: 'List for free',
-    footerLine: `© ${new Date().getFullYear()} Casa Libre · casa-libre.py · Asunción PY · Terms · Privacy`,
+    footerLine: `© ${new Date().getFullYear()} Casa Libre · www.casa-libre.com · Asunción PY · Terms · Privacy`,
     chips: ['Asunción', 'Villa Morra', 'Central', 'Luque', 'San Lorenzo'],
   },
 };
@@ -82,46 +82,50 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
       </div>
 
       {/* NAV */}
-      <nav className="flex items-center justify-between flex-nowrap gap-2 px-4 sm:px-5 md:px-11 py-4 sm:py-5">
-        <span className="font-bold text-[18px] sm:text-[22px] tracking-head shrink-0">casa-libre<em className="font-serif italic font-normal">.py</em></span>
-        <div className="hidden md:flex gap-2 text-[14px] font-medium">
-          <Link href="/propiedades" className="px-[18px] py-2.5 border border-ink rounded-pill">{t.navBuy}</Link>
-          <Link href="/propiedades?op=alquiler" className="px-[18px] py-2.5 border border-ink rounded-pill">{t.navRent}</Link>
-          <Link href="/publicar" className="px-[18px] py-2.5 border border-ink rounded-pill">{t.navSell}</Link>
+      <nav className="flex items-center justify-center md:justify-between flex-wrap gap-3 px-5 md:px-11 py-5">
+        <span className="font-bold text-[22px] tracking-head">casa-libre<em className="font-serif italic font-normal">.py</em></span>
+        <div className="flex gap-2 flex-wrap text-[14px] font-medium">
+          <Link href="/propiedades" className="inline-flex items-center h-[40px] px-[18px] border border-ink rounded-pill">{t.navBuy}</Link>
+          <Link href="/propiedades?op=alquiler" className="inline-flex items-center h-[40px] px-[18px] border border-ink rounded-pill">{t.navRent}</Link>
+          <Link href="/publicar" className="inline-flex items-center h-[40px] px-[18px] border border-ink rounded-pill">{t.navSell}</Link>
         </div>
-        <div className="flex items-center gap-1.5 sm:gap-3.5 shrink-0">
-          <div className="flex items-center h-[38px] border border-ink/30 rounded-pill p-[3px] text-[11px] sm:text-[12px] font-semibold">
-            {['es', 'en'].map((l) => <button key={l} onClick={() => setLang(l)} className={`h-full flex items-center px-2.5 sm:px-3 rounded-pill ${lang === l ? 'bg-ink text-paper' : 'text-ink/55'}`}>{l.toUpperCase()}</button>)}
+        <div className="flex items-center gap-3.5">
+          <div className="flex items-center h-[40px] border border-ink/30 rounded-pill p-[3px] text-[12px] font-semibold">
+            {['es', 'en'].map((l) => <button key={l} onClick={() => setLang(l)} className={`h-full flex items-center px-3 rounded-pill ${lang === l ? 'bg-ink text-paper' : 'text-ink/55'}`}>{l.toUpperCase()}</button>)}
           </div>
           <AuthButton />
-          <Link href="/propiedades" className="inline-flex items-center h-[38px] text-[13px] sm:text-[14px] font-semibold px-3.5 sm:px-[22px] bg-ink text-paper rounded-pill whitespace-nowrap">{t.navCta}</Link>
+          <Link href="/propiedades" className="inline-flex items-center h-[40px] px-[22px] bg-ink text-paper rounded-pill text-[14px] font-semibold whitespace-nowrap">{t.navCta}</Link>
         </div>
       </nav>
 
       {/* HERO */}
-      <div className="grid md:grid-cols-2 gap-6 items-center px-5 md:px-11 pt-10 pb-16">
-        <div>
-          <h1 className="text-[clamp(46px,7.5vw,92px)] leading-[0.92] tracking-display font-bold m-0 mb-5">
+      <div className="grid md:grid-cols-2 gap-2.5 md:gap-6 items-center px-5 md:px-11 pt-6 md:pt-10 pb-11 md:pb-16">
+        <div className="text-center md:text-left">
+          <h1 className="text-[clamp(40px,7.5vw,92px)] leading-[0.92] tracking-display font-bold m-0 mb-5">
             {t.heroLine1}<br /><span className="font-serif italic font-normal">{t.heroLine2}</span>
           </h1>
-          <p className="text-[19px] leading-relaxed text-ink/60 max-w-[460px] mb-9">{t.heroSub}</p>
-          <form onSubmit={(e) => { e.preventDefault(); router.push('/propiedades'); }} className="flex items-center bg-card border-2 border-ink rounded-pill pl-6 pr-1.5 py-1.5 max-w-[560px] shadow-hard">
-            <input placeholder={t.searchPlaceholder} className="flex-1 min-w-0 bg-transparent outline-none text-[15px] py-2 placeholder:text-ink/40" />
-            <button type="submit" aria-label={t.searchBtn} className="flex-none flex items-center justify-center bg-ink text-paper rounded-pill text-[15px] font-semibold whitespace-nowrap w-[44px] h-[44px] sm:w-auto sm:h-auto sm:px-7 sm:py-3.5">
-              <span className="hidden sm:inline">{t.searchBtn}</span>
-              <span className="sm:hidden" aria-hidden="true">→</span>
+          <p className="text-[clamp(16px,2vw,19px)] leading-relaxed text-ink/60 max-w-[460px] mx-auto md:mx-0 mb-7 md:mb-9">{t.heroSub}</p>
+          <form onSubmit={(e) => { e.preventDefault(); router.push('/propiedades'); }} className="flex items-center bg-card border-2 border-ink rounded-pill pl-[26px] pr-1.5 py-1.5 max-w-[560px] mx-auto md:mx-0 shadow-hard">
+            <input placeholder={t.searchPlaceholder} className="flex-1 min-w-0 bg-transparent outline-none text-[16px] text-ink placeholder:text-ink/40" />
+            <button
+              type="submit" aria-label={t.searchBtn}
+              className="flex-none flex items-center justify-center bg-ink text-paper rounded-pill font-semibold whitespace-nowrap w-[46px] h-[46px] sm:w-auto sm:h-auto sm:py-3.5 sm:px-7"
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            >
+              <span className="hidden sm:inline text-[15px]">{t.searchBtn}</span>
+              <span className="sm:hidden text-[19px] leading-none" aria-hidden="true">→</span>
             </button>
           </form>
-          <div className="flex gap-2.5 mt-[18px] flex-wrap">
+          <div className="flex gap-2.5 mt-[18px] flex-wrap justify-center md:justify-start">
             {t.chips.map((c) => (
               <Link key={c} href="/propiedades" className="text-[13px] font-medium px-3.5 py-1.5 border border-ink/25 rounded-pill bg-card">{c}</Link>
             ))}
           </div>
         </div>
-        <div className="flex flex-col items-center gap-3.5">
+        <div className="flex flex-row md:flex-col items-center justify-center gap-2.5 md:gap-3.5 mt-1.5 md:mt-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/mascot.png" alt="Casa Libre" className="w-[clamp(220px,28vw,420px)] max-w-[70vw] object-contain" />
-          <div className="font-mono text-[12px] text-ink/45 border border-dashed border-ink/30 rounded-pill px-4 py-1.5">{t.mascotCaption}</div>
+          <img src="/mascot.png" alt="Casa Libre" className="w-[132px] md:w-[clamp(220px,28vw,420px)] max-w-[40vw] md:max-w-[70vw] object-contain" />
+          <div className="font-mono text-[10.5px] md:text-[12px] leading-snug text-ink/45 border border-dashed border-ink/30 rounded-pill px-3 md:px-4 py-[5px] md:py-1.5 max-w-[46vw] md:max-w-none text-center md:text-left">{t.mascotCaption}</div>
         </div>
       </div>
 
