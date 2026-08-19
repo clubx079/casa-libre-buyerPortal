@@ -266,7 +266,7 @@ export default function PublicarClient() {
           <div className="text-center py-8">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/mascot.png" alt="" className="w-[170px] object-contain mx-auto mb-2.5" />
-            <h1 className="text-[clamp(36px,5vw,54px)] font-bold tracking-display mb-2.5">{t.s4Title} <span className="font-serif italic font-normal">{t.s4TitleSerif}</span></h1>
+            <h1 className="text-[clamp(36px,5vw,54px)] font-bold tracking-[-0.04em] mb-2.5">{t.s4Title} <span className="font-serif italic font-normal">{t.s4TitleSerif}</span></h1>
             <p className="text-[17px] text-ink/55 max-w-[440px] mx-auto mb-2.5">{t.s4Sub}</p>
             <div className="font-mono text-[12px] text-ink/45 mb-7">REF: {result?.ref}</div>
             <div className="flex gap-3 justify-center flex-wrap">
