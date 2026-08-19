@@ -6,10 +6,11 @@
 // anti-scam fine print -> "report unresponsive" link + inline toast.
 // Bilingual (ES/EN via useLang) — but the outgoing WhatsApp message is ALWAYS
 // Spanish, since it reaches a local (Paraguayan) seller regardless of the
-// buyer's UI language. Event tracking (PostHog) is wired in a follow-up task;
-// this component only builds the UI behavior.
+// buyer's UI language. Fires the four PostHog contact events (WhatsApp/call/
+// copy/report) with the listing's CL ref.
 import { useState } from 'react';
 import { useLang } from '@/lib/useLang';
+import { track } from '@/lib/analytics';
 
 const T = {
   es: {
@@ -65,12 +66,14 @@ export default function PropertyContactCard({ sellerName, waDigits, url, listing
 
   const copyNumber = async () => {
     try { await navigator.clipboard.writeText(`+${waDigits}`); } catch { /* ignore */ }
+    track('contact_copy_click', { ref: listingRef, ...(trackProps || {}) });
     setCopied(true);
     setTimeout(() => setCopied(false), 1800);
   };
 
   const onReport = (e) => {
     e.preventDefault();
+    track('report_unresponsive', { ref: listingRef, ...(trackProps || {}) });
     setReported(true);
     setTimeout(() => setReported(false), 2600);
   };
@@ -112,6 +115,7 @@ export default function PropertyContactCard({ sellerName, waDigits, url, listing
                 href={waUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => track('contact_whatsapp_click', { ref: listingRef, ...(trackProps || {}) })}
                 className="w-full flex items-center justify-center gap-2.5 px-[18px] py-[13px] rounded-pill text-[15px] font-semibold text-white transition-transform active:translate-x-[2px] active:translate-y-[2px]"
                 style={{ background: '#25D366', border: '1.5px solid #111', boxShadow: '4px 4px 0 #111' }}
               >
@@ -119,7 +123,7 @@ export default function PropertyContactCard({ sellerName, waDigits, url, listing
               </a>
 
               <div className="flex gap-2.5 mt-3.5">
-                <a href={`tel:+${waDigits}`} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-pill border border-ink bg-card text-[13.5px] font-medium hover:bg-paper transition-colors">
+                <a href={`tel:+${waDigits}`} onClick={() => track('contact_call_click', { ref: listingRef, ...(trackProps || {}) })} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-pill border border-ink bg-card text-[13.5px] font-medium hover:bg-paper transition-colors">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.13.96.36 1.9.7 2.8a2 2 0 0 1-.45 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.45c.9.34 1.84.57 2.8.7A2 2 0 0 1 22 16.9Z" /></svg>
                   {t.call}
                 </a>
