@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { typeLabel, typeKey } from '@/lib/propertyType';
-import { T, fmtUsd, fmtPyg, shortUsd } from '@/lib/ui';
+import { T, fmtUsd, fmtPyg, shortUsd, titleCaseZone, bedAbbr, bathWord, parkWord } from '@/lib/ui';
 import { useLang } from '@/lib/useLang';
 import AuthButton from '@/components/AuthButton';
 import { track } from '@/lib/analytics';
@@ -11,23 +11,23 @@ import { track } from '@/lib/analytics';
 const M = {
   es: {
     searchPh: 'Buscar por barrio o tipo…',
-    empty: 'Sin resultados — probá con otro barrio o filtro',
+    empty: 'Sin resultados — probá con otro barrio',
     types: { all: 'Tipo: todos', casa: 'Casa', depto: 'Departamento', duplex: 'Dúplex', terreno: 'Terreno', comercial: 'Local comercial', oficina: 'Oficina', deposito: 'Depósito', edificio: 'Edificio', condominio: 'Condominio', campo: 'Campo', otro: 'Otro' },
     pricesUsd: { all: 'Precio: todos', p1: 'Hasta US$ 100k', p2: 'US$ 100k – 200k', p3: 'Más de US$ 200k' },
     pricesPyg: { all: 'Precio: todos', p1: 'Hasta ₲ 3 M/mes', p2: '₲ 3 – 6 M/mes', p3: 'Más de ₲ 6 M/mes' },
     beds: { all: 'Dormitorios: todos', b1: '1+', b2: '2+', b3: '3+' },
     sort: { relevancia: 'Relevancia', precio_asc: 'Precio: menor a mayor', precio_desc: 'Precio: mayor a menor', area_desc: 'Superficie: mayor primero' },
-    dorm: 'dorm', bath: 'baños', park: 'cocheras', listView: 'Lista', mapView: 'Mapa',
+    listView: 'Lista', mapView: 'Mapa',
   },
   en: {
     searchPh: 'Search by neighborhood or type…',
-    empty: 'No results — try another neighborhood or filter',
+    empty: 'No results — try another neighborhood',
     types: { all: 'Type: all', casa: 'House', depto: 'Apartment', duplex: 'Duplex', terreno: 'Lot', comercial: 'Commercial', oficina: 'Office', deposito: 'Warehouse', edificio: 'Building', condominio: 'Condo', campo: 'Rural land', otro: 'Other' },
     pricesUsd: { all: 'Price: any', p1: 'Under US$ 100k', p2: 'US$ 100k – 200k', p3: 'Over US$ 200k' },
     pricesPyg: { all: 'Price: any', p1: 'Under ₲ 3 M/mo', p2: '₲ 3 – 6 M/mo', p3: 'Over ₲ 6 M/mo' },
     beds: { all: 'Bedrooms: any', b1: '1+', b2: '2+', b3: '3+' },
     sort: { relevancia: 'Relevance', precio_asc: 'Price: low to high', precio_desc: 'Price: high to low', area_desc: 'Area: largest first' },
-    dorm: 'beds', bath: 'baths', park: 'parking', listView: 'List', mapView: 'Map',
+    listView: 'List', mapView: 'Map',
   },
 };
 
@@ -108,12 +108,19 @@ export default function MarketplaceClient({ listings, initialOp = 'all', initial
 
   // ---- display helpers ----
   const title = (l) => {
-    const tp = typeLabel(l.type, lang) || (lang === 'es' ? 'Propiedad' : 'Property');
-    const bd = l.beds ? ` · ${l.beds} ${m.dorm}` : '';
-    const loc = l.neighborhood || l.city || '';
-    return `${tp}${bd}${loc ? ` · ${loc}` : ''}`;
+    let tp = typeLabel(l.type, lang) || (lang === 'es' ? 'Inmueble' : 'Property');
+    if (tp === 'Departamento') tp = 'Depto'; // title-only abbreviation (mock: "Depto 2 dorm · Villa Morra")
+    const zone = titleCaseZone(l.neighborhood || l.city || '');
+    const base = l.beds ? `${tp} ${l.beds} ${bedAbbr(lang)}` : tp;
+    return zone ? `${base} · ${zone}` : base;
   };
-  const meta = (l) => [l.area && `${l.area} m²`, l.baths && `${l.baths} ${m.bath}`, l.parking && `${l.parking} ${m.park}`].filter(Boolean).join(' · ');
+  const meta = (l) => {
+    const parts = [];
+    if (l.area) parts.push(`${l.area} m²`);
+    if (l.baths) parts.push(`${l.baths} ${bathWord(l.baths, lang)}`);
+    if (l.parking) parts.push(`${l.parking} ${parkWord(l.parking, lang)}`);
+    return parts.join(' · ');
+  };
   const priceMain = (l) => (l.mode === 'alquiler' ? (fmtPyg(l.pyg, lang) ? fmtPyg(l.pyg, lang) + t.perMonth : fmtUsd(l.usd, lang) + t.perMonth) : fmtUsd(l.usd, lang) || '—');
   const priceSub = (l) => (l.mode === 'alquiler' ? fmtUsd(l.usd, lang) : fmtPyg(l.pyg, lang));
   const shortPill = (l) => (l.mode === 'alquiler' && l.pyg ? '₲ ' + (l.pyg / 1e6).toLocaleString(lang === 'es' ? 'es-PY' : 'en-US', { maximumFractionDigits: 1 }) + 'M' : shortUsd(l.usd));
@@ -125,8 +132,8 @@ export default function MarketplaceClient({ listings, initialOp = 'all', initial
       const L = (await import('leaflet')).default;
       await import('leaflet.markercluster');
       if (cancelled || !mapEl.current || mapRef.current) return;
-      const map = L.map(mapEl.current, { scrollWheelZoom: true, zoomControl: true, attributionControl: false }).setView([-25.29, -57.6], 12);
-      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+      const map = L.map(mapEl.current, { scrollWheelZoom: true, zoomControl: true, attributionControl: true }).setView([-25.293, -57.60], 13);
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap contributors' }).addTo(map);
       const cluster = L.markerClusterGroup({
         maxClusterRadius: 46,
         showCoverageOnHover: false,
@@ -217,7 +224,7 @@ export default function MarketplaceClient({ listings, initialOp = 'all', initial
   }, [mobileView]);
 
   const chipCls = (on) => `px-4 py-2 rounded-pill text-[13px] font-medium border cursor-pointer ${on ? 'bg-ink text-paper border-ink' : 'bg-card border-ink/30'}`;
-  const selCls = 'cl-select pr-8 pl-4 py-2 rounded-pill text-[13px] font-medium border border-ink/30 bg-card outline-none cursor-pointer';
+  const selCls = 'cl-select pr-[30px] pl-4 py-2 rounded-pill text-[13px] font-medium border border-ink/30 bg-card outline-none cursor-pointer';
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
@@ -240,7 +247,7 @@ export default function MarketplaceClient({ listings, initialOp = 'all', initial
             ))}
           </div>
           <AuthButton />
-          <Link href="/publicar" className="inline-flex items-center h-[40px] px-[22px] rounded-pill bg-ink text-paper text-[14px] font-semibold">{t.cta}</Link>
+          <Link href="/publicar" className="inline-flex items-center h-[40px] px-[18px] rounded-pill bg-ink text-paper text-[14px] font-medium border border-ink">{t.cta}</Link>
         </div>
       </nav>
 
@@ -306,10 +313,10 @@ export default function MarketplaceClient({ listings, initialOp = 'all', initial
                   {l.image
                     ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={l.image} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                     : <span className="font-mono text-[10px] text-ink/45 text-center px-2">{t.noImg}</span>}
-                  <span className="absolute top-2 left-2 text-[10px] font-semibold bg-ink text-paper px-2.5 py-1 rounded-pill z-10">{l.mode === 'alquiler' ? t.forRent : t.forSale}</span>
+                  <span className="absolute top-2 left-2 text-[10px] font-semibold bg-ink text-paper px-2.5 py-1 rounded-pill z-10">{l.mode === 'alquiler' ? t.alquiler : t.venta}</span>
                 </div>
-                <div className="flex-1 min-w-0 px-4 py-3.5">
-                  <div className="text-[18px] font-bold tracking-head whitespace-nowrap">{priceMain(l)}</div>
+                <div className="flex-1 min-w-0 pt-3.5 pb-4 px-4">
+                  <div className="text-[18px] font-bold tracking-[-0.02em] whitespace-nowrap">{priceMain(l)}</div>
                   <div className="text-[14px] font-medium mt-[3px] line-clamp-1">{title(l)}</div>
                   <div className="text-[12px] text-ink/55 mt-[3px] line-clamp-1">{meta(l)}</div>
                 </div>
