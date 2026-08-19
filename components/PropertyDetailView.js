@@ -50,7 +50,8 @@ export default function PropertyDetailView({ l, url }) {
   const t = T[lang] || T.es;
 
   // ── derived ──
-  const ref = 'CL-' + String(l.id || '').replace(/-/g, '').slice(0, 6).toUpperCase();
+  // Shared CL ref (tracking + display) — numeric ids render "CL-0002"-style.
+  const listingRef = clRef(l.id ?? l.slug);
   const zone = [l.neighborhood, l.city].filter(Boolean).join(', ') || l.address || '';
   const tp = typeLabel(l.type, lang) || (lang === 'es' ? 'Propiedad' : 'Property');
   const title = `${tp}${l.beds ? ` ${l.beds} ${t.bedShort}` : ''}${l.neighborhood ? ` · ${l.neighborhood}` : l.city ? ` · ${l.city}` : ''}`;
@@ -86,7 +87,6 @@ export default function PropertyDetailView({ l, url }) {
   // wa digits — shared normalization (lib/ui.js) so the card and the mobile
   // bar always agree on the same phone format.
   const waDigits = normalizePy(l.contact_phone);
-  const listingRef = clRef(l.id ?? l.slug);
   // Always Spanish — the message reaches a local seller. Same locked format
   // as the contact card (no buyer name here — the mobile bar has no name field).
   const mbarMsg = `¡Hola! ¿Sigue disponible esta propiedad?\n${url}`;
@@ -126,7 +126,7 @@ export default function PropertyDetailView({ l, url }) {
               <button key={x} onClick={() => setLang(x)} className={`h-full flex items-center px-3 rounded-pill ${lang === x ? 'bg-ink text-paper' : 'text-ink/55'}`}>{x.toUpperCase()}</button>
             ))}
           </div>
-          <Link href="/publicar" className="inline-flex items-center h-[40px] px-[22px] rounded-pill text-[14px] font-semibold bg-ink text-paper">{t.cta}</Link>
+          <Link href="/publicar" className="inline-flex items-center h-[40px] px-[22px] rounded-pill text-[14px] font-medium bg-ink text-paper">{t.cta}</Link>
         </div>
       </nav>
 
@@ -141,16 +141,16 @@ export default function PropertyDetailView({ l, url }) {
 
       {/* ── GALLERY ── */}
       <section className="grid gap-3 px-5 md:px-9 pt-4 max-w-[1180px] mx-auto [grid-template-columns:2fr_1fr] [grid-template-rows:180px_180px] max-[720px]:[grid-template-columns:1fr_1fr] max-[720px]:[grid-template-rows:200px_100px]">
-        <Tile src={tiles[0] || null} i={0} main />
-        <Tile src={tiles[1] || null} i={1} />
-        <Tile src={tiles[2] || null} i={2} />
+        {[0, 1, 2, 3].map((i) => (
+          <Tile key={i} src={tiles[i] || null} i={i} main={i === 0} />
+        ))}
       </section>
 
       {/* ── LAYOUT ── */}
       <div className="grid gap-9 items-start px-5 md:px-9 pt-7 pb-28 max-w-[1180px] mx-auto [grid-template-columns:minmax(0,1fr)_360px] max-[920px]:grid-cols-1">
         {/* MAIN */}
         <main>
-          <div className="font-mono text-[11px] tracking-[.1em] uppercase text-ink/50">{modeLabel} · {t.ref} {ref}</div>
+          <div className="font-mono text-[11px] tracking-[.1em] uppercase text-ink/50">{modeLabel} · {t.ref} {listingRef}</div>
           <h1 className="text-[clamp(24px,3.4vw,34px)] font-bold tracking-head leading-[1.15] mt-1.5 mb-1">{title}</h1>
           <div className="text-[14px] text-ink/55 mb-4">{zone}</div>
           <div className="flex items-baseline gap-3.5 flex-wrap mb-1.5">
@@ -159,7 +159,7 @@ export default function PropertyDetailView({ l, url }) {
           </div>
 
           {specs.length > 0 && (
-            <div className="flex flex-wrap border-y border-ink/12 my-[18px]">
+            <div className="flex flex-wrap border-y border-ink/12 mt-[18px] mb-6">
               {specs.map(([v, k], i) => (
                 <div key={i} className="py-3.5 pr-6 mr-6 border-r border-ink/12 last:border-r-0 last:mr-0">
                   <b className="block text-[17px] font-bold">{v}</b>
@@ -189,7 +189,7 @@ export default function PropertyDetailView({ l, url }) {
 
           <div className="mt-7 pt-3.5 border-t border-ink/12 font-mono text-[11px] text-ink/45 flex gap-[18px] flex-wrap">
             {pubDate && <span>{t.published} {pubDate}</span>}
-            <span>{t.ref} {ref}</span>
+            <span>{t.ref} {listingRef}</span>
           </div>
         </main>
 
@@ -201,7 +201,7 @@ export default function PropertyDetailView({ l, url }) {
       <div className="hidden max-[920px]:flex fixed left-0 right-0 bottom-0 z-[400] bg-card border-t-[1.5px] border-ink px-3.5 py-2.5 items-center gap-3" style={{ paddingBottom: 'calc(10px + env(safe-area-inset-bottom))' }}>
         <div className="min-w-0">
           <span className="block font-bold text-[15px] leading-tight">{bigPrice}{sfx}</span>
-          <small className="block font-mono text-[10px] text-ink/50 truncate">{zone} · {t.ref} {ref}</small>
+          <small className="block font-mono text-[10px] text-ink/50 truncate">{zone} · {t.ref} {listingRef}</small>
         </div>
         {mbarWa && (
           <a href={mbarWa} target="_blank" rel="noopener noreferrer" onClick={() => track('contact_whatsapp_click', { ref: listingRef, ...(trackProps || {}) })} className="flex-1 flex items-center justify-center gap-2 px-3.5 py-3 rounded-pill text-[14px] font-semibold text-white" style={{ background: '#25D366', border: '1.5px solid #111' }}>
