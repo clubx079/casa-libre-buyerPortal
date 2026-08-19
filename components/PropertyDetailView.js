@@ -141,7 +141,7 @@ export default function PropertyDetailView({ l, url }) {
 
       {/* ── GALLERY ── */}
       <section className="grid gap-3 px-5 md:px-9 pt-4 max-w-[1180px] mx-auto [grid-template-columns:2fr_1fr] [grid-template-rows:180px_180px] max-[720px]:[grid-template-columns:1fr_1fr] max-[720px]:[grid-template-rows:200px_100px]">
-        {[0, 1, 2, 3].map((i) => (
+        {[0, 1, 2].map((i) => (
           <Tile key={i} src={tiles[i] || null} i={i} main={i === 0} />
         ))}
       </section>

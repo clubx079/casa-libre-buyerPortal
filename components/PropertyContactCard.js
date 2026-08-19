@@ -1,13 +1,10 @@
 'use client';
-// Property detail WhatsApp contact card (V2 brand), rebuilt to match the
-// reference mockup (Casa Libre Detalle.html, .contact) element-for-element:
-// seller header (avatar + name + neutral role) -> buyer-name input -> live
-// editable message preview -> hint -> green WhatsApp CTA -> call/copy row ->
-// anti-scam fine print -> "report unresponsive" link + inline toast.
-// Bilingual (ES/EN via useLang) — but the outgoing WhatsApp message is ALWAYS
-// Spanish, since it reaches a local (Paraguayan) seller regardless of the
-// buyer's UI language. Fires the four PostHog contact events (WhatsApp/call/
-// copy/report) with the listing's CL ref.
+// Property detail WhatsApp contact card (V2 brand) — compact production
+// layout: seller header (avatar + name) -> green WhatsApp CTA -> call/copy
+// row. Bilingual (ES/EN via useLang) — but the outgoing WhatsApp message is
+// ALWAYS Spanish, since it reaches a local (Paraguayan) seller regardless of
+// the buyer's UI language. Fires the three PostHog contact events
+// (WhatsApp/call/copy) with the listing's CL ref.
 import { useState } from 'react';
 import { useLang } from '@/lib/useLang';
 import { track } from '@/lib/analytics';
@@ -15,28 +12,14 @@ import { track } from '@/lib/analytics';
 const T = {
   es: {
     owner: 'El propietario',
-    role: 'Publicado por el propietario',
-    nameLbl: 'Tu nombre (opcional)', namePh: 'Ej: Carlos',
-    msgLbl: 'Tu mensaje',
-    msgHint: 'Se abre en WhatsApp — podés editarlo antes de enviar.',
     wa: 'Hablar por WhatsApp', call: 'Llamar', copy: 'Copiar número', copied: 'Número copiado',
-    fine: 'Nunca envíes señas ni transferencias sin visitar la propiedad y verificar el título.',
-    report: '¿El publicador no responde? Reportá este aviso',
-    reported: 'Gracias — reporte recibido',
     noContact: 'Sin contacto disponible',
-    // ALWAYS Spanish, both languages. Optional buyer name. Locked format.
+    // ALWAYS Spanish, both languages. Locked format.
     msg: (name, url) => `¡Hola${name ? `, soy ${name.trim()}` : ''}! ¿Sigue disponible esta propiedad?\n${url}`,
   },
   en: {
     owner: 'The owner',
-    role: 'Listed by the owner',
-    nameLbl: 'Your name (optional)', namePh: 'E.g. Carlos',
-    msgLbl: 'Your message',
-    msgHint: 'Opens in WhatsApp — pre-written in Spanish, the local language. You can edit it before sending.',
     wa: 'Chat on WhatsApp', call: 'Call', copy: 'Copy number', copied: 'Number copied',
-    fine: 'Never send deposits or transfers without visiting the property and verifying the title.',
-    report: 'Publisher not responding? Report this listing',
-    reported: 'Thanks — report received',
     noContact: 'No contact available',
     // The outgoing message is ALWAYS Spanish regardless of UI language.
     msg: (name, url) => `¡Hola${name ? `, soy ${name.trim()}` : ''}! ¿Sigue disponible esta propiedad?\n${url}`,
@@ -51,17 +34,14 @@ const WaGlyph = ({ size = 21 }) => (
 
 export default function PropertyContactCard({ sellerName, waDigits, url, listingRef, trackProps }) {
   const [lang] = useLang();
-  const [name, setName] = useState('');
   const [copied, setCopied] = useState(false);
-  const [reported, setReported] = useState(false);
   const t = T[lang] || T.es;
 
   const displayName = sellerName || t.owner;
   const initial = displayName.trim().charAt(0).toUpperCase() || '?';
   // The message reaches a local (Paraguayan) seller, so it is always in
-  // Spanish regardless of the buyer's UI language — the buyer name typed
-  // below feeds it live.
-  const message = T.es.msg(name, url);
+  // Spanish regardless of the buyer's UI language.
+  const message = T.es.msg('', url);
   const waUrl = waDigits ? `https://wa.me/${waDigits}?text=${encodeURIComponent(message)}` : null;
 
   const copyNumber = async () => {
@@ -71,44 +51,16 @@ export default function PropertyContactCard({ sellerName, waDigits, url, listing
     setTimeout(() => setCopied(false), 1800);
   };
 
-  const onReport = (e) => {
-    e.preventDefault();
-    track('report_unresponsive', { ref: listingRef, ...(trackProps || {}) });
-    setReported(true);
-    setTimeout(() => setReported(false), 2600);
-  };
-
   return (
     <aside className="min-[921px]:sticky min-[921px]:top-5">
       <div className="bg-card overflow-hidden" style={{ border: '1.5px solid #111', borderRadius: 18, boxShadow: '5px 4px 0 #111' }}>
         {/* Seller header */}
         <div className="flex items-center gap-3 px-[18px] py-4 border-b border-ink/12">
           <span className="w-[42px] h-[42px] shrink-0 rounded-full bg-ink text-paper flex items-center justify-center font-bold text-[16px]">{initial}</span>
-          <div className="min-w-0">
-            <b className="block text-[15px] font-bold truncate">{displayName}</b>
-            <span className="font-mono text-[11px] text-ink/50">{t.role}</span>
-          </div>
+          <b className="min-w-0 block text-[15px] font-bold truncate">{displayName}</b>
         </div>
 
         <div className="px-[18px] pt-4 pb-[18px]">
-          {/* Buyer name */}
-          <label htmlFor="buyerName" className="block font-mono text-[10px] tracking-[.08em] uppercase text-ink/50 mb-1.5">{t.nameLbl}</label>
-          <input
-            id="buyerName"
-            type="text"
-            autoComplete="given-name"
-            maxLength={40}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder={t.namePh}
-            className="w-full mb-3.5 px-3.5 py-2.5 rounded-pill text-[14px] font-medium bg-paper border border-ink/30 outline-none focus:border-ink"
-          />
-
-          {/* Live message preview */}
-          <span className="block font-mono text-[10px] tracking-[.08em] uppercase text-ink/50 mb-1.5">{t.msgLbl}</span>
-          <div className="bg-paper border border-ink/30 rounded-[14px] text-[13px] leading-[1.5] px-3.5 py-3 mb-1.5 whitespace-pre-line">{message}</div>
-          <p className="font-mono text-[10.5px] text-ink/45 mt-0 mb-3.5">{t.msgHint}</p>
-
           {waUrl ? (
             <>
               <a
@@ -137,17 +89,6 @@ export default function PropertyContactCard({ sellerName, waDigits, url, listing
             <button disabled aria-disabled="true" className="w-full px-4 py-3 rounded-pill bg-paper text-ink/40 font-semibold border border-ink/20 cursor-not-allowed">
               {t.noContact}
             </button>
-          )}
-
-          {/* Anti-scam fine print */}
-          <p className="font-mono text-[10.5px] leading-[1.5] text-ink/45 text-center mt-3.5 mb-0">{t.fine}</p>
-
-          {/* Report unresponsive publisher */}
-          <p className="text-center mt-2 mb-0">
-            <a href="#" onClick={onReport} className="underline text-ink/45 text-[11px]">{t.report}</a>
-          </p>
-          {reported && (
-            <p className="text-center mt-1.5 mb-0 text-[11px] font-medium text-ink" role="status">{t.reported}</p>
           )}
         </div>
       </div>
