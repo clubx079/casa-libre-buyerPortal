@@ -18,26 +18,12 @@ const DICT = {
     fName: 'Tu nombre', fNamePh: 'Ana Giménez', fPhone: 'WhatsApp / teléfono', fPhonePh: '0981 123 456',
     fPhotos: 'Arrastrá o elegí tus fotos', fPhotosSub: 'mín. 4 fotos · JPG o PNG · las fotos reales venden más rápido',
     photosChosen: (n) => `${n} foto${n === 1 ? '' : 's'} seleccionada${n === 1 ? '' : 's'}`,
-    s2Title: 'Elegí tu plan', s2TitleSerif: 'de publicación.',
-    s2Sub: 'Todos los planes publican al instante. Sin comisión por venta.',
-    tierNames: { basico: 'Básico', destacado: 'Destacado', premium: 'Premium' }, popularLabel: 'Más elegido',
-    tierFeats: {
-      basico: ['Publicación por 30 días', 'Hasta 10 fotos', 'Chat con interesados', 'Aparece en el mapa'],
-      destacado: ['Publicación por 45 días', 'Hasta 20 fotos', 'Borde destacado en resultados', 'Prioridad en búsquedas', 'Estadísticas de visitas'],
-      premium: ['Publicación por 60 días', 'Fotos ilimitadas', 'Destacado en la portada', 'Primero en el mapa y búsquedas', 'Asesor dedicado'],
-    },
-    pickLabel: 'Elegir', pickedLabel: 'Elegido ✓',
-    s3Title: 'Pago seguro.', s3Sub: 'Pagá con tarjeta. Procesado por Stripe. Tu propiedad se publica al confirmar.',
-    sumTitle: 'Resumen', sumPlanLabel: 'Plan', sumDurLabel: 'Duración', dur: (d) => `${d} días`,
-    payBtn: 'Pagar y publicar', publishBtn: 'Publicar gratis', paying: 'Publicando…', payNote: 'Se publica al instante en el marketplace',
-    testCard: 'modo prueba · usá la tarjeta 4242 4242 4242 4242', payError: 'No se pudo procesar el pago. Revisá los datos.',
-    initError: 'No se pudo iniciar el pago. Intentá de nuevo.', loadingPay: 'Cargando pago seguro…', needLogin: 'Ingresá para pagar y publicar.',
+    publishBtn: 'Publicar gratis', paying: 'Publicando…', payNote: 'Se publica al instante en el marketplace',
     gateTitle: 'Ingresá para publicar', gateSub: 'Creá tu cuenta o ingresá para publicar y gestionar tus propiedades.', gateBtn: 'Ingresar / Crear cuenta',
-    publishError: 'El pago se procesó pero hubo un error al publicar. Escribinos y lo resolvemos.',
     s4Title: '¡Tu propiedad está', s4TitleSerif: 'publicada!',
     s4Sub: 'Ya aparece en el marketplace de Casa Libre. Compartí el enlace con quien quieras.',
     s4View: 'Ver mi propiedad', s4Btn1: 'Ver propiedades', s4Btn2: 'Publicar otra',
-    backLabel: '← Atrás', nextLabels: ['Continuar →', 'Continuar al pago →'],
+    backLabel: '← Atrás',
     errType: 'Elegí un tipo de propiedad', errHood: 'Ingresá el barrio', errPrice: 'Ingresá un precio válido',
     errSubmit: 'No se pudo publicar. Intentá de nuevo.',
     fmtGs: (v) => '₲ ' + v.toLocaleString('es-PY'), fmtUsd: (v) => '≈ US$ ' + v, locale: 'es-PY',
@@ -54,33 +40,19 @@ const DICT = {
     fName: 'Your name', fNamePh: 'Ana Giménez', fPhone: 'WhatsApp / phone', fPhonePh: '0981 123 456',
     fPhotos: 'Drag or choose your photos', fPhotosSub: 'min. 4 photos · JPG or PNG · real photos sell faster',
     photosChosen: (n) => `${n} photo${n === 1 ? '' : 's'} selected`,
-    s2Title: 'Choose your', s2TitleSerif: 'listing plan.',
-    s2Sub: 'Every plan goes live instantly. No commission on sale.',
-    tierNames: { basico: 'Basic', destacado: 'Highlighted', premium: 'Featured' }, popularLabel: 'Most popular',
-    tierFeats: {
-      basico: ['Live for 30 days', 'Up to 10 photos', 'Chat with buyers', 'Shows on the map'],
-      destacado: ['Live for 45 days', 'Up to 20 photos', 'Highlighted border in results', 'Priority in search', 'Visit statistics'],
-      premium: ['Live for 60 days', 'Unlimited photos', 'Featured on the homepage', 'First on map & search', 'Dedicated advisor'],
-    },
-    pickLabel: 'Choose', pickedLabel: 'Selected ✓',
-    s3Title: 'Secure payment.', s3Sub: 'Pay by card. Processed by Stripe. Your listing publishes on confirm.',
-    sumTitle: 'Summary', sumPlanLabel: 'Plan', sumDurLabel: 'Duration', dur: (d) => `${d} days`,
-    payBtn: 'Pay & publish', publishBtn: 'Publish for free', paying: 'Publishing…', payNote: 'Goes live in the marketplace instantly',
-    testCard: 'test mode · use card 4242 4242 4242 4242', payError: 'Payment could not be processed. Check your details.',
-    initError: 'Could not start payment. Please try again.', loadingPay: 'Loading secure payment…', needLogin: 'Log in to pay & publish.',
+    publishBtn: 'Publish for free', paying: 'Publishing…', payNote: 'Goes live in the marketplace instantly',
     gateTitle: 'Log in to post', gateSub: 'Create an account or log in to post and manage your properties.', gateBtn: 'Log in / Sign up',
-    publishError: 'Payment went through but publishing failed. Contact us and we’ll fix it.',
     s4Title: 'Your listing is', s4TitleSerif: 'live!',
     s4Sub: 'It already shows in the Casa Libre marketplace. Share the link with anyone.',
     s4View: 'View my listing', s4Btn1: 'Browse listings', s4Btn2: 'List another',
-    backLabel: '← Back', nextLabels: ['Continue →', 'Continue to payment →'],
+    backLabel: '← Back',
     errType: 'Choose a property type', errHood: 'Enter the neighborhood', errPrice: 'Enter a valid price',
     errSubmit: 'Could not publish. Please try again.',
     fmtGs: (v) => '₲ ' + v.toLocaleString('en-US'), fmtUsd: (v) => '≈ US$ ' + v, locale: 'en-US',
   },
 };
 
-const inputCls = 'px-4 py-[13px] border-[1.5px] border-ink/35 rounded-input bg-card font-medium text-[15px] outline-none focus:border-ink';
+const inputCls = 'px-4 py-[14px] border-[1.5px] border-ink/35 rounded-input bg-card font-medium text-[15px] outline-none focus:border-ink';
 const labelCls = 'flex flex-col gap-[7px] text-[13px] font-semibold';
 
 export default function PublicarClient() {
@@ -207,7 +179,7 @@ export default function PublicarClient() {
     <div className="max-w-[1440px] mx-auto min-h-screen">
       {nav}
 
-      <div className="max-w-[860px] mx-auto px-5 md:px-11 pt-10 pb-24">
+      <div className="max-w-[860px] mx-auto px-5 md:px-11 pt-10 pb-[90px]">
         {/* STEPPER */}
         <div className="flex items-center gap-3.5 mb-11 flex-wrap">
           {stepper.map((s, i) => (
@@ -221,9 +193,9 @@ export default function PublicarClient() {
         {/* STEP 1 — DETAILS */}
         {step === 1 && (
           <div>
-            <h1 className="text-[clamp(34px,4.5vw,48px)] font-bold tracking-display leading-[1.05] mb-2">{t.s1Title} <span className="font-serif italic font-normal">{t.s1TitleSerif}</span></h1>
-            <p className="text-[16px] text-ink/55 mb-8">{t.s1Sub}</p>
-            <div className="flex gap-2.5 mb-6">
+            <h1 className="text-[clamp(34px,4.5vw,48px)] font-bold tracking-[-0.04em] mb-2">{t.s1Title} <span className="font-serif italic font-normal">{t.s1TitleSerif}</span></h1>
+            <p className="text-[16px] text-ink/55 mb-[34px]">{t.s1Sub}</p>
+            <div className="flex gap-2.5 mb-[26px]">
               {[['venta', t.opVenta], ['alquiler', t.opAlquiler]].map(([m, label]) => (
                 <button key={m} onClick={() => setMode(m)} className={`px-[22px] py-2.5 rounded-pill text-[14px] font-semibold border-[1.5px] border-ink ${mode === m ? 'bg-ink text-paper' : 'bg-transparent'}`}>{label}</button>
               ))}
@@ -268,7 +240,7 @@ export default function PublicarClient() {
               onClick={() => fileRef.current?.click()}
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => { e.preventDefault(); addPhotos(e.dataTransfer.files); }}
-              className="mt-[22px] border-[1.5px] border-dashed border-ink/35 rounded-[18px] p-[26px] text-center bg-card cursor-pointer hover:border-ink transition-colors"
+              className="mt-[22px] border-[1.5px] border-dashed border-ink/35 rounded-[18px] p-[34px] text-center bg-card cursor-pointer hover:border-ink transition-colors"
             >
               <div className="text-[15px] font-semibold mb-1">{t.fPhotos}</div>
               <div className="font-mono text-[12px] text-ink/45">{photos.length ? t.photosChosen(photos.length) : t.fPhotosSub}</div>
@@ -294,7 +266,7 @@ export default function PublicarClient() {
           <div className="text-center py-8">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/mascot.png" alt="" className="w-[170px] object-contain mx-auto mb-2.5" />
-            <h1 className="text-[clamp(36px,5vw,54px)] font-bold tracking-display leading-[1.03] mb-2.5">{t.s4Title} <span className="font-serif italic font-normal">{t.s4TitleSerif}</span></h1>
+            <h1 className="text-[clamp(36px,5vw,54px)] font-bold tracking-display mb-2.5">{t.s4Title} <span className="font-serif italic font-normal">{t.s4TitleSerif}</span></h1>
             <p className="text-[17px] text-ink/55 max-w-[440px] mx-auto mb-2.5">{t.s4Sub}</p>
             <div className="font-mono text-[12px] text-ink/45 mb-7">REF: {result?.ref}</div>
             <div className="flex gap-3 justify-center flex-wrap">
@@ -309,8 +281,8 @@ export default function PublicarClient() {
 
         {/* FOOTER — publish (free, instant) */}
         {step === 1 && (
-          <div className="flex justify-end mt-11 pt-6 border-t border-ink/15">
-            <button onClick={publishListing} disabled={busy} className="px-8 py-3.5 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60">{busy ? t.paying : t.publishBtn}</button>
+          <div className="flex justify-end mt-11 pt-[26px] border-t border-ink/15">
+            <button onClick={publishListing} disabled={busy} className="px-[28px] py-3.5 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60">{busy ? t.paying : t.publishBtn}</button>
           </div>
         )}
       </div>
