@@ -136,7 +136,7 @@ export default function PropertyContactCard({ sellerName, waDigits, url, listing
           )}
 
           {/* Anti-scam fine print */}
-          <p className="font-mono text-[10.5px] leading-[1.5] text-ink/50 text-center mt-3.5 mb-0">{t.fine}</p>
+          <p className="font-mono text-[10.5px] leading-[1.5] text-ink/45 text-center mt-3.5 mb-0">{t.fine}</p>
 
           {/* Report unresponsive publisher */}
           <p className="text-center mt-2 mb-0">
