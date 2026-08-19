@@ -21,7 +21,7 @@ export default function AuthButton({ variant = 'light' }) {
 
   if (!user) {
     return (
-      <button onClick={() => openAuth()} className={`px-[18px] py-2.5 rounded-pill text-[14px] font-medium border ${variant === 'dark' ? 'border-paper text-paper' : 'border-ink text-ink'}`}>
+      <button onClick={() => openAuth()} className={`inline-flex items-center h-[38px] px-[18px] rounded-pill text-[14px] font-medium border ${variant === 'dark' ? 'border-paper text-paper' : 'border-ink text-ink'}`}>
         {t.login}
       </button>
     );
@@ -30,7 +30,7 @@ export default function AuthButton({ variant = 'light' }) {
   const initials = (user.full_name || user.email || '?').trim().charAt(0).toUpperCase();
   return (
     <div className="relative">
-      <button onClick={() => setMenu((m) => !m)} className="flex items-center gap-2 pl-1 pr-1 sm:pr-3 py-1 rounded-pill border border-ink/25 hover:border-ink">
+      <button onClick={() => setMenu((m) => !m)} className="flex items-center h-[38px] gap-2 pl-1 pr-1 sm:pr-3 rounded-pill border border-ink/25 hover:border-ink">
         <span className="w-7 h-7 rounded-pill bg-ink text-paper flex items-center justify-center text-[13px] font-bold">{initials}</span>
         <span className="hidden sm:inline text-[13px] font-semibold max-w-[120px] truncate">{user.full_name || user.email}</span>
       </button>

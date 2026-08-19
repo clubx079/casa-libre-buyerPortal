@@ -90,11 +90,11 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
           <Link href="/publicar" className="px-[18px] py-2.5 border border-ink rounded-pill">{t.navSell}</Link>
         </div>
         <div className="flex items-center gap-1.5 sm:gap-3.5 shrink-0">
-          <div className="flex items-center border border-ink/30 rounded-pill p-[2px] sm:p-[3px] text-[11px] sm:text-[12px] font-semibold">
-            {['es', 'en'].map((l) => <button key={l} onClick={() => setLang(l)} className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-pill ${lang === l ? 'bg-ink text-paper' : 'text-ink/55'}`}>{l.toUpperCase()}</button>)}
+          <div className="flex items-center h-[38px] border border-ink/30 rounded-pill p-[3px] text-[11px] sm:text-[12px] font-semibold">
+            {['es', 'en'].map((l) => <button key={l} onClick={() => setLang(l)} className={`h-full flex items-center px-2.5 sm:px-3 rounded-pill ${lang === l ? 'bg-ink text-paper' : 'text-ink/55'}`}>{l.toUpperCase()}</button>)}
           </div>
           <AuthButton />
-          <Link href="/propiedades" className="text-[13px] sm:text-[14px] font-semibold px-3 sm:px-[22px] py-2 sm:py-2.5 bg-ink text-paper rounded-pill whitespace-nowrap">{t.navCta}</Link>
+          <Link href="/propiedades" className="inline-flex items-center h-[38px] text-[13px] sm:text-[14px] font-semibold px-3.5 sm:px-[22px] bg-ink text-paper rounded-pill whitespace-nowrap">{t.navCta}</Link>
         </div>
       </nav>
 
