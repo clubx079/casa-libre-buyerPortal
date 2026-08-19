@@ -8,7 +8,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
 import { typeLabel } from '@/lib/propertyType';
-import { fmtUsd, fmtPyg } from '@/lib/ui';
+import { fmtUsd, fmtPyg, normalizePy, clRef } from '@/lib/ui';
 import PropertyContactCard from '@/components/PropertyContactCard';
 
 const T = {
@@ -82,14 +82,13 @@ export default function PropertyDetailView({ l, url }) {
     currency: 'USD', mode: l.mode, type: l.type || null, lat: l.lat ?? null, lng: l.lng ?? null,
   };
 
-  // wa digits for the mobile bar (the card builds its own message)
-  let waDigits = String(l.contact_phone || '').replace(/\D/g, '');
-  if (waDigits) {
-    if (waDigits.startsWith('0')) waDigits = '595' + waDigits.slice(1);
-    else if (!waDigits.startsWith('595') && waDigits.length <= 10) waDigits = '595' + waDigits;
-  }
-  // Always Spanish — the message reaches a local seller.
-  const mbarMsg = `¡Hola! Vi esta propiedad en Casa Libre y me interesa. ¿Sigue disponible?\n${url}`;
+  // wa digits — shared normalization (lib/ui.js) so the card and the mobile
+  // bar always agree on the same phone format.
+  const waDigits = normalizePy(l.contact_phone);
+  const listingRef = clRef(l.id ?? l.slug);
+  // Always Spanish — the message reaches a local seller. Same locked format
+  // as the contact card (no buyer name here — the mobile bar has no name field).
+  const mbarMsg = `¡Hola! ¿Sigue disponible esta propiedad?\n${url}`;
   const mbarWa = waDigits ? `https://wa.me/${waDigits}?text=${encodeURIComponent(mbarMsg)}` : null;
 
   const Tile = ({ src, i, main }) => (
@@ -194,7 +193,7 @@ export default function PropertyDetailView({ l, url }) {
         </main>
 
         {/* CONTACT CARD */}
-        <PropertyContactCard sellerName={l.contact_name} waDigits={waDigits || null} url={url} trackProps={trackProps} />
+        <PropertyContactCard sellerName={l.contact_name} waDigits={waDigits || null} url={url} listingRef={listingRef} trackProps={trackProps} />
       </div>
 
       {/* ── MOBILE STICKY BAR ── */}
