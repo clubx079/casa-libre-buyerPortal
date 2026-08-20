@@ -25,6 +25,20 @@ export default function AuthProvider({ children }) {
     return () => { alive = false; };
   }, []);
 
+  // Periodically re-check the session so a user who gets blocked/suspended
+  // (or deactivated) mid-session is signed out without a manual refresh.
+  useEffect(() => {
+    const id = setInterval(() => {
+      fetch('/api/auth/me')
+        .then((r) => r.json())
+        .then((j) => {
+          if (!j.user) setUser((prev) => (prev ? null : prev));
+        })
+        .catch(() => {});
+    }, 60000);
+    return () => clearInterval(id);
+  }, []);
+
   // Tie PostHog events to the user whenever the session resolves to someone
   // logged in — covers session restore, email/OTP login, and Google OAuth.
   useEffect(() => { if (user?.id) identifyUser(user); }, [user]);

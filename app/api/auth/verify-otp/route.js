@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { verifyOtp } from '@/lib/otp';
 import { findUserByEmail, createUser, publicUser } from '@/lib/users';
 import { setSessionCookie } from '@/lib/auth';
+import { getClientIP } from '@/lib/ip';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -25,7 +26,7 @@ export async function POST(req) {
 
   let user;
   try {
-    user = await createUser({ email, password, fullName, phone });
+    user = await createUser({ email, password, fullName, phone, ip: getClientIP(req) });
   } catch (e) {
     return NextResponse.json({ error: 'create_failed', detail: e?.message || String(e) }, { status: 500 });
   }
