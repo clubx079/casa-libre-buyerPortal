@@ -33,3 +33,5 @@ Thumbs.db
 *.pem
 .vercel
 .turbo
+
+.superpowers/
