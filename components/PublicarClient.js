@@ -25,7 +25,11 @@ const DICT = {
     s4Sub: 'Ya aparece en el marketplace de Casa Libre. Compartí el enlace con quien quieras.',
     s4View: 'Ver mi propiedad', s4Btn1: 'Ver propiedades', s4Btn2: 'Publicar otra',
     backLabel: '← Atrás',
-    errType: 'Elegí un tipo de propiedad', errHood: 'Ingresá el barrio', errPrice: 'Ingresá un precio válido',
+    errType: 'Elegí un tipo de propiedad', errHood: 'Ingresá el barrio', errCity: 'Ingresá la ciudad', errPrice: 'Ingresá un precio válido',
+    errPriceFloorSale: 'El precio de venta debe ser de al menos US$ 5.000', errPriceFloorRent: 'El alquiler mensual debe ser de al menos ₲ 300.000',
+    errArea: 'Ingresá la superficie (m²)', errAreaRange: 'La superficie debe estar entre 5 y 2.000 m²',
+    errName: 'Ingresá tu nombre', errPhone: 'Ingresá un WhatsApp / teléfono válido (mín. 6 dígitos)', errPhotos: 'Agregá al menos una foto',
+    errFix: 'Faltan algunos datos. Revisá los campos marcados para publicar.',
     errSubmit: 'No se pudo publicar. Intentá de nuevo.',
     fmtGs: (v) => '₲ ' + v.toLocaleString('es-PY'), fmtUsd: (v) => '≈ US$ ' + v, locale: 'es-PY',
   },
@@ -47,7 +51,11 @@ const DICT = {
     s4Sub: 'It already shows in the Casa Libre marketplace. Share the link with anyone.',
     s4View: 'View my listing', s4Btn1: 'Browse listings', s4Btn2: 'List another',
     backLabel: '← Back',
-    errType: 'Choose a property type', errHood: 'Enter the neighborhood', errPrice: 'Enter a valid price',
+    errType: 'Choose a property type', errHood: 'Enter the neighborhood', errCity: 'Enter the city', errPrice: 'Enter a valid price',
+    errPriceFloorSale: 'Sale price must be at least US$ 5,000', errPriceFloorRent: 'Monthly rent must be at least ₲ 300,000',
+    errArea: 'Enter the area (m²)', errAreaRange: 'Area must be between 5 and 2,000 m²',
+    errName: 'Enter your name', errPhone: 'Enter a valid WhatsApp / phone number (min. 6 digits)', errPhotos: 'Add at least one photo',
+    errFix: 'Some details are missing. Please fix the highlighted fields to publish.',
     errSubmit: 'Could not publish. Please try again.',
     fmtGs: (v) => '₲ ' + v.toLocaleString('en-US'), fmtUsd: (v) => '≈ US$ ' + v, locale: 'en-US',
   },
@@ -64,6 +72,7 @@ export default function PublicarClient() {
   const [f, setF] = useState({ ptype: 'casa', neighborhood: '', city: '', price: '', currency: '', area: '', description: '', contact_name: '', contact_phone: '' });
   const [photos, setPhotos] = useState([]); // {file, url}
   const [err, setErr] = useState('');
+  const [errs, setErrs] = useState({}); // per-field errors { field: message }
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null); // {ref, slug}
   const fileRef = useRef(null);
@@ -75,29 +84,69 @@ export default function PublicarClient() {
     setF((s) => ({ ...s, contact_name: s.contact_name || user.full_name || '', contact_phone: s.contact_phone || user.phone || '' }));
   }, [user]);
 
-  const set = (k) => (e) => setF((s) => ({ ...s, [k]: e.target.value }));
+  // Update a field and clear its error as soon as the user edits it.
+  const set = (k) => (e) => {
+    const v = e.target.value;
+    setF((s) => ({ ...s, [k]: v }));
+    setErrs((er) => (er[k] ? { ...er, [k]: undefined } : er));
+  };
   const addPhotos = (list) => {
     const files = Array.from(list || []).filter((x) => x.type.startsWith('image/'));
     setPhotos((p) => [...p, ...files.map((file) => ({ file, url: URL.createObjectURL(file) }))].slice(0, 20));
+    setErrs((er) => (er.photos ? { ...er, photos: undefined } : er));
   };
   const removePhoto = (i) => setPhotos((p) => p.filter((_, idx) => idx !== i));
 
   const priceCurrency = f.currency || (mode === 'alquiler' ? 'PYG' : 'USD');
 
-  const validateStep1 = () => {
-    if (!f.ptype) return t.errType;
-    if (!f.neighborhood.trim()) return t.errHood;
-    const p = Number(String(f.price).replace(/[^\d.]/g, ''));
-    if (!Number.isFinite(p) || p <= 0) return t.errPrice;
-    return '';
+  // Full completeness validation — a published listing must clear the same bar the
+  // marketplace uses to show it (contact + location + plausible price + area), so
+  // a user's listing is never created "incomplete" and then hidden/404'd.
+  const APPROX_RATE = 7300; // client-side floor approximation; the live gate uses the real rate
+  const numOf = (v) => Number(String(v).replace(/[^\d.]/g, ''));
+  const validate = () => {
+    const e = {};
+    if (!f.ptype) e.ptype = t.errType;
+    if (!f.neighborhood.trim()) e.neighborhood = t.errHood;
+    if (!f.city.trim()) e.city = t.errCity;
+
+    const p = numOf(f.price);
+    if (!Number.isFinite(p) || p <= 0) e.price = t.errPrice;
+    else if (mode === 'venta') {
+      const usd = priceCurrency === 'USD' ? p : p / APPROX_RATE;
+      if (usd < 5000) e.price = t.errPriceFloorSale;
+    } else {
+      const pyg = priceCurrency === 'PYG' ? p : p * APPROX_RATE;
+      if (pyg < 300000) e.price = t.errPriceFloorRent;
+    }
+
+    const isLand = f.ptype === 'terreno';
+    const a = numOf(f.area);
+    if (!Number.isFinite(a) || a <= 0) e.area = t.errArea;
+    else if (!isLand && (a < 5 || a > 2000)) e.area = t.errAreaRange;
+
+    if (!f.contact_name.trim()) e.contact_name = t.errName;
+    if (String(f.contact_phone).replace(/\D/g, '').length < 6) e.contact_phone = t.errPhone;
+
+    if (photos.length < 1) e.photos = t.errPhotos;
+    return e;
   };
   const back = () => { setErr(''); setStep(1); };
 
   // Free publish — no plan, no payment. Requires login (gated below).
   const publishListing = async () => {
-    const e = validateStep1();
-    if (e) { setErr(e); return; }
-    setBusy(true); setErr('');
+    const e = validate();
+    if (Object.keys(e).length) {
+      setErrs(e);
+      setErr(t.errFix);
+      // jump to the first field with an error so it's obvious what to fix
+      if (typeof document !== 'undefined') {
+        const first = document.querySelector('[data-err="1"]');
+        first?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return;
+    }
+    setErrs({}); setBusy(true); setErr('');
     try {
       const fd = new FormData();
       fd.set('mode', mode);
@@ -136,10 +185,14 @@ export default function PublicarClient() {
   };
 
   const restart = () => {
-    setStep(1); setMode('venta'); setResult(null); setErr('');
+    setStep(1); setMode('venta'); setResult(null); setErr(''); setErrs({});
     setF({ ptype: 'casa', neighborhood: '', city: '', price: '', currency: '', area: '', description: '', contact_name: '', contact_phone: '' });
     setPhotos([]);
   };
+
+  // Input class + inline error helpers (red border + message on the errored field).
+  const fieldCls = (k) => `px-4 py-[14px] border-[1.5px] rounded-input bg-card font-medium text-[15px] outline-none ${errs[k] ? 'border-red-500 focus:border-red-600' : 'border-ink/35 focus:border-ink'}`;
+  const FErr = ({ k }) => (errs[k] ? <span data-err="1" className="text-[12.5px] font-medium text-red-600">{errs[k]}</span> : null);
 
   const stepper = t.stepLabels.map((label, i) => {
     const n = i + 1, active = step === n, done = step > n;
@@ -214,28 +267,34 @@ export default function PublicarClient() {
                 </select>
               </label>
               <label className={labelCls}>{t.fHood}
-                <input value={f.neighborhood} onChange={set('neighborhood')} placeholder={t.fHoodPh} className={inputCls} />
+                <input value={f.neighborhood} onChange={set('neighborhood')} placeholder={t.fHoodPh} className={fieldCls('neighborhood')} />
+                <FErr k="neighborhood" />
               </label>
               <label className={labelCls}>{t.fCity}
-                <input value={f.city} onChange={set('city')} placeholder={t.fCityPh} className={inputCls} />
+                <input value={f.city} onChange={set('city')} placeholder={t.fCityPh} className={fieldCls('city')} />
+                <FErr k="city" />
               </label>
               <label className={labelCls}>{t.fPrice(mode)}
                 <div className="flex gap-2">
-                  <input value={f.price} onChange={set('price')} inputMode="numeric" placeholder={t.fPricePh(mode)} className={`${inputCls} flex-1 min-w-0`} />
+                  <input value={f.price} onChange={set('price')} inputMode="numeric" placeholder={t.fPricePh(mode)} className={`${fieldCls('price')} flex-1 min-w-0`} />
                   <select value={priceCurrency} onChange={set('currency')} className={`${inputCls} cursor-pointer w-[92px]`}>
                     <option value="USD">US$</option>
                     <option value="PYG">₲</option>
                   </select>
                 </div>
+                <FErr k="price" />
               </label>
               <label className={labelCls}>{t.fArea}
-                <input value={f.area} onChange={set('area')} inputMode="numeric" placeholder="120" className={inputCls} />
+                <input value={f.area} onChange={set('area')} inputMode="numeric" placeholder="120" className={fieldCls('area')} />
+                <FErr k="area" />
               </label>
               <label className={labelCls}>{t.fName}
-                <input value={f.contact_name} onChange={set('contact_name')} placeholder={t.fNamePh} className={inputCls} />
+                <input value={f.contact_name} onChange={set('contact_name')} placeholder={t.fNamePh} className={fieldCls('contact_name')} />
+                <FErr k="contact_name" />
               </label>
               <label className={labelCls}>{t.fPhone}
-                <input value={f.contact_phone} onChange={set('contact_phone')} placeholder={t.fPhonePh} className={inputCls} />
+                <input value={f.contact_phone} onChange={set('contact_phone')} placeholder={t.fPhonePh} className={fieldCls('contact_phone')} />
+                <FErr k="contact_phone" />
               </label>
             </div>
             <label className={`${labelCls} mt-4`}>{t.fDesc}
@@ -247,12 +306,13 @@ export default function PublicarClient() {
               onClick={() => fileRef.current?.click()}
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => { e.preventDefault(); addPhotos(e.dataTransfer.files); }}
-              className="mt-[22px] border-[1.5px] border-dashed border-ink/35 rounded-[18px] p-[34px] text-center bg-card cursor-pointer hover:border-ink transition-colors"
+              className={`mt-[22px] border-[1.5px] border-dashed rounded-[18px] p-[34px] text-center bg-card cursor-pointer transition-colors ${errs.photos ? 'border-red-500' : 'border-ink/35 hover:border-ink'}`}
             >
               <div className="text-[15px] font-semibold mb-1">{t.fPhotos}</div>
               <div className="font-mono text-[12px] text-ink/45">{photos.length ? t.photosChosen(photos.length) : t.fPhotosSub}</div>
               <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => addPhotos(e.target.files)} />
             </div>
+            {errs.photos && <div className="mt-1.5"><FErr k="photos" /></div>}
             {photos.length > 0 && (
               <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 mt-3">
                 {photos.map((p, i) => (

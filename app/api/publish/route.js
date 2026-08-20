@@ -66,10 +66,14 @@ export async function POST(req) {
   const contactName = get('contact_name') || session.name || null;
   const contactPhone = get('contact_phone') || null;
 
-  // minimal validation — the fields the mockup marks as required
+  // Completeness validation — a published listing must clear the same bar the
+  // marketplace gate uses to SHOW it, so a user's listing is never created
+  // "incomplete" and then hidden / 404'd on its own detail page.
   if (!TYPE_MAP[ptype]) return NextResponse.json({ error: 'missing_type' }, { status: 400 });
   if (!neighborhood) return NextResponse.json({ error: 'missing_neighborhood' }, { status: 400 });
+  if (!city) return NextResponse.json({ error: 'missing_city' }, { status: 400 });
   if (!Number.isFinite(price) || price <= 0) return NextResponse.json({ error: 'missing_price' }, { status: 400 });
+  if (String(contactPhone || '').replace(/\D/g, '').length < 6) return NextResponse.json({ error: 'missing_contact' }, { status: 400 });
 
   // Listings are FREE — no payment required. Login (above) is the only gate, so
   // every published deal is tied to a known user.
@@ -78,6 +82,19 @@ export async function POST(req) {
   const isLand = ptype === 'terreno';
   const rate = await getUsdToPyg().catch(() => Number(process.env.PYG_PER_USD) || 7300);
   const price_usd = currency === 'USD' ? Math.round(price) : rate ? Math.round(price / rate) : null;
+
+  // Area required + plausible for buildings (land has no upper cap); price floors
+  // match the gate (sale ≥ US$5.000, rent ≥ ₲300.000/mes).
+  if (!isLand) {
+    if (!(Number(area) > 0)) return NextResponse.json({ error: 'missing_area' }, { status: 400 });
+    if (Number(area) < 5 || Number(area) > 2000) return NextResponse.json({ error: 'bad_area' }, { status: 400 });
+  }
+  if (mode === 'venta') {
+    if (!(Number(price_usd) >= 5000)) return NextResponse.json({ error: 'price_too_low' }, { status: 400 });
+  } else {
+    const pygVal = currency === 'PYG' ? price : Math.round(price * rate);
+    if (!(pygVal >= 300000)) return NextResponse.json({ error: 'price_too_low' }, { status: 400 });
+  }
 
   const slug = `${slugify(`${property_type}-${neighborhood}`) || 'propiedad'}-${Date.now().toString(36)}`;
   const coords = await geocode(neighborhood, city);
