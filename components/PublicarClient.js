@@ -3,11 +3,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
 import { useAuth } from '@/components/AuthProvider';
+import AuthButton from '@/components/AuthButton';
 import { track } from '@/lib/analytics';
 
 const DICT = {
   es: {
-    navBack: 'Ver propiedades', stepLabels: ['Detalles', 'Listo'],
+    navBack: 'Ver propiedades', navBuy: 'Comprar', navRent: 'Alquilar', navSell: 'Vender', navCta: 'Publicar gratis', stepLabels: ['Detalles', 'Listo'],
     s1Title: 'Publicá tu propiedad', s1TitleSerif: 'en minutos.',
     s1Sub: 'Contanos sobre tu propiedad. Se publica al instante en el marketplace.',
     opVenta: 'Vender', opAlquiler: 'Alquilar',
@@ -29,7 +30,7 @@ const DICT = {
     fmtGs: (v) => '₲ ' + v.toLocaleString('es-PY'), fmtUsd: (v) => '≈ US$ ' + v, locale: 'es-PY',
   },
   en: {
-    navBack: 'Browse listings', stepLabels: ['Details', 'Done'],
+    navBack: 'Browse listings', navBuy: 'Buy', navRent: 'Rent', navSell: 'Sell', navCta: 'List for free', stepLabels: ['Details', 'Done'],
     s1Title: 'List your property', s1TitleSerif: 'in minutes.',
     s1Sub: 'Tell us about your property. It goes live in the marketplace instantly.',
     opVenta: 'Sell', opAlquiler: 'Rent out',
@@ -146,15 +147,21 @@ export default function PublicarClient() {
   });
 
   const nav = (
-    <nav className="flex items-center justify-between flex-wrap gap-3 px-5 md:px-11 py-5 border-b border-ink/12">
-      <Link href="/" className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif not-italic italic font-normal">.py</em></Link>
+    <nav className="flex items-center justify-center md:justify-between flex-wrap gap-3 px-5 md:px-11 py-5 border-b border-ink/12">
+      <Link href="/" className="font-bold text-[22px] tracking-head">casa-libre<em className="font-serif italic font-normal">.py</em></Link>
+      <div className="flex gap-2 flex-wrap text-[14px] font-medium">
+        <Link href="/propiedades" className="inline-flex items-center h-[40px] px-[18px] border border-ink rounded-pill">{t.navBuy}</Link>
+        <Link href="/propiedades?op=alquiler" className="inline-flex items-center h-[40px] px-[18px] border border-ink rounded-pill">{t.navRent}</Link>
+        <Link href="/publicar" className="inline-flex items-center h-[40px] px-[18px] border border-ink rounded-pill">{t.navSell}</Link>
+      </div>
       <div className="flex items-center gap-3.5">
-        <div className="flex items-center border border-ink/30 rounded-pill p-[3px] text-[12px] font-semibold">
+        <div className="flex items-center h-[40px] border border-ink/30 rounded-pill p-[3px] text-[12px] font-semibold">
           {['es', 'en'].map((l) => (
-            <button key={l} onClick={() => setLang(l)} className={`px-3 py-1.5 rounded-pill ${lang === l ? 'bg-ink text-paper' : 'text-ink/55'}`}>{l.toUpperCase()}</button>
+            <button key={l} onClick={() => setLang(l)} className={`h-full flex items-center px-3 rounded-pill ${lang === l ? 'bg-ink text-paper' : 'text-ink/55'}`}>{l.toUpperCase()}</button>
           ))}
         </div>
-        <Link href="/propiedades" className="text-[14px] font-medium px-[18px] py-2.5 border border-ink rounded-pill">{t.navBack}</Link>
+        <AuthButton />
+        <Link href="/publicar" className="inline-flex items-center h-[40px] px-[22px] bg-ink text-paper rounded-pill text-[14px] font-semibold whitespace-nowrap">{t.navCta}</Link>
       </div>
     </nav>
   );
