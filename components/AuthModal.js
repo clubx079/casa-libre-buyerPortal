@@ -149,7 +149,7 @@ export default function AuthModal({ onAuthed, onClose }) {
       <div className="absolute inset-0 bg-ink/40 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-[420px] bg-paper border-[1.5px] border-ink rounded-[24px] shadow-hard p-7 md:p-8">
         <button onClick={onClose} aria-label={t.close} className="absolute top-4 right-4 w-8 h-8 rounded-pill border border-ink/25 flex items-center justify-center text-ink/60 hover:border-ink hover:text-ink">×</button>
-        <div className="text-[22px] font-bold tracking-head mb-5">casa-libre<em className="font-serif not-italic italic font-normal">.py</em></div>
+        <div className="text-[22px] font-bold tracking-head mb-5">casa-libre<em className="font-serif italic font-normal">.py</em></div>
 
         {step === 'email' && (
           <form onSubmit={submitEmail}>

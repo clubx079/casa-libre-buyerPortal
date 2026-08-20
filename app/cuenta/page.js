@@ -8,13 +8,13 @@ import { CardGridSkeleton, StatSkeleton } from '@/components/account/Skeletons';
 
 const T = {
   es: {
-    hi: (n) => `Hola${n ? `, ${n}` : ''}`, sub: 'Este es tu panel de Casa Libre.',
+    greet: 'Hola', sub: 'Este es tu panel de Casa Libre.',
     saved: 'Guardadas', mine: 'Mis publicaciones', browse: 'Ver propiedades', publish: 'Publicar propiedad',
     recent: 'Guardadas recientes', seeAll: 'Ver todas →', empty: 'Todavía no guardaste ninguna propiedad.',
     quick: 'Acciones rápidas',
   },
   en: {
-    hi: (n) => `Hi${n ? `, ${n}` : ''}`, sub: 'This is your Casa Libre dashboard.',
+    greet: 'Hi', sub: 'This is your Casa Libre dashboard.',
     saved: 'Saved', mine: 'My listings', browse: 'Browse listings', publish: 'List a property',
     recent: 'Recently saved', seeAll: 'See all →', empty: "You haven't saved any properties yet.",
     quick: 'Quick actions',
@@ -45,7 +45,7 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <h1 className="text-[clamp(28px,4vw,40px)] font-bold tracking-display leading-tight">{t.hi(firstName)} <span className="font-serif italic font-normal">👋</span></h1>
+      <h1 className="text-[clamp(28px,4vw,40px)] font-bold tracking-display leading-tight">{t.greet}{firstName && <>, <span className="font-serif italic font-normal">{firstName}</span></>}</h1>
       <p className="text-[15px] text-ink/55 mt-1 mb-7">{t.sub}</p>
 
       <div className="flex flex-wrap gap-4 mb-8">

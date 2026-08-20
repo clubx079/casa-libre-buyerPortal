@@ -40,7 +40,7 @@ export default function AccountShell({ children }) {
       {/* LEFT SIDEBAR */}
       <aside className={`fixed lg:sticky top-0 left-0 z-[100] w-[248px] h-screen bg-card border-r border-ink/12 flex flex-col transition-transform duration-200 lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex items-center justify-between px-5 h-[68px] border-b border-ink/10 shrink-0">
-          <Link href="/" className="text-[20px] font-bold tracking-head">casa-libre<em className="font-serif not-italic italic font-normal">.py</em></Link>
+          <Link href="/" className="text-[20px] font-bold tracking-head">casa-libre<em className="font-serif italic font-normal">.py</em></Link>
           <button onClick={() => setOpen(false)} aria-label="Cerrar" className="lg:hidden w-8 h-8 rounded-pill flex items-center justify-center text-ink/60 hover:bg-ink/5">×</button>
         </div>
 
@@ -76,7 +76,7 @@ export default function AccountShell({ children }) {
           <button onClick={() => setOpen(true)} aria-label="Menú" className="lg:hidden w-9 h-9 rounded-pill border border-ink/20 flex items-center justify-center">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="2" strokeLinecap="round"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
           </button>
-          <span className="lg:hidden text-[18px] font-bold tracking-head">casa-libre<em className="font-serif not-italic italic font-normal">.py</em></span>
+          <span className="lg:hidden text-[18px] font-bold tracking-head">casa-libre<em className="font-serif italic font-normal">.py</em></span>
           <div className="hidden lg:block flex-1" />
           <div className="flex items-center border border-ink/30 rounded-pill p-[3px] text-[12px] font-semibold">
             {['es', 'en'].map((l) => <button key={l} onClick={() => setLang(l)} className={`px-3 py-1.5 rounded-pill ${lang === l ? 'bg-ink text-paper' : 'text-ink/55'}`}>{l.toUpperCase()}</button>)}
