@@ -19,6 +19,7 @@ const M = {
     beds: { all: 'Dormitorios: todos', b1: '1+', b2: '2+', b3: '3+' },
     sort: { relevancia: 'Relevancia', precio_asc: 'Precio: menor a mayor', precio_desc: 'Precio: mayor a menor', area_desc: 'Superficie: mayor primero' },
     listView: 'Lista', mapView: 'Mapa',
+    loadMore: 'Ver más propiedades', showing: (n, total) => `Mostrando ${n} de ${total}`,
   },
   en: {
     searchPh: 'Search by neighborhood or type…',
@@ -29,8 +30,12 @@ const M = {
     beds: { all: 'Bedrooms: any', b1: '1+', b2: '2+', b3: '3+' },
     sort: { relevancia: 'Relevance', precio_asc: 'Price: low to high', precio_desc: 'Price: high to low', area_desc: 'Area: largest first' },
     listView: 'List', mapView: 'Map',
+    loadMore: 'Load more properties', showing: (n, total) => `Showing ${n} of ${total}`,
   },
 };
+
+// List page size — the map plots every match (clustered), the list grows 24 at a time.
+const PER_PAGE = 24;
 
 // accent- and case-insensitive text for search ("asuncion" should match "Asunción")
 const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -46,6 +51,7 @@ export default function MarketplaceClient({ listings, rate, initialOp = 'all', i
   const [sortOpen, setSortOpen] = useState(false);
   const [mobileView, setMobileView] = useState('list'); // mobile: 'list' | 'map'
   const [hot, setHot] = useState(null);
+  const [visible, setVisible] = useState(PER_PAGE); // #16 how many list cards are rendered
   const mapEl = useRef(null);
   const mapRef = useRef(null);
   const clusterRef = useRef(null);
@@ -158,6 +164,9 @@ export default function MarketplaceClient({ listings, rate, initialOp = 'all', i
   }, []);
 
   useEffect(() => { didFit.current = false; drawMarkers(); /* eslint-disable-next-line */ }, [rows, lang]);
+
+  // #16 Reset the list window to the first page whenever the result set changes.
+  useEffect(() => { setVisible(PER_PAGE); }, [filter, typeF, priceF, bedF, query, sortBy]);
 
   function popupHtml(l) {
     const img = l.image
@@ -306,7 +315,7 @@ export default function MarketplaceClient({ listings, rate, initialOp = 'all', i
           {/* list */}
           <div className="flex-1 min-h-0 overflow-y-auto px-4 md:px-7 py-5 flex flex-col gap-4">
             {rows.length === 0 && <div className="py-10 text-center font-mono text-[12px] text-ink/45">{m.empty}</div>}
-            {rows.map((l) => (
+            {rows.slice(0, visible).map((l) => (
               <Link
                 key={l.id} href={`/propiedad/${l.id}`}
                 onMouseEnter={() => setHot(l.id)} onMouseLeave={() => setHot(null)}
@@ -325,6 +334,18 @@ export default function MarketplaceClient({ listings, rate, initialOp = 'all', i
                 </div>
               </Link>
             ))}
+            {/* #16 Pagination — the list grows 24 at a time; the map keeps every pin. */}
+            {rows.length > visible && (
+              <div className="flex flex-col items-center gap-2 pt-1 pb-2">
+                <button
+                  onClick={() => setVisible((v) => v + PER_PAGE)}
+                  className="px-6 py-2.5 rounded-pill bg-ink text-paper text-[13px] font-semibold shadow-hard-soft hover:-translate-y-0.5 transition-transform"
+                >
+                  {m.loadMore}
+                </button>
+                <span className="font-mono text-[11px] text-ink/45">{m.showing(Math.min(visible, rows.length), rows.length)}</span>
+              </div>
+            )}
           </div>
         </div>
         <div ref={mapEl} className={`min-h-0 md:block md:flex-1 md:border-l border-ink/12 ${mobileView === 'list' ? 'hidden' : 'block flex-1'}`} />

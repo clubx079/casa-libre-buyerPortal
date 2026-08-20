@@ -2,7 +2,7 @@ import './globals.css';
 import PostHogProvider from '@/components/PostHogProvider';
 import AuthProvider from '@/components/AuthProvider';
 import FavoritesProvider from '@/components/FavoritesProvider';
-import { SITE, SITE_NAME, SITE_DESC } from '@/lib/site';
+import { SITE, SITE_NAME, SITE_DESC, INDEXABLE } from '@/lib/site';
 
 export const metadata = {
   metadataBase: new URL(SITE),
@@ -15,7 +15,10 @@ export const metadata = {
   alternates: { canonical: '/' },
   openGraph: { title: 'Casa Libre — Propiedades en Paraguay', description: SITE_DESC, url: SITE, siteName: SITE_NAME, locale: 'es_PY', type: 'website' },
   twitter: { card: 'summary_large_image', title: 'Casa Libre — Propiedades en Paraguay', description: SITE_DESC },
-  robots: { index: true, follow: true },
+  // #18 Non-production hosts return noindex,nofollow so staging isn't indexed.
+  robots: INDEXABLE
+    ? { index: true, follow: true }
+    : { index: false, follow: false, googleBot: { index: false, follow: false } },
 };
 
 // Site-wide structured data: an Organization entity + a WebSite with a
