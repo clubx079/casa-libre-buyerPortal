@@ -128,9 +128,10 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
     if (l.parking) parts.push(`${l.parking} ${parkWord(l.parking, lang)}`);
     return parts.join(' · ');
   };
-  const priceMain = (l) => (l.mode === 'alquiler' ? (fmtPyg(l.pyg, lang) ? fmtPyg(l.pyg, lang) + t.perMonth : fmtUsd(l.usd, lang) + t.perMonth) : fmtUsd(l.usd, lang) || '—');
-  const priceSub = (l) => (l.mode === 'alquiler' ? fmtUsd(l.usd, lang) : fmtPyg(l.pyg, lang));
-  const shortPill = (l) => (l.mode === 'alquiler' && l.pyg ? '₲ ' + (l.pyg / 1e6).toLocaleString(lang === 'es' ? 'es-PY' : 'en-US', { maximumFractionDigits: 1 }) + 'M' : shortUsd(l.usd));
+  // Standardized: USD is always the main price; local ₲ is the sub. Rent adds /mes|/mo.
+  const priceMain = (l) => ((fmtUsd(l.usd, lang) || '—') + (l.mode === 'alquiler' ? t.perMonth : ''));
+  const priceSub = (l) => (fmtPyg(l.pyg, lang) ? fmtPyg(l.pyg, lang) + (l.mode === 'alquiler' ? t.perMonth : '') : '');
+  const shortPill = (l) => shortUsd(l.usd);
 
   // ---- Leaflet init (client-only) with marker clustering ----
   useEffect(() => {
@@ -176,6 +177,7 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
       ${img}
       <div style="padding:9px 11px 10px">
         <div style="font:700 15px 'Space Grotesk',sans-serif">${priceMain(l)}</div>
+        ${priceSub(l) ? `<div style="font:500 11px 'Space Grotesk',sans-serif;color:rgba(17,17,17,.5)">${priceSub(l)}</div>` : ''}
         <div style="font:500 12px 'Space Grotesk',sans-serif;margin-top:2px">${title(l)}</div>
         <div style="font:400 11px 'Space Grotesk',sans-serif;color:rgba(17,17,17,.55);margin-top:1px">${meta(l)}</div>
       </div></a>`;
@@ -329,6 +331,7 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
                 </div>
                 <div className="flex-1 min-w-0 pt-3.5 pb-4 px-4">
                   <div className="text-[18px] font-bold tracking-[-0.02em] whitespace-nowrap">{priceMain(l)}</div>
+                  {priceSub(l) && <div className="text-[12px] font-medium text-ink/50 whitespace-nowrap">{priceSub(l)}</div>}
                   <div className="text-[14px] font-medium mt-[3px] line-clamp-1">{title(l)}</div>
                   <div className="text-[12px] text-ink/55 mt-[3px] line-clamp-1">{meta(l)}</div>
                 </div>

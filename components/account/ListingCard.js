@@ -7,7 +7,10 @@ import { useLang } from '@/lib/useLang';
 // Compact listing card used across the account pages (saved / my listings).
 export default function ListingCard({ l, action }) {
   const [lang] = useLang();
-  const price = l.mode === 'alquiler' ? (fmtPyg(l.pyg, lang) || fmtUsd(l.usd, lang) || '—') : (fmtUsd(l.usd, lang) || '—');
+  // Standardized: USD main, local ₲ sub (rent adds /mes|/mo).
+  const per = l.mode === 'alquiler' ? (lang === 'es' ? '/mes' : '/mo') : '';
+  const price = (fmtUsd(l.usd, lang) || '—') + per;
+  const priceSub = fmtPyg(l.pyg, lang) ? fmtPyg(l.pyg, lang) + per : '';
   const title = `${typeLabel(l.type, lang) || (lang === 'es' ? 'Propiedad' : 'Property')}${l.beds ? ` · ${l.beds} ${lang === 'es' ? 'dorm' : 'bd'}` : ''}`;
   const place = [l.neighborhood, l.city].filter(Boolean).join(', ');
   const meta = [l.area && `${l.area} m²`, l.baths && `${l.baths} ${lang === 'es' ? 'baños' : 'ba'}`].filter(Boolean).join(' · ');
@@ -24,6 +27,7 @@ export default function ListingCard({ l, action }) {
       <div className="p-3.5 flex-1 flex flex-col">
         <Link href={`/propiedad/${l.id}`} className="block">
           <div className="text-[17px] font-bold tracking-head whitespace-nowrap">{price}</div>
+          {priceSub && <div className="text-[11px] font-medium text-ink/50 whitespace-nowrap">{priceSub}</div>}
           <div className="text-[13px] font-medium mt-0.5 line-clamp-1">{title}</div>
           <div className="text-[12px] text-ink/55 line-clamp-1">{place}</div>
           {meta && <div className="font-mono text-[11px] text-ink/45 mt-1">{meta}</div>}

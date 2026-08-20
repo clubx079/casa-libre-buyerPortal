@@ -54,13 +54,7 @@ export default function PropertyContactCard({ sellerName, waDigits, url, listing
   return (
     <aside className="min-[921px]:sticky min-[921px]:top-5">
       <div className="bg-card overflow-hidden" style={{ border: '1.5px solid #111', borderRadius: 18, boxShadow: '5px 4px 0 #111' }}>
-        {/* Seller header */}
-        <div className="flex items-center gap-3 px-[18px] py-4 border-b border-ink/12">
-          <span className="w-[42px] h-[42px] shrink-0 rounded-full bg-ink text-paper flex items-center justify-center font-bold text-[16px]">{initial}</span>
-          <b className="min-w-0 block text-[15px] font-bold truncate">{displayName}</b>
-        </div>
-
-        <div className="px-[18px] pt-4 pb-[18px]">
+        <div className="px-[18px] pt-[18px] pb-[18px]">
           {waUrl ? (
             <>
               <a

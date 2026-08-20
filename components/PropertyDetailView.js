@@ -59,10 +59,9 @@ export default function PropertyDetailView({ l, url }) {
   const modeLabel = l.mode === 'alquiler' ? t.forRent : t.forSale;
   const sfx = l.mode === 'alquiler' ? t.perMonth : '';
 
-  // price: native currency big, the other as "≈ …" alt
-  const nativePyg = l.currency === 'PYG';
-  const bigPrice = (nativePyg ? fmtPyg(l.pyg, lang) : fmtUsd(l.usd, lang)) || '—';
-  const altVal = nativePyg ? fmtUsd(l.usd, lang) : fmtPyg(l.pyg, lang);
+  // Standardized: USD is always the main price; local ₲ is the "≈ …" sub.
+  const bigPrice = (fmtUsd(l.usd, lang) || '—');
+  const altVal = fmtPyg(l.pyg, lang);
   const altPrice = altVal ? `≈ ${altVal}${sfx}` : '';
 
   const specs = [
