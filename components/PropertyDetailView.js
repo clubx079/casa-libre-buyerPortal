@@ -11,6 +11,7 @@ import { typeLabel } from '@/lib/propertyType';
 import { track } from '@/lib/analytics';
 import { fmtUsd, fmtPyg, normalizePy, clRef } from '@/lib/ui';
 import PropertyContactCard from '@/components/PropertyContactCard';
+import NoResponseReport from '@/components/NoResponseReport';
 
 const T = {
   es: {
@@ -194,7 +195,10 @@ export default function PropertyDetailView({ l, url }) {
         </main>
 
         {/* CONTACT CARD */}
-        <PropertyContactCard sellerName={l.contact_name} waDigits={waDigits || null} url={url} listingRef={listingRef} trackProps={trackProps} />
+        <div>
+          <PropertyContactCard sellerName={l.contact_name} waDigits={waDigits || null} url={url} listingRef={listingRef} trackProps={trackProps} />
+          <NoResponseReport propertyId={l.id} listingRef={listingRef} sellerName={l.contact_name} sellerPhone={l.contact_phone} />
+        </div>
       </div>
 
       {/* ── MOBILE STICKY BAR ── */}
