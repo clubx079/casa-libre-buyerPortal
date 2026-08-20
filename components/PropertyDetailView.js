@@ -80,7 +80,7 @@ export default function PropertyDetailView({ l, url }) {
   const tiles = imgs.slice(0, 4);
 
   const trackProps = {
-    property_id: l.id, slug: l.slug, address: l.address || null, city: l.city || null,
+    property_id: l.id, slug: l.id, address: l.address || null, city: l.city || null,
     neighborhood: l.neighborhood || null, state: l.province || null, price: l.usd ?? null,
     currency: 'USD', mode: l.mode, type: l.type || null, lat: l.lat ?? null, lng: l.lng ?? null,
   };

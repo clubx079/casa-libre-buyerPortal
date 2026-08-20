@@ -162,7 +162,7 @@ export default function MarketplaceClient({ listings, initialOp = 'all', initial
     const img = l.image
       ? `<img src="${l.image}" alt="" style="width:100%;height:118px;object-fit:cover;display:block" onerror="this.style.display='none'"/>`
       : `<div style="height:64px;display:flex;align-items:center;justify-content:center;background:repeating-linear-gradient(45deg,#EAE6DD,#EAE6DD 10px,#F4F1EA 10px,#F4F1EA 20px);font:600 10px 'IBM Plex Mono',monospace;color:rgba(17,17,17,.45)">${t.noImg}</div>`;
-    return `<a href="/propiedad/${l.slug}" style="display:block;width:210px;text-decoration:none;color:#111">
+    return `<a href="/propiedad/${l.id}" style="display:block;width:210px;text-decoration:none;color:#111">
       ${img}
       <div style="padding:9px 11px 10px">
         <div style="font:700 15px 'Space Grotesk',sans-serif">${priceMain(l)}</div>
@@ -197,7 +197,7 @@ export default function MarketplaceClient({ listings, initialOp = 'all', initial
           province: l.province || null,
           lat: l.lat, lng: l.lng,
         });
-        window.location.href = `/propiedad/${l.slug}`;
+        window.location.href = `/propiedad/${l.id}`;
       });
       cluster.addLayer(marker);
       markersRef.current[l.id] = marker;
@@ -305,7 +305,7 @@ export default function MarketplaceClient({ listings, initialOp = 'all', initial
             {rows.length === 0 && <div className="py-10 text-center font-mono text-[12px] text-ink/45">{m.empty}</div>}
             {rows.map((l) => (
               <Link
-                key={l.id} href={`/propiedad/${l.slug}`}
+                key={l.id} href={`/propiedad/${l.id}`}
                 onMouseEnter={() => setHot(l.id)} onMouseLeave={() => setHot(null)}
                 className={`flex items-stretch shrink-0 min-h-[120px] bg-card border rounded-[18px] overflow-hidden transition-all ${hot === l.id ? 'border-ink -translate-y-0.5 shadow-hard-sm' : 'border-ink/15'}`}
               >

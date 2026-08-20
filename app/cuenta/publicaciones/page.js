@@ -54,7 +54,7 @@ export default function MyListingsPage() {
           {listings.map((l) => (
             <ListingCard key={l.id} l={l} action={
               <div className="flex gap-2">
-                <Link href={`/propiedad/${l.slug}`} className="flex-1 text-center py-2 rounded-pill border-[1.5px] border-ink text-[13px] font-semibold">{t.view}</Link>
+                <Link href={`/propiedad/${l.id}`} className="flex-1 text-center py-2 rounded-pill border-[1.5px] border-ink text-[13px] font-semibold">{t.view}</Link>
                 <button onClick={() => setConfirmId(l.id)} className="flex-1 py-2 rounded-pill border-[1.5px] border-red-300 text-red-700 text-[13px] font-semibold">{t.del}</button>
               </div>
             } />

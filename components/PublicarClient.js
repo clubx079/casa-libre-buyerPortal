@@ -125,7 +125,7 @@ export default function PublicarClient() {
         currency: priceCurrency,
         photos: photos.length,
       });
-      setResult({ ref: j.ref, slug: j.slug });
+      setResult({ ref: j.ref, id: j.id });
       setStep(2);
     } catch {
       setErr(t.errSubmit);
@@ -270,7 +270,7 @@ export default function PublicarClient() {
             <p className="text-[17px] text-ink/55 max-w-[440px] mx-auto mb-2.5">{t.s4Sub}</p>
             <div className="font-mono text-[12px] text-ink/45 mb-7">REF: {result?.ref}</div>
             <div className="flex gap-3 justify-center flex-wrap">
-              {result?.slug && <Link href={`/propiedad/${result.slug}`} className="px-8 py-4 bg-ink text-paper font-semibold text-[15px] rounded-pill shadow-hard-soft">{t.s4View}</Link>}
+              {result?.id && <Link href={`/propiedad/${result.id}`} className="px-8 py-4 bg-ink text-paper font-semibold text-[15px] rounded-pill shadow-hard-soft">{t.s4View}</Link>}
               <Link href="/propiedades" className="px-8 py-4 border-2 border-ink font-semibold text-[15px] rounded-pill">{t.s4Btn1}</Link>
               <button onClick={restart} className="px-8 py-4 border-2 border-ink font-semibold text-[15px] rounded-pill">{t.s4Btn2}</button>
             </div>

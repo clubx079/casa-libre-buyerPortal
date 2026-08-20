@@ -135,7 +135,7 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
         </div>
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {featured.map((l) => (
-            <Link key={l.id} href={`/propiedad/${l.slug}`} className="bg-paper text-ink rounded-card overflow-hidden hover:-translate-y-1 transition-transform block">
+            <Link key={l.id} href={`/propiedad/${l.id}`} className="bg-paper text-ink rounded-card overflow-hidden hover:-translate-y-1 transition-transform block">
               <div className="h-[180px] cl-hatch relative">
                 {l.image && /* eslint-disable-next-line @next/next/no-img-element */ <img src={l.image} alt="" className="w-full h-full object-cover" />}
                 <span className="absolute top-3 left-3 text-[11px] font-semibold bg-ink text-paper px-2.5 py-1 rounded-pill">{l.mode === 'alquiler' ? t.forRent : t.forSale}</span>

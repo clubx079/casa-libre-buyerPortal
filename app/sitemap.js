@@ -17,7 +17,7 @@ export default async function sitemap() {
   COMPETITORS.forEach((c) => entries.push({ url: `${SITE}/comparar/${c.slug}`, lastModified: now, changeFrequency: 'monthly', priority: 0.5 }));
   try {
     const { listings } = await getListings({ limit: 5000 });
-    listings.forEach((l) => entries.push({ url: `${SITE}/propiedad/${l.slug}`, lastModified: now, changeFrequency: 'weekly', priority: 0.5 }));
+    listings.forEach((l) => entries.push({ url: `${SITE}/propiedad/${l.id}`, lastModified: now, changeFrequency: 'weekly', priority: 0.5 }));
   } catch { /* DB blip — ship the static + programmatic entries anyway */ }
   return entries;
 }

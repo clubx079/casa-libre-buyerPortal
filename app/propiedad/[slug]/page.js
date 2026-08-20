@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { getListing } from '@/lib/listings';
 import { typeLabel } from '@/lib/propertyType';
 import { fmtUsd } from '@/lib/ui';
@@ -15,7 +15,7 @@ export async function generateMetadata({ params }) {
   if (!l) return { title: 'Propiedad no encontrada' };
   const title = `${listingTitle(l)} — ${fmtUsd(l.usd, 'es') || ''}${l.mode === 'alquiler' ? '/mes' : ''}`;
   const description = (l.description || `${listingTitle(l)}. ${[l.area && `${l.area} m²`, l.baths && `${l.baths} baños`, l.parking && `${l.parking} cocheras`].filter(Boolean).join(', ')}. Ver en Casa Libre.`).slice(0, 160);
-  const url = `${SITE}/propiedad/${l.slug}`;
+  const url = `${SITE}/propiedad/${l.id}`;
   return {
     title, description, alternates: { canonical: url },
     openGraph: { title, description, url, siteName: 'Casa Libre', type: 'website', locale: 'es_PY', images: l.image ? [{ url: l.image, alt: title }] : [] },
@@ -26,8 +26,11 @@ export async function generateMetadata({ params }) {
 export default async function PropiedadPage({ params }) {
   const l = await getListing(params.slug);
   if (!l) notFound();
+  // Audit #5: the public identifier is our internal uuid — never a source system id.
+  // Old shared source-slug URLs still resolve (getListing fallback) and 301 here.
+  if (params.slug !== l.id) permanentRedirect(`/propiedad/${l.id}`);
 
-  const url = `${SITE}/propiedad/${l.slug}`;
+  const url = `${SITE}/propiedad/${l.id}`;
   const jsonLd = {
     '@context': 'https://schema.org', '@type': 'RealEstateListing',
     name: listingTitle(l), description: l.description || listingTitle(l), url,
@@ -50,7 +53,7 @@ export default async function PropiedadPage({ params }) {
 
   // Analytics props for property_viewed.
   const trackProps = {
-    property_id: l.id, slug: l.slug, address: l.address || null, city: l.city || null,
+    property_id: l.id, slug: l.id, address: l.address || null, city: l.city || null,
     neighborhood: l.neighborhood || null, state: l.province || null, price: l.usd ?? null,
     currency: 'USD', mode: l.mode, type: l.type || null, lat: l.lat ?? null, lng: l.lng ?? null,
   };
