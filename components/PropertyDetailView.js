@@ -196,7 +196,7 @@ export default function PropertyDetailView({ l, url }) {
 
         {/* CONTACT CARD */}
         <div>
-          <PropertyContactCard sellerName={l.contact_name} waDigits={waDigits || null} url={url} listingRef={listingRef} trackProps={trackProps} />
+          <PropertyContactCard sellerName={l.user_published ? l.contact_name : null} waDigits={waDigits || null} url={url} listingRef={listingRef} trackProps={trackProps} />
           <NoResponseReport propertyId={l.id} listingRef={listingRef} sellerName={l.contact_name} sellerPhone={l.contact_phone} />
         </div>
       </div>
