@@ -28,7 +28,6 @@ const DICT = {
     ctaTitle: 'Tu casa te está buscando', ctaTitleSerif: 'a vos.',
     ctaSub: 'Gratis para buscar, gratis para publicar. Empezá hoy.',
     ctaBtn1: 'Explorar propiedades', ctaBtn2: 'Publicar gratis',
-    footerLine: `© ${new Date().getFullYear()} Casa Libre · hola@casa-libre.com · www.casa-libre.com · Asunción PY · Términos · Privacidad`,
     chips: ['Villa Morra', 'Carmelitas', 'Recoleta', 'Las Mercedes', 'Barrio Jara'],
   },
   en: {
@@ -52,7 +51,6 @@ const DICT = {
     ctaTitle: 'Your home is out there looking', ctaTitleSerif: 'for you.',
     ctaSub: 'Free to browse, free to list. Start today.',
     ctaBtn1: 'Explore homes', ctaBtn2: 'List for free',
-    footerLine: `© ${new Date().getFullYear()} Casa Libre · hola@casa-libre.com · www.casa-libre.com · Asunción PY · Terms · Privacy`,
     chips: ['Villa Morra', 'Carmelitas', 'Recoleta', 'Las Mercedes', 'Barrio Jara'],
   },
 };
@@ -181,7 +179,6 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
           <Link href="/propiedades" className="px-8 py-4 bg-ink text-paper font-semibold text-[16px] rounded-pill shadow-hard-soft">{t.ctaBtn1}</Link>
           <Link href="/publicar" className="px-8 py-4 border-2 border-ink font-semibold text-[16px] rounded-pill">{t.ctaBtn2}</Link>
         </div>
-        <div className="mt-12 font-mono text-[11px] text-ink/40">{t.footerLine}</div>
       </div>
     </div>
   );
