@@ -15,7 +15,7 @@ const M = {
     empty: 'Sin resultados — probá con otro barrio',
     types: { all: 'Tipo: todos', casa: 'Casa', depto: 'Departamento', duplex: 'Dúplex', terreno: 'Terreno', comercial: 'Local comercial', oficina: 'Oficina', deposito: 'Depósito', edificio: 'Edificio', condominio: 'Condominio', campo: 'Campo', otro: 'Otro' },
     pricesUsd: { all: 'Precio: todos', p1: 'Hasta US$ 100k', p2: 'US$ 100k – 200k', p3: 'Más de US$ 200k' },
-    pricesPyg: { all: 'Precio: todos', p1: 'Hasta ₲ 3 M/mes', p2: '₲ 3 – 6 M/mes', p3: 'Más de ₲ 6 M/mes' },
+    pricesPyg: { all: 'Precio: todos', p1: 'Hasta US$ 500/mes', p2: 'US$ 500 – 1.000/mes', p3: 'Más de US$ 1.000/mes' },
     beds: { all: 'Dormitorios: todos', b1: '1+', b2: '2+', b3: '3+' },
     sort: { relevancia: 'Relevancia', precio_asc: 'Precio: menor a mayor', precio_desc: 'Precio: mayor a menor', area_desc: 'Superficie: mayor primero' },
     listView: 'Lista', mapView: 'Mapa',
@@ -26,7 +26,7 @@ const M = {
     empty: 'No results — try another neighborhood',
     types: { all: 'Type: all', casa: 'House', depto: 'Apartment', duplex: 'Duplex', terreno: 'Lot', comercial: 'Commercial', oficina: 'Office', deposito: 'Warehouse', edificio: 'Building', condominio: 'Condo', campo: 'Rural land', otro: 'Other' },
     pricesUsd: { all: 'Price: any', p1: 'Under US$ 100k', p2: 'US$ 100k – 200k', p3: 'Over US$ 200k' },
-    pricesPyg: { all: 'Price: any', p1: 'Under ₲ 3 M/mo', p2: '₲ 3 – 6 M/mo', p3: 'Over ₲ 6 M/mo' },
+    pricesPyg: { all: 'Price: any', p1: 'Under US$ 500/mo', p2: 'US$ 500 – 1,000/mo', p3: 'Over US$ 1,000/mo' },
     beds: { all: 'Bedrooms: any', b1: '1+', b2: '2+', b3: '3+' },
     sort: { relevancia: 'Relevance', precio_asc: 'Price: low to high', precio_desc: 'Price: high to low', area_desc: 'Area: largest first' },
     listView: 'List', mapView: 'Map',
@@ -80,7 +80,7 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
     let r = listings.filter((l) => filter === 'all' || l.mode === filter);
     if (typeF !== 'all') r = r.filter((l) => typeOf(l) === typeF);
     if (priceF !== 'all') {
-      if (isRent) r = r.filter((l) => { const v = l.pyg || 0; return priceF === 'p1' ? v < 3000000 : priceF === 'p2' ? v >= 3000000 && v <= 6000000 : v > 6000000; });
+      if (isRent) r = r.filter((l) => { const v = l.usd || 0; return priceF === 'p1' ? v < 500 : priceF === 'p2' ? v >= 500 && v <= 1000 : v > 1000; });
       else r = r.filter((l) => { const v = usdVal(l); return priceF === 'p1' ? v < 100000 : priceF === 'p2' ? v >= 100000 && v <= 200000 : v > 200000; });
     }
     if (bedF !== 'all') r = r.filter((l) => bedsOf(l) >= Number(bedF.slice(1)));
