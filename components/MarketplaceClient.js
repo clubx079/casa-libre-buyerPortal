@@ -311,8 +311,6 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
               )}
             </div>
           </div>
-          {/* #15 referential FX-rate note — converted prices are approximate */}
-          {rate ? <p className="px-4 md:px-7 pt-1.5 font-mono text-[10.5px] leading-snug text-ink/40">{fmtRate(rate, lang, rateSource, rateDate)}</p> : null}
 
           {/* list */}
           <div className="flex-1 min-h-0 overflow-y-auto px-4 md:px-7 py-5 flex flex-col gap-4">

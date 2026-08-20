@@ -13,6 +13,7 @@ const L = {
     story: 'Nuestra historia', how: 'Cómo funciona', sell: 'Publicá tu propiedad', contact: 'Contacto', faq: 'Preguntas frecuentes',
     cityPrefix: '', vs: (n) => `Casa Libre vs ${n}`,
     terms: 'Términos', privacy: 'Privacidad',
+    fxNote: 'Conversión referencial al tipo de cambio del día · fuente open.er-api.com',
   },
   en: {
     tagline: 'Buy, rent and list properties in Paraguay — free.',
@@ -21,6 +22,7 @@ const L = {
     story: 'Our story', how: 'How it works', sell: 'List your property', contact: 'Contact', faq: 'FAQ',
     cityPrefix: '', vs: (n) => `Casa Libre vs ${n}`,
     terms: 'Terms', privacy: 'Privacy',
+    fxNote: 'Reference exchange rate of the day · source open.er-api.com',
   },
 };
 
@@ -53,7 +55,7 @@ export default function Footer() {
           ))}
         </div>
         <div className="mt-12 pt-6 border-t border-paper/15 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="font-mono text-[11px] text-paper/45">© {new Date().getFullYear()} Casa Libre — Paraguay · <a href="mailto:hola@casa-libre.com" className="hover:text-paper">hola@casa-libre.com</a></div>
+          <div className="font-mono text-[11px] text-paper/45">© {new Date().getFullYear()} Casa Libre — Paraguay · <a href="mailto:hola@casa-libre.com" className="hover:text-paper">hola@casa-libre.com</a><span className="block text-paper/35 mt-1">{t.fxNote}</span></div>
           <div className="flex gap-5 text-[12px] text-paper/60">
             <Link href="/terminos" className="hover:text-paper">{t.terms}</Link>
             <Link href="/privacidad" className="hover:text-paper">{t.privacy}</Link>
