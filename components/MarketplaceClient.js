@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { typeLabel, typeKey } from '@/lib/propertyType';
 import { T, fmtUsd, fmtPyg, shortUsd, titleCaseZone, bedAbbr, bathWord, parkWord } from '@/lib/ui';
+import { fmtRate } from '@/lib/money';
 import { useLang } from '@/lib/useLang';
 import AuthButton from '@/components/AuthButton';
 import { track } from '@/lib/analytics';
@@ -34,7 +35,7 @@ const M = {
 // accent- and case-insensitive text for search ("asuncion" should match "Asunción")
 const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
-export default function MarketplaceClient({ listings, initialOp = 'all', initialQuery = '' }) {
+export default function MarketplaceClient({ listings, rate, initialOp = 'all', initialQuery = '' }) {
   const [lang, setLang] = useLang();
   const [filter, setFilter] = useState(['all', 'venta', 'alquiler'].includes(initialOp) ? initialOp : 'all');
   const [query, setQuery] = useState(initialQuery || '');
@@ -299,6 +300,8 @@ export default function MarketplaceClient({ listings, initialOp = 'all', initial
               )}
             </div>
           </div>
+          {/* #15 referential FX-rate note — converted prices are approximate */}
+          {rate ? <p className="px-4 md:px-7 pt-1.5 font-mono text-[10.5px] leading-snug text-ink/40">{fmtRate(rate, lang)}</p> : null}
 
           {/* list */}
           <div className="flex-1 min-h-0 overflow-y-auto px-4 md:px-7 py-5 flex flex-col gap-4">
