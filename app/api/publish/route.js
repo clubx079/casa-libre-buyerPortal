@@ -4,6 +4,7 @@
 // them via property_images. Multipart/form-data.
 import { NextResponse } from 'next/server';
 import { insert, update } from '@/lib/db';
+import { zoneCanonical, dedupeKey } from '@/lib/dedupe';
 import { put } from '@/lib/b2';
 import { getUsdToPyg } from '@/lib/fx';
 import { getSession } from '@/lib/auth';
@@ -128,6 +129,13 @@ export async function POST(req) {
     posted_by: session.uid,
     raw_data: { published_via: 'buyer-portal', user_id: session.uid, user_email: session.email },
   };
+
+  // Ingest-pipeline parity: give the user listing a canonical zone + dedupe
+  // fingerprint (same logic as the scraper), so the scraper dedupe DEFERS to this
+  // authoritative owner listing instead of re-adding the same property later.
+  const zc = zoneCanonical(row);
+  row.zone_canonical = zc;
+  row.dedupe_key = dedupeKey(row, zc);
 
   let created;
   try {
