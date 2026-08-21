@@ -8,7 +8,10 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
 
-const BIZ_WA = '595981000000'; // TODO: real business WhatsApp line
+// No real business WhatsApp line yet — leave empty so the WhatsApp button is
+// hidden (the placeholder was a real person's number). Set the real line here
+// to bring the button back; contact falls back to email meanwhile.
+const BIZ_WA = '';
 
 const T = {
   es: {
@@ -287,11 +290,13 @@ export default function EmpresasClient() {
           </ul>
           <p className="font-mono text-[12px] tracking-[.08em] uppercase text-ink/55 mb-2">{t.sideH2}</p>
           <div className="flex flex-col gap-2.5">
-            <a href={waHref} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2.5 px-[22px] py-3 rounded-pill font-semibold text-[15px] text-white border-[1.5px] border-ink shadow-[4px_4px_0_#111]" style={{ background: '#25D366' }}>
-              <WaGlyph /> {t.waLbl}
-            </a>
+            {BIZ_WA && (
+              <a href={waHref} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2.5 px-[22px] py-3 rounded-pill font-semibold text-[15px] text-white border-[1.5px] border-ink shadow-[4px_4px_0_#111]" style={{ background: '#25D366' }}>
+                <WaGlyph /> {t.waLbl}
+              </a>
+            )}
             <p className="text-[13.5px] text-ink/65">
-              {lang === 'es' ? 'O por email: ' : 'Or by email: '}
+              {BIZ_WA ? (lang === 'es' ? 'O por email: ' : 'Or by email: ') : (lang === 'es' ? 'Escribinos por email: ' : 'Reach us by email: ')}
               <a href="mailto:hola@casa-libre.com" className="underline">hola@casa-libre.com</a>
             </p>
           </div>
