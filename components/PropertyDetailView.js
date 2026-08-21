@@ -233,7 +233,9 @@ export default function PropertyDetailView({ l, url }) {
           {hasGeo && (
             <>
               <h2 className="text-[18px] font-bold tracking-head mt-6 mb-2.5">{t.locH}</h2>
-              <div ref={mapEl} className="w-full h-[320px] rounded-[16px] overflow-hidden border border-ink/15" />
+              {/* relative z-0 = own stacking context so Leaflet's z-1000 zoom
+                  control can't poke through the fixed mobile WhatsApp bar. */}
+              <div ref={mapEl} className="relative z-0 w-full h-[320px] rounded-[16px] overflow-hidden border border-ink/15" />
             </>
           )}
 
