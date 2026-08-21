@@ -53,7 +53,7 @@ export default function PropertyContactCard({ sellerName, waDigits, url, listing
 
   return (
     <aside className="min-[921px]:sticky min-[921px]:top-5">
-      <div className="bg-card overflow-hidden border-[1.5px] border-ink rounded-[18px] shadow-[5px_4px_0_#111] max-[920px]:border-0 max-[920px]:rounded-none max-[920px]:shadow-none">
+      <div className="bg-card overflow-hidden border-[1.5px] border-ink rounded-[18px] shadow-[5px_4px_0_#111] max-[920px]:border-0 max-[920px]:rounded-none max-[920px]:shadow-none max-[920px]:bg-transparent">
         <div className="px-[18px] pt-[18px] pb-[18px] max-[920px]:p-0">
           {waUrl ? (
             <>

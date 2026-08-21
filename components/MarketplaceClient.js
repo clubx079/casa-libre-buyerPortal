@@ -140,8 +140,8 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
       const L = (await import('leaflet')).default;
       await import('leaflet.markercluster');
       if (cancelled || !mapEl.current || mapRef.current) return;
-      const map = L.map(mapEl.current, { scrollWheelZoom: true, zoomControl: true, attributionControl: true }).setView([-25.293, -57.60], 13);
-      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap contributors' }).addTo(map);
+      const map = L.map(mapEl.current, { scrollWheelZoom: true, zoomControl: true, attributionControl: false }).setView([-25.293, -57.60], 13);
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
       const cluster = L.markerClusterGroup({
         maxClusterRadius: 46,
         showCoverageOnHover: false,

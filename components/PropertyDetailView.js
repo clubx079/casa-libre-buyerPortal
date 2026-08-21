@@ -72,8 +72,8 @@ export default function PropertyDetailView({ l, url }) {
     (async () => {
       const L = (await import('leaflet')).default;
       if (cancelled || !mapEl.current || mapRef.current) return;
-      const map = L.map(mapEl.current, { scrollWheelZoom: false, zoomControl: true, attributionControl: true }).setView([l.lat, l.lng], 15);
-      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap contributors' }).addTo(map);
+      const map = L.map(mapEl.current, { scrollWheelZoom: false, zoomControl: true, attributionControl: false }).setView([l.lat, l.lng], 15);
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
       L.marker([l.lat, l.lng], { icon: L.divIcon({ className: '', html: '<div class="marker-pill">•</div>', iconSize: null }) }).addTo(map);
       mapRef.current = map;
       setTimeout(() => map.invalidateSize(), 200);
