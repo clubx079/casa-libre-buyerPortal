@@ -8,10 +8,10 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
 
-// No real business WhatsApp line yet — leave empty so the WhatsApp button is
-// hidden (the placeholder was a real person's number). Set the real line here
-// to bring the button back; contact falls back to email meanwhile.
-const BIZ_WA = '';
+// Placeholder test number until the real business WhatsApp line is set — the
+// previous placeholder (595981000000) was a real person's number, so this is a
+// harmless dummy. Replace with the real line when available.
+const BIZ_WA = '00000000';
 
 const T = {
   es: {
