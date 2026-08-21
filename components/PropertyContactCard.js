@@ -53,27 +53,29 @@ export default function PropertyContactCard({ sellerName, waDigits, url, listing
 
   return (
     <aside className="min-[921px]:sticky min-[921px]:top-5">
-      <div className="bg-card overflow-hidden" style={{ border: '1.5px solid #111', borderRadius: 18, boxShadow: '5px 4px 0 #111' }}>
-        <div className="px-[18px] pt-[18px] pb-[18px]">
+      <div className="bg-card overflow-hidden border-[1.5px] border-ink rounded-[18px] shadow-[5px_4px_0_#111] max-[920px]:border-0 max-[920px]:rounded-none max-[920px]:shadow-none">
+        <div className="px-[18px] pt-[18px] pb-[18px] max-[920px]:p-0">
           {waUrl ? (
             <>
+              {/* WhatsApp lives in the card on desktop; on mobile the sticky bottom
+                  bar carries it, so hide this one to avoid two WhatsApp buttons. */}
               <a
                 href={waUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => track('contact_whatsapp_click', { ref: listingRef, ...(trackProps || {}) })}
-                className="w-full flex items-center justify-center gap-2.5 px-[18px] py-[13px] rounded-pill text-[15px] font-semibold text-white transition-transform active:translate-x-[2px] active:translate-y-[2px]"
+                className="max-[920px]:hidden w-full flex items-center justify-center gap-2.5 px-[18px] py-[13px] rounded-pill text-[15px] font-semibold text-white transition-transform active:translate-x-[2px] active:translate-y-[2px]"
                 style={{ background: '#25D366', border: '1.5px solid #111', boxShadow: '4px 4px 0 #111' }}
               >
                 <WaGlyph /> {t.wa}
               </a>
 
-              <div className="flex gap-2.5 mt-3.5">
-                <a href={`tel:+${waDigits}`} onClick={() => track('contact_call_click', { ref: listingRef, ...(trackProps || {}) })} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-pill border border-ink bg-card text-[13.5px] font-medium hover:bg-paper transition-colors">
+              <div className="flex gap-2.5 mt-3.5 max-[920px]:mt-0">
+                <a href={`tel:+${waDigits}`} onClick={() => track('contact_call_click', { ref: listingRef, ...(trackProps || {}) })} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 max-[920px]:py-2 rounded-pill border border-ink bg-card text-[13.5px] max-[920px]:text-[12.5px] font-medium hover:bg-paper transition-colors">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.13.96.36 1.9.7 2.8a2 2 0 0 1-.45 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.45c.9.34 1.84.57 2.8.7A2 2 0 0 1 22 16.9Z" /></svg>
                   {t.call}
                 </a>
-                <button type="button" onClick={copyNumber} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-pill border border-ink bg-card text-[13.5px] font-medium hover:bg-paper transition-colors">
+                <button type="button" onClick={copyNumber} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 max-[920px]:py-2 rounded-pill border border-ink bg-card text-[13.5px] max-[920px]:text-[12.5px] font-medium hover:bg-paper transition-colors">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" /></svg>
                   {copied ? t.copied : t.copy}
                 </button>

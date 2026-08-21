@@ -4,7 +4,7 @@
 // bordered specs rail · description · features · publish-meta · WhatsApp contact
 // card · mobile sticky bar. Bilingual labels (ES default) via useLang; property
 // content comes from the DB.
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
 import { typeLabel } from '@/lib/propertyType';
@@ -12,6 +12,7 @@ import { track } from '@/lib/analytics';
 import { fmtUsd, fmtPyg, normalizePy, clRef } from '@/lib/ui';
 import PropertyContactCard from '@/components/PropertyContactCard';
 import NoResponseReport from '@/components/NoResponseReport';
+import SaveButton from '@/components/SaveButton';
 
 const T = {
   es: {
@@ -19,14 +20,14 @@ const T = {
     cta: 'Publicar gratis', crumbHome: 'Inicio', crumbList: 'Propiedades',
     forSale: 'Venta', forRent: 'Alquiler', perMonth: '/mes', bedShort: 'dorm',
     specBeds: 'Dormitorios', specBaths: 'Baños', specBuilt: 'm² construidos', specLot: 'm² terreno', specPark: 'Cocheras',
-    descH: 'Descripción', featH: 'Características', published: 'Publicado', ref: 'Ref', photoSoon: 'Foto próximamente',
+    descH: 'Descripción', featH: 'Características', locH: 'Ubicación', published: 'Publicado', ref: 'Ref', photoSoon: 'Foto próximamente',
   },
   en: {
     tabs: [['Buy', '/propiedades?op=venta'], ['Rent', '/propiedades?op=alquiler'], ['Sell', '/publicar']],
     cta: 'List for free', crumbHome: 'Home', crumbList: 'Listings',
     forSale: 'For sale', forRent: 'For rent', perMonth: '/mo', bedShort: 'bd',
     specBeds: 'Bedrooms', specBaths: 'Bathrooms', specBuilt: 'm² built', specLot: 'm² lot', specPark: 'Parking',
-    descH: 'Description', featH: 'Features', published: 'Listed', ref: 'Ref', photoSoon: 'Photo coming soon',
+    descH: 'Description', featH: 'Features', locH: 'Location', published: 'Listed', ref: 'Ref', photoSoon: 'Photo coming soon',
   },
 };
 
@@ -49,6 +50,8 @@ export default function PropertyDetailView({ l, url }) {
   const [lang, setLang] = useLang();
   const [box, setBox] = useState(-1); // lightbox image index; -1 closed
   const t = T[lang] || T.es;
+  const mapEl = useRef(null);
+  const mapRef = useRef(null);
 
   // ── derived ──
   // Shared CL ref (tracking + display) — numeric ids render "CL-0002"-style.
@@ -58,6 +61,26 @@ export default function PropertyDetailView({ l, url }) {
   const title = `${tp}${l.beds ? ` ${l.beds} ${t.bedShort}` : ''}${l.neighborhood ? ` · ${l.neighborhood}` : l.city ? ` · ${l.city}` : ''}`;
   const modeLabel = l.mode === 'alquiler' ? t.forRent : t.forSale;
   const sfx = l.mode === 'alquiler' ? t.perMonth : '';
+  // Nav toggle: only the operation matching THIS listing is selected (not both).
+  const navActive = l.mode === 'alquiler' ? 1 : 0;
+  const hasGeo = l.lat != null && l.lng != null;
+
+  // Location map — a single pin at the property's coordinates (client-only Leaflet).
+  useEffect(() => {
+    if (!hasGeo) return;
+    let cancelled = false;
+    (async () => {
+      const L = (await import('leaflet')).default;
+      if (cancelled || !mapEl.current || mapRef.current) return;
+      const map = L.map(mapEl.current, { scrollWheelZoom: false, zoomControl: true, attributionControl: true }).setView([l.lat, l.lng], 15);
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap contributors' }).addTo(map);
+      L.marker([l.lat, l.lng], { icon: L.divIcon({ className: '', html: '<div class="marker-pill">•</div>', iconSize: null }) }).addTo(map);
+      mapRef.current = map;
+      setTimeout(() => map.invalidateSize(), 200);
+    })();
+    return () => { cancelled = true; if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; } };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [l.lat, l.lng]);
 
   // Standardized: USD is always the main price; local ₲ is the "≈ …" sub.
   const bigPrice = (fmtUsd(l.usd, lang) || '—');
@@ -104,6 +127,9 @@ export default function PropertyDetailView({ l, url }) {
       {main && (
         <span className="absolute top-2.5 left-2.5 text-[10px] font-semibold bg-ink text-paper px-2.5 py-1 rounded-pill">{modeLabel}</span>
       )}
+      {main && (
+        <SaveButton id={l.id} className="absolute top-2.5 right-2.5 z-10" />
+      )}
       {main && imgs.length > 0 && (
         <span className="absolute bottom-2.5 right-2.5 text-[10px] bg-card border border-ink text-ink px-2.5 py-1 rounded-pill">1 / {imgs.length}</span>
       )}
@@ -117,7 +143,7 @@ export default function PropertyDetailView({ l, url }) {
         <Link href="/" className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif italic font-normal">.py</em></Link>
         <div className="hidden md:flex gap-2">
           {t.tabs.map(([label, href], i) => (
-            <Link key={label} href={href} className={`inline-flex items-center h-[40px] px-[18px] rounded-pill text-[14px] font-medium border border-ink ${i < 2 ? 'bg-ink text-paper' : ''}`}>{label}</Link>
+            <Link key={label} href={href} className={`inline-flex items-center h-[40px] px-[18px] rounded-pill text-[14px] font-medium border border-ink ${i === navActive ? 'bg-ink text-paper' : ''}`}>{label}</Link>
           ))}
         </div>
         <div className="flex items-center gap-3.5">
@@ -130,13 +156,30 @@ export default function PropertyDetailView({ l, url }) {
         </div>
       </nav>
 
-      {/* ── BREADCRUMB ── */}
-      <div className="px-5 md:px-9 pt-4 font-mono text-[12px] text-ink/50">
+      {/* ── BREADCRUMB ── Home / Listings / City / Neighborhood / Sale|Rent / Type
+          / Title. Each filter crumb opens the marketplace pre-filtered in a new tab. */}
+      <div className="px-5 md:px-9 pt-4 font-mono text-[12px] text-ink/50 flex flex-wrap items-center gap-x-1.5 gap-y-1">
         <Link href="/" className="hover:underline">{t.crumbHome}</Link>
-        <span className="mx-1.5 text-ink/25">/</span>
+        <span className="text-ink/25">/</span>
         <Link href="/propiedades" className="hover:underline">{t.crumbList}</Link>
-        <span className="mx-1.5 text-ink/25">/</span>
-        {title}
+        {l.city && (
+          <>
+            <span className="text-ink/25">/</span>
+            <a href={`/propiedades?q=${encodeURIComponent(l.city)}`} target="_blank" rel="noopener noreferrer" className="hover:underline">{l.city}</a>
+          </>
+        )}
+        {l.neighborhood && (
+          <>
+            <span className="text-ink/25">/</span>
+            <a href={`/propiedades?q=${encodeURIComponent(l.neighborhood)}`} target="_blank" rel="noopener noreferrer" className="hover:underline">{l.neighborhood}</a>
+          </>
+        )}
+        <span className="text-ink/25">/</span>
+        <a href={`/propiedades?op=${l.mode === 'alquiler' ? 'alquiler' : 'venta'}`} target="_blank" rel="noopener noreferrer" className="hover:underline">{modeLabel}</a>
+        <span className="text-ink/25">/</span>
+        <a href={`/propiedades?q=${encodeURIComponent(tp)}`} target="_blank" rel="noopener noreferrer" className="hover:underline">{tp}</a>
+        <span className="text-ink/25">/</span>
+        <span className="text-ink/70">{title}</span>
       </div>
 
       {/* ── GALLERY ── */}
@@ -187,6 +230,13 @@ export default function PropertyDetailView({ l, url }) {
             </>
           )}
 
+          {hasGeo && (
+            <>
+              <h2 className="text-[18px] font-bold tracking-head mt-6 mb-2.5">{t.locH}</h2>
+              <div ref={mapEl} className="w-full h-[320px] rounded-[16px] overflow-hidden border border-ink/15" />
+            </>
+          )}
+
           <div className="mt-7 pt-3.5 border-t border-ink/12 font-mono text-[11px] text-ink/45 flex gap-[18px] flex-wrap">
             {pubDate && <span>{t.published} {pubDate}</span>}
             <span>{t.ref} {listingRef}</span>
@@ -196,7 +246,9 @@ export default function PropertyDetailView({ l, url }) {
         {/* CONTACT CARD */}
         <div>
           <PropertyContactCard sellerName={l.user_published ? l.contact_name : null} waDigits={waDigits || null} url={url} listingRef={listingRef} trackProps={trackProps} />
-          <NoResponseReport propertyId={l.id} listingRef={listingRef} sellerName={l.contact_name} sellerPhone={l.contact_phone} />
+          <div className="flex justify-center text-center">
+            <NoResponseReport propertyId={l.id} listingRef={listingRef} sellerName={l.contact_name} sellerPhone={l.contact_phone} />
+          </div>
         </div>
       </div>
 

@@ -7,7 +7,7 @@ import Footer from '@/components/Footer';
 export const dynamic = 'force-dynamic';
 
 export default async function Landing() {
-  const { listings, count } = await getListings({ limit: 120 });
+  const { listings, count, total } = await getListings({ limit: 120 });
   const featured = listings.filter((l) => l.image).slice(0, 3);
   const ticker = listings
     .filter((l) => l.usd)
@@ -15,7 +15,7 @@ export default async function Landing() {
     .map((l) => `${(l.neighborhood || l.city || 'Paraguay').toUpperCase()} — ${(typeLabel(l.type, 'es') || 'Propiedad').toUpperCase()} — ${fmtUsd(l.usd, 'es')}${l.mode === 'alquiler' ? '/mes' : ''}`);
   return (
     <>
-      <LandingClient featured={featured} count={count || listings.length} tickerData={ticker} />
+      <LandingClient featured={featured} count={total || count || listings.length} tickerData={ticker} />
       <Footer />
     </>
   );

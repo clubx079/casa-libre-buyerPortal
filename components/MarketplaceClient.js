@@ -52,6 +52,7 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
   const [mobileView, setMobileView] = useState('list'); // mobile: 'list' | 'map'
   const [hot, setHot] = useState(null);
   const [visible, setVisible] = useState(PER_PAGE); // #16 how many list cards are rendered
+  const [scope, setScope] = useState('asuncion'); // default: focus Asunción; 'all' = whole country
   const mapEl = useRef(null);
   const mapRef = useRef(null);
   const clusterRef = useRef(null);
@@ -78,6 +79,9 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
 
   const rows = useMemo(() => {
     let r = listings.filter((l) => filter === 'all' || l.mode === filter);
+    // Default the marketplace to Asunción (map zooms there, list shows its
+    // properties); a free-text search or switching scope to 'all' lifts it.
+    if (scope === 'asuncion' && !query) r = r.filter((l) => norm(l.city).includes('asuncion'));
     if (typeF !== 'all') r = r.filter((l) => typeOf(l) === typeF);
     if (priceF !== 'all') {
       if (isRent) r = r.filter((l) => { const v = l.usd || 0; return priceF === 'p1' ? v < 500 : priceF === 'p2' ? v >= 500 && v <= 1000 : v > 1000; });
@@ -93,7 +97,7 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
     else if (sortBy === 'area_desc') r = [...r].sort((a, b) => areaVal(b) - areaVal(a));
     return r;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [listings, filter, typeF, priceF, bedF, query, sortBy]);
+  }, [listings, filter, typeF, priceF, bedF, query, sortBy, scope]);
 
   // Report the active filter set to analytics, debounced so free-text typing
   // doesn't fire an event per keystroke. Captures the initial view too.
@@ -167,13 +171,13 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
   useEffect(() => { didFit.current = false; drawMarkers(); /* eslint-disable-next-line */ }, [rows, lang]);
 
   // #16 Reset the list window to the first page whenever the result set changes.
-  useEffect(() => { setVisible(PER_PAGE); }, [filter, typeF, priceF, bedF, query, sortBy]);
+  useEffect(() => { setVisible(PER_PAGE); }, [filter, typeF, priceF, bedF, query, sortBy, scope]);
 
   function popupHtml(l) {
     const img = l.image
       ? `<img src="${l.image}" alt="" style="width:100%;height:118px;object-fit:cover;display:block" onerror="this.style.display='none'"/>`
       : `<div style="height:64px;display:flex;align-items:center;justify-content:center;background:repeating-linear-gradient(45deg,#EAE6DD,#EAE6DD 10px,#F4F1EA 10px,#F4F1EA 20px);font:600 10px 'IBM Plex Mono',monospace;color:rgba(17,17,17,.45)">${t.noImg}</div>`;
-    return `<a href="/propiedad/${l.id}" style="display:block;width:210px;text-decoration:none;color:#111">
+    return `<a href="/propiedad/${l.id}" target="_blank" rel="noopener noreferrer" style="display:block;width:210px;text-decoration:none;color:#111">
       ${img}
       <div style="padding:9px 11px 10px">
         <div style="font:700 15px 'Space Grotesk',sans-serif">${priceMain(l)}</div>
@@ -209,7 +213,7 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
           province: l.province || null,
           lat: l.lat, lng: l.lng,
         });
-        window.location.href = `/propiedad/${l.id}`;
+        window.open(`/propiedad/${l.id}`, '_blank', 'noopener');
       });
       cluster.addLayer(marker);
       markersRef.current[l.id] = marker;
@@ -272,6 +276,14 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
         {['all', 'venta', 'alquiler'].map((f) => (
           <button key={f} onClick={() => setFilter(f)} className={chipCls(filter === f)}>{f === 'all' ? t.all : t[f]}</button>
         ))}
+        {/* Scope: Asunción by default (map zooms there); toggle off for all Paraguay. */}
+        <button
+          onClick={() => setScope((s) => (s === 'asuncion' ? 'all' : 'asuncion'))}
+          className={chipCls(scope === 'asuncion')}
+          title={scope === 'asuncion' ? (lang === 'es' ? 'Mostrando solo Asunción' : 'Showing Asunción only') : (lang === 'es' ? 'Mostrando todo Paraguay' : 'Showing all Paraguay')}
+        >
+          {scope === 'asuncion' ? 'Asunción' : (lang === 'es' ? 'Todo Paraguay' : 'All Paraguay')}
+        </button>
         <select value={typeF} onChange={(e) => setTypeF(e.target.value)} className={selCls}>
           {Object.entries(m.types).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
@@ -317,7 +329,7 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
             {rows.length === 0 && <div className="py-10 text-center font-mono text-[12px] text-ink/45">{m.empty}</div>}
             {rows.slice(0, visible).map((l) => (
               <Link
-                key={l.id} href={`/propiedad/${l.id}`}
+                key={l.id} href={`/propiedad/${l.id}`} target="_blank" rel="noopener noreferrer"
                 onMouseEnter={() => setHot(l.id)} onMouseLeave={() => setHot(null)}
                 className={`flex items-stretch shrink-0 min-h-[120px] bg-card border rounded-[18px] overflow-hidden transition-all ${hot === l.id ? 'border-ink -translate-y-0.5 shadow-hard-sm' : 'border-ink/15'}`}
               >
