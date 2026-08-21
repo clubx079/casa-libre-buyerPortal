@@ -52,7 +52,6 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
   const [mobileView, setMobileView] = useState('list'); // mobile: 'list' | 'map'
   const [hot, setHot] = useState(null);
   const [visible, setVisible] = useState(PER_PAGE); // #16 how many list cards are rendered
-  const [scope, setScope] = useState('asuncion'); // default: focus Asunción; 'all' = whole country
   const mapEl = useRef(null);
   const mapRef = useRef(null);
   const clusterRef = useRef(null);
@@ -79,9 +78,6 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
 
   const rows = useMemo(() => {
     let r = listings.filter((l) => filter === 'all' || l.mode === filter);
-    // Default the marketplace to Asunción (map zooms there, list shows its
-    // properties); a free-text search or switching scope to 'all' lifts it.
-    if (scope === 'asuncion' && !query) r = r.filter((l) => norm(l.city).includes('asuncion'));
     if (typeF !== 'all') r = r.filter((l) => typeOf(l) === typeF);
     if (priceF !== 'all') {
       if (isRent) r = r.filter((l) => { const v = l.usd || 0; return priceF === 'p1' ? v < 500 : priceF === 'p2' ? v >= 500 && v <= 1000 : v > 1000; });
@@ -97,7 +93,7 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
     else if (sortBy === 'area_desc') r = [...r].sort((a, b) => areaVal(b) - areaVal(a));
     return r;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [listings, filter, typeF, priceF, bedF, query, sortBy, scope]);
+  }, [listings, filter, typeF, priceF, bedF, query, sortBy]);
 
   // Report the active filter set to analytics, debounced so free-text typing
   // doesn't fire an event per keystroke. Captures the initial view too.
@@ -171,7 +167,7 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
   useEffect(() => { didFit.current = false; drawMarkers(); /* eslint-disable-next-line */ }, [rows, lang]);
 
   // #16 Reset the list window to the first page whenever the result set changes.
-  useEffect(() => { setVisible(PER_PAGE); }, [filter, typeF, priceF, bedF, query, sortBy, scope]);
+  useEffect(() => { setVisible(PER_PAGE); }, [filter, typeF, priceF, bedF, query, sortBy]);
 
   function popupHtml(l) {
     const img = l.image
@@ -219,7 +215,10 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
       markersRef.current[l.id] = marker;
       pts.push([l.lat, l.lng]);
     });
-    if (pts.length && !didFit.current) { didFit.current = true; try { map.fitBounds(pts, { padding: [40, 40], maxZoom: 14 }); } catch {} }
+    // Default view stays zoomed on Asunción (the initial setView); only auto-fit
+    // to the results once the user actually filters/searches.
+    const isFiltered = filter !== 'all' || typeF !== 'all' || priceF !== 'all' || bedF !== 'all' || !!query;
+    if (pts.length && !didFit.current && isFiltered) { didFit.current = true; try { map.fitBounds(pts, { padding: [40, 40], maxZoom: 14 }); } catch {} }
   }
 
   useEffect(() => {
@@ -276,14 +275,6 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
         {['all', 'venta', 'alquiler'].map((f) => (
           <button key={f} onClick={() => setFilter(f)} className={chipCls(filter === f)}>{f === 'all' ? t.all : t[f]}</button>
         ))}
-        {/* Scope: Asunción by default (map zooms there); toggle off for all Paraguay. */}
-        <button
-          onClick={() => setScope((s) => (s === 'asuncion' ? 'all' : 'asuncion'))}
-          className={chipCls(scope === 'asuncion')}
-          title={scope === 'asuncion' ? (lang === 'es' ? 'Mostrando solo Asunción' : 'Showing Asunción only') : (lang === 'es' ? 'Mostrando todo Paraguay' : 'Showing all Paraguay')}
-        >
-          {scope === 'asuncion' ? 'Asunción' : (lang === 'es' ? 'Todo Paraguay' : 'All Paraguay')}
-        </button>
         <select value={typeF} onChange={(e) => setTypeF(e.target.value)} className={selCls}>
           {Object.entries(m.types).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
