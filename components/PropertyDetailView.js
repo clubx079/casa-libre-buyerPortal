@@ -21,6 +21,7 @@ const T = {
     forSale: 'Venta', forRent: 'Alquiler', perMonth: '/mes', bedShort: 'dorm',
     specBeds: 'Dormitorios', specBaths: 'Baños', specBuilt: 'm² construidos', specLot: 'm² terreno', specPark: 'Cocheras',
     descH: 'Descripción', featH: 'Características', locH: 'Ubicación', published: 'Publicado', ref: 'Ref', photoSoon: 'Foto próximamente',
+    bizLink: '¿Empresa o inmobiliaria? Publicá tu cartera →',
   },
   en: {
     tabs: [['Buy', '/propiedades?op=venta'], ['Rent', '/propiedades?op=alquiler'], ['Sell', '/publicar']],
@@ -28,6 +29,7 @@ const T = {
     forSale: 'For sale', forRent: 'For rent', perMonth: '/mo', bedShort: 'bd',
     specBeds: 'Bedrooms', specBaths: 'Bathrooms', specBuilt: 'm² built', specLot: 'm² lot', specPark: 'Parking',
     descH: 'Description', featH: 'Features', locH: 'Location', published: 'Listed', ref: 'Ref', photoSoon: 'Photo coming soon',
+    bizLink: 'Agency or business? List your portfolio →',
   },
 };
 
@@ -250,6 +252,10 @@ export default function PropertyDetailView({ l, url }) {
           <PropertyContactCard sellerName={l.user_published ? l.contact_name : null} waDigits={waDigits || null} url={url} listingRef={listingRef} trackProps={trackProps} />
           <div className="flex justify-center text-center">
             <NoResponseReport propertyId={l.id} listingRef={listingRef} sellerName={l.contact_name} sellerPhone={l.contact_phone} />
+          </div>
+          {/* Partner funnel — visible on every listing. */}
+          <div className="mt-4 pt-3.5 border-t border-ink/12 text-center">
+            <Link href="/empresas" className="font-mono text-[11.5px] text-ink/55 hover:text-ink/80 underline underline-offset-2 decoration-ink/25">{t.bizLink}</Link>
           </div>
         </div>
       </div>
