@@ -83,7 +83,7 @@ export default function AccountShell({ children }) {
             {['es', 'en'].map((l) => <button key={l} onClick={() => setLang(l)} className={`px-3 py-1.5 rounded-pill ${lang === l ? 'bg-ink text-paper' : 'text-ink/55'}`}>{l.toUpperCase()}</button>)}
           </div>
         </div>
-        <main className="max-w-[1040px] mx-auto px-5 md:px-8 py-8">{children}</main>
+        <main className="w-full px-5 md:px-8 py-8">{children}</main>
       </div>
 
       <ConfirmModal open={showLogout} title={t.logout} message={t.logoutMsg} confirmLabel={t.logout} cancelLabel={t.cancel} onConfirm={() => { setShowLogout(false); logout(); }} onCancel={() => setShowLogout(false)} />
