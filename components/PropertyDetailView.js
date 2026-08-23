@@ -243,9 +243,12 @@ export default function PropertyDetailView({ l, url }) {
             <>
               <h2 className="text-[18px] font-bold tracking-head mt-6 mb-2.5">{t.featH}</h2>
               <ul className="list-none p-0 m-0 flex flex-wrap gap-2">
-                {l.features.map((f, i) => (
-                  <li key={i} className="text-[13px] font-medium bg-card border border-ink/30 rounded-pill px-3.5 py-[7px]">{f}</li>
-                ))}
+                {l.features.map((f, i) => {
+                  const label = typeof f === 'string' ? f : (f && (f.FeatureName || f.name || f.label)) || '';
+                  return label ? (
+                    <li key={i} className="text-[13px] font-medium bg-card border border-ink/30 rounded-pill px-3.5 py-[7px]">{label}</li>
+                  ) : null;
+                })}
               </ul>
             </>
           )}
