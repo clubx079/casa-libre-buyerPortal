@@ -8,6 +8,7 @@ import { zoneCanonical, dedupeKey } from '@/lib/dedupe';
 import { put } from '@/lib/b2';
 import { getUsdToPyg } from '@/lib/fx';
 import { getSession } from '@/lib/auth';
+import { sendListingPublishedEmail } from '@/lib/email';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -177,5 +178,17 @@ export async function POST(req) {
   }
 
   const ref = `CL-${new Date().getFullYear()}-${String(propertyId || '').replace(/\D/g, '').slice(-5).padStart(5, '0') || '00000'}`;
+
+  // Confirmation email to the owner — fire-and-forget, never blocks publish.
+  if (session.email) {
+    const site = (process.env.APP_PUBLIC_URL || '').replace(/\/$/, '');
+    sendListingPublishedEmail(session.email, {
+      name: session.name || contactName,
+      title: `${property_type} · ${neighborhood}`,
+      ref,
+      url: propertyId ? `${site}/propiedad/${propertyId}` : null,
+    }).catch(() => {});
+  }
+
   return NextResponse.json({ ok: true, slug, id: propertyId, ref, images: images.length });
 }

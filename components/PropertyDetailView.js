@@ -13,6 +13,8 @@ import { fmtUsd, fmtPyg, normalizePy, clRef } from '@/lib/ui';
 import PropertyContactCard from '@/components/PropertyContactCard';
 import NoResponseReport from '@/components/NoResponseReport';
 import SaveButton from '@/components/SaveButton';
+import ShareButton from '@/components/ShareButton';
+import { genToken, trackedUrl, trackContact, markOpened } from '@/lib/contactTrack';
 
 const T = {
   es: {
@@ -114,8 +116,21 @@ export default function PropertyDetailView({ l, url }) {
   const waDigits = normalizePy(l.contact_phone);
   // Always Spanish — the message reaches a local seller. Same locked format
   // as the contact card (no buyer name here — the mobile bar has no name field).
-  const mbarMsg = `¡Hola! ¿Sigue disponible esta propiedad?\n${url}`;
+  // Trackable mobile-bar WhatsApp (own token; only one WA button shows per
+  // viewport, so it never collides with the contact card's).
+  const [mbarToken] = useState(genToken);
+  const mbarMsg = `¡Hola! ¿Sigue disponible esta propiedad?\n${trackedUrl(url, mbarToken)}`;
   const mbarWa = waDigits ? `https://wa.me/${waDigits}?text=${encodeURIComponent(mbarMsg)}` : null;
+  const recordMbarContact = () =>
+    trackContact({ token: mbarToken, channel: 'whatsapp', property_id: l.id, listing_ref: listingRef, seller_name: l.contact_name || null, seller_phone: waDigits || null });
+
+  // If the seller opened the shared link (…?t=<token>), flag that contact opened.
+  useEffect(() => {
+    try {
+      const tok = new URLSearchParams(window.location.search).get('t');
+      if (tok) markOpened(tok);
+    } catch { /* noop */ }
+  }, []);
 
   const Tile = ({ src, i, main }) => (
     <div
@@ -130,7 +145,10 @@ export default function PropertyDetailView({ l, url }) {
         <span className="absolute top-2.5 left-2.5 text-[10px] font-semibold bg-ink text-paper px-2.5 py-1 rounded-pill">{modeLabel}</span>
       )}
       {main && (
-        <SaveButton id={l.id} className="absolute top-2.5 right-2.5 z-10" />
+        <div className="absolute top-2.5 right-2.5 z-10 flex items-center gap-1.5">
+          <ShareButton url={url} title={title} />
+          <SaveButton id={l.id} />
+        </div>
       )}
       {main && imgs.length > 0 && (
         <span className="absolute bottom-2.5 right-2.5 text-[10px] bg-card border border-ink text-ink px-2.5 py-1 rounded-pill">1 / {imgs.length}</span>
@@ -267,7 +285,7 @@ export default function PropertyDetailView({ l, url }) {
           <small className="block font-mono text-[10px] text-ink/50 truncate">{zone} · {t.ref} {listingRef}</small>
         </div>
         {mbarWa && (
-          <a href={mbarWa} target="_blank" rel="noopener noreferrer" onClick={() => track('contact_whatsapp_click', { ref: listingRef, ...(trackProps || {}) })} className="flex-1 flex items-center justify-center gap-2 px-3.5 py-3 rounded-pill text-[14px] font-semibold text-white" style={{ background: '#25D366', border: '1.5px solid #111' }}>
+          <a href={mbarWa} target="_blank" rel="noopener noreferrer" onClick={() => { track('contact_whatsapp_click', { ref: listingRef, ...(trackProps || {}) }); recordMbarContact(); }} className="flex-1 flex items-center justify-center gap-2 px-3.5 py-3 rounded-pill text-[14px] font-semibold text-white" style={{ background: '#25D366', border: '1.5px solid #111' }}>
             <WaGlyph /> WhatsApp
           </a>
         )}

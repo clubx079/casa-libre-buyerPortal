@@ -4,6 +4,7 @@ import { verifyOtp } from '@/lib/otp';
 import { findUserByEmail, createUser, publicUser } from '@/lib/users';
 import { setSessionCookie } from '@/lib/auth';
 import { getClientIP } from '@/lib/ip';
+import { sendWelcomeEmail } from '@/lib/email';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -30,6 +31,8 @@ export async function POST(req) {
   } catch (e) {
     return NextResponse.json({ error: 'create_failed', detail: e?.message || String(e) }, { status: 500 });
   }
+  // Welcome email — fire-and-forget, never blocks signup.
+  sendWelcomeEmail(email, fullName).catch(() => {});
   setSessionCookie(user);
   return NextResponse.json({ ok: true, user: publicUser(user) });
 }

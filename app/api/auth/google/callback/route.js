@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { findOrCreateGoogleUser } from '@/lib/users';
 import { makeToken, COOKIE_NAME } from '@/lib/auth';
 import { getClientIP } from '@/lib/ip';
+import { sendWelcomeEmail } from '@/lib/email';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -46,6 +47,9 @@ export async function GET(req) {
     const user = await findOrCreateGoogleUser({ email: g.email, googleId: g.id, fullName, ip: getClientIP(req) });
 
     if (user.blocked || user.suspended) return NextResponse.redirect(`${base}/?auth_error=blocked`);
+
+    // Welcome email for brand-new Google signups — fire-and-forget.
+    if (user._isNew) sendWelcomeEmail(g.email, fullName).catch(() => {});
 
     const res = NextResponse.redirect(`${base}/cuenta`);
     res.cookies.set(COOKIE_NAME, makeToken(user), {

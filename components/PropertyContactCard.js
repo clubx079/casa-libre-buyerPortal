@@ -8,6 +8,7 @@
 import { useState } from 'react';
 import { useLang } from '@/lib/useLang';
 import { track } from '@/lib/analytics';
+import { genToken, trackedUrl, trackContact } from '@/lib/contactTrack';
 
 const T = {
   es: {
@@ -35,14 +36,22 @@ const WaGlyph = ({ size = 21 }) => (
 export default function PropertyContactCard({ sellerName, waDigits, url, listingRef, trackProps }) {
   const [lang] = useLang();
   const [copied, setCopied] = useState(false);
+  // One tracking token per card render — embedded in the WhatsApp link so we can
+  // tell when the seller opens it (see /api/contact-track).
+  const [token] = useState(genToken);
   const t = T[lang] || T.es;
 
   const displayName = sellerName || t.owner;
   const initial = displayName.trim().charAt(0).toUpperCase() || '?';
   // The message reaches a local (Paraguayan) seller, so it is always in
-  // Spanish regardless of the buyer's UI language.
-  const message = T.es.msg('', url);
+  // Spanish regardless of the buyer's UI language. The link back to the listing
+  // carries UTM + the tracking token.
+  const message = T.es.msg('', trackedUrl(url, token));
   const waUrl = waDigits ? `https://wa.me/${waDigits}?text=${encodeURIComponent(message)}` : null;
+
+  // Record the contact attempt (who/seller/property) as the buyer taps WhatsApp.
+  const recordContact = (channel) =>
+    trackContact({ token, channel, property_id: trackProps?.property_id || null, listing_ref: listingRef || null, seller_name: sellerName || null, seller_phone: waDigits || null });
 
   const copyNumber = async () => {
     try { await navigator.clipboard.writeText(`+${waDigits}`); } catch { /* ignore */ }
@@ -63,7 +72,7 @@ export default function PropertyContactCard({ sellerName, waDigits, url, listing
                 href={waUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                onClick={() => track('contact_whatsapp_click', { ref: listingRef, ...(trackProps || {}) })}
+                onClick={() => { track('contact_whatsapp_click', { ref: listingRef, ...(trackProps || {}) }); recordContact('whatsapp'); }}
                 className="max-[920px]:hidden w-full flex items-center justify-center gap-2.5 px-[18px] py-[13px] rounded-pill text-[15px] font-semibold text-white transition-transform active:translate-x-[2px] active:translate-y-[2px]"
                 style={{ background: '#25D366', border: '1.5px solid #111', boxShadow: '4px 4px 0 #111' }}
               >
