@@ -52,6 +52,7 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
   const [mobileView, setMobileView] = useState('list'); // mobile: 'list' | 'map'
   const [hot, setHot] = useState(null);
   const [visible, setVisible] = useState(PER_PAGE); // #16 how many list cards are rendered
+  const [mapReady, setMapReady] = useState(false); // show a branded loader until tiles paint
   const mapEl = useRef(null);
   const mapRef = useRef(null);
   const clusterRef = useRef(null);
@@ -141,7 +142,10 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
       await import('leaflet.markercluster');
       if (cancelled || !mapEl.current || mapRef.current) return;
       const map = L.map(mapEl.current, { scrollWheelZoom: true, zoomControl: true, attributionControl: false }).setView([-25.293, -57.60], 13);
-      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+      const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 });
+      tiles.on('load', () => { if (!cancelled) setMapReady(true); });
+      tiles.addTo(map);
+      setTimeout(() => { if (!cancelled) setMapReady(true); }, 1500); // fallback if 'load' is missed
       const cluster = L.markerClusterGroup({
         maxClusterRadius: 46,
         showCoverageOnHover: false,
@@ -352,7 +356,17 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
             )}
           </div>
         </div>
-        <div ref={mapEl} className={`min-h-0 md:block md:flex-1 md:border-l border-ink/12 ${mobileView === 'list' ? 'hidden' : 'block flex-1'}`} />
+        {/* relative wrapper gives Leaflet a definite-size, clipped box (fixes the
+            mobile overflow where pins spilled outside the map) + hosts the loader. */}
+        <div className={`relative min-h-0 md:block md:flex-1 md:border-l border-ink/12 ${mobileView === 'list' ? 'hidden' : 'block flex-1'}`}>
+          <div ref={mapEl} className="absolute inset-0 z-0 overflow-hidden" />
+          {!mapReady && (
+            <div className="absolute inset-0 z-[5] flex flex-col items-center justify-center gap-3" style={{ background: 'repeating-linear-gradient(45deg,#EAE6DD,#EAE6DD 10px,#F4F1EA 10px,#F4F1EA 20px)' }}>
+              <span className="w-7 h-7 rounded-full border-2 border-ink/20 border-t-ink animate-spin" aria-hidden="true" />
+              <span className="font-mono text-[12px] text-ink/55">{lang === 'es' ? 'Cargando mapa…' : 'Loading map…'}</span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
