@@ -67,7 +67,7 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
   const ticker = tickerData.length ? tickerData : ['CASA LIBRE — PROPIEDADES EN PARAGUAY'];
 
   return (
-    <div className="max-w-[1440px] mx-auto">
+    <div className="max-w-[1920px] mx-auto">
       {/* TICKER */}
       <div className="bg-ink text-paper overflow-hidden whitespace-nowrap font-mono text-[12px] py-2">
         <div className="cl-marquee">
