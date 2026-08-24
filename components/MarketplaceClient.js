@@ -221,7 +221,9 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
     });
     // Default view stays zoomed on Asunción (the initial setView); only auto-fit
     // to the results once the user actually filters/searches.
-    const isFiltered = filter !== 'all' || typeF !== 'all' || priceF !== 'all' || bedF !== 'all' || !!query;
+    // Buy/Rent/All all keep the default Asunción view — only a search or a
+    // type/price/beds filter re-fits the map to the matching results.
+    const isFiltered = typeF !== 'all' || priceF !== 'all' || bedF !== 'all' || !!query;
     if (pts.length && !didFit.current && isFiltered) { didFit.current = true; try { map.fitBounds(pts, { padding: [40, 40], maxZoom: 14 }); } catch {} }
   }
 
