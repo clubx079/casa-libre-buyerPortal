@@ -31,8 +31,9 @@ export async function POST(req) {
   } catch (e) {
     return NextResponse.json({ error: 'create_failed', detail: e?.message || String(e) }, { status: 500 });
   }
-  // Welcome email — fire-and-forget, never blocks signup.
-  sendWelcomeEmail(email, fullName).catch(() => {});
+  // Welcome email — awaited (serverless freezes the function after the response,
+  // which would kill a fire-and-forget send). Wrapped so it never blocks signup.
+  await sendWelcomeEmail(email, fullName).catch(() => {});
   setSessionCookie(user);
   return NextResponse.json({ ok: true, user: publicUser(user) });
 }

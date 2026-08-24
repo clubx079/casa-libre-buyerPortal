@@ -48,8 +48,9 @@ export async function GET(req) {
 
     if (user.blocked || user.suspended) return NextResponse.redirect(`${base}/?auth_error=blocked`);
 
-    // Welcome email for brand-new Google signups — fire-and-forget.
-    if (user._isNew) sendWelcomeEmail(g.email, fullName).catch(() => {});
+    // Welcome email for brand-new Google signups — awaited (serverless kills
+    // fire-and-forget work after the redirect). Wrapped so it never blocks login.
+    if (user._isNew) await sendWelcomeEmail(g.email, fullName).catch(() => {});
 
     const res = NextResponse.redirect(`${base}/cuenta`);
     res.cookies.set(COOKIE_NAME, makeToken(user), {

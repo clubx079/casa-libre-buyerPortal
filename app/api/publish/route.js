@@ -179,10 +179,12 @@ export async function POST(req) {
 
   const ref = `CL-${new Date().getFullYear()}-${String(propertyId || '').replace(/\D/g, '').slice(-5).padStart(5, '0') || '00000'}`;
 
-  // Confirmation email to the owner — fire-and-forget, never blocks publish.
+  // Confirmation email to the owner — awaited (serverless freezes the function
+  // after the response, killing fire-and-forget sends). Wrapped so it never
+  // blocks publish.
   if (session.email) {
-    const site = (process.env.APP_PUBLIC_URL || '').replace(/\/$/, '');
-    sendListingPublishedEmail(session.email, {
+    const site = (process.env.APP_PUBLIC_URL || 'https://casa-libre-buyerportal.apps.airosofts.com').replace(/\/$/, '');
+    await sendListingPublishedEmail(session.email, {
       name: session.name || contactName,
       title: `${property_type} · ${neighborhood}`,
       ref,
