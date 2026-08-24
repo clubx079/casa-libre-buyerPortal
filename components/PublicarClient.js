@@ -200,7 +200,7 @@ export default function PublicarClient() {
   });
 
   const nav = (
-    <nav className="flex items-center justify-center md:justify-between flex-wrap gap-3 px-5 md:px-11 py-5 border-b border-ink/12">
+    <nav className="flex items-center justify-center md:justify-between flex-wrap gap-3 px-5 md:px-9 py-4 border-b border-ink/12">
       <Link href="/" className="font-bold text-[22px] tracking-head">casa-libre<em className="font-serif italic font-normal">.py</em></Link>
       <div className="flex gap-2 flex-wrap text-[14px] font-medium">
         <Link href="/propiedades" className="inline-flex items-center h-[40px] px-[18px] border border-ink rounded-pill">{t.navBuy}</Link>
