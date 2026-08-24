@@ -222,7 +222,7 @@ export default function PublicarClient() {
   // Gate the whole flow behind login so every published deal has an owner.
   if (!loading && !user) {
     return (
-      <div className="max-w-[1440px] mx-auto min-h-screen">
+      <div className="min-h-screen">
         {nav}
         <div className="max-w-[520px] mx-auto px-5 py-24 text-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -236,7 +236,7 @@ export default function PublicarClient() {
   }
 
   return (
-    <div className="max-w-[1440px] mx-auto min-h-screen">
+    <div className="min-h-screen">
       {nav}
 
       <div className="max-w-[860px] mx-auto px-5 md:px-11 pt-10 pb-[90px]">
