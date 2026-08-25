@@ -12,7 +12,6 @@ const content = {
     hero: { eyebrow: 'Contacto', title: 'Hablemos.', sub: '¿Tenés una consulta o necesitás ayuda? Escribinos y te respondemos.' },
     blocks: [
       { type: 'contact', items: [
-        { label: 'Email', value: 'hola@casa-libre.com', href: 'mailto:hola@casa-libre.com' },
         { label: 'Publicá tu propiedad', value: 'Publicar gratis →', href: '/publicar' },
         { label: 'Preguntas frecuentes', value: 'Ver respuestas →', href: '/preguntas-frecuentes' },
       ] },
@@ -22,7 +21,6 @@ const content = {
     hero: { eyebrow: 'Contact', title: 'Let’s talk.', sub: 'Have a question or need help? Write to us and we’ll get back to you.' },
     blocks: [
       { type: 'contact', items: [
-        { label: 'Email', value: 'hola@casa-libre.com', href: 'mailto:hola@casa-libre.com' },
         { label: 'List your property', value: 'List for free →', href: '/publicar' },
         { label: 'Frequently asked questions', value: 'See answers →', href: '/preguntas-frecuentes' },
       ] },

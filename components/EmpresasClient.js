@@ -295,10 +295,6 @@ export default function EmpresasClient() {
                 <WaGlyph /> {t.waLbl}
               </a>
             )}
-            <p className="text-[13.5px] text-ink/65">
-              {BIZ_WA ? (lang === 'es' ? 'O por email: ' : 'Or by email: ') : (lang === 'es' ? 'Escribinos por email: ' : 'Reach us by email: ')}
-              <a href="mailto:hola@casa-libre.com" className="underline">hola@casa-libre.com</a>
-            </p>
           </div>
         </div>
       </section>

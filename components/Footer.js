@@ -55,7 +55,7 @@ export default function Footer() {
           ))}
         </div>
         <div className="mt-12 pt-6 border-t border-paper/15 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="font-mono text-[11px] text-paper/45">© {new Date().getFullYear()} Casa Libre — Paraguay · <a href="mailto:hola@casa-libre.com" className="hover:text-paper">hola@casa-libre.com</a></div>
+          <div className="font-mono text-[11px] text-paper/45">© {new Date().getFullYear()} Casa Libre — Paraguay</div>
           <div className="flex gap-5 text-[12px] text-paper/60">
             <Link href="/terminos" className="hover:text-paper">{t.terms}</Link>
             <Link href="/privacidad" className="hover:text-paper">{t.privacy}</Link>
