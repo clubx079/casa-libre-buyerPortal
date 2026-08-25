@@ -325,7 +325,7 @@ export default function PropertyDetailView({ l, url }) {
 
       {/* ── LIGHTBOX ── full image + bottom thumbnail scroller (tap any to jump) */}
       {box >= 0 && imgs[box] && (
-        <div className="fixed inset-0 z-[600] bg-ink/92 flex flex-col" onClick={() => setBox(-1)}>
+        <div className="fixed inset-0 z-[600] bg-[rgba(10,10,10,0.97)] flex flex-col" onClick={() => setBox(-1)}>
           <div className="flex items-center justify-between px-5 py-4" onClick={(e) => e.stopPropagation()}>
             <span className="font-mono text-[12px] text-paper/80">{box + 1} / {imgs.length}</span>
             <button aria-label="Cerrar" onClick={() => setBox(-1)} className="w-10 h-10 rounded-pill bg-paper text-ink text-[20px] font-bold flex items-center justify-center">×</button>
