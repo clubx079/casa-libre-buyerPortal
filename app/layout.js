@@ -12,6 +12,7 @@ export const metadata = {
   },
   description: SITE_DESC,
   keywords: ['propiedades Paraguay', 'casas en Asunción', 'departamentos Paraguay', 'comprar casa Paraguay', 'alquilar departamento Asunción', 'inmuebles Paraguay', 'publicar propiedad gratis'],
+  icons: { icon: '/logo.png', shortcut: '/logo.png', apple: '/logo.png' },
   alternates: { canonical: '/' },
   openGraph: { title: 'Casa Libre — Propiedades en Paraguay', description: SITE_DESC, url: SITE, siteName: SITE_NAME, locale: 'es_PY', type: 'website' },
   twitter: { card: 'summary_large_image', title: 'Casa Libre — Propiedades en Paraguay', description: SITE_DESC },

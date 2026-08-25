@@ -12,6 +12,7 @@ const DICT = {
     s1Title: 'Publicá tu propiedad', s1TitleSerif: 'en minutos.',
     s1Sub: 'Contanos sobre tu propiedad. Se publica al instante en el marketplace.',
     opVenta: 'Vender', opAlquiler: 'Alquilar',
+    roleQ: '¿Sos el propietario o un agente?', roleOwner: 'Propietario', roleAgent: 'Agente',
     fType: 'Tipo de propiedad', types: [['casa', 'Casa'], ['departamento', 'Departamento'], ['duplex', 'Dúplex'], ['terreno', 'Terreno']],
     fHood: 'Barrio', fHoodPh: 'Villa Morra, Recoleta…', fCity: 'Ciudad', fCityPh: 'Asunción',
     fPrice: (m) => (m === 'venta' ? 'Precio' : 'Alquiler mensual'), fPricePh: (m) => (m === 'venta' ? '145.000' : '4.500.000'),
@@ -38,6 +39,7 @@ const DICT = {
     s1Title: 'List your property', s1TitleSerif: 'in minutes.',
     s1Sub: 'Tell us about your property. It goes live in the marketplace instantly.',
     opVenta: 'Sell', opAlquiler: 'Rent out',
+    roleQ: 'Are you the owner or an agent?', roleOwner: 'Owner', roleAgent: 'Agent',
     fType: 'Property type', types: [['casa', 'House'], ['departamento', 'Apartment'], ['duplex', 'Duplex'], ['terreno', 'Lot']],
     fHood: 'Neighborhood', fHoodPh: 'Villa Morra, Recoleta…', fCity: 'City', fCityPh: 'Asunción',
     fPrice: (m) => (m === 'venta' ? 'Price' : 'Monthly rent'), fPricePh: (m) => (m === 'venta' ? '145,000' : '4,500,000'),
@@ -69,7 +71,7 @@ export default function PublicarClient() {
   const { user, loading, openAuth } = useAuth();
   const [step, setStep] = useState(1);
   const [mode, setMode] = useState('venta');
-  const [f, setF] = useState({ ptype: 'casa', neighborhood: '', city: '', price: '', currency: '', area: '', description: '', contact_name: '', contact_phone: '' });
+  const [f, setF] = useState({ ptype: 'casa', neighborhood: '', city: '', price: '', currency: '', area: '', description: '', contact_name: '', contact_phone: '', seller_type: 'owner' });
   const [photos, setPhotos] = useState([]); // {file, url}
   const [err, setErr] = useState('');
   const [errs, setErrs] = useState({}); // per-field errors { field: message }
@@ -159,6 +161,7 @@ export default function PublicarClient() {
       fd.set('description', f.description);
       fd.set('contact_name', f.contact_name);
       fd.set('contact_phone', f.contact_phone);
+      fd.set('seller_type', f.seller_type);
       photos.forEach((p) => fd.append('photos', p.file));
       const res = await fetch('/api/publish', { method: 'POST', body: fd });
       const j = await res.json();
@@ -186,7 +189,7 @@ export default function PublicarClient() {
 
   const restart = () => {
     setStep(1); setMode('venta'); setResult(null); setErr(''); setErrs({});
-    setF({ ptype: 'casa', neighborhood: '', city: '', price: '', currency: '', area: '', description: '', contact_name: '', contact_phone: '' });
+    setF({ ptype: 'casa', neighborhood: '', city: '', price: '', currency: '', area: '', description: '', contact_name: '', contact_phone: '', seller_type: 'owner' });
     setPhotos([]);
   };
 
@@ -203,7 +206,7 @@ export default function PublicarClient() {
     <nav className="flex items-center justify-center md:justify-between flex-wrap gap-3 px-5 md:px-9 py-4 border-b border-ink/12">
       <Link href="/" className="font-bold text-[22px] tracking-head">casa-libre<em className="font-serif italic font-normal">.py</em></Link>
       <div className="flex gap-2 flex-wrap text-[14px] font-medium">
-        <Link href="/propiedades" className="inline-flex items-center h-[40px] px-[18px] border border-ink rounded-pill">{t.navBuy}</Link>
+        <Link href="/propiedades?op=venta" className="inline-flex items-center h-[40px] px-[18px] border border-ink rounded-pill">{t.navBuy}</Link>
         <Link href="/propiedades?op=alquiler" className="inline-flex items-center h-[40px] px-[18px] border border-ink rounded-pill">{t.navRent}</Link>
         <Link href="/publicar" className="inline-flex items-center h-[40px] px-[18px] border border-ink rounded-pill">{t.navSell}</Link>
       </div>
@@ -259,6 +262,14 @@ export default function PublicarClient() {
               {[['venta', t.opVenta], ['alquiler', t.opAlquiler]].map(([m, label]) => (
                 <button key={m} onClick={() => setMode(m)} className={`px-[22px] py-2.5 rounded-pill text-[14px] font-semibold border-[1.5px] border-ink ${mode === m ? 'bg-ink text-paper' : 'bg-transparent'}`}>{label}</button>
               ))}
+            </div>
+            <div className="mb-[26px]">
+              <div className="text-[13px] font-semibold mb-2">{t.roleQ}</div>
+              <div className="flex gap-2.5">
+                {[['owner', t.roleOwner], ['agent', t.roleAgent]].map(([r, label]) => (
+                  <button key={r} type="button" onClick={() => setF((s) => ({ ...s, seller_type: r }))} className={`px-[22px] py-2.5 rounded-pill text-[14px] font-semibold border-[1.5px] border-ink ${f.seller_type === r ? 'bg-ink text-paper' : 'bg-transparent'}`}>{label}</button>
+                ))}
+              </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <label className={labelCls}>{t.fType}

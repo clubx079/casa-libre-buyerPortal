@@ -1,4 +1,5 @@
 'use client';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
 import AuthButton from '@/components/AuthButton';
@@ -59,6 +60,8 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
   const [lang, setLang] = useLang();
   const router = useRouter();
   const t = DICT[lang];
+  const [q, setQ] = useState('');
+  const goSearch = () => { const query = q.trim(); router.push(query ? `/propiedades?q=${encodeURIComponent(query)}` : '/propiedades'); };
 
   const price = (l) => (fmtUsd(l.usd, lang) || '—') + (l.mode === 'alquiler' ? t.perMonth : '');
   const title = (l) => `${typeLabel(l.type, lang) || (lang === 'es' ? 'Propiedad' : 'Property')}${l.beds ? ` · ${l.beds} ${t.beds}` : ''}`;
@@ -83,7 +86,7 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
       <nav className="flex items-center justify-center md:justify-between flex-wrap gap-3 px-5 md:px-11 py-5">
         <span className="font-bold text-[22px] tracking-head">casa-libre<em className="font-serif italic font-normal">.py</em></span>
         <div className="flex gap-2 flex-wrap text-[14px] font-medium">
-          <Link href="/propiedades" className="inline-flex items-center h-[40px] px-[18px] border border-ink rounded-pill">{t.navBuy}</Link>
+          <Link href="/propiedades?op=venta" className="inline-flex items-center h-[40px] px-[18px] border border-ink rounded-pill">{t.navBuy}</Link>
           <Link href="/propiedades?op=alquiler" className="inline-flex items-center h-[40px] px-[18px] border border-ink rounded-pill">{t.navRent}</Link>
           <Link href="/publicar" className="inline-flex items-center h-[40px] px-[18px] border border-ink rounded-pill">{t.navSell}</Link>
         </div>
@@ -103,8 +106,8 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
             {t.heroLine1}<br /><span className="font-serif italic font-normal">{t.heroLine2}</span>
           </h1>
           <p className="text-[clamp(16px,2vw,19px)] leading-relaxed text-ink/60 max-w-[460px] mx-auto md:mx-0 mb-7 md:mb-9 max-[720px]:mb-6">{t.heroSub}</p>
-          <form onSubmit={(e) => { e.preventDefault(); router.push('/propiedades'); }} className="flex items-center bg-card border-2 border-ink rounded-pill pl-[26px] pr-1.5 py-1.5 max-w-[560px] mx-auto md:mx-0 shadow-hard">
-            <input placeholder={t.searchPlaceholder} className="flex-1 min-w-0 bg-transparent outline-none text-[16px] text-ink placeholder:text-ink/40" />
+          <form onSubmit={(e) => { e.preventDefault(); goSearch(); }} className="flex items-center bg-card border-2 border-ink rounded-pill pl-[26px] pr-1.5 py-1.5 max-w-[560px] mx-auto md:mx-0 shadow-hard">
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t.searchPlaceholder} className="flex-1 min-w-0 bg-transparent outline-none text-[16px] text-ink placeholder:text-ink/40" />
             <button
               type="submit" aria-label={t.searchBtn}
               className="flex-none flex items-center justify-center bg-ink text-paper rounded-pill font-semibold whitespace-nowrap w-[46px] h-[46px] sm:w-auto sm:h-auto sm:py-3.5 sm:px-[clamp(18px,3vw,30px)]"
@@ -116,7 +119,7 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
           </form>
           <div className="flex gap-2.5 mt-[18px] flex-wrap justify-center md:justify-start">
             {t.chips.map((c) => (
-              <Link key={c} href="/propiedades" className="text-[13px] font-medium px-3.5 py-[7px] border border-ink/25 rounded-pill bg-card">{c}</Link>
+              <Link key={c} href={`/propiedades?q=${encodeURIComponent(c)}`} className="text-[13px] font-medium px-3.5 py-[7px] border border-ink/25 rounded-pill bg-card">{c}</Link>
             ))}
           </div>
         </div>

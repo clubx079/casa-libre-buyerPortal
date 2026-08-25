@@ -67,6 +67,8 @@ export async function POST(req) {
   // Default the public contact to the logged-in user's name/email when not given.
   const contactName = get('contact_name') || session.name || null;
   const contactPhone = get('contact_phone') || null;
+  // Who is publishing — owner vs. agent. Saved for data quality; not shown publicly.
+  const sellerType = get('seller_type') === 'agent' ? 'agent' : 'owner';
 
   // Completeness validation — a published listing must clear the same bar the
   // marketplace gate uses to SHOW it, so a user's listing is never created
@@ -124,7 +126,7 @@ export async function POST(req) {
     admin_status: 'active',
     property_status: 'available',
     origin: 'user',
-    seller_type: 'owner',
+    seller_type: sellerType,
     is_delisted: false,
     created_by: session.uid,   // who published this deal
     posted_by: session.uid,
