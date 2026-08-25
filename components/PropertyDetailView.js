@@ -24,6 +24,7 @@ const T = {
     specBeds: 'Dormitorios', specBaths: 'Baños', specBuilt: 'm² construidos', specLot: 'm² terreno', specPark: 'Cocheras',
     descH: 'Descripción', featH: 'Características', locH: 'Ubicación', published: 'Publicado', ref: 'Ref', photoSoon: 'Foto próximamente',
     bizLink: '¿Empresa o inmobiliaria? Publicá tu cartera →',
+    viewAll: (k) => `Ver todas las fotos (${k})`,
   },
   en: {
     tabs: [['Buy', '/propiedades?op=venta'], ['Rent', '/propiedades?op=alquiler'], ['Sell', '/publicar']],
@@ -32,6 +33,7 @@ const T = {
     specBeds: 'Bedrooms', specBaths: 'Bathrooms', specBuilt: 'm² built', specLot: 'm² lot', specPark: 'Parking',
     descH: 'Description', featH: 'Features', locH: 'Location', published: 'Listed', ref: 'Ref', photoSoon: 'Photo coming soon',
     bizLink: 'Agency or business? List your portfolio →',
+    viewAll: (k) => `View all photos (${k})`,
   },
 };
 
@@ -56,6 +58,7 @@ export default function PropertyDetailView({ l, url }) {
   const t = T[lang] || T.es;
   const mapEl = useRef(null);
   const mapRef = useRef(null);
+  const boxStripRef = useRef(null);
 
   // ── derived ──
   // Shared CL ref (tracking + display) — numeric ids render "CL-0002"-style.
@@ -132,6 +135,23 @@ export default function PropertyDetailView({ l, url }) {
     } catch { /* noop */ }
   }, []);
 
+  // Lightbox: keyboard nav (Esc/←/→), scroll lock, and keep the active
+  // thumbnail centered in the bottom scroller.
+  useEffect(() => {
+    if (box < 0) return;
+    const onKey = (e) => {
+      if (e.key === 'Escape') setBox(-1);
+      else if (e.key === 'ArrowRight') setBox((b) => (b + 1) % imgs.length);
+      else if (e.key === 'ArrowLeft') setBox((b) => (b - 1 + imgs.length) % imgs.length);
+    };
+    window.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    const el = boxStripRef.current?.children?.[box];
+    if (el) el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = ''; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [box, imgs.length]);
+
   const Tile = ({ src, i, main }) => (
     <div
       onClick={src ? () => setBox(i) : undefined}
@@ -152,6 +172,15 @@ export default function PropertyDetailView({ l, url }) {
       )}
       {main && imgs.length > 0 && (
         <span className="absolute bottom-2.5 right-2.5 text-[10px] bg-card border border-ink text-ink px-2.5 py-1 rounded-pill">1 / {imgs.length}</span>
+      )}
+      {main && imgs.length > 1 && (
+        <button
+          onClick={(e) => { e.stopPropagation(); setBox(0); }}
+          className="absolute bottom-2.5 left-2.5 z-10 inline-flex items-center gap-1.5 text-[11px] font-semibold bg-paper/90 hover:bg-paper text-ink px-3 py-1.5 rounded-pill border border-ink/15 shadow-[3px_3px_0_rgba(17,17,17,0.15)]"
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><rect x="0" y="0" width="5" height="5" rx="1" /><rect x="7" y="0" width="5" height="5" rx="1" /><rect x="0" y="7" width="5" height="5" rx="1" /><rect x="7" y="7" width="5" height="5" rx="1" /></svg>
+          {t.viewAll(imgs.length)}
+        </button>
       )}
     </div>
   );
@@ -294,18 +323,33 @@ export default function PropertyDetailView({ l, url }) {
         )}
       </div>
 
-      {/* ── LIGHTBOX ── */}
+      {/* ── LIGHTBOX ── full image + bottom thumbnail scroller (tap any to jump) */}
       {box >= 0 && imgs[box] && (
-        <div className="fixed inset-0 z-[600] bg-ink/90 flex items-center justify-center p-4" onClick={() => setBox(-1)}>
-          <button aria-label="Cerrar" onClick={() => setBox(-1)} className="absolute top-4 right-5 w-10 h-10 rounded-pill bg-paper text-ink text-[20px] font-bold flex items-center justify-center">×</button>
+        <div className="fixed inset-0 z-[600] bg-ink/92 flex flex-col" onClick={() => setBox(-1)}>
+          <div className="flex items-center justify-between px-5 py-4" onClick={(e) => e.stopPropagation()}>
+            <span className="font-mono text-[12px] text-paper/80">{box + 1} / {imgs.length}</span>
+            <button aria-label="Cerrar" onClick={() => setBox(-1)} className="w-10 h-10 rounded-pill bg-paper text-ink text-[20px] font-bold flex items-center justify-center">×</button>
+          </div>
+          <div className="relative flex-1 min-h-0 flex items-center justify-center px-4" onClick={(e) => e.stopPropagation()}>
+            {imgs.length > 1 && (
+              <button aria-label="Anterior" onClick={() => setBox((box - 1 + imgs.length) % imgs.length)} className="absolute left-3 md:left-6 w-11 h-11 rounded-pill bg-paper/90 hover:bg-paper text-ink text-[22px] flex items-center justify-center">‹</button>
+            )}
+            <img src={imgs[box]} alt="" className="max-w-full max-h-full object-contain rounded-[12px]" />
+            {imgs.length > 1 && (
+              <button aria-label="Siguiente" onClick={() => setBox((box + 1) % imgs.length)} className="absolute right-3 md:right-6 w-11 h-11 rounded-pill bg-paper/90 hover:bg-paper text-ink text-[22px] flex items-center justify-center">›</button>
+            )}
+          </div>
           {imgs.length > 1 && (
-            <button aria-label="Anterior" onClick={(e) => { e.stopPropagation(); setBox((box - 1 + imgs.length) % imgs.length); }} className="absolute left-4 w-11 h-11 rounded-pill bg-paper/90 text-ink text-[22px] flex items-center justify-center">‹</button>
+            <div className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+              <div ref={boxStripRef} className="flex gap-2 overflow-x-auto pb-1 md:justify-center [scrollbar-width:thin]">
+                {imgs.map((im, k) => (
+                  <button key={k} onClick={() => setBox(k)} className={`shrink-0 w-[68px] h-[50px] rounded-[8px] overflow-hidden border-2 transition ${k === box ? 'border-paper' : 'border-transparent opacity-55 hover:opacity-100'}`}>
+                    <img src={im} alt="" className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
-          <img src={imgs[box]} alt="" className="max-w-full max-h-[86vh] object-contain rounded-[12px]" onClick={(e) => e.stopPropagation()} />
-          {imgs.length > 1 && (
-            <button aria-label="Siguiente" onClick={(e) => { e.stopPropagation(); setBox((box + 1) % imgs.length); }} className="absolute right-4 w-11 h-11 rounded-pill bg-paper/90 text-ink text-[22px] flex items-center justify-center">›</button>
-          )}
-          <span className="absolute bottom-5 left-1/2 -translate-x-1/2 font-mono text-[12px] text-paper/80">{box + 1} / {imgs.length}</span>
         </div>
       )}
     </div>
