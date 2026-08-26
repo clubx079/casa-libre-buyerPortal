@@ -142,7 +142,7 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
       await import('leaflet.markercluster');
       if (cancelled || !mapEl.current || mapRef.current) return;
       const map = L.map(mapEl.current, { scrollWheelZoom: true, zoomControl: true, attributionControl: false }).setView([-25.293, -57.60], 13);
-      const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 });
+      const tiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 20, attribution: '© OpenStreetMap contributors © CARTO' });
       tiles.on('load', () => { if (!cancelled) setMapReady(true); });
       tiles.addTo(map);
       setTimeout(() => { if (!cancelled) setMapReady(true); }, 1500); // fallback if 'load' is missed
