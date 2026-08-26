@@ -80,7 +80,7 @@ export default function PropertyDetailView({ l, url }) {
       const L = (await import('leaflet')).default;
       if (cancelled || !mapEl.current || mapRef.current) return;
       const map = L.map(mapEl.current, { scrollWheelZoom: false, zoomControl: true, attributionControl: false }).setView([l.lat, l.lng], 15);
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 20, attribution: '© OpenStreetMap contributors © CARTO' }).addTo(map);
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
       L.marker([l.lat, l.lng], { icon: L.divIcon({ className: '', html: '<div class="marker-pill">•</div>', iconSize: null }) }).addTo(map);
       mapRef.current = map;
       setTimeout(() => map.invalidateSize(), 200);
