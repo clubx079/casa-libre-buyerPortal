@@ -185,7 +185,7 @@ export async function POST(req) {
   // after the response, killing fire-and-forget sends). Wrapped so it never
   // blocks publish.
   if (session.email) {
-    const site = (process.env.APP_PUBLIC_URL || 'https://casa-libre-buyerportal.apps.airosofts.com').replace(/\/$/, '');
+    const site = (process.env.APP_PUBLIC_URL || 'https://casa-libre.com.py').replace(/\/$/, '');
     await sendListingPublishedEmail(session.email, {
       name: session.name || contactName,
       title: `${property_type} · ${neighborhood}`,

@@ -14,7 +14,7 @@ import PropertyContactCard from '@/components/PropertyContactCard';
 import NoResponseReport from '@/components/NoResponseReport';
 import SaveButton from '@/components/SaveButton';
 import ShareButton from '@/components/ShareButton';
-import { genToken, trackedUrl, trackContact, markOpened } from '@/lib/contactTrack';
+import { genToken, shortUrl, trackContact, markOpened } from '@/lib/contactTrack';
 
 const T = {
   es: {
@@ -122,7 +122,7 @@ export default function PropertyDetailView({ l, url }) {
   // Trackable mobile-bar WhatsApp (own token; only one WA button shows per
   // viewport, so it never collides with the contact card's).
   const [mbarToken] = useState(genToken);
-  const mbarMsg = `¡Hola! ¿Sigue disponible esta propiedad?\n${trackedUrl(url, mbarToken)}`;
+  const mbarMsg = `¡Hola! ¿Sigue disponible esta propiedad?\n${shortUrl(url, mbarToken)}`;
   const mbarWa = waDigits ? `https://wa.me/${waDigits}?text=${encodeURIComponent(mbarMsg)}` : null;
   const recordMbarContact = () =>
     trackContact({ token: mbarToken, channel: 'whatsapp', property_id: l.id, listing_ref: listingRef, seller_name: l.contact_name || null, seller_phone: waDigits || null });

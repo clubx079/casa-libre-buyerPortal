@@ -8,7 +8,7 @@
 import { useState } from 'react';
 import { useLang } from '@/lib/useLang';
 import { track } from '@/lib/analytics';
-import { genToken, trackedUrl, trackContact } from '@/lib/contactTrack';
+import { genToken, shortUrl, trackContact } from '@/lib/contactTrack';
 
 const T = {
   es: {
@@ -46,7 +46,7 @@ export default function PropertyContactCard({ sellerName, waDigits, url, listing
   // The message reaches a local (Paraguayan) seller, so it is always in
   // Spanish regardless of the buyer's UI language. The link back to the listing
   // carries UTM + the tracking token.
-  const message = T.es.msg('', trackedUrl(url, token));
+  const message = T.es.msg('', shortUrl(url, token));
   const waUrl = waDigits ? `https://wa.me/${waDigits}?text=${encodeURIComponent(message)}` : null;
 
   // Record the contact attempt (who/seller/property) as the buyer taps WhatsApp.
