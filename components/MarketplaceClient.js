@@ -7,9 +7,6 @@ import { fmtRate } from '@/lib/money';
 import { useLang } from '@/lib/useLang';
 import AuthButton from '@/components/AuthButton';
 import { track } from '@/lib/analytics';
-import { loadGoogleMapsAPI } from '@/utils/googleMapsLoader';
-import { CL_MAP_STYLE } from '@/lib/mapStyle';
-import { MarkerClusterer } from '@googlemaps/markerclusterer';
 
 // Marketplace-specific bilingual strings (search / filters / sort).
 const M = {
@@ -62,11 +59,9 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
   const imgMapRef = useRef({});             // latest map, for imperative Leaflet handlers
   const imgReq = useRef(new Set());         // ids already requested (dedupe)
   const mapEl = useRef(null);
-  const mapRef = useRef(null);      // { g, map } (Google)
-  const clusterRef = useRef(null);  // MarkerClusterer
-  const markersRef = useRef({});    // id -> google.maps.Marker
-  const infoWindowRef = useRef(null);
-  const prevHotRef = useRef(null);
+  const mapRef = useRef(null);
+  const clusterRef = useRef(null);
+  const markersRef = useRef({});
   const didFit = useRef(false);
   const t = T[lang];
   const m = M[lang];
@@ -167,29 +162,37 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
   const priceSub = (l) => (fmtPyg(l.pyg, lang) ? fmtPyg(l.pyg, lang) + (l.mode === 'alquiler' ? t.perMonth : '') : '');
   const shortPill = (l) => shortUsd(l.usd);
 
-  // ---- Google Maps init (client-only) with marker clustering ----
+  // ---- Leaflet init (client-only) with marker clustering ----
   useEffect(() => {
     let cancelled = false;
-    loadGoogleMapsAPI().then(() => {
+    (async () => {
+      const L = (await import('leaflet')).default;
+      await import('leaflet.markercluster');
       if (cancelled || !mapEl.current || mapRef.current) return;
-      const g = window.google;
-      const map = new g.maps.Map(mapEl.current, {
-        zoom: 13,
-        center: { lat: -25.293, lng: -57.60 },
-        styles: CL_MAP_STYLE,
-        mapTypeControl: false,
-        streetViewControl: false,
-        fullscreenControl: false,
-        clickableIcons: false,
-        zoomControl: true,
-        gestureHandling: 'greedy',
+      const map = L.map(mapEl.current, { scrollWheelZoom: true, zoomControl: true, attributionControl: false }).setView([-25.293, -57.60], 13);
+      const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 });
+      tiles.on('load', () => { if (!cancelled) setMapReady(true); });
+      tiles.addTo(map);
+      setTimeout(() => { if (!cancelled) setMapReady(true); }, 1500); // fallback if 'load' is missed
+      const cluster = L.markerClusterGroup({
+        maxClusterRadius: 46,
+        showCoverageOnHover: false,
+        iconCreateFunction: (c) => L.divIcon({ className: '', html: `<div class="cluster-pill">${c.getChildCount()}</div>`, iconSize: [38, 38] }),
       });
-      mapRef.current = { g, map };
-      infoWindowRef.current = new g.maps.InfoWindow({ disableAutoPan: false });
-      setMapReady(true);
+      map.addLayer(cluster);
+      mapRef.current = { L, map };
+      clusterRef.current = cluster;
       drawMarkers();
-    }).catch(() => { setMapReady(true); });
-    return () => { cancelled = true; };
+      const fix = () => map.invalidateSize();
+      setTimeout(fix, 100);
+      setTimeout(() => { map.invalidateSize(); drawMarkers(); }, 400);
+      window.addEventListener('resize', fix);
+      mapRef.current.fix = fix;
+    })();
+    return () => {
+      cancelled = true;
+      if (mapRef.current) { if (mapRef.current.fix) window.removeEventListener('resize', mapRef.current.fix); mapRef.current.map.remove(); mapRef.current = null; }
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -198,47 +201,42 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
   // #16 Reset the list window to the first page whenever the result set changes.
   useEffect(() => { setVisible(PER_PAGE); }, [filter, typeF, priceF, bedF, query, sortBy]);
 
-  // Text-only info window (like DeelMap) — no image, so map hover is instant.
-  function popupHtml(l) {
-    return `<a href="/propiedad/${l.id}" target="_blank" rel="noopener noreferrer" style="display:block;min-width:180px;max-width:240px;text-decoration:none;color:#111">
-      <div style="font:700 16px 'Space Grotesk',sans-serif">${priceMain(l)}</div>
-      ${priceSub(l) ? `<div style="font:500 11px 'Space Grotesk',sans-serif;color:rgba(17,17,17,.5)">${priceSub(l)}</div>` : ''}
-      <div style="font:500 12.5px 'Space Grotesk',sans-serif;margin-top:3px">${title(l)}</div>
-      <div style="font:400 11px 'Space Grotesk',sans-serif;color:rgba(17,17,17,.55);margin-top:2px">${meta(l)}</div>
-    </a>`;
-  }
-
-  // Dark round price pin (Casa Libre ink). Green when "hot" (hovered in the list).
-  function pinIcon(g, hot) {
-    return { path: g.maps.SymbolPath.CIRCLE, scale: hot ? 18 : 15, fillColor: hot ? '#25D366' : '#111', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 };
-  }
-
-  function openInfo(l, marker) {
-    const iw = infoWindowRef.current;
-    if (!iw || !mapRef.current) return;
-    iw.setContent(popupHtml(l));
-    iw.open({ map: mapRef.current.map, anchor: marker });
+  function popupHtml(l, imgUrl) {
+    const img = imgUrl
+      ? `<img src="${imgUrl}" alt="" style="width:100%;height:118px;object-fit:cover;display:block" onerror="this.style.display='none'"/>`
+      : `<div style="height:64px;display:flex;align-items:center;justify-content:center;background:repeating-linear-gradient(45deg,#EAE6DD,#EAE6DD 10px,#F4F1EA 10px,#F4F1EA 20px);font:600 10px 'IBM Plex Mono',monospace;color:rgba(17,17,17,.45)">${t.noImg}</div>`;
+    return `<a href="/propiedad/${l.id}" target="_blank" rel="noopener noreferrer" style="display:block;width:210px;text-decoration:none;color:#111">
+      ${img}
+      <div style="padding:9px 11px 10px">
+        <div style="font:700 15px 'Space Grotesk',sans-serif">${priceMain(l)}</div>
+        ${priceSub(l) ? `<div style="font:500 11px 'Space Grotesk',sans-serif;color:rgba(17,17,17,.5)">${priceSub(l)}</div>` : ''}
+        <div style="font:500 12px 'Space Grotesk',sans-serif;margin-top:2px">${title(l)}</div>
+        <div style="font:400 11px 'Space Grotesk',sans-serif;color:rgba(17,17,17,.55);margin-top:1px">${meta(l)}</div>
+      </div></a>`;
   }
 
   function drawMarkers() {
     const ref = mapRef.current;
-    if (!ref || !window.google) return;
-    const { g, map } = ref;
-    if (clusterRef.current) clusterRef.current.clearMarkers();
+    const cluster = clusterRef.current;
+    if (!ref || !cluster) return;
+    const { L, map } = ref;
+    cluster.clearLayers();
     markersRef.current = {};
-    prevHotRef.current = null;
-    const markers = [];
-    const bounds = new g.maps.LatLngBounds();
+    const pts = [];
     rows.forEach((l) => {
       if (l.lat == null || l.lng == null) return;
-      const marker = new g.maps.Marker({
-        position: { lat: Number(l.lat), lng: Number(l.lng) },
-        label: { text: shortPill(l) || '·', color: '#fff', fontFamily: "'IBM Plex Mono', monospace", fontSize: '11px', fontWeight: '700' },
-        icon: pinIcon(g, false),
+      const marker = L.marker([l.lat, l.lng], {
+        icon: L.divIcon({ className: '', html: `<div class="marker-pill" data-mid="${l.id}">${shortPill(l)}</div>`, iconSize: null }),
       });
-      marker.addListener('mouseover', () => { setHot(l.id); openInfo(l, marker); });
-      marker.addListener('mouseout', () => setHot(null));
-      marker.addListener('click', () => {
+      marker.bindPopup(popupHtml(l, imgMapRef.current[l.id]), { closeButton: false, offset: [0, -4], minWidth: 210, maxWidth: 210 });
+      marker.on('mouseover', () => {
+        setHot(l.id);
+        marker.openPopup();
+        // Lazy-load this pin's image, then refresh the popup content once it arrives.
+        ensureImages([l.id]).then(() => { try { marker.setPopupContent(popupHtml(l, imgMapRef.current[l.id])); } catch { /* popup closed */ } });
+      });
+      marker.on('mouseout', () => setHot(null));
+      marker.on('click', () => {
         track('map_pin_clicked', {
           property_id: l.id,
           location_name: l.neighborhood || l.city || l.address || null,
@@ -250,46 +248,32 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
         });
         window.open(`/propiedad/${l.id}`, '_blank', 'noopener');
       });
-      markers.push(marker);
+      cluster.addLayer(marker);
       markersRef.current[l.id] = marker;
-      bounds.extend(marker.getPosition());
+      pts.push([l.lat, l.lng]);
     });
-    // Cluster the pins (dark count bubbles) — matches DeelMap's look.
-    const renderer = {
-      render: ({ count, position }) => new g.maps.Marker({
-        position,
-        label: { text: String(count), color: '#fff', fontFamily: "'IBM Plex Mono', monospace", fontSize: '12px', fontWeight: '700' },
-        icon: { path: g.maps.SymbolPath.CIRCLE, scale: 18, fillColor: '#111', fillOpacity: 0.92, strokeColor: '#fff', strokeWeight: 2 },
-        zIndex: 10000 + count,
-      }),
-    };
-    if (clusterRef.current) clusterRef.current.addMarkers(markers);
-    else clusterRef.current = new MarkerClusterer({ map, markers, renderer });
-    // Keep the default Asunción view; only auto-fit once the user filters/searches.
+    // Default view stays zoomed on Asunción (the initial setView); only auto-fit
+    // to the results once the user actually filters/searches.
+    // Buy/Rent/All all keep the default Asunción view — only a search or a
+    // type/price/beds filter re-fits the map to the matching results.
     const isFiltered = typeF !== 'all' || priceF !== 'all' || bedF !== 'all' || !!query;
-    if (markers.length && !didFit.current && isFiltered) { didFit.current = true; try { map.fitBounds(bounds, 40); } catch {} }
+    if (pts.length && !didFit.current && isFiltered) { didFit.current = true; try { map.fitBounds(pts, { padding: [40, 40], maxZoom: 14 }); } catch {} }
   }
 
-  // Highlight the hovered card's pin (green) — only touch the two changed markers.
   useEffect(() => {
-    const ref = mapRef.current;
-    if (!ref || !window.google) return;
-    const { g } = ref;
-    const set = (id, hotOn) => { const mk = markersRef.current[id]; if (mk) { try { mk.setIcon(pinIcon(g, hotOn)); if (hotOn) mk.setZIndex(99999); } catch {} } };
-    if (prevHotRef.current && prevHotRef.current !== hot) set(prevHotRef.current, false);
-    if (hot) set(hot, true);
-    prevHotRef.current = hot;
+    Object.entries(markersRef.current).forEach(([id, mk]) => {
+      const el = mk.getElement()?.querySelector('.marker-pill');
+      if (el) el.classList.toggle('hot', String(id) === String(hot));
+    });
   }, [hot]);
 
   // On mobile, the map lives in a hidden panel until its tab is selected — Leaflet
   // must recalc its size once it becomes visible or it renders grey/blank.
   useEffect(() => {
-    if (mobileView === 'map' && mapRef.current && window.google) {
-      const { g, map } = mapRef.current;
-      const c = map.getCenter();
-      const fix = () => { g.maps.event.trigger(map, 'resize'); if (c) map.setCenter(c); };
-      setTimeout(fix, 80);
-      setTimeout(fix, 260);
+    if (mobileView === 'map' && mapRef.current) {
+      const { map } = mapRef.current;
+      setTimeout(() => { map.invalidateSize(); }, 60);
+      setTimeout(() => { map.invalidateSize(); }, 250);
     }
   }, [mobileView]);
 

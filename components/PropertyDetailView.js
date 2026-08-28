@@ -77,31 +77,15 @@ export default function PropertyDetailView({ l, url }) {
     if (!hasGeo) return;
     let cancelled = false;
     (async () => {
-      const [{ loadGoogleMapsAPI }, { CL_MAP_STYLE }] = await Promise.all([
-        import('@/utils/googleMapsLoader'),
-        import('@/lib/mapStyle'),
-      ]);
-      await loadGoogleMapsAPI();
-      if (cancelled || !mapEl.current || mapRef.current || !window.google) return;
-      const g = window.google;
-      const map = new g.maps.Map(mapEl.current, {
-        zoom: 15,
-        center: { lat: Number(l.lat), lng: Number(l.lng) },
-        styles: CL_MAP_STYLE,
-        mapTypeControl: false,
-        streetViewControl: false,
-        fullscreenControl: false,
-        clickableIcons: false,
-        gestureHandling: 'cooperative',
-      });
-      new g.maps.Marker({
-        position: { lat: Number(l.lat), lng: Number(l.lng) },
-        map,
-        icon: { path: g.maps.SymbolPath.CIRCLE, scale: 11, fillColor: '#111', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2.5 },
-      });
-      mapRef.current = { map };
+      const L = (await import('leaflet')).default;
+      if (cancelled || !mapEl.current || mapRef.current) return;
+      const map = L.map(mapEl.current, { scrollWheelZoom: false, zoomControl: true, attributionControl: false }).setView([l.lat, l.lng], 15);
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+      L.marker([l.lat, l.lng], { icon: L.divIcon({ className: '', html: '<div class="marker-pill">•</div>', iconSize: null }) }).addTo(map);
+      mapRef.current = map;
+      setTimeout(() => map.invalidateSize(), 200);
     })();
-    return () => { cancelled = true; mapRef.current = null; };
+    return () => { cancelled = true; if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; } };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [l.lat, l.lng]);
 
