@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { typeLabel, typeKey } from '@/lib/propertyType';
 import { T, fmtUsd, fmtPyg, shortUsd, titleCaseZone, bedAbbr, bathWord, parkWord } from '@/lib/ui';
@@ -53,6 +53,11 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
   const [hot, setHot] = useState(null);
   const [visible, setVisible] = useState(PER_PAGE); // #16 how many list cards are rendered
   const [mapReady, setMapReady] = useState(false); // show a branded loader until tiles paint
+  // Feature images are NOT shipped with the listings (keeps the page light);
+  // they're fetched lazily for the cards/popups actually on screen.
+  const [imgMap, setImgMap] = useState({}); // { id: url | null }
+  const imgMapRef = useRef({});             // latest map, for imperative Leaflet handlers
+  const imgReq = useRef(new Set());         // ids already requested (dedupe)
   const mapEl = useRef(null);
   const mapRef = useRef(null);
   const clusterRef = useRef(null);
@@ -95,6 +100,29 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
     return r;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listings, filter, typeF, priceF, bedF, query, sortBy]);
+
+  // Lazily fetch feature images for a set of ids (deduped). imgMapRef is the
+  // source of truth (readable synchronously by the imperative map popups);
+  // setImgMap re-renders the cards. Missing/failed ids resolve to null.
+  const ensureImages = useCallback(async (ids) => {
+    const need = (ids || []).filter((id) => id && !imgReq.current.has(id));
+    if (!need.length) return;
+    need.forEach((id) => imgReq.current.add(id));
+    let got = {};
+    try {
+      const res = await fetch('/api/listings/images', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: need }),
+      });
+      got = (await res.json()).images || {};
+    } catch { got = {}; }
+    const merged = { ...imgMapRef.current };
+    need.forEach((id) => { merged[id] = got[id] || null; });
+    imgMapRef.current = merged;
+    setImgMap(merged);
+  }, []);
+
+  // Load images for the visible list cards whenever the window or results change.
+  useEffect(() => { ensureImages(rows.slice(0, visible).map((l) => l.id)); }, [rows, visible, ensureImages]);
 
   // Report the active filter set to analytics, debounced so free-text typing
   // doesn't fire an event per keystroke. Captures the initial view too.
@@ -173,9 +201,9 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
   // #16 Reset the list window to the first page whenever the result set changes.
   useEffect(() => { setVisible(PER_PAGE); }, [filter, typeF, priceF, bedF, query, sortBy]);
 
-  function popupHtml(l) {
-    const img = l.image
-      ? `<img src="${l.image}" alt="" style="width:100%;height:118px;object-fit:cover;display:block" onerror="this.style.display='none'"/>`
+  function popupHtml(l, imgUrl) {
+    const img = imgUrl
+      ? `<img src="${imgUrl}" alt="" style="width:100%;height:118px;object-fit:cover;display:block" onerror="this.style.display='none'"/>`
       : `<div style="height:64px;display:flex;align-items:center;justify-content:center;background:repeating-linear-gradient(45deg,#EAE6DD,#EAE6DD 10px,#F4F1EA 10px,#F4F1EA 20px);font:600 10px 'IBM Plex Mono',monospace;color:rgba(17,17,17,.45)">${t.noImg}</div>`;
     return `<a href="/propiedad/${l.id}" target="_blank" rel="noopener noreferrer" style="display:block;width:210px;text-decoration:none;color:#111">
       ${img}
@@ -200,8 +228,13 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
       const marker = L.marker([l.lat, l.lng], {
         icon: L.divIcon({ className: '', html: `<div class="marker-pill" data-mid="${l.id}">${shortPill(l)}</div>`, iconSize: null }),
       });
-      marker.bindPopup(popupHtml(l), { closeButton: false, offset: [0, -4], minWidth: 210, maxWidth: 210 });
-      marker.on('mouseover', () => { setHot(l.id); marker.openPopup(); });
+      marker.bindPopup(popupHtml(l, imgMapRef.current[l.id]), { closeButton: false, offset: [0, -4], minWidth: 210, maxWidth: 210 });
+      marker.on('mouseover', () => {
+        setHot(l.id);
+        marker.openPopup();
+        // Lazy-load this pin's image, then refresh the popup content once it arrives.
+        ensureImages([l.id]).then(() => { try { marker.setPopupContent(popupHtml(l, imgMapRef.current[l.id])); } catch { /* popup closed */ } });
+      });
       marker.on('mouseout', () => setHot(null));
       marker.on('click', () => {
         track('map_pin_clicked', {
@@ -331,8 +364,8 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
                 className={`flex items-stretch shrink-0 min-h-[120px] bg-card border rounded-[18px] overflow-hidden transition-all ${hot === l.id ? 'border-ink -translate-y-0.5 shadow-hard-sm' : 'border-ink/15'}`}
               >
                 <div className="relative w-[150px] max-[560px]:w-[110px] shrink-0 cl-hatch overflow-hidden flex items-center justify-center">
-                  {l.image
-                    ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={l.image} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                  {imgMap[l.id]
+                    ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={imgMap[l.id]} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                     : <span className="font-mono text-[10px] text-ink/45 text-center px-2">{t.noImg}</span>}
                   <span className="absolute top-2 left-2 text-[10px] font-semibold bg-ink text-paper px-2.5 py-1 rounded-pill z-10">{l.mode === 'alquiler' ? t.alquiler : t.venta}</span>
                 </div>
