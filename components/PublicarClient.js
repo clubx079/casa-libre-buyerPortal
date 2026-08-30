@@ -21,7 +21,7 @@ const DICT = {
     fPhotos: 'Arrastrá o elegí tus fotos', fPhotosSub: 'mín. 4 fotos · JPG o PNG · las fotos reales venden más rápido',
     photosChosen: (n) => `${n} foto${n === 1 ? '' : 's'} seleccionada${n === 1 ? '' : 's'}`,
     publishBtn: 'Publicar gratis', paying: 'Publicando…', payNote: 'Se publica al instante en el marketplace',
-    gateTitle: 'Ingresá para publicar', gateSub: 'Creá tu cuenta o ingresá para publicar y gestionar tus propiedades.', gateBtn: 'Ingresar / Crear cuenta',
+    gateTitle: 'Necesitás una cuenta para publicar', gateSub: 'Creá tu cuenta o ingresá para publicar y gestionar tus propiedades. Podés volver a abrir el ingreso cuando quieras.', gateBtn: 'Ingresar / Crear cuenta',
     s4Title: '¡Tu propiedad está', s4TitleSerif: 'publicada!',
     s4Sub: 'Ya aparece en el marketplace de Casa Libre. Compartí el enlace con quien quieras.',
     s4View: 'Ver mi propiedad', s4Btn1: 'Ver propiedades', s4Btn2: 'Publicar otra',
@@ -48,7 +48,7 @@ const DICT = {
     fPhotos: 'Drag or choose your photos', fPhotosSub: 'min. 4 photos · JPG or PNG · real photos sell faster',
     photosChosen: (n) => `${n} photo${n === 1 ? '' : 's'} selected`,
     publishBtn: 'Publish for free', paying: 'Publishing…', payNote: 'Goes live in the marketplace instantly',
-    gateTitle: 'Log in to post', gateSub: 'Create an account or log in to post and manage your properties.', gateBtn: 'Log in / Sign up',
+    gateTitle: 'You need an account to post', gateSub: 'Create an account or log in to post and manage your properties. You can reopen the login anytime.', gateBtn: 'Log in / Sign up',
     s4Title: 'Your listing is', s4TitleSerif: 'live!',
     s4Sub: 'It already shows in the Casa Libre marketplace. Share the link with anyone.',
     s4View: 'View my listing', s4Btn1: 'Browse listings', s4Btn2: 'List another',
@@ -78,7 +78,19 @@ export default function PublicarClient() {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null); // {ref, slug}
   const fileRef = useRef(null);
+  const autoOpened = useRef(false);
   const t = DICT[lang];
+
+  // Auto-open the login modal the moment we know the visitor is logged out —
+  // collapses the old "dead-end gate → click a button → modal" flow into one
+  // step. Runs once per mount; guarded so it never re-fires (e.g. if the user
+  // closes the modal without logging in, we don't force it back open on them).
+  useEffect(() => {
+    if (!loading && !user && !autoOpened.current) {
+      autoOpened.current = true;
+      openAuth();
+    }
+  }, [loading, user, openAuth]);
 
   // Prefill contact from the logged-in user (only if the fields are still empty).
   useEffect(() => {
@@ -223,6 +235,9 @@ export default function PublicarClient() {
   );
 
   // Gate the whole flow behind login so every published deal has an owner.
+  // The modal auto-opens on mount (effect above); this is just the fallback
+  // screen shown behind/after it in case the visitor closes it without
+  // logging in, with a button to bring it back.
   if (!loading && !user) {
     return (
       <div className="min-h-screen">
