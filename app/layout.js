@@ -14,6 +14,8 @@ export const metadata = {
   keywords: ['propiedades Paraguay', 'casas en Asunción', 'departamentos Paraguay', 'comprar casa Paraguay', 'alquilar departamento Asunción', 'inmuebles Paraguay', 'publicar propiedad gratis'],
   icons: { icon: '/favicon.png', shortcut: '/favicon.png', apple: '/favicon.png' },
   alternates: { canonical: '/' },
+  // Google Search Console site ownership verification.
+  verification: { google: 'pYOvxtOG8ggKnLLL8itfNb1yBjuAHWeZ6cHzk7Tl87E' },
   openGraph: { title: 'Casa Libre — Propiedades en Paraguay', description: SITE_DESC, url: SITE, siteName: SITE_NAME, locale: 'es_PY', type: 'website' },
   twitter: { card: 'summary_large_image', title: 'Casa Libre — Propiedades en Paraguay', description: SITE_DESC },
   // #18 Non-production hosts return noindex,nofollow so staging isn't indexed.
