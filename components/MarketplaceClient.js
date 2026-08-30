@@ -63,6 +63,8 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
   const clusterRef = useRef(null);
   const markersRef = useRef({});
   const didFit = useRef(false);
+  const hoverRevealRef = useRef(null); // id of the pin currently styled/opened by hover
+  const hoverTargetRef = useRef(null); // latest hover target requested; guards stale zoomToShowLayer callbacks
   const t = T[lang];
   const m = M[lang];
   // Price buckets + value accessor switch together based on venta/alquiler mode:
@@ -260,11 +262,59 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
     if (pts.length && !didFit.current && isFiltered) { didFit.current = true; try { map.fitBounds(pts, { padding: [40, 40], maxZoom: 14 }); } catch {} }
   }
 
+  // Focus the hovered pin: reveal it out of its cluster if needed, pan to it,
+  // open its popup, and enlarge it — so hovering a card makes it obvious
+  // "this is the location." Mirrors the marker's own mouseover handler, so a
+  // hover started from the map side doesn't get fought by a redundant zoom/pan.
+  function unfocusPin(id) {
+    const mk = markersRef.current[id];
+    const el = mk?.getElement()?.querySelector('.marker-pill');
+    if (el) el.classList.remove('hot');
+    if (mk) mk.closePopup();
+  }
+
   useEffect(() => {
-    Object.entries(markersRef.current).forEach(([id, mk]) => {
-      const el = mk.getElement()?.querySelector('.marker-pill');
-      if (el) el.classList.toggle('hot', String(id) === String(hot));
-    });
+    const ref = mapRef.current;
+    const cluster = clusterRef.current;
+    if (!ref || !cluster) return;
+    const { map } = ref;
+
+    // Clear whatever pin was previously focused by hover (covers hot->null and
+    // hot flipping directly from one card/pin to another without a null step).
+    if (hoverRevealRef.current != null && hoverRevealRef.current !== hot) {
+      unfocusPin(hoverRevealRef.current);
+      hoverRevealRef.current = null;
+    }
+
+    hoverTargetRef.current = hot;
+    if (hot == null) return;
+
+    const mk = markersRef.current[hot];
+    if (!mk) return;
+
+    const focus = () => {
+      // Bail if the hover moved on before this (possibly async) reveal finished.
+      if (hoverTargetRef.current !== hot) return;
+      if (!mk.isPopupOpen()) mk.openPopup();
+      const applyClass = () => {
+        const el = mk.getElement()?.querySelector('.marker-pill');
+        if (el) el.classList.add('hot');
+        else requestAnimationFrame(() => { if (hoverTargetRef.current === hot) applyClass(); });
+      };
+      applyClass();
+      hoverRevealRef.current = hot;
+    };
+
+    // Already visible (not tucked inside a cluster) -> just pan; otherwise
+    // un-cluster it first via the markercluster API, then focus once settled.
+    const visibleParent = cluster.getVisibleParent(mk);
+    if (visibleParent === mk) {
+      map.panTo(mk.getLatLng(), { animate: true });
+      focus();
+    } else {
+      cluster.zoomToShowLayer(mk, focus);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hot]);
 
   // On mobile, the map lives in a hidden panel until its tab is selected — Leaflet
