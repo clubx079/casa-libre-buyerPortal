@@ -262,16 +262,20 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
     if (pts.length && !didFit.current && isFiltered) { didFit.current = true; try { map.fitBounds(pts, { padding: [40, 40], maxZoom: 14 }); } catch {} }
   }
 
-  // Focus the hovered pin: reveal it out of its cluster if needed, pan to it,
-  // open its popup, and enlarge it — so hovering a card makes it obvious
-  // "this is the location." Mirrors the marker's own mouseover handler, so a
-  // hover started from the map side doesn't get fought by a redundant zoom/pan.
-  function unfocusPin(id) {
-    const mk = markersRef.current[id];
-    const el = mk?.getElement()?.querySelector('.marker-pill');
-    if (el) el.classList.remove('hot');
-    if (mk) mk.closePopup();
-  }
+  // Highlight the hovered card's pin on the map WITHOUT changing zoom: pan the
+  // map (keeping the current zoom) only if the pin sits outside the current
+  // viewport, then enlarge either the pin itself — or, if it's still grouped in
+  // a cluster at this zoom, the cluster bubble that contains it. Never zooms,
+  // never navigates. Refs remember exactly which DOM node we lit up so we can
+  // clear it cleanly even after the cluster layout shifts.
+  const hoverElRef = useRef(null);    // the .marker-pill / .cluster-pill node we added .hot to
+  const hoverPopupRef = useRef(null); // marker whose popup we opened (individual pins only)
+
+  const clearHover = () => {
+    if (hoverElRef.current) { hoverElRef.current.classList.remove('hot'); hoverElRef.current = null; }
+    if (hoverPopupRef.current) { hoverPopupRef.current.closePopup(); hoverPopupRef.current = null; }
+    hoverRevealRef.current = null;
+  };
 
   useEffect(() => {
     const ref = mapRef.current;
@@ -279,41 +283,39 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
     if (!ref || !cluster) return;
     const { map } = ref;
 
-    // Clear whatever pin was previously focused by hover (covers hot->null and
-    // hot flipping directly from one card/pin to another without a null step).
-    if (hoverRevealRef.current != null && hoverRevealRef.current !== hot) {
-      unfocusPin(hoverRevealRef.current);
-      hoverRevealRef.current = null;
-    }
+    // Clear the previously-lit pin/cluster (covers hot->null and hot flipping
+    // straight from one card to another without an intermediate null).
+    if (hoverRevealRef.current != null && hoverRevealRef.current !== hot) clearHover();
 
     hoverTargetRef.current = hot;
-    if (hot == null) return;
+    if (hot == null) { clearHover(); return; }
 
     const mk = markersRef.current[hot];
     if (!mk) return;
+    const latlng = mk.getLatLng();
 
-    const focus = () => {
-      // Bail if the hover moved on before this (possibly async) reveal finished.
-      if (hoverTargetRef.current !== hot) return;
-      if (!mk.isPopupOpen()) mk.openPopup();
-      const applyClass = () => {
+    // Pan only when the pin is off-screen — keep the current zoom level intact.
+    if (!map.getBounds().contains(latlng)) map.panTo(latlng, { animate: true });
+
+    const highlight = () => {
+      if (hoverTargetRef.current !== hot) return; // hover moved on
+      const vis = cluster.getVisibleParent(mk);
+      if (vis === mk) {
+        // Pin is on its own at this zoom — enlarge it and open its popup.
+        if (!mk.isPopupOpen()) mk.openPopup();
+        hoverPopupRef.current = mk;
         const el = mk.getElement()?.querySelector('.marker-pill');
-        if (el) el.classList.add('hot');
-        else requestAnimationFrame(() => { if (hoverTargetRef.current === hot) applyClass(); });
-      };
-      applyClass();
-      hoverRevealRef.current = hot;
+        if (el) { el.classList.add('hot'); hoverElRef.current = el; hoverRevealRef.current = hot; }
+        else { requestAnimationFrame(highlight); }
+      } else if (vis) {
+        // Still inside a cluster at this zoom — highlight the cluster bubble
+        // (no zoom to break it open).
+        const el = vis.getElement()?.querySelector('.cluster-pill');
+        if (el) { el.classList.add('hot'); hoverElRef.current = el; hoverRevealRef.current = hot; }
+        else { requestAnimationFrame(highlight); }
+      }
     };
-
-    // Already visible (not tucked inside a cluster) -> just pan; otherwise
-    // un-cluster it first via the markercluster API, then focus once settled.
-    const visibleParent = cluster.getVisibleParent(mk);
-    if (visibleParent === mk) {
-      map.panTo(mk.getLatLng(), { animate: true });
-      focus();
-    } else {
-      cluster.zoomToShowLayer(mk, focus);
-    }
+    highlight();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hot]);
 
