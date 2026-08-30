@@ -220,7 +220,9 @@ export default function PublicarClient() {
       <div className="flex gap-2 flex-wrap text-[14px] font-medium">
         <Link href="/propiedades?op=venta" className="inline-flex items-center h-[40px] px-[18px] border border-ink rounded-pill">{t.navBuy}</Link>
         <Link href="/propiedades?op=alquiler" className="inline-flex items-center h-[40px] px-[18px] border border-ink rounded-pill">{t.navRent}</Link>
-        <Link href="/publicar" className="inline-flex items-center h-[40px] px-[18px] border border-ink rounded-pill">{t.navSell}</Link>
+        {/* We're on the sell page — show the Sell tab as selected, matching how
+            Buy/Rent look filled when active on the marketplace. */}
+        <Link href="/publicar" aria-current="page" className="inline-flex items-center h-[40px] px-[18px] border border-ink rounded-pill bg-ink text-paper">{t.navSell}</Link>
       </div>
       <div className="flex items-center gap-3.5">
         <div className="flex items-center h-[40px] border border-ink/30 rounded-pill p-[3px] text-[12px] font-semibold">
