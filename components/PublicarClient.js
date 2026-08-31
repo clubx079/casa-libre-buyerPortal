@@ -5,6 +5,8 @@ import { useLang } from '@/lib/useLang';
 import { useAuth } from '@/components/AuthProvider';
 import AuthButton from '@/components/AuthButton';
 import { track } from '@/lib/analytics';
+import AddressAutocomplete from '@/components/AddressAutocomplete';
+import { useSellFlow } from '@/components/SellFlow';
 
 const DICT = {
   es: {
@@ -69,6 +71,8 @@ const labelCls = 'flex flex-col gap-[7px] text-[13px] font-semibold';
 export default function PublicarClient() {
   const [lang, setLang] = useLang();
   const { user, loading, openAuth } = useAuth();
+  const { openSell } = useSellFlow();
+  const [addrText, setAddrText] = useState('');
   const [step, setStep] = useState(1);
   const [mode, setMode] = useState('venta');
   const [f, setF] = useState({ ptype: 'casa', neighborhood: '', city: '', price: '', currency: '', area: '', description: '', contact_name: '', contact_phone: '', seller_type: 'owner' });
@@ -81,16 +85,15 @@ export default function PublicarClient() {
   const autoOpened = useRef(false);
   const t = DICT[lang];
 
-  // Auto-open the login modal the moment we know the visitor is logged out —
-  // collapses the old "dead-end gate → click a button → modal" flow into one
-  // step. Runs once per mount; guarded so it never re-fires (e.g. if the user
-  // closes the modal without logging in, we don't force it back open on them).
+  // A logged-out visitor who reaches the sell page gets the collect-first sell
+  // wizard (address → details → photos → contact → login-last), NOT a bare login
+  // prompt. Runs once per mount; guarded so it never re-fires if they close it.
   useEffect(() => {
     if (!loading && !user && !autoOpened.current) {
       autoOpened.current = true;
-      openAuth();
+      openSell();
     }
-  }, [loading, user, openAuth]);
+  }, [loading, user, openSell]);
 
   // Prefill contact from the logged-in user (only if the fields are still empty).
   useEffect(() => {
@@ -249,7 +252,7 @@ export default function PublicarClient() {
           <img src="/mascot.png" alt="" className="w-[130px] object-contain mx-auto mb-4" />
           <h1 className="text-[clamp(30px,4.5vw,42px)] font-bold tracking-display leading-tight mb-2">{t.gateTitle}</h1>
           <p className="text-[16px] text-ink/55 mb-7">{t.gateSub}</p>
-          <button onClick={() => openAuth()} className="px-8 py-4 bg-ink text-paper font-semibold text-[15px] rounded-pill shadow-hard-soft">{t.gateBtn}</button>
+          <button onClick={() => openSell()} className="px-8 py-4 bg-ink text-paper font-semibold text-[15px] rounded-pill shadow-hard-soft">{t.gateBtn}</button>
         </div>
       </div>
     );
@@ -289,6 +292,11 @@ export default function PublicarClient() {
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <label className={`${labelCls} sm:col-span-2`}>{lang === 'en' ? 'Address' : 'Dirección'} <span className="font-normal text-ink/45">· Google</span>
+                <AddressAutocomplete value={addrText} onChange={setAddrText}
+                  onSelect={({ neighborhood, city }) => { setF((s) => ({ ...s, neighborhood, city })); setErrs((er) => ({ ...er, neighborhood: undefined, city: undefined })); }}
+                  placeholder={lang === 'en' ? 'Search the address…' : 'Buscá la dirección…'} className={inputCls} />
+              </label>
               <label className={labelCls}>{t.fType}
                 <select value={f.ptype} onChange={set('ptype')} className={`${inputCls} cursor-pointer`}>
                   {t.types.map(([v, l]) => <option key={v} value={v}>{l}</option>)}

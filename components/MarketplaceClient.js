@@ -6,6 +6,7 @@ import { T, fmtUsd, fmtPyg, shortUsd, titleCaseZone, bedAbbr, bathWord, parkWord
 import { fmtRate } from '@/lib/money';
 import { useLang } from '@/lib/useLang';
 import AuthButton from '@/components/AuthButton';
+import { useSellFlow } from '@/components/SellFlow';
 import { track } from '@/lib/analytics';
 
 // Marketplace-specific bilingual strings (search / filters / sort).
@@ -42,6 +43,7 @@ const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toL
 
 export default function MarketplaceClient({ listings, rate, rateSource, rateDate, initialOp = 'all', initialQuery = '' }) {
   const [lang, setLang] = useLang();
+  const { openSell } = useSellFlow();
   const [filter, setFilter] = useState(['all', 'venta', 'alquiler'].includes(initialOp) ? initialOp : 'all');
   const [query, setQuery] = useState(initialQuery || '');
   const [typeF, setTypeF] = useState('all');
@@ -342,7 +344,7 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
             op ? (
               <button key={i} onClick={() => setFilter(op)} className={`inline-flex items-center h-[40px] px-[18px] rounded-pill text-[14px] font-medium border border-ink ${filter === op ? 'bg-ink text-paper' : ''}`}>{label}</button>
             ) : (
-              <Link key={i} href={href} className="inline-flex items-center h-[40px] px-[18px] rounded-pill text-[14px] font-medium border border-ink">{label}</Link>
+              <button key={i} onClick={openSell} className="inline-flex items-center h-[40px] px-[18px] rounded-pill text-[14px] font-medium border border-ink">{label}</button>
             )
           ))}
         </div>
@@ -353,7 +355,7 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
             ))}
           </div>
           <AuthButton />
-          <Link href="/publicar" className="inline-flex items-center h-[40px] px-[18px] rounded-pill bg-ink text-paper text-[14px] font-medium border border-ink">{t.cta}</Link>
+          <button onClick={openSell} className="inline-flex items-center h-[40px] px-[18px] rounded-pill bg-ink text-paper text-[14px] font-medium border border-ink">{t.cta}</button>
         </div>
       </nav>
 

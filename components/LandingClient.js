@@ -3,6 +3,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
 import AuthButton from '@/components/AuthButton';
+import { useSellFlow } from '@/components/SellFlow';
 import { useRouter } from 'next/navigation';
 import { typeLabel } from '@/lib/propertyType';
 import { fmtUsd, fmtPyg, bathWord } from '@/lib/ui';
@@ -58,6 +59,7 @@ const DICT = {
 
 export default function LandingClient({ featured = [], count = 0, tickerData = [] }) {
   const [lang, setLang] = useLang();
+  const { openSell } = useSellFlow();
   const router = useRouter();
   const t = DICT[lang];
   const [q, setQ] = useState('');
@@ -88,14 +90,14 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
         <div className="flex gap-2 flex-wrap text-[14px] font-medium">
           <Link href="/propiedades?op=venta" className="inline-flex items-center h-[40px] px-[18px] border border-ink rounded-pill">{t.navBuy}</Link>
           <Link href="/propiedades?op=alquiler" className="inline-flex items-center h-[40px] px-[18px] border border-ink rounded-pill">{t.navRent}</Link>
-          <Link href="/publicar" className="inline-flex items-center h-[40px] px-[18px] border border-ink rounded-pill">{t.navSell}</Link>
+          <button onClick={openSell} className="inline-flex items-center h-[40px] px-[18px] border border-ink rounded-pill">{t.navSell}</button>
         </div>
         <div className="flex items-center gap-3.5">
           <div className="flex items-center h-[40px] border border-ink/30 rounded-pill p-[3px] text-[12px] font-semibold">
             {['es', 'en'].map((l) => <button key={l} onClick={() => setLang(l)} className={`h-full flex items-center px-3 rounded-pill ${lang === l ? 'bg-ink text-paper' : 'text-ink/55'}`}>{l.toUpperCase()}</button>)}
           </div>
           <AuthButton />
-          <Link href="/publicar" className="inline-flex items-center h-[40px] px-[22px] bg-ink text-paper rounded-pill text-[14px] font-semibold whitespace-nowrap">{t.navCta}</Link>
+          <button onClick={openSell} className="inline-flex items-center h-[40px] px-[22px] bg-ink text-paper rounded-pill text-[14px] font-semibold whitespace-nowrap">{t.navCta}</button>
         </div>
       </nav>
 
@@ -180,7 +182,7 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
         <p className="text-[17px] text-ink/55 m-0 mb-[30px]">{t.ctaSub}</p>
         <div className="flex gap-3 justify-center flex-wrap">
           <Link href="/propiedades" className="px-8 py-4 bg-ink text-paper font-semibold text-[16px] rounded-pill shadow-hard-soft">{t.ctaBtn1}</Link>
-          <Link href="/publicar" className="px-8 py-4 border-2 border-ink font-semibold text-[16px] rounded-pill">{t.ctaBtn2}</Link>
+          <button onClick={openSell} className="px-8 py-4 border-2 border-ink font-semibold text-[16px] rounded-pill">{t.ctaBtn2}</button>
         </div>
       </div>
     </div>

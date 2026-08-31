@@ -2,6 +2,7 @@ import './globals.css';
 import PostHogProvider from '@/components/PostHogProvider';
 import AuthProvider from '@/components/AuthProvider';
 import FavoritesProvider from '@/components/FavoritesProvider';
+import SellFlowProvider from '@/components/SellFlow';
 import { SITE, SITE_NAME, SITE_DESC, INDEXABLE } from '@/lib/site';
 
 export const metadata = {
@@ -57,7 +58,9 @@ export default function RootLayout({ children }) {
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(siteLd) }} />
         <PostHogProvider>
           <AuthProvider>
-            <FavoritesProvider>{children}</FavoritesProvider>
+            <SellFlowProvider>
+              <FavoritesProvider>{children}</FavoritesProvider>
+            </SellFlowProvider>
           </AuthProvider>
         </PostHogProvider>
       </body>

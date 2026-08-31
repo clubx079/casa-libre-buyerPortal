@@ -12,6 +12,7 @@ import { track } from '@/lib/analytics';
 import { fmtUsd, fmtPyg, normalizePy, clRef } from '@/lib/ui';
 import PropertyContactCard from '@/components/PropertyContactCard';
 import NoResponseReport from '@/components/NoResponseReport';
+import { useSellFlow } from '@/components/SellFlow';
 import SaveButton from '@/components/SaveButton';
 import ShareButton from '@/components/ShareButton';
 import { genToken, shortUrl, trackContact, markOpened } from '@/lib/contactTrack';
@@ -23,7 +24,7 @@ const T = {
     forSale: 'Venta', forRent: 'Alquiler', perMonth: '/mes', bedShort: 'dorm',
     specBeds: 'Dormitorios', specBaths: 'Baños', specBuilt: 'm² construidos', specLot: 'm² terreno', specPark: 'Cocheras',
     descH: 'Descripción', featH: 'Características', locH: 'Ubicación', published: 'Publicado', ref: 'Ref', photoSoon: 'Foto próximamente',
-    bizLink: '¿Empresa o inmobiliaria? Publicá tu cartera →',
+    bizLink: '¿Empresa o inmobiliaria? Publicá tu cartera →', sellCta: '¿Querés vender? Publicá tu propiedad →',
     viewAll: (k) => `Ver todas las fotos (${k})`,
   },
   en: {
@@ -32,7 +33,7 @@ const T = {
     forSale: 'For sale', forRent: 'For rent', perMonth: '/mo', bedShort: 'bd',
     specBeds: 'Bedrooms', specBaths: 'Bathrooms', specBuilt: 'm² built', specLot: 'm² lot', specPark: 'Parking',
     descH: 'Description', featH: 'Features', locH: 'Location', published: 'Listed', ref: 'Ref', photoSoon: 'Photo coming soon',
-    bizLink: 'Agency or business? List your portfolio →',
+    bizLink: 'Agency or business? List your portfolio →', sellCta: 'Want to sell? List your property →',
     viewAll: (k) => `View all photos (${k})`,
   },
 };
@@ -54,6 +55,7 @@ const fmtDate = (v, lang) => {
 
 export default function PropertyDetailView({ l, url }) {
   const [lang, setLang] = useLang();
+  const { openSell } = useSellFlow();
   const [box, setBox] = useState(-1); // lightbox image index; -1 closed
   const t = T[lang] || T.es;
   const mapEl = useRef(null);
@@ -303,8 +305,9 @@ export default function PropertyDetailView({ l, url }) {
           <div className="flex justify-center text-center">
             <NoResponseReport propertyId={l.id} listingRef={listingRef} sellerName={l.contact_name} sellerPhone={l.contact_phone} />
           </div>
-          {/* Partner funnel — visible on every listing. */}
-          <div className="mt-4 pt-3.5 border-t border-ink/12 text-center">
+          {/* Sell + partner funnels — visible on every listing. */}
+          <div className="mt-4 pt-3.5 border-t border-ink/12 text-center flex flex-col gap-2">
+            <button type="button" onClick={openSell} className="font-mono text-[11.5px] text-ink/55 hover:text-ink/80 underline underline-offset-2 decoration-ink/25">{t.sellCta}</button>
             <Link href="/empresas" className="font-mono text-[11.5px] text-ink/55 hover:text-ink/80 underline underline-offset-2 decoration-ink/25">{t.bizLink}</Link>
           </div>
         </div>
