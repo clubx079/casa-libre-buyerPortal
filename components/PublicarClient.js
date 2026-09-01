@@ -7,12 +7,14 @@ import AuthButton from '@/components/AuthButton';
 import { track } from '@/lib/analytics';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import { useSellFlow } from '@/components/SellFlow';
+import { loadPendingSell, clearPendingSell } from '@/lib/pendingSell';
 
 const DICT = {
   es: {
     navBack: 'Ver propiedades', navBuy: 'Comprar', navRent: 'Alquilar', navSell: 'Vender', navCta: 'Publicar gratis', stepLabels: ['Detalles', 'Listo'],
     s1Title: 'Publicá tu propiedad', s1TitleSerif: 'en minutos.',
     s1Sub: 'Contanos sobre tu propiedad. Se publica al instante en el marketplace.',
+    resumeBanner: 'Ya guardamos tus datos. Completá los últimos detalles — precio, superficie y fotos — para publicar tu propiedad.',
     opVenta: 'Vender', opAlquiler: 'Alquilar',
     roleQ: '¿Sos el propietario o un agente?', roleOwner: 'Propietario', roleAgent: 'Agente',
     fType: 'Tipo de propiedad', types: [['casa', 'Casa'], ['departamento', 'Departamento'], ['duplex', 'Dúplex'], ['terreno', 'Terreno']],
@@ -40,6 +42,7 @@ const DICT = {
     navBack: 'Browse listings', navBuy: 'Buy', navRent: 'Rent', navSell: 'Sell', navCta: 'List for free', stepLabels: ['Details', 'Done'],
     s1Title: 'List your property', s1TitleSerif: 'in minutes.',
     s1Sub: 'Tell us about your property. It goes live in the marketplace instantly.',
+    resumeBanner: 'We saved your details. Add the last bits — price, area and photos — to publish your listing.',
     opVenta: 'Sell', opAlquiler: 'Rent out',
     roleQ: 'Are you the owner or an agent?', roleOwner: 'Owner', roleAgent: 'Agent',
     fType: 'Property type', types: [['casa', 'House'], ['departamento', 'Apartment'], ['duplex', 'Duplex'], ['terreno', 'Lot']],
@@ -83,6 +86,8 @@ export default function PublicarClient() {
   const [result, setResult] = useState(null); // {ref, slug}
   const fileRef = useRef(null);
   const autoOpened = useRef(false);
+  const prefilled = useRef(false);
+  const [resumed, setResumed] = useState(false); // came from the sell wizard → finish this listing
   const t = DICT[lang];
 
   // A logged-out visitor who reaches the sell page gets the collect-first sell
@@ -94,6 +99,32 @@ export default function PublicarClient() {
       openSell();
     }
   }, [loading, user, openSell]);
+
+  // Resume from the sell wizard: a logged-out visitor collected operation,
+  // owner/agent, name, contact and address as a guest; after logging in we land
+  // here PRE-FILLED so they only add price, area, description and photos. The
+  // pending data is consumed (cleared) once read.
+  useEffect(() => {
+    if (!user || prefilled.current) return;
+    prefilled.current = true;
+    (async () => {
+      const payload = await loadPendingSell();
+      const x = payload?.fields;
+      if (!x) return;
+      if (x.mode === 'venta' || x.mode === 'alquiler') setMode(x.mode);
+      if (x.addressText) setAddrText(x.addressText);
+      setF((s) => ({
+        ...s,
+        seller_type: x.seller_type || s.seller_type,
+        neighborhood: x.neighborhood || s.neighborhood,
+        city: x.city || s.city,
+        contact_name: x.contact_name || s.contact_name,
+        contact_phone: x.contact_phone || s.contact_phone,
+      }));
+      setResumed(true);
+      await clearPendingSell();
+    })();
+  }, [user]);
 
   // Prefill contact from the logged-in user (only if the fields are still empty).
   useEffect(() => {
@@ -278,6 +309,13 @@ export default function PublicarClient() {
           <div>
             <h1 className="text-[clamp(34px,4.5vw,48px)] font-bold tracking-[-0.04em] mb-2">{t.s1Title} <span className="font-serif italic font-normal">{t.s1TitleSerif}</span></h1>
             <p className="text-[16px] text-ink/55 mb-[34px]">{t.s1Sub}</p>
+            {resumed && (
+              <div className="flex items-start gap-3 mb-7 border-[1.5px] border-ink/20 bg-card rounded-[14px] px-4 py-3.5">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/mascot.png" alt="" className="w-9 h-9 object-contain shrink-0" />
+                <p className="text-[14px] font-medium text-ink">{t.resumeBanner}</p>
+              </div>
+            )}
             <div className="flex gap-2.5 mb-[26px]">
               {[['venta', t.opVenta], ['alquiler', t.opAlquiler]].map(([m, label]) => (
                 <button key={m} onClick={() => setMode(m)} className={`px-[22px] py-2.5 rounded-pill text-[14px] font-semibold border-[1.5px] border-ink ${mode === m ? 'bg-ink text-paper' : 'bg-transparent'}`}>{label}</button>

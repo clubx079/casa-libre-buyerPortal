@@ -74,20 +74,20 @@ export default function PropertyDetailView({ l, url }) {
   const navActive = l.mode === 'alquiler' ? 1 : 0;
   const hasGeo = l.lat != null && l.lng != null;
 
-  // Location map — a single pin at the property's coordinates (client-only Leaflet).
+  // Location map — a single pin at the property's coordinates (Google Maps).
   useEffect(() => {
     if (!hasGeo) return;
     let cancelled = false;
     (async () => {
-      const L = (await import('leaflet')).default;
-      if (cancelled || !mapEl.current || mapRef.current) return;
-      const map = L.map(mapEl.current, { scrollWheelZoom: false, zoomControl: true, attributionControl: false }).setView([l.lat, l.lng], 15);
-      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
-      L.marker([l.lat, l.lng], { icon: L.divIcon({ className: '', html: '<div class="marker-pill">•</div>', iconSize: null }) }).addTo(map);
+      const { loadGoogleMapsAPI, mapOptions, pinIcon } = await import('@/utils/gmap');
+      await loadGoogleMapsAPI();
+      if (cancelled || !mapEl.current || mapRef.current || !window.google?.maps) return;
+      const google = window.google;
+      const map = new google.maps.Map(mapEl.current, mapOptions(google, { center: { lat: l.lat, lng: l.lng }, zoom: 15, gestureHandling: 'cooperative' }));
+      new google.maps.Marker({ position: { lat: l.lat, lng: l.lng }, map, icon: pinIcon(google, '•', false) });
       mapRef.current = map;
-      setTimeout(() => map.invalidateSize(), 200);
     })();
-    return () => { cancelled = true; if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; } };
+    return () => { cancelled = true; mapRef.current = null; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [l.lat, l.lng]);
 

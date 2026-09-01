@@ -17,17 +17,30 @@ a { color: inherit; text-decoration: none; }
 @keyframes cl-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 .cl-marquee { display: inline-flex; animation: cl-marquee 45s linear infinite; }
 
-/* leaflet marker pill */
-.marker-pill { background:#111; color:#F9F4EE; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:12px; padding:5px 10px; border-radius:999px; white-space:nowrap; border:2px solid #F9F4EE; box-shadow:0 1px 4px rgba(0,0,0,.35); width:max-content !important; transform:translate(-50%,-50%); cursor:pointer; transition:transform .12s ease; }
-.marker-pill.hot { background:#fff; color:#111; border-color:#111; transform:translate(-50%,-50%) scale(1.35); z-index:1000; box-shadow:0 4px 14px rgba(0,0,0,.4); }
-.leaflet-popup-content-wrapper { border-radius:14px; font-family:'Space Grotesk',sans-serif; }
-.leaflet-popup-content { margin:0 !important; }
+/* map marker pill (Google Advanced Markers anchor bottom-center → translateY(50%) centres it on the point) */
+.marker-pill { background:#111; color:#F9F4EE; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:12px; padding:5px 10px; border-radius:999px; white-space:nowrap; border:2px solid #F9F4EE; box-shadow:0 1px 4px rgba(0,0,0,.35); width:max-content; transform:translateY(50%); cursor:pointer; transition:transform .12s ease; }
+.marker-pill.hot { background:#fff; color:#111; border-color:#111; transform:translateY(50%) scale(1.35); z-index:1000; box-shadow:0 4px 14px rgba(0,0,0,.4); }
 
-/* marker cluster pill (matches the guide) */
-.cluster-pill { background:#111; color:#F9F4EE; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:13px; border-radius:999px; border:2px solid #F9F4EE; box-shadow:0 1px 4px rgba(0,0,0,.35); display:flex; align-items:center; justify-content:center; width:100%; height:100%; transition:transform .12s ease; }
+/* marker cluster pill */
+.cluster-pill { background:#111; color:#F9F4EE; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:13px; border-radius:999px; border:2px solid #F9F4EE; box-shadow:0 1px 4px rgba(0,0,0,.35); display:flex; align-items:center; justify-content:center; width:38px; height:38px; transform:translateY(50%); cursor:pointer; transition:transform .12s ease; }
 /* hover-highlight when a hovered list card's pin lives inside this cluster */
-.cluster-pill.hot { background:#fff; color:#111; border-color:#111; transform:scale(1.28); box-shadow:0 4px 14px rgba(0,0,0,.4); }
-.leaflet-marker-icon:has(.cluster-pill.hot) { z-index:1000 !important; }
+.cluster-pill.hot { background:#fff; color:#111; border-color:#111; transform:translateY(50%) scale(1.28); z-index:1000; box-shadow:0 4px 14px rgba(0,0,0,.4); }
+
+/* Google InfoWindow — strip the default chrome so it matches the old popup */
+.gm-style-iw.gm-style-iw-c { padding:0 !important; border-radius:14px !important; box-shadow:0 2px 12px rgba(17,17,17,.2) !important; }
+.gm-style-iw-d { overflow:hidden !important; padding:0 !important; }
+.gm-style-iw-c .gm-style-iw-chr { display:none !important; }
+.gm-style .gm-style-iw-tc::after { background:#fff !important; }
+
+/* Hide Google's logo + attribution / terms in the map corners (all maps) */
+.gm-style-cc, .gm-style-cc * { display:none !important; }
+.gm-style a[href^="https://maps.google.com/maps"] { display:none !important; }
+.gm-style a[href^="https://www.google.com/maps"] { display:none !important; }
+.gm-style img[alt="Google"] { display:none !important; }
 
 /* filter select with a custom chevron */
 .cl-select { appearance:none; -webkit-appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23111' fill='none' stroke-width='1.5'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 12px center; }
+
+/* horizontal filter rows (mobile marketplace) — hide the scrollbar */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

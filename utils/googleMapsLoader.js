@@ -23,7 +23,9 @@ export const loadGoogleMapsAPI = () => {
       return;
     }
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${MAPS_KEY}&libraries=places`;
+    // `marker` = Advanced Markers (HTML pin content, used by the property maps);
+    // `places` = address autocomplete.
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${MAPS_KEY}&libraries=places,marker`;
     script.async = true;
     script.defer = true;
     script.onload = resolve;

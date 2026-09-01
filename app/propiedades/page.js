@@ -1,5 +1,6 @@
 import { getListings } from '@/lib/listings';
 import MarketplaceClient from '@/components/MarketplaceClient';
+import MobileMarketplace from '@/components/MobileMarketplace';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,5 +17,15 @@ export default async function PropiedadesPage({ searchParams }) {
   const { listings, rate, rateSource, rateDate } = await getListings({ limit: 5000, light: true });
   const initialOp = searchParams?.op === 'alquiler' ? 'alquiler' : searchParams?.op === 'venta' ? 'venta' : 'all';
   const initialQuery = typeof searchParams?.q === 'string' ? searchParams.q : '';
-  return <MarketplaceClient listings={listings} rate={rate} rateSource={rateSource} rateDate={rateDate} initialOp={initialOp} initialQuery={initialQuery} />;
+  return (
+    <>
+      {/* Mobile: the app-style listing UI. Desktop: the existing marketplace (unchanged). */}
+      <div className="md:hidden">
+        <MobileMarketplace listings={listings} initialOp={initialOp} initialQuery={initialQuery} />
+      </div>
+      <div className="hidden md:block">
+        <MarketplaceClient listings={listings} rate={rate} rateSource={rateSource} rateDate={rateDate} initialOp={initialOp} initialQuery={initialQuery} />
+      </div>
+    </>
+  );
 }

@@ -8,6 +8,7 @@ import { useLang } from '@/lib/useLang';
 import AuthButton from '@/components/AuthButton';
 import { useSellFlow } from '@/components/SellFlow';
 import { track } from '@/lib/analytics';
+import { loadGoogleMapsAPI, mapOptions, pinIcon, clusterIcon } from '@/utils/gmap';
 
 // Marketplace-specific bilingual strings (search / filters / sort).
 const M = {
@@ -63,6 +64,7 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
   const mapEl = useRef(null);
   const mapRef = useRef(null);
   const clusterRef = useRef(null);
+  const infoRef = useRef(null); // shared Google InfoWindow (hover popup)
   const markersRef = useRef({});
   const didFit = useRef(false);
   const hoverRevealRef = useRef(null); // id of the pin currently styled/opened by hover
@@ -104,6 +106,8 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
     return r;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listings, filter, typeF, priceF, bedF, query, sortBy]);
+
+  const rowsById = useMemo(() => new Map(rows.map((l) => [l.id, l])), [rows]);
 
   // Lazily fetch feature images for a set of ids (deduped). imgMapRef is the
   // source of truth (readable synchronously by the imperative map popups);
@@ -166,37 +170,32 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
   const priceSub = (l) => (fmtPyg(l.pyg, lang) ? fmtPyg(l.pyg, lang) + (l.mode === 'alquiler' ? t.perMonth : '') : '');
   const shortPill = (l) => shortUsd(l.usd);
 
-  // ---- Leaflet init (client-only) with marker clustering ----
+  // ---- Google Maps init with marker clustering (Advanced Markers) ----
   useEffect(() => {
+    // Below `md` this desktop layout is hidden (the mobile view uses
+    // MobileMarketplace), so skip the heavy map init there. Desktop unchanged.
+    if (typeof window !== 'undefined' && window.matchMedia && !window.matchMedia('(min-width: 768px)').matches) return;
     let cancelled = false;
     (async () => {
-      const L = (await import('leaflet')).default;
-      await import('leaflet.markercluster');
-      if (cancelled || !mapEl.current || mapRef.current) return;
-      const map = L.map(mapEl.current, { scrollWheelZoom: true, zoomControl: true, attributionControl: false }).setView([-25.293, -57.60], 13);
-      const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 });
-      tiles.on('load', () => { if (!cancelled) setMapReady(true); });
-      tiles.addTo(map);
-      setTimeout(() => { if (!cancelled) setMapReady(true); }, 1500); // fallback if 'load' is missed
-      const cluster = L.markerClusterGroup({
-        maxClusterRadius: 46,
-        showCoverageOnHover: false,
-        iconCreateFunction: (c) => L.divIcon({ className: '', html: `<div class="cluster-pill">${c.getChildCount()}</div>`, iconSize: [38, 38] }),
-      });
-      map.addLayer(cluster);
-      mapRef.current = { L, map };
+      const { MarkerClusterer, SuperClusterAlgorithm } = await import('@googlemaps/markerclusterer');
+      await loadGoogleMapsAPI();
+      if (cancelled || !mapEl.current || mapRef.current || !window.google?.maps) return;
+      const google = window.google;
+      const map = new google.maps.Map(mapEl.current, mapOptions(google, { center: { lat: -25.293, lng: -57.60 }, zoom: 13, gestureHandling: 'greedy' }));
+      const info = new google.maps.InfoWindow({ disableAutoPan: true });
+      // Cluster bubble → brand-coloured SVG pill (matches `.cluster-pill`).
+      const renderer = {
+        render: ({ count, position }) => new google.maps.Marker({ position, zIndex: 1000 + count, icon: clusterIcon(google, count, false) }),
+      };
+      const cluster = new MarkerClusterer({ map, renderer, algorithm: new SuperClusterAlgorithm({ radius: 46, maxZoom: 16 }) });
+      mapRef.current = { google, map };
       clusterRef.current = cluster;
+      infoRef.current = info;
+      google.maps.event.addListenerOnce(map, 'tilesloaded', () => { if (!cancelled) setMapReady(true); });
+      setTimeout(() => { if (!cancelled) setMapReady(true); }, 1500);
       drawMarkers();
-      const fix = () => map.invalidateSize();
-      setTimeout(fix, 100);
-      setTimeout(() => { map.invalidateSize(); drawMarkers(); }, 400);
-      window.addEventListener('resize', fix);
-      mapRef.current.fix = fix;
     })();
-    return () => {
-      cancelled = true;
-      if (mapRef.current) { if (mapRef.current.fix) window.removeEventListener('resize', mapRef.current.fix); mapRef.current.map.remove(); mapRef.current = null; }
-    };
+    return () => { cancelled = true; mapRef.current = null; clusterRef.current = null; infoRef.current = null; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -223,24 +222,20 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
     const ref = mapRef.current;
     const cluster = clusterRef.current;
     if (!ref || !cluster) return;
-    const { L, map } = ref;
-    cluster.clearLayers();
+    const { google, map } = ref;
+    cluster.clearMarkers();
     markersRef.current = {};
-    const pts = [];
+    const markers = [];
+    const bounds = new google.maps.LatLngBounds();
+    let n = 0;
     rows.forEach((l) => {
       if (l.lat == null || l.lng == null) return;
-      const marker = L.marker([l.lat, l.lng], {
-        icon: L.divIcon({ className: '', html: `<div class="marker-pill" data-mid="${l.id}">${shortPill(l)}</div>`, iconSize: null }),
-      });
-      marker.bindPopup(popupHtml(l, imgMapRef.current[l.id]), { closeButton: false, offset: [0, -4], minWidth: 210, maxWidth: 210 });
-      marker.on('mouseover', () => {
-        setHot(l.id);
-        marker.openPopup();
-        // Lazy-load this pin's image, then refresh the popup content once it arrives.
-        ensureImages([l.id]).then(() => { try { marker.setPopupContent(popupHtml(l, imgMapRef.current[l.id])); } catch { /* popup closed */ } });
-      });
-      marker.on('mouseout', () => setHot(null));
-      marker.on('click', () => {
+      const label = shortPill(l);
+      const marker = new google.maps.Marker({ position: { lat: l.lat, lng: l.lng }, icon: pinIcon(google, label, false) });
+      marker.__label = label;
+      marker.addListener('mouseover', () => setHot(l.id));
+      marker.addListener('mouseout', () => setHot(null));
+      marker.addListener('click', () => {
         track('map_pin_clicked', {
           property_id: l.id,
           location_name: l.neighborhood || l.city || l.address || null,
@@ -252,30 +247,28 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
         });
         window.open(`/propiedad/${l.id}`, '_blank', 'noopener');
       });
-      cluster.addLayer(marker);
       markersRef.current[l.id] = marker;
-      pts.push([l.lat, l.lng]);
+      markers.push(marker);
+      bounds.extend({ lat: l.lat, lng: l.lng });
+      n++;
     });
-    // Default view stays zoomed on Asunción (the initial setView); only auto-fit
-    // to the results once the user actually filters/searches.
-    // Buy/Rent/All all keep the default Asunción view — only a search or a
-    // type/price/beds filter re-fits the map to the matching results.
+    cluster.addMarkers(markers);
+    // Default view stays zoomed on Asunción; only auto-fit to the results once
+    // the user actually filters/searches (Buy/Rent/All keep the default view).
     const isFiltered = typeF !== 'all' || priceF !== 'all' || bedF !== 'all' || !!query;
-    if (pts.length && !didFit.current && isFiltered) { didFit.current = true; try { map.fitBounds(pts, { padding: [40, 40], maxZoom: 14 }); } catch {} }
+    if (n && !didFit.current && isFiltered) { didFit.current = true; try { map.fitBounds(bounds, 40); } catch {} }
   }
 
   // Highlight the hovered card's pin on the map WITHOUT changing zoom: pan the
   // map (keeping the current zoom) only if the pin sits outside the current
-  // viewport, then enlarge either the pin itself — or, if it's still grouped in
+  // viewport, then light up either the pin itself — or, if it's still grouped in
   // a cluster at this zoom, the cluster bubble that contains it. Never zooms,
-  // never navigates. Refs remember exactly which DOM node we lit up so we can
-  // clear it cleanly even after the cluster layout shifts.
-  const hoverElRef = useRef(null);    // the .marker-pill / .cluster-pill node we added .hot to
-  const hoverPopupRef = useRef(null); // marker whose popup we opened (individual pins only)
+  // never navigates.
+  const hotMarkerRef = useRef(null); // { marker, icon } — restore its normal icon on clear
 
   const clearHover = () => {
-    if (hoverElRef.current) { hoverElRef.current.classList.remove('hot'); hoverElRef.current = null; }
-    if (hoverPopupRef.current) { hoverPopupRef.current.closePopup(); hoverPopupRef.current = null; }
+    if (hotMarkerRef.current) { try { hotMarkerRef.current.marker.setIcon(hotMarkerRef.current.icon); } catch { /* removed */ } hotMarkerRef.current = null; }
+    if (infoRef.current) infoRef.current.close();
     hoverRevealRef.current = null;
   };
 
@@ -283,7 +276,7 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
     const ref = mapRef.current;
     const cluster = clusterRef.current;
     if (!ref || !cluster) return;
-    const { map } = ref;
+    const { google, map } = ref;
 
     // Clear the previously-lit pin/cluster (covers hot->null and hot flipping
     // straight from one card to another without an intermediate null).
@@ -294,40 +287,40 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
 
     const mk = markersRef.current[hot];
     if (!mk) return;
-    const latlng = mk.getLatLng();
 
     // Pan only when the pin is off-screen — keep the current zoom level intact.
-    if (!map.getBounds().contains(latlng)) map.panTo(latlng, { animate: true });
+    const p = mk.getPosition?.();
+    const b = map.getBounds();
+    if (p && b && !b.contains(p)) map.panTo(p);
 
-    const highlight = () => {
-      if (hoverTargetRef.current !== hot) return; // hover moved on
-      const vis = cluster.getVisibleParent(mk);
-      if (vis === mk) {
-        // Pin is on its own at this zoom — enlarge it and open its popup.
-        if (!mk.isPopupOpen()) mk.openPopup();
-        hoverPopupRef.current = mk;
-        const el = mk.getElement()?.querySelector('.marker-pill');
-        if (el) { el.classList.add('hot'); hoverElRef.current = el; hoverRevealRef.current = hot; }
-        else { requestAnimationFrame(highlight); }
-      } else if (vis) {
-        // Still inside a cluster at this zoom — highlight the cluster bubble
-        // (no zoom to break it open).
-        const el = vis.getElement()?.querySelector('.cluster-pill');
-        if (el) { el.classList.add('hot'); hoverElRef.current = el; hoverRevealRef.current = hot; }
-        else { requestAnimationFrame(highlight); }
+    // Is this marker currently rolled up inside a multi-marker cluster bubble?
+    const parent = (cluster.clusters || []).find((c) => (c.markers?.length > 1) && c.markers.includes(mk));
+    if (parent && parent.marker && typeof parent.marker.setIcon === 'function') {
+      const cm = parent.marker;
+      hotMarkerRef.current = { marker: cm, icon: cm.getIcon() };
+      cm.setIcon(clusterIcon(google, parent.count ?? parent.markers.length, true));
+      hoverRevealRef.current = hot;
+    } else {
+      // Standalone pin → invert its pill + open its popup (lazy-load image, then refresh).
+      hotMarkerRef.current = { marker: mk, icon: mk.getIcon() };
+      mk.setIcon(pinIcon(google, mk.__label, true));
+      hoverRevealRef.current = hot;
+      const l = rowsById.get(hot);
+      if (l && infoRef.current) {
+        infoRef.current.setContent(popupHtml(l, imgMapRef.current[l.id]));
+        infoRef.current.open({ map, anchor: mk });
+        ensureImages([l.id]).then(() => { if (hoverTargetRef.current === hot && infoRef.current) infoRef.current.setContent(popupHtml(l, imgMapRef.current[l.id])); });
       }
-    };
-    highlight();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hot]);
 
-  // On mobile, the map lives in a hidden panel until its tab is selected — Leaflet
-  // must recalc its size once it becomes visible or it renders grey/blank.
+  // On mobile the map panel is hidden until its tab is selected — nudge Google to
+  // recompute size once it becomes visible or it renders grey/blank.
   useEffect(() => {
     if (mobileView === 'map' && mapRef.current) {
-      const { map } = mapRef.current;
-      setTimeout(() => { map.invalidateSize(); }, 60);
-      setTimeout(() => { map.invalidateSize(); }, 250);
+      const { google, map } = mapRef.current;
+      setTimeout(() => google.maps.event.trigger(map, 'resize'), 60);
     }
   }, [mobileView]);
 
