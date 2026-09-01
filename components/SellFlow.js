@@ -131,8 +131,8 @@ export default function SellFlowProvider({ children }) {
           <div className="relative w-full max-w-[480px] bg-paper border-[1.5px] border-ink rounded-[24px] shadow-hard p-6 md:p-7 max-h-[92vh] overflow-y-auto">
             <button onClick={close} aria-label={t.close} className="absolute top-4 right-4 w-8 h-8 rounded-pill border border-ink/25 flex items-center justify-center text-ink/60 hover:text-ink">×</button>
 
-            {/* stepper */}
-            <div className="flex items-center gap-1.5 mb-5 mt-1">
+            {/* stepper — pr-9 keeps the bar clear of the × close button */}
+            <div className="flex items-center gap-1.5 mb-5 mt-1 pr-9">
               {t.steps.map((_, i) => (
                 <span key={i} className={`h-1.5 flex-1 rounded-pill ${i <= step ? 'bg-ink' : 'bg-ink/15'}`} />
               ))}
