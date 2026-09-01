@@ -26,6 +26,7 @@ const T = {
     descH: 'Descripción', featH: 'Características', locH: 'Ubicación', published: 'Publicado', ref: 'Ref', photoSoon: 'Foto próximamente',
     bizLink: '¿Empresa o inmobiliaria? Publicá tu cartera →', sellCta: '¿Querés vender? Publicá tu propiedad →',
     viewAll: (k) => `Ver todas las fotos (${k})`,
+    listedAgo: (n) => (n === 0 ? 'Recién publicado en Casa Libre' : `${n} ${n === 1 ? 'día' : 'días'} en Casa Libre`),
   },
   en: {
     tabs: [['Buy', '/propiedades?op=venta'], ['Rent', '/propiedades?op=alquiler'], ['Sell', '/publicar']],
@@ -35,6 +36,7 @@ const T = {
     descH: 'Description', featH: 'Features', locH: 'Location', published: 'Listed', ref: 'Ref', photoSoon: 'Photo coming soon',
     bizLink: 'Agency or business? List your portfolio →', sellCta: 'Want to sell? List your property →',
     viewAll: (k) => `View all photos (${k})`,
+    listedAgo: (n) => (n === 0 ? 'Just listed on Casa Libre' : `${n} ${n === 1 ? 'day' : 'days'} on Casa Libre`),
   },
 };
 
@@ -107,6 +109,12 @@ export default function PropertyDetailView({ l, url }) {
 
   const paras = (l.description || '').split(/\n{2,}|\r?\n/).map((s) => s.trim()).filter(Boolean);
   const pubDate = fmtDate(l.created_at, lang);
+  // Days since this property was first listed on Casa Libre (mirrors DeelMap's
+  // "N days on DeelMap" badge). Uses created_at = when we first captured/listed it.
+  const daysListed = l.created_at
+    ? Math.max(0, Math.floor((Date.now() - new Date(l.created_at).getTime()) / 86400000))
+    : null;
+  const listedLabel = daysListed === null ? null : t.listedAgo(daysListed);
 
   const imgs = (l.images || []).filter(Boolean);
   const tiles = imgs.slice(0, 4);
@@ -252,6 +260,15 @@ export default function PropertyDetailView({ l, url }) {
             <span className="text-[clamp(22px,3vw,28px)] font-bold tracking-head">{bigPrice}{sfx}</span>
             {altPrice && <span className="font-mono text-[13px] text-ink/50">{altPrice}</span>}
           </div>
+
+          {listedLabel && (
+            <div className="mb-1.5">
+              <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold bg-card border border-ink/25 rounded-pill px-3 py-[6px] text-ink/80">
+                <span className="w-[7px] h-[7px] rounded-full" style={{ background: daysListed <= 7 ? '#12876a' : '#9aa2ad' }} />
+                {listedLabel}
+              </span>
+            </div>
+          )}
 
           {specs.length > 0 && (
             <div className="flex flex-wrap border-y border-ink/12 mt-[18px] mb-6">
