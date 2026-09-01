@@ -108,11 +108,15 @@ export default function PropertyDetailView({ l, url }) {
   ].filter(Boolean);
 
   const paras = (l.description || '').split(/\n{2,}|\r?\n/).map((s) => s.trim()).filter(Boolean);
-  const pubDate = fmtDate(l.created_at, lang);
-  // Days since this property was first listed on Casa Libre (mirrors DeelMap's
-  // "N days on DeelMap" badge). Uses created_at = when we first captured/listed it.
-  const daysListed = l.created_at
-    ? Math.max(0, Math.floor((Date.now() - new Date(l.created_at).getTime()) / 86400000))
+  // "Listed on Casa Libre" = when WE first scraped it into our ecosystem
+  // (first_scraped_at). created_at is unreliable for some sources (e.g. Habitamia
+  // carries the source's original 2015-01-01 date → absurd day counts).
+  const listedAt = l.first_scraped_at || l.created_at;
+  const pubDate = fmtDate(listedAt, lang);
+  // Days since we scraped it — mirrors DeelMap's "N days on DeelMap". Computed live
+  // from Date.now() on each (force-dynamic) render, so it advances on its own daily.
+  const daysListed = listedAt
+    ? Math.max(0, Math.floor((Date.now() - new Date(listedAt).getTime()) / 86400000))
     : null;
   const listedLabel = daysListed === null ? null : t.listedAgo(daysListed);
 
