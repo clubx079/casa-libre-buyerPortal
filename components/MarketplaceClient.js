@@ -42,7 +42,7 @@ const PER_PAGE = 24;
 // accent- and case-insensitive text for search ("asuncion" should match "Asunción")
 const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
-export default function MarketplaceClient({ listings, rate, rateSource, rateDate, totalCount = 0, initialOp = 'all', initialQuery = '' }) {
+export default function MarketplaceClient({ initialListings = [], initialCount = 0, initialPins = [], totalCount = 0, initialOp = 'all', initialQuery = '' }) {
   const [lang, setLang] = useLang();
   const { openSell } = useSellFlow();
   const [filter, setFilter] = useState(['all', 'venta', 'alquiler'].includes(initialOp) ? initialOp : 'all');
@@ -89,12 +89,13 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
 
   // ---- server-driven data: a paginated search page + all-pins for the map ----
   // Filters/search/sort hit /api/listings/search (all ~25k), not a client slice.
-  const [rows, setRows] = useState([]);
-  const [count, setCount] = useState(totalCount || 0);
-  const [pins, setPins] = useState([]);
-  const [loadingList, setLoadingList] = useState(true);
+  const [rows, setRows] = useState(initialListings);
+  const [count, setCount] = useState(initialCount || totalCount || 0);
+  const [pins, setPins] = useState(initialPins);
+  const [loadingList, setLoadingList] = useState(false);
   const [page, setPage] = useState(1);
   const reqRef = useRef(0);
+  const firstRun = useRef(true); // initial page is SSR'd → don't refetch on mount
 
   // Desktop price bands (M.pricesUsd / pricesPyg) → USD min/max for the API.
   const priceBounds = () => {
@@ -118,17 +119,20 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
 
   useEffect(() => {
     const id = ++reqRef.current;
-    setLoadingList(true);
+    const doSearch = !firstRun.current; // mount: list is SSR'd, only load the pins
+    firstRun.current = false;
+    if (doSearch) setLoadingList(true);
     const tmo = setTimeout(async () => {
-      try {
-        const res = await fetch('/api/listings/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(searchBody(1)) });
-        const j = await res.json();
-        if (id !== reqRef.current) return;
-        setRows(j.listings || []); setCount(j.count || 0); setPage(1);
-      } catch { if (id === reqRef.current) { setRows([]); setCount(0); } }
-      finally { if (id === reqRef.current) setLoadingList(false); }
+      if (doSearch) {
+        try {
+          const res = await fetch('/api/listings/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(searchBody(1)) });
+          const j = await res.json();
+          if (id === reqRef.current) { setRows(j.listings || []); setCount(j.count || 0); setPage(1); }
+        } catch { if (id === reqRef.current) { setRows([]); setCount(0); } }
+        finally { if (id === reqRef.current) setLoadingList(false); }
+      }
       try { const pr = await fetch(pinsUrl()); const pj = await pr.json(); if (id === reqRef.current) { didFit.current = false; setPins(pj.pins || []); } } catch {}
-    }, 250);
+    }, doSearch ? 220 : 0);
     return () => clearTimeout(tmo);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter, typeF, priceF, bedF, query, sortBy]);

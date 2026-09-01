@@ -44,7 +44,7 @@ const SORTS = [
   { k: 'area_desc', es: 'Superficie: mayor primero', en: 'Area: largest first', esS: 'Mayor', enS: 'Largest' },
 ];
 
-export default function MobileMarketplace({ listings = [], initialOp = 'all', initialQuery = '' }) {
+export default function MobileMarketplace({ initialListings = [], initialCount = 0, initialPins = [], totalCount = 0, initialOp = 'all', initialQuery = '' }) {
   const [lang, setLang] = useLang();
   const { openSell } = useSellFlow();
   const { isSaved, toggle } = useFavorites();
@@ -73,11 +73,12 @@ export default function MobileMarketplace({ listings = [], initialOp = 'all', in
   const buckets = priceBuckets(mode, lang);
 
   // ---- server-driven data: filtered page + all-pins for the map ----
-  const [rows, setRows] = useState([]);
-  const [count, setCount] = useState(0);
-  const [pins, setPins] = useState([]);
-  const [loadingList, setLoadingList] = useState(true);
+  const [rows, setRows] = useState(initialListings);
+  const [count, setCount] = useState(initialCount || 0);
+  const [pins, setPins] = useState(initialPins);
+  const [loadingList, setLoadingList] = useState(false);
   const reqRef = useRef(0);
+  const firstRun = useRef(true); // initial page is SSR'd → don't refetch on mount
 
   const priceBoundsFor = () => {
     if (priceF === 'all') return {};
@@ -102,17 +103,20 @@ export default function MobileMarketplace({ listings = [], initialOp = 'all', in
 
   useEffect(() => {
     const id = ++reqRef.current;
-    setLoadingList(true);
+    const doSearch = !firstRun.current; // mount: list is SSR'd, only load the pins
+    firstRun.current = false;
+    if (doSearch) setLoadingList(true);
     const tmo = setTimeout(async () => {
-      try {
-        const res = await fetch('/api/listings/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(searchBody(1)) });
-        const j = await res.json();
-        if (id !== reqRef.current) return;
-        setRows(j.listings || []); setCount(j.count || 0); setPage(1);
-      } catch { if (id === reqRef.current) { setRows([]); setCount(0); } }
-      finally { if (id === reqRef.current) setLoadingList(false); }
+      if (doSearch) {
+        try {
+          const res = await fetch('/api/listings/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(searchBody(1)) });
+          const j = await res.json();
+          if (id === reqRef.current) { setRows(j.listings || []); setCount(j.count || 0); setPage(1); }
+        } catch { if (id === reqRef.current) { setRows([]); setCount(0); } }
+        finally { if (id === reqRef.current) setLoadingList(false); }
+      }
       try { const pr = await fetch(pinsUrl()); const pj = await pr.json(); if (id === reqRef.current) setPins(pj.pins || []); } catch {}
-    }, 250);
+    }, doSearch ? 220 : 0);
     return () => clearTimeout(tmo);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, typeF, priceF, bedF, barrioF, sellerF, q, sort]);
