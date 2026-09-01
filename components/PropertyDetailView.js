@@ -72,7 +72,8 @@ export default function PropertyDetailView({ l, url }) {
   const sfx = l.mode === 'alquiler' ? t.perMonth : '';
   // Nav toggle: only the operation matching THIS listing is selected (not both).
   const navActive = l.mode === 'alquiler' ? 1 : 0;
-  const hasGeo = l.lat != null && l.lng != null;
+  // Paraguay bbox — hide the location map for mis-geocoded listings (bad coords abroad).
+  const hasGeo = l.lat != null && l.lng != null && l.lat >= -28 && l.lat <= -19 && l.lng >= -63 && l.lng <= -54;
 
   // Location map — a single pin at the property's coordinates (Google Maps).
   useEffect(() => {
@@ -302,11 +303,9 @@ export default function PropertyDetailView({ l, url }) {
         {/* CONTACT CARD */}
         <div>
           <PropertyContactCard sellerName={l.user_published ? l.contact_name : null} waDigits={waDigits || null} url={url} listingRef={listingRef} trackProps={trackProps} />
-          <div className="flex justify-center text-center">
+          {/* Report + sell + partner funnels — one evenly-spaced column, no divider. */}
+          <div className="mt-4 text-center flex flex-col items-center gap-3">
             <NoResponseReport propertyId={l.id} listingRef={listingRef} sellerName={l.contact_name} sellerPhone={l.contact_phone} />
-          </div>
-          {/* Sell + partner funnels — visible on every listing. */}
-          <div className="mt-4 pt-3.5 border-t border-ink/12 text-center flex flex-col gap-2">
             <button type="button" onClick={openSell} className="font-mono text-[11.5px] text-ink/55 hover:text-ink/80 underline underline-offset-2 decoration-ink/25">{t.sellCta}</button>
             <Link href="/empresas" className="font-mono text-[11.5px] text-ink/55 hover:text-ink/80 underline underline-offset-2 decoration-ink/25">{t.bizLink}</Link>
           </div>

@@ -32,6 +32,12 @@ export const CL_MAP_STYLE = [
   { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#9aa8a3' }] },
 ];
 
+// Paraguay bounding box (generous). Listings with coordinates outside it are
+// mis-geocoded (e.g. stuck at 0,0 or a wrong country) and must NOT be plotted.
+export function inParaguay(lat, lng) {
+  return lat != null && lng != null && lat >= -28 && lat <= -19 && lng >= -63 && lng <= -54;
+}
+
 const uri = (svg) => 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
 
 // Price pill (matches the old `.marker-pill`: black pill, cream border/text; hover = inverted).

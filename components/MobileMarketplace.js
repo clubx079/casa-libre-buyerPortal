@@ -10,7 +10,7 @@ import { useSellFlow } from '@/components/SellFlow';
 import { useFavorites } from '@/components/FavoritesProvider';
 import { typeLabel, typeKey } from '@/lib/propertyType';
 import { T, fmtUsd, fmtPyg, shortUsd, titleCaseZone, bedAbbr, bathWord, parkWord, loc } from '@/lib/ui';
-import { loadGoogleMapsAPI, mapOptions, pinIcon, clusterIcon } from '@/utils/gmap';
+import { loadGoogleMapsAPI, mapOptions, pinIcon, clusterIcon, inParaguay } from '@/utils/gmap';
 
 const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const PER_PAGE = 24;
@@ -139,7 +139,7 @@ export default function MobileMarketplace({ listings = [], initialOp = 'all', in
     const bounds = new google.maps.LatLngBounds();
     let n = 0;
     filtered.forEach((l) => {
-      if (l.lat == null || l.lng == null) return;
+      if (!inParaguay(l.lat, l.lng)) return; // never plot mis-geocoded listings outside PY
       const mk = new google.maps.Marker({ position: { lat: l.lat, lng: l.lng }, icon: pinIcon(google, shortUsd(l.usd), false) });
       mk.addListener('click', () => { window.location.href = `/propiedad/${l.id}`; });
       markers.push(mk); bounds.extend({ lat: l.lat, lng: l.lng }); n++;

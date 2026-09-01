@@ -8,7 +8,7 @@ import { useLang } from '@/lib/useLang';
 import AuthButton from '@/components/AuthButton';
 import { useSellFlow } from '@/components/SellFlow';
 import { track } from '@/lib/analytics';
-import { loadGoogleMapsAPI, mapOptions, pinIcon, clusterIcon } from '@/utils/gmap';
+import { loadGoogleMapsAPI, mapOptions, pinIcon, clusterIcon, inParaguay } from '@/utils/gmap';
 
 // Marketplace-specific bilingual strings (search / filters / sort).
 const M = {
@@ -229,7 +229,7 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
     const bounds = new google.maps.LatLngBounds();
     let n = 0;
     rows.forEach((l) => {
-      if (l.lat == null || l.lng == null) return;
+      if (!inParaguay(l.lat, l.lng)) return; // never plot mis-geocoded listings outside PY
       const label = shortPill(l);
       const marker = new google.maps.Marker({ position: { lat: l.lat, lng: l.lng }, icon: pinIcon(google, label, false) });
       marker.__label = label;
