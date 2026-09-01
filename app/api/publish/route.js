@@ -125,6 +125,7 @@ export async function POST(req) {
     status: 'published',
     admin_status: 'active',
     property_status: 'available',
+    is_complete: true, // passed the form's completeness validation → searchable immediately
     origin: 'user',
     seller_type: sellerType,
     is_delisted: false,

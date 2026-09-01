@@ -68,32 +68,65 @@ export default function MobileMarketplace({ listings = [], initialOp = 'all', in
 
   useEffect(() => { setPriceF('all'); }, [mode]);
 
-  const barrios = useMemo(() => {
-    const m = {};
-    listings.forEach((l) => { if (mode !== 'all' && l.mode !== mode) return; const nb = (l.neighborhood || '').trim(); if (nb) m[nb] = (m[nb] || 0) + 1; });
-    return Object.entries(m).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([nb]) => nb);
-  }, [listings, mode]);
-
+  // Static barrio options (server-side search — we don't hold all listings client-side).
+  const barrios = ['Villa Morra', 'Carmelitas', 'Recoleta', 'Las Mercedes', 'Barrio Jara', 'Ycuá Satí', 'Mburucuyá', 'San Vicente', 'Trinidad', 'Sajonia', 'Los Laureles', 'Ciudad Nueva'];
   const buckets = priceBuckets(mode, lang);
-  const usdVal = (l) => (l.usd != null ? l.usd : l.pyg != null ? l.pyg / 7500 : 0);
-  const filtered = useMemo(() => {
-    let out = listings.filter((l) => l.mode === mode);
-    if (q.trim()) { const nq = norm(q); out = out.filter((l) => norm([l.neighborhood, l.city, l.address, l.type, typeLabel(l.type, 'es'), typeLabel(l.type, 'en')].filter(Boolean).join(' ')).includes(nq)); }
-    if (typeF !== 'all') out = out.filter((l) => typeKey(l.type) === typeF);
-    if (bedF !== 'all') { const mn = Number(bedF); out = out.filter((l) => (l.beds || 0) >= mn); }
-    if (barrioF !== 'all') out = out.filter((l) => norm(l.neighborhood) === norm(barrioF));
-    if (sellerF !== 'all') out = out.filter((l) => (sellerF === 'owner' ? !!l.user_published : !l.user_published));
-    if (priceF !== 'all') { const b = buckets.find((x) => x.k === priceF); if (b) out = out.filter((l) => b.t(mode === 'alquiler' ? (l.usd || 0) : usdVal(l))); }
-    if (sort === 'precio_asc') out = [...out].sort((a, b) => usdVal(a) - usdVal(b));
-    else if (sort === 'precio_desc') out = [...out].sort((a, b) => usdVal(b) - usdVal(a));
-    else if (sort === 'area_desc') out = [...out].sort((a, b) => (b.area || 0) - (a.area || 0));
-    return out;
+
+  // ---- server-driven data: filtered page + all-pins for the map ----
+  const [rows, setRows] = useState([]);
+  const [count, setCount] = useState(0);
+  const [pins, setPins] = useState([]);
+  const [loadingList, setLoadingList] = useState(true);
+  const reqRef = useRef(0);
+
+  const priceBoundsFor = () => {
+    if (priceF === 'all') return {};
+    const bands = mode === 'alquiler'
+      ? { p1: { priceMax: 500 }, p2: { priceMin: 500, priceMax: 1000 }, p3: { priceMin: 1000, priceMax: 2000 }, p4: { priceMin: 2000 } }
+      : { p1: { priceMax: 80000 }, p2: { priceMin: 80000, priceMax: 200000 }, p3: { priceMin: 200000, priceMax: 400000 }, p4: { priceMin: 400000 } };
+    return bands[priceF] || {};
+  };
+  const searchBody = (pageN) => ({ op: mode, type: typeF === 'all' ? undefined : typeF, beds: bedF === 'all' ? undefined : bedF, q: q || undefined, barrio: barrioF === 'all' ? undefined : barrioF, seller: sellerF === 'all' ? undefined : sellerF, sort, page: pageN, pageSize: PER_PAGE, ...priceBoundsFor() });
+  const pinsUrl = () => {
+    const p = new URLSearchParams(); p.set('op', mode);
+    if (typeF !== 'all') p.set('type', typeF);
+    if (bedF !== 'all') p.set('beds', bedF);
+    if (q) p.set('q', q);
+    if (barrioF !== 'all') p.set('barrio', barrioF);
+    if (sellerF !== 'all') p.set('seller', sellerF);
+    const pb = priceBoundsFor();
+    if (pb.priceMin != null) p.set('priceMin', pb.priceMin);
+    if (pb.priceMax != null) p.set('priceMax', pb.priceMax);
+    return `/api/listings/pins?${p.toString()}`;
+  };
+
+  useEffect(() => {
+    const id = ++reqRef.current;
+    setLoadingList(true);
+    const tmo = setTimeout(async () => {
+      try {
+        const res = await fetch('/api/listings/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(searchBody(1)) });
+        const j = await res.json();
+        if (id !== reqRef.current) return;
+        setRows(j.listings || []); setCount(j.count || 0); setPage(1);
+      } catch { if (id === reqRef.current) { setRows([]); setCount(0); } }
+      finally { if (id === reqRef.current) setLoadingList(false); }
+      try { const pr = await fetch(pinsUrl()); const pj = await pr.json(); if (id === reqRef.current) setPins(pj.pins || []); } catch {}
+    }, 250);
+    return () => clearTimeout(tmo);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [listings, mode, q, typeF, priceF, bedF, barrioF, sellerF, sort, lang]);
+  }, [mode, typeF, priceF, bedF, barrioF, sellerF, q, sort]);
+
+  const loadMore = async () => {
+    const next = page + 1;
+    try {
+      const res = await fetch('/api/listings/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(searchBody(next)) });
+      const j = await res.json();
+      setRows((prev) => [...prev, ...(j.listings || [])]); setPage(next);
+    } catch { /* keep current */ }
+  };
 
   const activeCount = (typeF !== 'all' ? 1 : 0) + (priceF !== 'all' ? 1 : 0) + (bedF !== 'all' ? 1 : 0) + (barrioF !== 'all' ? 1 : 0) + (sellerF !== 'all' ? 1 : 0);
-  useEffect(() => { setPage(1); }, [q, typeF, priceF, bedF, barrioF, sellerF, sort, mode]);
-  const visible = filtered.slice(0, page * PER_PAGE);
   const clearAll = () => { setTypeF('all'); setPriceF('all'); setBedF('all'); setBarrioF('all'); setSellerF('all'); };
   const nf = (x) => x.toLocaleString(loc(lang));
 
@@ -106,7 +139,7 @@ export default function MobileMarketplace({ listings = [], initialOp = 'all', in
     try { const res = await fetch('/api/listings/images', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: need }) }); got = (await res.json()).images || {}; } catch { got = {}; }
     setImgMap((prev) => { const m = { ...prev }; need.forEach((id) => { m[id] = got[id] || null; }); return m; });
   }, []);
-  useEffect(() => { ensureImages(visible.map((l) => l.id)); }, [visible, ensureImages]);
+  useEffect(() => { ensureImages(rows.map((l) => l.id)); }, [rows, ensureImages]);
 
   // ---- map (lazy: only init when the map tab is first opened) — Google Maps ----
   const mapEl = useRef(null);
@@ -138,7 +171,7 @@ export default function MobileMarketplace({ listings = [], initialOp = 'all', in
     const markers = [];
     const bounds = new google.maps.LatLngBounds();
     let n = 0;
-    filtered.forEach((l) => {
+    pins.forEach((l) => {
       if (!inParaguay(l.lat, l.lng)) return; // never plot mis-geocoded listings outside PY
       const mk = new google.maps.Marker({ position: { lat: l.lat, lng: l.lng }, icon: pinIcon(google, shortUsd(l.usd), false) });
       mk.addListener('click', () => { window.location.href = `/propiedad/${l.id}`; });
@@ -146,7 +179,7 @@ export default function MobileMarketplace({ listings = [], initialOp = 'all', in
     });
     cluster.addMarkers(markers);
     if (n && (typeF !== 'all' || priceF !== 'all' || bedF !== 'all' || barrioF !== 'all' || q)) { try { map.fitBounds(bounds, 36); } catch {} }
-  }, [filtered, typeF, priceF, bedF, barrioF, q]);
+  }, [pins, typeF, priceF, bedF, barrioF, q]);
   useEffect(() => { if (view === 'map') drawMarkers(); }, [view, drawMarkers]);
 
   const priceMain = (l) => (fmtUsd(l.usd, lang) || '—') + (l.mode === 'alquiler' ? t.perMonth : '');
@@ -208,7 +241,7 @@ export default function MobileMarketplace({ listings = [], initialOp = 'all', in
 
       {/* RESULTS ROW */}
       <div className="flex items-center gap-2.5 px-4 pb-3">
-        <span className="font-mono text-[12.5px] text-ink/60 shrink-0">{nf(filtered.length)} {X.propsWord}</span>
+        <span className="font-mono text-[12.5px] text-ink/60 shrink-0">{nf(count)} {X.propsWord}</span>
         <div className="flex-1 flex items-center justify-end gap-2.5">
           <div className="flex bg-ink rounded-pill p-[3px]">
             {[['list', X.list], ['map', X.map]].map(([k, lb]) => (
@@ -227,8 +260,8 @@ export default function MobileMarketplace({ listings = [], initialOp = 'all', in
         </div>
       ) : (
         <div className="px-4 pb-8 flex flex-col gap-4">
-          {filtered.length === 0 && <div className="py-14 text-center font-mono text-[13px] text-ink/45">{X.noResults}</div>}
-          {visible.map((l) => (
+          {rows.length === 0 && !loadingList && <div className="py-14 text-center font-mono text-[13px] text-ink/45">{X.noResults}</div>}
+          {rows.map((l) => (
             <Link key={l.id} href={`/propiedad/${l.id}`} className="block bg-card border border-ink/12 rounded-[18px] overflow-hidden">
               <div className="relative h-[220px] cl-hatch">
                 {imgMap[l.id] && /* eslint-disable-next-line @next/next/no-img-element */ <img src={imgMap[l.id]} alt="" loading="lazy" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
@@ -248,8 +281,8 @@ export default function MobileMarketplace({ listings = [], initialOp = 'all', in
               </div>
             </Link>
           ))}
-          {filtered.length > visible.length && (
-            <button onClick={() => setPage((p) => p + 1)} className="self-center mt-1 px-6 py-2.5 rounded-pill bg-ink text-paper text-[13px] font-semibold">{X.loadMore}</button>
+          {rows.length < count && (
+            <button onClick={loadMore} className="self-center mt-1 px-6 py-2.5 rounded-pill bg-ink text-paper text-[13px] font-semibold">{X.loadMore}</button>
           )}
         </div>
       )}
@@ -294,7 +327,7 @@ export default function MobileMarketplace({ listings = [], initialOp = 'all', in
             </div>
             <div className="flex gap-3 p-5 pb-8 border-t border-ink/8">
               <button onClick={clearAll} className="flex-1 py-3.5 rounded-pill border-[1.5px] border-ink text-[15px] font-medium">{X.clearAll}</button>
-              <button onClick={() => setFiltersOpen(false)} className="flex-[2] py-3.5 rounded-pill bg-ink text-paper text-[15px] font-bold shadow-hard-soft">{X.show} {nf(filtered.length)} {X.propsWord}</button>
+              <button onClick={() => setFiltersOpen(false)} className="flex-[2] py-3.5 rounded-pill bg-ink text-paper text-[15px] font-bold shadow-hard-soft">{X.show} {nf(count)} {X.propsWord}</button>
             </div>
           </div>
         </div>

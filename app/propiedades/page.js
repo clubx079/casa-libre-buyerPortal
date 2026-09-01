@@ -1,4 +1,4 @@
-import { getMarketplaceListings } from '@/lib/listings';
+import { getActiveCountCached } from '@/lib/listings';
 import MarketplaceClient from '@/components/MarketplaceClient';
 import MobileMarketplace from '@/components/MobileMarketplace';
 
@@ -14,17 +14,19 @@ export const metadata = {
 export default async function PropiedadesPage({ searchParams }) {
   // Load all active buildings (the DB has grown well past the old 400 cap) so the
   // count, filters and map reflect the full catalogue.
-  const { listings, rate, rateSource, rateDate, totalCount } = await getMarketplaceListings();
+  // The marketplace now fetches listings/pins itself (server-side search over all
+  // ~25k), so the page only needs the initial count + the filter seed.
+  const totalCount = await getActiveCountCached();
   const initialOp = searchParams?.op === 'alquiler' ? 'alquiler' : searchParams?.op === 'venta' ? 'venta' : 'all';
   const initialQuery = typeof searchParams?.q === 'string' ? searchParams.q : '';
   return (
     <>
       {/* Mobile: the app-style listing UI. Desktop: the existing marketplace (unchanged). */}
       <div className="md:hidden">
-        <MobileMarketplace listings={listings} totalCount={totalCount} initialOp={initialOp} initialQuery={initialQuery} />
+        <MobileMarketplace totalCount={totalCount} initialOp={initialOp} initialQuery={initialQuery} />
       </div>
       <div className="hidden md:block">
-        <MarketplaceClient listings={listings} rate={rate} rateSource={rateSource} rateDate={rateDate} totalCount={totalCount} initialOp={initialOp} initialQuery={initialQuery} />
+        <MarketplaceClient totalCount={totalCount} initialOp={initialOp} initialQuery={initialQuery} />
       </div>
     </>
   );

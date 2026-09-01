@@ -39,24 +39,23 @@ function filterParts(p) {
   return parts;
 }
 
+// Cap the map at PIN_LIMIT newest matches: the full 25k both blows Next's 2MB
+// data-cache and is too heavy to render/cluster in the browser. Any filter that
+// narrows below the cap plots every match; the list count always shows the true
+// total. (True all-25k plotting would need viewport/supercluster loading.)
+const PIN_LIMIT = 8000;
 const loadPins = unstable_cache(
   async (key, partsStr) => {
     const rate = await getUsdToPyg();
-    const all = [];
-    for (let off = 0; ; off += 1000) {
-      let rows = [];
-      try { rows = await select('properties', `${partsStr}&select=id,latitude,longitude,listing_type,price,currency&order=id&limit=1000&offset=${off}`); }
-      catch { break; }
-      if (!Array.isArray(rows) || !rows.length) break;
-      for (const r of rows) {
-        const m = dualPrice(r.price, r.currency, rate);
-        all.push({ id: r.id, lat: Number(r.latitude), lng: Number(r.longitude), usd: m.usd, mode: r.listing_type === 'rent' ? 'alquiler' : 'venta' });
-      }
-      if (rows.length < 1000) break;
-    }
-    return all;
+    let rows = [];
+    try { rows = await select('properties', `${partsStr}&select=id,latitude,longitude,listing_type,price,currency&order=created_at.desc&limit=${PIN_LIMIT}`); }
+    catch { rows = []; }
+    return (rows || []).map((r) => {
+      const m = dualPrice(r.price, r.currency, rate);
+      return { id: r.id, lat: Number(Number(r.latitude).toFixed(5)), lng: Number(Number(r.longitude).toFixed(5)), usd: m.usd, mode: r.listing_type === 'rent' ? 'alquiler' : 'venta' };
+    });
   },
-  ['cl-listing-pins-v1'],
+  ['cl-listing-pins-v2'],
   { revalidate: 120 },
 );
 

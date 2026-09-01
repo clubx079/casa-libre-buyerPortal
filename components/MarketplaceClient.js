@@ -54,7 +54,6 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
   const [sortOpen, setSortOpen] = useState(false);
   const [mobileView, setMobileView] = useState('list'); // mobile: 'list' | 'map'
   const [hot, setHot] = useState(null);
-  const [visible, setVisible] = useState(PER_PAGE); // #16 how many list cards are rendered
   const [mapReady, setMapReady] = useState(false); // show a branded loader until tiles paint
   // Feature images are NOT shipped with the listings (keeps the page light);
   // they're fetched lazily for the cards/popups actually on screen.
@@ -88,31 +87,64 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
   const bedsOf = (l) => l.beds || 0;
   const areaVal = (l) => l.area || 0;
 
-  const rows = useMemo(() => {
-    let r = listings.filter((l) => filter === 'all' || l.mode === filter);
-    if (typeF !== 'all') r = r.filter((l) => typeOf(l) === typeF);
-    if (priceF !== 'all') {
-      if (isRent) r = r.filter((l) => { const v = l.usd || 0; return priceF === 'p1' ? v < 500 : priceF === 'p2' ? v >= 500 && v <= 1000 : v > 1000; });
-      else r = r.filter((l) => { const v = usdVal(l); return priceF === 'p1' ? v < 100000 : priceF === 'p2' ? v >= 100000 && v <= 200000 : v > 200000; });
-    }
-    if (bedF !== 'all') r = r.filter((l) => bedsOf(l) >= Number(bedF.slice(1)));
-    if (query) {
-      const q = norm(query);
-      r = r.filter((l) => norm([l.neighborhood, l.city, l.address, l.type, typeLabel(l.type, 'es'), typeLabel(l.type, 'en')].filter(Boolean).join(' ')).includes(q));
-    }
-    if (sortBy === 'precio_asc') r = [...r].sort((a, b) => usdVal(a) - usdVal(b));
-    else if (sortBy === 'precio_desc') r = [...r].sort((a, b) => usdVal(b) - usdVal(a));
-    else if (sortBy === 'area_desc') r = [...r].sort((a, b) => areaVal(b) - areaVal(a));
-    return r;
+  // ---- server-driven data: a paginated search page + all-pins for the map ----
+  // Filters/search/sort hit /api/listings/search (all ~25k), not a client slice.
+  const [rows, setRows] = useState([]);
+  const [count, setCount] = useState(totalCount || 0);
+  const [pins, setPins] = useState([]);
+  const [loadingList, setLoadingList] = useState(true);
+  const [page, setPage] = useState(1);
+  const reqRef = useRef(0);
+
+  // Desktop price bands (M.pricesUsd / pricesPyg) → USD min/max for the API.
+  const priceBounds = () => {
+    if (priceF === 'all') return {};
+    if (isRent) return priceF === 'p1' ? { priceMax: 500 } : priceF === 'p2' ? { priceMin: 500, priceMax: 1000 } : { priceMin: 1000 };
+    return priceF === 'p1' ? { priceMax: 100000 } : priceF === 'p2' ? { priceMin: 100000, priceMax: 200000 } : { priceMin: 200000 };
+  };
+  const bedsParam = bedF === 'all' ? undefined : bedF.replace(/\D/g, '');
+  const searchBody = (pageN) => ({ op: filter, type: typeF === 'all' ? undefined : typeF, beds: bedsParam, q: query || undefined, sort: sortBy, page: pageN, pageSize: PER_PAGE, ...priceBounds() });
+  const pinsUrl = () => {
+    const p = new URLSearchParams();
+    if (filter !== 'all') p.set('op', filter);
+    if (typeF !== 'all') p.set('type', typeF);
+    if (bedsParam) p.set('beds', bedsParam);
+    if (query) p.set('q', query);
+    const pb = priceBounds();
+    if (pb.priceMin != null) p.set('priceMin', pb.priceMin);
+    if (pb.priceMax != null) p.set('priceMax', pb.priceMax);
+    return `/api/listings/pins?${p.toString()}`;
+  };
+
+  useEffect(() => {
+    const id = ++reqRef.current;
+    setLoadingList(true);
+    const tmo = setTimeout(async () => {
+      try {
+        const res = await fetch('/api/listings/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(searchBody(1)) });
+        const j = await res.json();
+        if (id !== reqRef.current) return;
+        setRows(j.listings || []); setCount(j.count || 0); setPage(1);
+      } catch { if (id === reqRef.current) { setRows([]); setCount(0); } }
+      finally { if (id === reqRef.current) setLoadingList(false); }
+      try { const pr = await fetch(pinsUrl()); const pj = await pr.json(); if (id === reqRef.current) { didFit.current = false; setPins(pj.pins || []); } } catch {}
+    }, 250);
+    return () => clearTimeout(tmo);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [listings, filter, typeF, priceF, bedF, query, sortBy]);
+  }, [filter, typeF, priceF, bedF, query, sortBy]);
+
+  const loadMore = async () => {
+    const next = page + 1;
+    try {
+      const res = await fetch('/api/listings/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(searchBody(next)) });
+      const j = await res.json();
+      setRows((prev) => [...prev, ...(j.listings || [])]); setPage(next);
+    } catch { /* keep current */ }
+  };
 
   const rowsById = useMemo(() => new Map(rows.map((l) => [l.id, l])), [rows]);
-
-  // Unfiltered view shows the real active-inventory total (not the load cap);
-  // any active filter/search shows the matching (loaded) subset count.
-  const unfiltered = filter === 'all' && !query && typeF === 'all' && priceF === 'all' && bedF === 'all';
-  const headerCount = unfiltered ? (totalCount || rows.length) : rows.length;
+  const pinsById = useMemo(() => new Map(pins.map((p) => [p.id, p])), [pins]);
+  const headerCount = count;
 
   // Lazily fetch feature images for a set of ids (deduped). imgMapRef is the
   // source of truth (readable synchronously by the imperative map popups);
@@ -134,8 +166,8 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
     setImgMap(merged);
   }, []);
 
-  // Load images for the visible list cards whenever the window or results change.
-  useEffect(() => { ensureImages(rows.slice(0, visible).map((l) => l.id)); }, [rows, visible, ensureImages]);
+  // Load feature images for the loaded list cards whenever results grow.
+  useEffect(() => { ensureImages(rows.map((l) => l.id)); }, [rows, ensureImages]);
 
   // Report the active filter set to analytics, debounced so free-text typing
   // doesn't fire an event per keystroke. Captures the initial view too.
@@ -204,10 +236,7 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => { didFit.current = false; drawMarkers(); /* eslint-disable-next-line */ }, [rows, lang]);
-
-  // #16 Reset the list window to the first page whenever the result set changes.
-  useEffect(() => { setVisible(PER_PAGE); }, [filter, typeF, priceF, bedF, query, sortBy]);
+  useEffect(() => { didFit.current = false; drawMarkers(); /* eslint-disable-next-line */ }, [pins, lang]);
 
   function popupHtml(l, imgUrl) {
     const img = imgUrl
@@ -233,7 +262,7 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
     const markers = [];
     const bounds = new google.maps.LatLngBounds();
     let n = 0;
-    rows.forEach((l) => {
+    pins.forEach((l) => {
       if (!inParaguay(l.lat, l.lng)) return; // never plot mis-geocoded listings outside PY
       const label = shortPill(l);
       const marker = new google.maps.Marker({ position: { lat: l.lat, lng: l.lng }, icon: pinIcon(google, label, false) });
@@ -241,13 +270,14 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
       marker.addListener('mouseover', () => setHot(l.id));
       marker.addListener('mouseout', () => setHot(null));
       marker.addListener('click', () => {
+        const full = rowsById.get(l.id) || l;
         track('map_pin_clicked', {
           property_id: l.id,
-          location_name: l.neighborhood || l.city || l.address || null,
-          neighborhood: l.neighborhood || null,
-          city: l.city || null,
-          address: l.address || null,
-          province: l.province || null,
+          location_name: full.neighborhood || full.city || full.address || null,
+          neighborhood: full.neighborhood || null,
+          city: full.city || null,
+          address: full.address || null,
+          province: full.province || null,
           lat: l.lat, lng: l.lng,
         });
         window.open(`/propiedad/${l.id}`, '_blank', 'noopener');
@@ -310,7 +340,7 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
       hotMarkerRef.current = { marker: mk, icon: mk.getIcon() };
       mk.setIcon(pinIcon(google, mk.__label, true));
       hoverRevealRef.current = hot;
-      const l = rowsById.get(hot);
+      const l = rowsById.get(hot) || pinsById.get(hot);
       if (l && infoRef.current) {
         infoRef.current.setContent(popupHtml(l, imgMapRef.current[l.id]));
         infoRef.current.open({ map, anchor: mk });
@@ -408,8 +438,8 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
 
           {/* list */}
           <div className="flex-1 min-h-0 overflow-y-auto px-4 md:px-7 py-5 flex flex-col gap-4">
-            {rows.length === 0 && <div className="py-10 text-center font-mono text-[12px] text-ink/45">{m.empty}</div>}
-            {rows.slice(0, visible).map((l) => (
+            {rows.length === 0 && !loadingList && <div className="py-10 text-center font-mono text-[12px] text-ink/45">{m.empty}</div>}
+            {rows.map((l) => (
               <Link
                 key={l.id} href={`/propiedad/${l.id}`} target="_blank" rel="noopener noreferrer"
                 onMouseEnter={() => setHot(l.id)} onMouseLeave={() => setHot(null)}
@@ -429,16 +459,16 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
                 </div>
               </Link>
             ))}
-            {/* #16 Pagination — the list grows 24 at a time; the map keeps every pin. */}
-            {rows.length > visible && (
+            {/* Pagination — the list grows a page at a time from the server; the map keeps every pin. */}
+            {rows.length < count && (
               <div className="flex flex-col items-center gap-2 pt-1 pb-2">
                 <button
-                  onClick={() => setVisible((v) => v + PER_PAGE)}
+                  onClick={loadMore}
                   className="px-6 py-2.5 rounded-pill bg-ink text-paper text-[13px] font-semibold shadow-hard-soft hover:-translate-y-0.5 transition-transform"
                 >
                   {m.loadMore}
                 </button>
-                <span className="font-mono text-[11px] text-ink/45">{m.showing(Math.min(visible, rows.length), rows.length)}</span>
+                <span className="font-mono text-[11px] text-ink/45">{m.showing(rows.length, count)}</span>
               </div>
             )}
           </div>
