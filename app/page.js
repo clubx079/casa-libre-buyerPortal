@@ -1,4 +1,4 @@
-import { getListings, getActiveCount } from '@/lib/listings';
+import { getLandingListings, getActiveCountCached } from '@/lib/listings';
 import { typeLabel } from '@/lib/propertyType';
 import { fmtUsd } from '@/lib/ui';
 import LandingClient from '@/components/LandingClient';
@@ -8,7 +8,7 @@ import Footer from '@/components/Footer';
 export const dynamic = 'force-dynamic';
 
 export default async function Landing() {
-  const [{ listings }, activeCount] = await Promise.all([getListings({ limit: 120 }), getActiveCount()]);
+  const [{ listings }, activeCount] = await Promise.all([getLandingListings(), getActiveCountCached()]);
   const featured = listings.filter((l) => l.image).slice(0, 3);
   const ticker = listings
     .filter((l) => l.usd)

@@ -42,7 +42,7 @@ const PER_PAGE = 24;
 // accent- and case-insensitive text for search ("asuncion" should match "Asunción")
 const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
-export default function MarketplaceClient({ listings, rate, rateSource, rateDate, initialOp = 'all', initialQuery = '' }) {
+export default function MarketplaceClient({ listings, rate, rateSource, rateDate, totalCount = 0, initialOp = 'all', initialQuery = '' }) {
   const [lang, setLang] = useLang();
   const { openSell } = useSellFlow();
   const [filter, setFilter] = useState(['all', 'venta', 'alquiler'].includes(initialOp) ? initialOp : 'all');
@@ -108,6 +108,11 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
   }, [listings, filter, typeF, priceF, bedF, query, sortBy]);
 
   const rowsById = useMemo(() => new Map(rows.map((l) => [l.id, l])), [rows]);
+
+  // Unfiltered view shows the real active-inventory total (not the load cap);
+  // any active filter/search shows the matching (loaded) subset count.
+  const unfiltered = filter === 'all' && !query && typeF === 'all' && priceF === 'all' && bedF === 'all';
+  const headerCount = unfiltered ? (totalCount || rows.length) : rows.length;
 
   // Lazily fetch feature images for a set of ids (deduped). imgMapRef is the
   // source of truth (readable synchronously by the imperative map popups);
@@ -383,7 +388,7 @@ export default function MarketplaceClient({ listings, rate, rateSource, rateDate
         <div className={`min-h-0 flex-col md:flex md:w-[44%] md:min-w-[400px] md:flex-none ${mobileView === 'map' ? 'hidden' : 'flex flex-1'}`}>
           {/* list head: count + sort */}
           <div className="flex items-center justify-between gap-2.5 px-4 md:px-7 pt-3.5">
-            <span className="font-mono text-[12px] text-ink/50">{t.results(rows.length)}</span>
+            <span className="font-mono text-[12px] text-ink/50">{t.results(headerCount)}</span>
             <div className="relative">
               <button onClick={(e) => { e.stopPropagation(); setSortOpen((o) => !o); }} className="flex items-center gap-2 border border-ink/30 bg-card rounded-pill px-3.5 py-2 text-[13px] font-medium">
                 {m.sort[sortBy]}<span className="text-[12px] font-bold tracking-[-2px]">↑↓</span>
