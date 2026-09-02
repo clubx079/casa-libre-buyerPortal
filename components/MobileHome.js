@@ -15,7 +15,7 @@ const H = {
   es: {
     cta: 'Publicá gratis', buy: 'Comprar', rent: 'Alquilar', sell: 'Vender',
     heroL1: 'Encontrá tu lugar,', heroL2: 'libremente.',
-    heroSub: ['La forma más amigable de comprar,', 'alquilar y vender casas en', 'Asunción.'],
+    heroSub: ['La forma más amigable de comprar,', 'alquilar y vender casas en', 'Paraguay.'],
     searchPh: '¿Dónde querés vivir?', mascotCaption: '“¡Vamos que se puede!” — Cuate, tu guía',
     justListed: 'Recién publicadas', justListedSerif: 'lo más nuevo del mercado', viewAll: 'Ver todas →',
     forSale: 'En venta', forRent: 'En alquiler', perMonth: '/mes', bd: 'dorm',
@@ -32,7 +32,7 @@ const H = {
   en: {
     cta: 'List for free', buy: 'Buy', rent: 'Rent', sell: 'Sell',
     heroL1: 'Find your place,', heroL2: 'freely.',
-    heroSub: ['The friendliest way to buy,', 'rent and sell homes in', 'Asunción.'],
+    heroSub: ['The friendliest way to buy,', 'rent and sell homes in', 'Paraguay.'],
     searchPh: 'Where do you want to live?', mascotCaption: '“Let’s go!” — Cuate, your guide',
     justListed: 'Just listed', justListedSerif: 'fresh on the market', viewAll: 'View all →',
     forSale: 'For sale', forRent: 'For rent', perMonth: '/mo', bd: 'bd',

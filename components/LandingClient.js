@@ -12,7 +12,7 @@ const DICT = {
   es: {
     navBuy: 'Comprar', navRent: 'Alquilar', navSell: 'Vender', navCta: 'Publicar gratis',
     heroLine1: 'Encontrá tu lugar,', heroLine2: 'libremente.',
-    heroSub: 'La forma más amigable de comprar, alquilar y vender casas en Asunción.',
+    heroSub: 'La forma más amigable de comprar, alquilar y vender casas en Paraguay.',
     searchPlaceholder: '¿Dónde querés vivir? — “Carmelitas”, “Recoleta”…', searchBtn: 'Buscar',
     mascotCaption: '“¡Vamos que se puede!” — Cuate, tu guía',
     listingsTitle: 'Recién publicadas', listingsTitleSerif: 'lo más nuevo del mercado', listingsAll: 'Ver todas →',
@@ -35,7 +35,7 @@ const DICT = {
   en: {
     navBuy: 'Buy', navRent: 'Rent', navSell: 'Sell', navCta: 'List for free',
     heroLine1: 'Find your place,', heroLine2: 'freely.',
-    heroSub: 'The friendliest way to buy, rent and sell homes in Asunción.',
+    heroSub: 'The friendliest way to buy, rent and sell homes in Paraguay.',
     searchPlaceholder: 'Where do you want to live? — “Carmelitas”, “Recoleta”…', searchBtn: 'Search',
     mascotCaption: '“Let’s go!” — Cuate, your guide',
     listingsTitle: 'Just listed', listingsTitleSerif: 'fresh on the market', listingsAll: 'View all →',
