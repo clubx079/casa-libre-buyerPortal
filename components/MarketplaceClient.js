@@ -447,13 +447,14 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
               <Link
                 key={l.id} href={`/propiedad/${l.id}`} target="_blank" rel="noopener noreferrer"
                 onMouseEnter={() => setHot(l.id)} onMouseLeave={() => setHot(null)}
-                className={`flex items-stretch shrink-0 min-h-[120px] bg-card border rounded-[18px] overflow-hidden transition-all ${hot === l.id ? 'border-ink -translate-y-0.5 shadow-hard-sm' : 'border-ink/15'}`}
+                className={`relative flex items-stretch shrink-0 min-h-[120px] bg-card border rounded-[18px] overflow-hidden transition-all ${l.highlighted ? 'border-ink ring-[1.5px] ring-ink shadow-hard-sm' : hot === l.id ? 'border-ink -translate-y-0.5 shadow-hard-sm' : 'border-ink/15'}`}
               >
                 <div className="relative w-[150px] max-[560px]:w-[110px] shrink-0 cl-hatch overflow-hidden flex items-center justify-center">
                   {imgMap[l.id]
                     ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={imgMap[l.id]} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                     : <span className="font-mono text-[10px] text-ink/45 text-center px-2">{t.noImg}</span>}
                   <span className="absolute top-2 left-2 text-[10px] font-semibold bg-ink text-paper px-2.5 py-1 rounded-pill z-10">{l.mode === 'alquiler' ? t.alquiler : t.venta}</span>
+                  {l.highlighted && <span className="absolute bottom-2 left-2 text-[9px] font-bold uppercase tracking-label bg-ink text-paper px-2 py-0.5 rounded-pill z-10">{lang === 'es' ? 'DESTACADA' : 'FEATURED'}</span>}
                 </div>
                 <div className="flex-1 min-w-0 pt-3.5 pb-4 px-4">
                   <div className="text-[18px] font-bold tracking-[-0.02em] whitespace-nowrap">{priceMain(l)}</div>

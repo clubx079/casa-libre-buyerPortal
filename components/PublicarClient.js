@@ -7,6 +7,7 @@ import AuthButton from '@/components/AuthButton';
 import { track } from '@/lib/analytics';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import { useSellFlow } from '@/components/SellFlow';
+import HighlightModal from '@/components/HighlightModal';
 import { loadPendingSell, clearPendingSell } from '@/lib/pendingSell';
 
 const DICT = {
@@ -29,6 +30,7 @@ const DICT = {
     s4Title: '¡Tu propiedad está', s4TitleSerif: 'publicada!',
     s4Sub: 'Ya aparece en el marketplace de Casa Libre. Compartí el enlace con quien quieras.',
     s4View: 'Ver mi propiedad', s4Btn1: 'Ver propiedades', s4Btn2: 'Publicar otra',
+    hiOffer: 'Destacá tu propiedad', hiOfferSub: 'Aparecé arriba de todo en el mapa y la lista por 30 días, con una insignia destacada.', hiBtn: 'Destacar · US$5', hiDone: '¡Tu propiedad está destacada por 30 días!',
     backLabel: '← Atrás',
     errType: 'Elegí un tipo de propiedad', errHood: 'Ingresá el barrio', errCity: 'Ingresá la ciudad', errPrice: 'Ingresá un precio válido',
     errPriceFloorSale: 'El precio de venta debe ser de al menos US$ 5.000', errPriceFloorRent: 'El alquiler mensual debe ser de al menos ₲ 300.000',
@@ -57,6 +59,7 @@ const DICT = {
     s4Title: 'Your listing is', s4TitleSerif: 'live!',
     s4Sub: 'It already shows in the Casa Libre marketplace. Share the link with anyone.',
     s4View: 'View my listing', s4Btn1: 'Browse listings', s4Btn2: 'List another',
+    hiOffer: 'Feature your property', hiOfferSub: 'Appear on top of the map and list for 30 days, with a featured badge.', hiBtn: 'Feature · US$5', hiDone: 'Your property is featured for 30 days!',
     backLabel: '← Back',
     errType: 'Choose a property type', errHood: 'Enter the neighborhood', errCity: 'Enter the city', errPrice: 'Enter a valid price',
     errPriceFloorSale: 'Sale price must be at least US$ 5,000', errPriceFloorRent: 'Monthly rent must be at least ₲ 300,000',
@@ -84,6 +87,8 @@ export default function PublicarClient() {
   const [errs, setErrs] = useState({}); // per-field errors { field: message }
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null); // {ref, slug}
+  const [showHi, setShowHi] = useState(false);       // highlight payment modal (post-publish upsell)
+  const [highlighted, setHighlighted] = useState(false);
   const fileRef = useRef(null);
   const autoOpened = useRef(false);
   const prefilled = useRef(false);
@@ -234,7 +239,7 @@ export default function PublicarClient() {
   };
 
   const restart = () => {
-    setStep(1); setMode('venta'); setResult(null); setErr(''); setErrs({});
+    setStep(1); setMode('venta'); setResult(null); setErr(''); setErrs({}); setShowHi(false); setHighlighted(false);
     setF({ ptype: 'casa', neighborhood: '', city: '', price: '', currency: '', area: '', description: '', contact_name: '', contact_phone: '', seller_type: 'owner' });
     setPhotos([]);
   };
@@ -410,11 +415,34 @@ export default function PublicarClient() {
             <h1 className="text-[clamp(36px,5vw,54px)] font-bold tracking-[-0.04em] mb-2.5">{t.s4Title} <span className="font-serif italic font-normal">{t.s4TitleSerif}</span></h1>
             <p className="text-[17px] text-ink/55 max-w-[440px] mx-auto mb-2.5">{t.s4Sub}</p>
             <div className="font-mono text-[12px] text-ink/45 mb-7">REF: {result?.ref}</div>
+
+            {/* Highlight upsell — publish is already done (free); this is optional. */}
+            <div className="max-w-[440px] mx-auto mb-7">
+              {highlighted ? (
+                <div className="rounded-[16px] border-[1.5px] border-ink bg-card px-4 py-3 text-[14px] font-bold text-ink">{t.hiDone}</div>
+              ) : (
+                <div className="rounded-[16px] border-[1.5px] border-ink bg-card px-5 py-4 text-left shadow-hard-sm">
+                  <div className="text-[16px] font-bold tracking-head mb-1">{t.hiOffer}</div>
+                  <p className="text-[13px] text-ink/60 mb-3">{t.hiOfferSub}</p>
+                  <button onClick={() => setShowHi(true)} className="w-full py-3 rounded-pill bg-ink text-paper font-bold text-[14px] hover:bg-ink/90">{t.hiBtn}</button>
+                </div>
+              )}
+            </div>
+
             <div className="flex gap-3 justify-center flex-wrap">
               {result?.id && <Link href={`/propiedad/${result.id}`} className="px-8 py-4 bg-ink text-paper font-semibold text-[15px] rounded-pill shadow-hard-soft">{t.s4View}</Link>}
               <Link href="/propiedades" className="px-8 py-4 border-2 border-ink font-semibold text-[15px] rounded-pill">{t.s4Btn1}</Link>
               <button onClick={restart} className="px-8 py-4 border-2 border-ink font-semibold text-[15px] rounded-pill">{t.s4Btn2}</button>
             </div>
+
+            {showHi && result?.id && (
+              <HighlightModal
+                propertyId={result.id}
+                propertyLabel={[(t.types.find(([v]) => v === f.ptype) || [])[1], f.neighborhood].filter(Boolean).join(' · ')}
+                onClose={() => setShowHi(false)}
+                onSuccess={() => { setHighlighted(true); setShowHi(false); }}
+              />
+            )}
           </div>
         )}
 

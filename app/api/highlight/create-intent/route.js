@@ -1,0 +1,94 @@
+// POST /api/highlight/create-intent — start a $5 highlight for one of the user's
+// properties. Two paths: (1) one-click charge on the saved card (off_session), or
+// (2) a fresh PaymentIntent whose card the client confirms + we vault for next time.
+// Requires login + ownership; the property must be active/complete and not already
+// currently highlighted.
+import { NextResponse } from 'next/server';
+import { getSession } from '@/lib/auth';
+import { select } from '@/lib/db';
+import { stripe, HIGHLIGHT_USD, HIGHLIGHT_CENTS } from '@/lib/stripe';
+import { getUserBillingRow, ensureStripeCustomer, grantHighlight, recordPayment } from '@/lib/billing';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+// Map a Stripe error to a short Spanish message for the user.
+function friendly(e) {
+  const code = e?.decline_code || e?.code || e?.raw?.decline_code || e?.raw?.code;
+  if (code === 'insufficient_funds') return 'Fondos insuficientes en la tarjeta.';
+  if (code === 'card_declined' || code === 'generic_decline') return 'La tarjeta fue rechazada.';
+  if (code === 'expired_card') return 'La tarjeta está vencida.';
+  if (code === 'incorrect_cvc') return 'El código de seguridad (CVC) es incorrecto.';
+  if (code === 'processing_error') return 'Hubo un error al procesar la tarjeta. Intentá de nuevo.';
+  return e?.message || 'El pago no pudo completarse.';
+}
+
+export async function POST(req) {
+  const session = getSession();
+  if (!session) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  if (!stripe) return NextResponse.json({ error: 'stripe_not_configured' }, { status: 500 });
+
+  const { propertyId, useSavedCard } = await req.json().catch(() => ({}));
+  if (!propertyId) return NextResponse.json({ error: 'missing_property' }, { status: 400 });
+
+  // Ownership + publishability + not-already-highlighted.
+  const rows = await select('properties', `select=id,created_by,admin_status,is_complete,is_highlighted,highlighted_until&id=eq.${encodeURIComponent(propertyId)}&limit=1`).catch(() => []);
+  const prop = Array.isArray(rows) && rows[0];
+  if (!prop) return NextResponse.json({ error: 'not_found' }, { status: 404 });
+  if (String(prop.created_by) !== String(session.uid)) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+  if (prop.admin_status !== 'active' || prop.is_complete === false) return NextResponse.json({ error: 'not_publishable' }, { status: 400 });
+  if (prop.is_highlighted && prop.highlighted_until && new Date(prop.highlighted_until) > new Date()) {
+    return NextResponse.json({ error: 'already_highlighted', highlightUntil: prop.highlighted_until }, { status: 400 });
+  }
+
+  const user = await getUserBillingRow(session.uid);
+  if (!user) return NextResponse.json({ error: 'no_user' }, { status: 400 });
+  let customerId;
+  try { customerId = await ensureStripeCustomer(user); }
+  catch (e) { return NextResponse.json({ error: 'stripe_error', detail: e?.message }, { status: 502 }); }
+
+  const metadata = { user_id: String(session.uid), property_id: String(propertyId), product: 'casa-libre-highlight' };
+  const description = 'Casa Libre — destacar propiedad (30 días)';
+
+  // (1) One-click: charge the saved card immediately, off-session.
+  if (useSavedCard && user.card_pm_id) {
+    try {
+      const pi = await stripe.paymentIntents.create({
+        amount: HIGHLIGHT_CENTS, currency: 'usd', customer: customerId,
+        payment_method: user.card_pm_id, off_session: true, confirm: true,
+        metadata, description,
+      });
+      if (pi.status === 'succeeded') {
+        const until = await grantHighlight(propertyId);
+        await recordPayment({ user_id: session.uid, property_id: propertyId, kind: 'highlight', amount_usd: HIGHLIGHT_USD, currency: 'usd', status: 'succeeded', stripe_payment_intent_id: pi.id, card_brand: user.card_brand, card_last4: user.card_last4, highlight_until: until });
+        return NextResponse.json({ status: 'succeeded', highlightUntil: until, card: { brand: user.card_brand, last4: user.card_last4 } });
+      }
+      if (pi.status === 'requires_action' || pi.status === 'requires_confirmation') {
+        return NextResponse.json({ status: 'requires_action', clientSecret: pi.client_secret, paymentIntentId: pi.id });
+      }
+      await recordPayment({ user_id: session.uid, property_id: propertyId, kind: 'highlight', amount_usd: HIGHLIGHT_USD, currency: 'usd', status: 'failed', stripe_payment_intent_id: pi.id, card_brand: user.card_brand, card_last4: user.card_last4, failure_reason: pi.status });
+      return NextResponse.json({ status: 'failed', error: 'El pago no se completó.' });
+    } catch (e) {
+      const pi = e?.raw?.payment_intent || e?.payment_intent;
+      // 3-D Secure required on the saved card → let the client authenticate.
+      if ((e?.code === 'authentication_required' || e?.raw?.code === 'authentication_required') && pi?.client_secret) {
+        return NextResponse.json({ status: 'requires_action', clientSecret: pi.client_secret, paymentIntentId: pi.id });
+      }
+      await recordPayment({ user_id: session.uid, property_id: propertyId, kind: 'highlight', amount_usd: HIGHLIGHT_USD, currency: 'usd', status: 'failed', stripe_payment_intent_id: pi?.id || null, card_brand: user.card_brand, card_last4: user.card_last4, failure_reason: (e?.decline_code || e?.code || 'error') });
+      return NextResponse.json({ status: 'failed', error: friendly(e) });
+    }
+  }
+
+  // (2) New card: create the PI and save the card for future one-click reuse. The
+  // client confirms it with the Payment Element, then calls /confirm to grant.
+  try {
+    const pi = await stripe.paymentIntents.create({
+      amount: HIGHLIGHT_CENTS, currency: 'usd', customer: customerId,
+      setup_future_usage: 'off_session', automatic_payment_methods: { enabled: true },
+      metadata, description,
+    });
+    return NextResponse.json({ status: 'requires_payment', clientSecret: pi.client_secret, paymentIntentId: pi.id, amount: HIGHLIGHT_USD });
+  } catch (e) {
+    return NextResponse.json({ error: 'stripe_error', detail: e?.message }, { status: 502 });
+  }
+}

@@ -15,6 +15,7 @@ import { useLang } from '@/lib/useLang';
 import { useAuth } from '@/components/AuthProvider';
 import { track } from '@/lib/analytics';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
+import HighlightModal from '@/components/HighlightModal';
 
 const SellFlowContext = createContext({ openSell: () => {} });
 export const useSellFlow = () => useContext(SellFlowContext);
@@ -38,6 +39,7 @@ const DICT = {
     fPhotos: 'Arrastrá o elegí tus fotos', fPhotosSub: 'mín. 1 foto · JPG o PNG', photosChosen: (n) => `${n} foto${n === 1 ? '' : 's'} seleccionada${n === 1 ? '' : 's'}`,
     publishBtn: 'Publicar gratis', publishing: 'Publicando…',
     doneTitle: '¡Tu propiedad está publicada!', doneSub: 'Ya aparece en el marketplace de Casa Libre.', doneView: 'Ver mi propiedad', doneBrowse: 'Ver propiedades',
+    hiOffer: 'Destacá tu propiedad', hiOfferSub: 'Aparecé arriba de todo en el mapa y la lista por 30 días, con una insignia destacada.', hiBtn: 'Destacar · US$5', hiDone: '¡Tu propiedad está destacada por 30 días!',
     next: 'Siguiente', back: '← Atrás', close: 'Cerrar', sending: 'Enviando…',
     errSeller: 'Elegí propietario o agente', errName: 'Ingresá tu nombre', errEmail: 'Ingresá un correo válido', errAddr: 'Elegí una dirección',
     errSendOtp: 'No se pudo enviar el código. Intentá de nuevo.', emailTaken: 'Este correo ya tiene una cuenta.', loginInstead: 'Iniciar sesión para continuar',
@@ -64,6 +66,7 @@ const DICT = {
     fPhotos: 'Drag or choose your photos', fPhotosSub: 'min. 1 photo · JPG or PNG', photosChosen: (n) => `${n} photo${n === 1 ? '' : 's'} selected`,
     publishBtn: 'Publish for free', publishing: 'Publishing…',
     doneTitle: 'Your listing is live!', doneSub: 'It already shows in the Casa Libre marketplace.', doneView: 'View my listing', doneBrowse: 'Browse listings',
+    hiOffer: 'Feature your property', hiOfferSub: 'Appear on top of the map and list for 30 days, with a featured badge.', hiBtn: 'Feature · US$5', hiDone: 'Your property is featured for 30 days!',
     next: 'Next', back: '← Back', close: 'Close', sending: 'Sending…',
     errSeller: 'Choose owner or agent', errName: 'Enter your name', errEmail: 'Enter a valid email', errAddr: 'Choose an address',
     errSendOtp: 'Could not send the code. Please try again.', emailTaken: 'This email already has an account.', loginInstead: 'Log in to continue',
@@ -107,11 +110,13 @@ export default function SellFlowProvider({ children }) {
   const [loginPw, setLoginPw] = useState('');
   const [photos, setPhotos] = useState([]);      // {file,url}
   const [result, setResult] = useState(null);    // {id, ref}
+  const [showHi, setShowHi] = useState(false);    // highlight payment modal (post-publish upsell)
+  const [highlighted, setHighlighted] = useState(false);
   const fileRef = useRef(null);
   const [f, setF] = useState({ mode: '', seller_type: '', neighborhood: '', city: '', addressText: '', contact_name: '', email: '', ptype: 'casa', price: '', currency: '', area: '', description: '', contact_phone: '' });
 
   const reset = () => {
-    setStep(0); setPhase(''); setErr(''); setErrs({}); setBusy(false); setCode(''); setVerified(false); setEmailTaken(false); setLoginPw(''); setPhotos([]); setResult(null);
+    setStep(0); setPhase(''); setErr(''); setErrs({}); setBusy(false); setCode(''); setVerified(false); setEmailTaken(false); setLoginPw(''); setPhotos([]); setResult(null); setShowHi(false); setHighlighted(false);
     setF({ mode: '', seller_type: '', neighborhood: '', city: '', addressText: '', contact_name: '', email: '', ptype: 'casa', price: '', currency: '', area: '', description: '', contact_phone: '' });
   };
   const close = () => { setOpen(false); reset(); };
@@ -266,10 +271,31 @@ export default function SellFlowProvider({ children }) {
                 <h2 className="text-[24px] font-bold tracking-head mb-1.5">{t.doneTitle}</h2>
                 <p className="text-[14px] text-ink/55 mb-1">{t.doneSub}</p>
                 <div className="font-mono text-[11px] text-ink/45 mb-5">REF: {result.ref}</div>
+
+                {/* Highlight upsell — publish is already done (free); this is optional. */}
+                {highlighted ? (
+                  <div className="mb-5 rounded-[16px] border-[1.5px] border-ink bg-card px-4 py-3 text-[13px] font-bold text-ink">{t.hiDone}</div>
+                ) : (
+                  <div className="mb-5 rounded-[16px] border-[1.5px] border-ink bg-card px-4 py-4 text-left shadow-hard-sm">
+                    <div className="text-[15px] font-bold tracking-head mb-1">{t.hiOffer}</div>
+                    <p className="text-[12.5px] text-ink/60 mb-3">{t.hiOfferSub}</p>
+                    <button onClick={() => setShowHi(true)} className="w-full py-2.5 rounded-pill bg-ink text-paper font-bold text-[14px] hover:bg-ink/90">{t.hiBtn}</button>
+                  </div>
+                )}
+
                 <div className="flex gap-2.5 justify-center flex-wrap">
                   <button onClick={() => { close(); router.push('/cuenta'); }} className="px-6 py-3 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft">{t.doneDash}</button>
                   <button onClick={() => { const id = result.id; close(); router.push(`/propiedad/${id}`); }} className="px-6 py-3 border-2 border-ink rounded-pill font-semibold text-[14px]">{t.doneView}</button>
                 </div>
+
+                {showHi && result?.id && (
+                  <HighlightModal
+                    propertyId={result.id}
+                    propertyLabel={[(t.types.find(([v]) => v === f.ptype) || [])[1], f.neighborhood].filter(Boolean).join(' · ')}
+                    onClose={() => setShowHi(false)}
+                    onSuccess={() => { setHighlighted(true); setShowHi(false); }}
+                  />
+                )}
               </div>
             ) : phase === 'otp' ? (
               /* ---- OTP VERIFY overlay ---- */

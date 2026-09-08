@@ -16,13 +16,14 @@ export default function ListingCard({ l, action }) {
   const meta = [l.area && `${l.area} m²`, l.baths && `${l.baths} ${lang === 'es' ? 'baños' : 'ba'}`].filter(Boolean).join(' · ');
 
   return (
-    <div className="bg-card border border-ink/15 rounded-[18px] overflow-hidden flex flex-col">
+    <div className={`bg-card rounded-[18px] overflow-hidden flex flex-col ${l.highlighted ? 'border border-ink ring-[1.5px] ring-ink shadow-hard-sm' : 'border border-ink/15'}`}>
       <Link href={`/propiedad/${l.id}`} className="relative block h-[150px] cl-hatch">
         {l.image
           ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={l.image} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
           : <span className="absolute inset-0 flex items-center justify-center font-mono text-[10px] text-ink/45">{lang === 'es' ? 'Foto próximamente' : 'Photo coming soon'}</span>}
         <span className="absolute top-2 left-2 text-[10px] font-semibold bg-ink text-paper px-2.5 py-1 rounded-pill">{l.mode === 'alquiler' ? (lang === 'es' ? 'Alquiler' : 'Rent') : (lang === 'es' ? 'Venta' : 'Sale')}</span>
         {l.admin_status && l.admin_status !== 'active' && <span className="absolute top-2 right-2 text-[10px] font-semibold bg-paper text-ink border border-ink/20 px-2.5 py-1 rounded-pill capitalize">{l.admin_status}</span>}
+        {l.highlighted && <span className="absolute bottom-2 left-2 text-[9px] font-bold uppercase tracking-label bg-ink text-paper px-2.5 py-1 rounded-pill">{lang === 'es' ? 'Destacada' : 'Featured'}</span>}
       </Link>
       <div className="p-3.5 flex-1 flex flex-col">
         <Link href={`/propiedad/${l.id}`} className="block">
