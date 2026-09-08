@@ -17,6 +17,7 @@ import { track } from '@/lib/analytics';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import HighlightModal from '@/components/HighlightModal';
 import FeaturedTag from '@/components/FeaturedTag';
+import { savePendingSell } from '@/lib/pendingSell';
 
 const SellFlowContext = createContext({ openSell: () => {} });
 export const useSellFlow = () => useContext(SellFlowContext);
@@ -192,7 +193,10 @@ export default function SellFlowProvider({ children }) {
   const googleSignIn = async () => {
     setErr('');
     try {
-      const r = await fetch('/api/auth/google', { method: 'POST' });
+      // Stash what the guest collected so /publicar resumes (prefilled) after the
+      // OAuth full-page redirect — instead of dropping the user on the dashboard.
+      await savePendingSell({ fields: { mode: f.mode, seller_type: f.seller_type, contact_name: f.contact_name, email: f.email, neighborhood: f.neighborhood, city: f.city, addressText: f.addressText } });
+      const r = await fetch('/api/auth/google', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ next: '/publicar' }) });
       const j = await r.json().catch(() => ({}));
       if (j.url) window.location.href = j.url; else setErr(t.errGeneric);
     } catch { setErr(t.errGeneric); }

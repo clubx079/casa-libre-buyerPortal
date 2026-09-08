@@ -20,6 +20,10 @@ export async function GET(req) {
   const base = baseUrl(req);
   const { searchParams } = new URL(req.url);
   const code = searchParams.get('code');
+  // Return path passed via OAuth `state` (e.g. /publicar to finish a listing). Only
+  // safe relative paths are honored; anything else falls back to the dashboard.
+  const state = searchParams.get('state');
+  const dest = (typeof state === 'string' && /^\/[A-Za-z0-9/_-]*$/.test(state)) ? state : '/cuenta';
   if (searchParams.get('error') || !code) return NextResponse.redirect(`${base}/?auth_error=1`);
 
   try {
@@ -52,7 +56,7 @@ export async function GET(req) {
     // fire-and-forget work after the redirect). Wrapped so it never blocks login.
     if (user._isNew) await sendWelcomeEmail(g.email, fullName).catch(() => {});
 
-    const res = NextResponse.redirect(`${base}/cuenta`);
+    const res = NextResponse.redirect(`${base}${dest}`);
     res.cookies.set(COOKIE_NAME, makeToken(user), {
       httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: 60 * 60 * 24 * 7,
     });
