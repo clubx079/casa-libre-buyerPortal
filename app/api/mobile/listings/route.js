@@ -7,10 +7,10 @@ import { getListings } from '@/lib/listings';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+// No wildcard cross-origin allowance: only the native app (not subject to CORS)
+// and the same-origin site consume this. Dropping `Access-Control-Allow-Origin: *`
+// blocks browser-based cross-origin scrapers with zero impact on the native app.
 const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET,OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
   'Cache-Control': 'public, max-age=120',
 };
 
@@ -21,7 +21,9 @@ export async function OPTIONS() {
 export async function GET(req) {
   try {
     const url = new URL(req.url);
-    const limit = Math.min(parseInt(url.searchParams.get('limit') || '600', 10) || 600, 5000);
+    // Clamp to the app's real need (≤600). Was 5000 — a single call that dumped
+    // the whole catalog. The app requests 600, so this is invisible to it.
+    const limit = Math.min(parseInt(url.searchParams.get('limit') || '600', 10) || 600, 600);
     const mode = url.searchParams.get('mode');
     const { rate, listings } = await getListings({ limit });
     let out = listings;
