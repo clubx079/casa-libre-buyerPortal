@@ -132,8 +132,9 @@ export default function HighlightModal({ propertyId, propertyLabel, onClose, onS
   const fmtUntil = (iso) => { try { return new Date(iso).toLocaleDateString('es-PY', { day: 'numeric', month: 'long', year: 'numeric' }); } catch { return ''; } };
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-ink/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="relative w-full max-w-[460px] bg-paper rounded-[22px] border-[1.5px] border-ink/15 shadow-2xl p-6 sm:p-7" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[1000] overflow-y-auto cl-scroll bg-ink/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="min-h-full flex items-start sm:items-center justify-center p-4">
+        <div className="relative w-full max-w-[460px] my-4 bg-paper rounded-[22px] border-[1.5px] border-ink/15 shadow-2xl p-6 sm:p-7" onClick={(e) => e.stopPropagation()}>
         <button onClick={onClose} aria-label="Cerrar" className="absolute top-4 right-4 w-8 h-8 grid place-items-center rounded-full hover:bg-ink/5 text-ink/50 text-lg">×</button>
 
         <div className="font-mono text-[11px] uppercase tracking-label text-ink/45 mb-1">Destacar propiedad</div>
@@ -190,6 +191,7 @@ export default function HighlightModal({ propertyId, propertyLabel, onClose, onS
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>
   );
