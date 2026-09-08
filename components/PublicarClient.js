@@ -25,7 +25,7 @@ const DICT = {
     fName: 'Tu nombre', fNamePh: 'Ana Giménez', fPhone: 'WhatsApp / teléfono', fPhonePh: '0981 123 456',
     fPhotos: 'Arrastrá o elegí tus fotos', fPhotosSub: 'mín. 4 fotos · JPG o PNG · las fotos reales venden más rápido',
     photosChosen: (n) => `${n} foto${n === 1 ? '' : 's'} seleccionada${n === 1 ? '' : 's'}`,
-    publishBtn: 'Publicar gratis', paying: 'Publicando…', payNote: 'Se publica al instante en el marketplace',
+    publishBtn: 'Publicar gratis', publishHighlightBtn: 'Publicar y destacar · US$5', paying: 'Publicando…', payNote: 'Se publica al instante en el marketplace',
     gateTitle: 'Necesitás una cuenta para publicar', gateSub: 'Creá tu cuenta o ingresá para publicar y gestionar tus propiedades. Podés volver a abrir el ingreso cuando quieras.', gateBtn: 'Ingresar / Crear cuenta',
     s4Title: '¡Tu propiedad está', s4TitleSerif: 'publicada!',
     s4Sub: 'Ya aparece en el marketplace de Casa Libre. Compartí el enlace con quien quieras.',
@@ -54,7 +54,7 @@ const DICT = {
     fName: 'Your name', fNamePh: 'Ana Giménez', fPhone: 'WhatsApp / phone', fPhonePh: '0981 123 456',
     fPhotos: 'Drag or choose your photos', fPhotosSub: 'min. 4 photos · JPG or PNG · real photos sell faster',
     photosChosen: (n) => `${n} photo${n === 1 ? '' : 's'} selected`,
-    publishBtn: 'Publish for free', paying: 'Publishing…', payNote: 'Goes live in the marketplace instantly',
+    publishBtn: 'Publish for free', publishHighlightBtn: 'Publish & feature · US$5', paying: 'Publishing…', payNote: 'Goes live in the marketplace instantly',
     gateTitle: 'You need an account to post', gateSub: 'Create an account or log in to post and manage your properties. You can reopen the login anytime.', gateBtn: 'Log in / Sign up',
     s4Title: 'Your listing is', s4TitleSerif: 'live!',
     s4Sub: 'It already shows in the Casa Libre marketplace. Share the link with anyone.',
@@ -187,7 +187,9 @@ export default function PublicarClient() {
   const back = () => { setErr(''); setStep(1); };
 
   // Free publish — no plan, no payment. Requires login (gated below).
-  const publishListing = async () => {
+  // openHighlightAfter=true opens the US$5 highlight payment modal once the
+  // (free) listing is created, so a cancelled/failed payment still leaves it published.
+  const publishListing = async (openHighlightAfter = false) => {
     const e = validate();
     if (Object.keys(e).length) {
       setErrs(e);
@@ -231,6 +233,7 @@ export default function PublicarClient() {
       });
       setResult({ ref: j.ref, id: j.id });
       setStep(2);
+      if (openHighlightAfter) setShowHi(true);
     } catch {
       setErr(t.errSubmit);
     } finally {
@@ -450,8 +453,9 @@ export default function PublicarClient() {
 
         {/* FOOTER — publish (free, instant) */}
         {step === 1 && (
-          <div className="flex justify-end mt-11 pt-[26px] border-t border-ink/15">
-            <button onClick={publishListing} disabled={busy} className="px-[28px] py-3.5 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60">{busy ? t.paying : t.publishBtn}</button>
+          <div className="flex flex-wrap justify-end items-center gap-3 mt-11 pt-[26px] border-t border-ink/15">
+            <button onClick={() => publishListing(true)} disabled={busy} className="px-[24px] py-3.5 border-[1.5px] border-ink rounded-pill font-bold text-[14px] disabled:opacity-60">{busy ? t.paying : t.publishHighlightBtn}</button>
+            <button onClick={() => publishListing(false)} disabled={busy} className="px-[28px] py-3.5 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60">{busy ? t.paying : t.publishBtn}</button>
           </div>
         )}
       </div>

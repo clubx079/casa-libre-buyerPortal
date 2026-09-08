@@ -226,7 +226,7 @@ export default function SellFlowProvider({ children }) {
     if (photos.length < 1) e.photos = t.errPhotos;
     return e;
   };
-  const publish = async () => {
+  const publish = async (openHighlightAfter = false) => {
     const e = validateDetails();
     if (Object.keys(e).length) { setErrs(e); setErr(''); return; }
     setErrs({}); setBusy(true); setErr('');
@@ -241,6 +241,7 @@ export default function SellFlowProvider({ children }) {
       if (!res.ok || !j.ok) throw new Error(j.error || 'failed');
       track('listing_created', { property_id: j.id, slug: j.slug, ref: j.ref, operation: f.mode, property_type: f.ptype, city: f.city, neighborhood: f.neighborhood, price: f.price ? Number(f.price) : null, currency: priceCurrency, photos: photos.length });
       setResult({ id: j.id, ref: j.ref });
+      if (openHighlightAfter) setShowHi(true);
     } catch { setErr(t.errSubmit); } finally { setBusy(false); }
   };
 
@@ -431,12 +432,15 @@ export default function SellFlowProvider({ children }) {
 
                 {/* nav */}
                 {step > 0 && (
-                  <div className="flex items-center justify-between mt-6">
-                    <button onClick={back} className="text-[13px] font-medium text-ink/55 hover:text-ink">{t.back}</button>
+                  <div className="flex items-center justify-between gap-2 mt-6">
+                    <button onClick={back} className="text-[13px] font-medium text-ink/55 hover:text-ink shrink-0">{t.back}</button>
                     {step < 3 ? (
                       <button onClick={next} disabled={busy} className="px-7 py-3 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60 inline-flex items-center justify-center min-w-[108px]">{busy ? <Spinner /> : t.next}</button>
                     ) : (
-                      <button onClick={publish} disabled={busy} className="px-7 py-3 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60">{busy ? t.publishing : t.publishBtn}</button>
+                      <div className="flex flex-wrap justify-end gap-2">
+                        <button onClick={() => publish(true)} disabled={busy} className="px-4 py-3 border-[1.5px] border-ink rounded-pill font-bold text-[13px] disabled:opacity-60">{busy ? t.publishing : t.hiBtn}</button>
+                        <button onClick={() => publish(false)} disabled={busy} className="px-5 py-3 bg-ink text-paper rounded-pill font-bold text-[13px] shadow-hard-soft disabled:opacity-60">{busy ? t.publishing : t.publishBtn}</button>
+                      </div>
                     )}
                   </div>
                 )}
