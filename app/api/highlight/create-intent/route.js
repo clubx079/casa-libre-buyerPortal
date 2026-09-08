@@ -84,7 +84,9 @@ export async function POST(req) {
   try {
     const pi = await stripe.paymentIntents.create({
       amount: HIGHLIGHT_CENTS, currency: 'usd', customer: customerId,
-      setup_future_usage: 'off_session', automatic_payment_methods: { enabled: true },
+      // Card-only keeps the modal short (no Bank / Cash App Pay / Link "save info"
+      // section) — we already vault the card ourselves via setup_future_usage.
+      setup_future_usage: 'off_session', payment_method_types: ['card'],
       metadata, description,
     });
     return NextResponse.json({ status: 'requires_payment', clientSecret: pi.client_secret, paymentIntentId: pi.id, amount: HIGHLIGHT_USD });
