@@ -4,6 +4,7 @@
 // grants the 30-day highlight, vaults the card, and records the transaction.
 // Idempotent: a retried confirm never double-grants or double-charges.
 import { NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { getSession } from '@/lib/auth';
 import { select } from '@/lib/db';
 import { stripe, HIGHLIGHT_USD } from '@/lib/stripe';
@@ -53,5 +54,6 @@ export async function POST(req) {
     card_last4: card?.last4 || user?.card_last4 || null,
     highlight_until: until,
   });
+  try { revalidateTag('listings'); } catch {}   // reflect the new highlight on home/marketplace now
   return NextResponse.json({ status: 'succeeded', highlightUntil: until, card: card ? { brand: card.brand, last4: card.last4 } : null });
 }

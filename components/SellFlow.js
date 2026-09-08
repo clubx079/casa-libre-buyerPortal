@@ -16,6 +16,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { track } from '@/lib/analytics';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import HighlightModal from '@/components/HighlightModal';
+import FeaturedTag from '@/components/FeaturedTag';
 
 const SellFlowContext = createContext({ openSell: () => {} });
 export const useSellFlow = () => useContext(SellFlowContext);
@@ -40,6 +41,7 @@ const DICT = {
     publishBtn: 'Publicar gratis', publishing: 'Publicando…',
     doneTitle: '¡Tu propiedad está publicada!', doneSub: 'Ya aparece en el marketplace de Casa Libre.', doneView: 'Ver mi propiedad', doneBrowse: 'Ver propiedades',
     hiOffer: 'Destacá tu propiedad', hiOfferSub: 'Aparecé arriba de todo en el mapa y la lista por 30 días, con una insignia destacada.', hiBtn: 'Destacar · US$5', hiDone: '¡Tu propiedad está destacada por 30 días!',
+    hiCheck: 'Destacar esta propiedad', hiCheckSub: 'Aparecerá arriba de todo en el mapa y la lista, con una insignia destacada, durante 30 días — US$5.', hiPublishBtn: 'Publicar por US$5',
     next: 'Siguiente', back: '← Atrás', close: 'Cerrar', sending: 'Enviando…',
     errSeller: 'Elegí propietario o agente', errName: 'Ingresá tu nombre', errEmail: 'Ingresá un correo válido', errAddr: 'Elegí una dirección',
     errSendOtp: 'No se pudo enviar el código. Intentá de nuevo.', emailTaken: 'Este correo ya tiene una cuenta.', loginInstead: 'Iniciar sesión para continuar',
@@ -67,6 +69,7 @@ const DICT = {
     publishBtn: 'Publish for free', publishing: 'Publishing…',
     doneTitle: 'Your listing is live!', doneSub: 'It already shows in the Casa Libre marketplace.', doneView: 'View my listing', doneBrowse: 'Browse listings',
     hiOffer: 'Feature your property', hiOfferSub: 'Appear on top of the map and list for 30 days, with a featured badge.', hiBtn: 'Feature · US$5', hiDone: 'Your property is featured for 30 days!',
+    hiCheck: 'Highlight this property', hiCheckSub: 'It appears on top of the map and list, with a featured badge, for 30 days — US$5.', hiPublishBtn: 'Publish for US$5',
     next: 'Next', back: '← Back', close: 'Close', sending: 'Sending…',
     errSeller: 'Choose owner or agent', errName: 'Enter your name', errEmail: 'Enter a valid email', errAddr: 'Choose an address',
     errSendOtp: 'Could not send the code. Please try again.', emailTaken: 'This email already has an account.', loginInstead: 'Log in to continue',
@@ -112,11 +115,12 @@ export default function SellFlowProvider({ children }) {
   const [result, setResult] = useState(null);    // {id, ref}
   const [showHi, setShowHi] = useState(false);    // highlight payment modal (post-publish upsell)
   const [highlighted, setHighlighted] = useState(false);
+  const [highlight, setHighlight] = useState(false); // opted in to highlight (US$5) at publish
   const fileRef = useRef(null);
   const [f, setF] = useState({ mode: '', seller_type: '', neighborhood: '', city: '', addressText: '', contact_name: '', email: '', ptype: 'casa', price: '', currency: '', area: '', description: '', contact_phone: '' });
 
   const reset = () => {
-    setStep(0); setPhase(''); setErr(''); setErrs({}); setBusy(false); setCode(''); setVerified(false); setEmailTaken(false); setLoginPw(''); setPhotos([]); setResult(null); setShowHi(false); setHighlighted(false);
+    setStep(0); setPhase(''); setErr(''); setErrs({}); setBusy(false); setCode(''); setVerified(false); setEmailTaken(false); setLoginPw(''); setPhotos([]); setResult(null); setShowHi(false); setHighlighted(false); setHighlight(false);
     setF({ mode: '', seller_type: '', neighborhood: '', city: '', addressText: '', contact_name: '', email: '', ptype: 'casa', price: '', currency: '', area: '', description: '', contact_phone: '' });
   };
   const close = () => { setOpen(false); reset(); };
@@ -425,6 +429,17 @@ export default function SellFlowProvider({ children }) {
                         ))}
                       </div>
                     )}
+
+                    {/* Highlight opt-in — prominent container so it gets noticed. */}
+                    <button type="button" onClick={() => setHighlight((v) => !v)} aria-pressed={highlight} className={`w-full flex items-start gap-3 text-left rounded-[14px] border-[1.5px] p-3.5 mt-4 transition-colors ${highlight ? 'border-ink bg-ink/[0.04] shadow-hard-sm' : 'border-ink/25 hover:border-ink/50'}`}>
+                      <span className={`mt-0.5 w-5 h-5 shrink-0 rounded-[6px] border-[1.5px] flex items-center justify-center ${highlight ? 'bg-ink border-ink text-paper' : 'border-ink/40'}`}>
+                        {highlight && <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>}
+                      </span>
+                      <span className="flex-1 min-w-0">
+                        <span className="flex items-center gap-2 mb-1 flex-wrap"><span className="text-[14px] font-bold tracking-head">{t.hiCheck}</span><FeaturedTag lang={lang} className="text-[9px] px-2 py-0.5" /></span>
+                        <span className="block text-[12px] text-ink/60">{t.hiCheckSub}</span>
+                      </span>
+                    </button>
                   </div>
                 )}
 
@@ -437,10 +452,7 @@ export default function SellFlowProvider({ children }) {
                     {step < 3 ? (
                       <button onClick={next} disabled={busy} className="px-7 py-3 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60 inline-flex items-center justify-center min-w-[108px]">{busy ? <Spinner /> : t.next}</button>
                     ) : (
-                      <div className="flex flex-wrap justify-end gap-2">
-                        <button onClick={() => publish(true)} disabled={busy} className="px-4 py-3 border-[1.5px] border-ink rounded-pill font-bold text-[13px] disabled:opacity-60">{busy ? t.publishing : t.hiBtn}</button>
-                        <button onClick={() => publish(false)} disabled={busy} className="px-5 py-3 bg-ink text-paper rounded-pill font-bold text-[13px] shadow-hard-soft disabled:opacity-60">{busy ? t.publishing : t.publishBtn}</button>
-                      </div>
+                      <button onClick={() => publish(highlight)} disabled={busy} className="px-7 py-3 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60">{busy ? t.publishing : (highlight ? t.hiPublishBtn : t.publishBtn)}</button>
                     )}
                   </div>
                 )}

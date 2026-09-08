@@ -4,6 +4,7 @@
 // Requires login + ownership; the property must be active/complete and not already
 // currently highlighted.
 import { NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { getSession } from '@/lib/auth';
 import { select } from '@/lib/db';
 import { stripe, HIGHLIGHT_USD, HIGHLIGHT_CENTS } from '@/lib/stripe';
@@ -61,6 +62,7 @@ export async function POST(req) {
       if (pi.status === 'succeeded') {
         const until = await grantHighlight(propertyId);
         await recordPayment({ user_id: session.uid, property_id: propertyId, kind: 'highlight', amount_usd: HIGHLIGHT_USD, currency: 'usd', status: 'succeeded', stripe_payment_intent_id: pi.id, card_brand: user.card_brand, card_last4: user.card_last4, highlight_until: until });
+        try { revalidateTag('listings'); } catch {}   // reflect the new highlight on home/marketplace now
         return NextResponse.json({ status: 'succeeded', highlightUntil: until, card: { brand: user.card_brand, last4: user.card_last4 } });
       }
       if (pi.status === 'requires_action' || pi.status === 'requires_confirmation') {

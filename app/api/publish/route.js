@@ -3,6 +3,7 @@
 // origin=user) so getListings() picks it up, uploads any photos to B2 and links
 // them via property_images. Multipart/form-data.
 import { NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { insert, update } from '@/lib/db';
 import { zoneCanonical, dedupeKey } from '@/lib/dedupe';
 import { put } from '@/lib/b2';
@@ -200,5 +201,6 @@ export async function POST(req) {
     }).catch(() => {});
   }
 
+  try { revalidateTag('listings'); } catch {}   // new listing shows on home/marketplace immediately
   return NextResponse.json({ ok: true, slug, id: propertyId, ref, images: images.length });
 }

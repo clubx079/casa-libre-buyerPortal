@@ -8,6 +8,7 @@ import { track } from '@/lib/analytics';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import { useSellFlow } from '@/components/SellFlow';
 import HighlightModal from '@/components/HighlightModal';
+import FeaturedTag from '@/components/FeaturedTag';
 import { loadPendingSell, clearPendingSell } from '@/lib/pendingSell';
 
 const DICT = {
@@ -25,7 +26,7 @@ const DICT = {
     fName: 'Tu nombre', fNamePh: 'Ana Giménez', fPhone: 'WhatsApp / teléfono', fPhonePh: '0981 123 456',
     fPhotos: 'Arrastrá o elegí tus fotos', fPhotosSub: 'mín. 4 fotos · JPG o PNG · las fotos reales venden más rápido',
     photosChosen: (n) => `${n} foto${n === 1 ? '' : 's'} seleccionada${n === 1 ? '' : 's'}`,
-    publishBtn: 'Publicar gratis', publishHighlightBtn: 'Publicar y destacar · US$5', paying: 'Publicando…', payNote: 'Se publica al instante en el marketplace',
+    publishBtn: 'Publicar gratis', publishHiBtn: 'Publicar por US$5', hiCheck: 'Destacar esta propiedad', hiCheckSub: 'Aparecerá arriba de todo en el mapa y la lista, con una insignia destacada, durante 30 días — US$5.', paying: 'Publicando…', payNote: 'Se publica al instante en el marketplace',
     gateTitle: 'Necesitás una cuenta para publicar', gateSub: 'Creá tu cuenta o ingresá para publicar y gestionar tus propiedades. Podés volver a abrir el ingreso cuando quieras.', gateBtn: 'Ingresar / Crear cuenta',
     s4Title: '¡Tu propiedad está', s4TitleSerif: 'publicada!',
     s4Sub: 'Ya aparece en el marketplace de Casa Libre. Compartí el enlace con quien quieras.',
@@ -54,7 +55,7 @@ const DICT = {
     fName: 'Your name', fNamePh: 'Ana Giménez', fPhone: 'WhatsApp / phone', fPhonePh: '0981 123 456',
     fPhotos: 'Drag or choose your photos', fPhotosSub: 'min. 4 photos · JPG or PNG · real photos sell faster',
     photosChosen: (n) => `${n} photo${n === 1 ? '' : 's'} selected`,
-    publishBtn: 'Publish for free', publishHighlightBtn: 'Publish & feature · US$5', paying: 'Publishing…', payNote: 'Goes live in the marketplace instantly',
+    publishBtn: 'Publish for free', publishHiBtn: 'Publish for US$5', hiCheck: 'Highlight this property', hiCheckSub: 'It appears on top of the map and list, with a featured badge, for 30 days — US$5.', paying: 'Publishing…', payNote: 'Goes live in the marketplace instantly',
     gateTitle: 'You need an account to post', gateSub: 'Create an account or log in to post and manage your properties. You can reopen the login anytime.', gateBtn: 'Log in / Sign up',
     s4Title: 'Your listing is', s4TitleSerif: 'live!',
     s4Sub: 'It already shows in the Casa Libre marketplace. Share the link with anyone.',
@@ -89,6 +90,7 @@ export default function PublicarClient() {
   const [result, setResult] = useState(null); // {ref, slug}
   const [showHi, setShowHi] = useState(false);       // highlight payment modal (post-publish upsell)
   const [highlighted, setHighlighted] = useState(false);
+  const [highlight, setHighlight] = useState(false); // opted in to highlight (US$5) at publish time
   const fileRef = useRef(null);
   const autoOpened = useRef(false);
   const prefilled = useRef(false);
@@ -242,7 +244,7 @@ export default function PublicarClient() {
   };
 
   const restart = () => {
-    setStep(1); setMode('venta'); setResult(null); setErr(''); setErrs({}); setShowHi(false); setHighlighted(false);
+    setStep(1); setMode('venta'); setResult(null); setErr(''); setErrs({}); setShowHi(false); setHighlighted(false); setHighlight(false);
     setF({ ptype: 'casa', neighborhood: '', city: '', price: '', currency: '', area: '', description: '', contact_name: '', contact_phone: '', seller_type: 'owner' });
     setPhotos([]);
   };
@@ -453,9 +455,20 @@ export default function PublicarClient() {
 
         {/* FOOTER — publish (free, instant) */}
         {step === 1 && (
-          <div className="flex flex-wrap justify-end items-center gap-3 mt-11 pt-[26px] border-t border-ink/15">
-            <button onClick={() => publishListing(true)} disabled={busy} className="px-[24px] py-3.5 border-[1.5px] border-ink rounded-pill font-bold text-[14px] disabled:opacity-60">{busy ? t.paying : t.publishHighlightBtn}</button>
-            <button onClick={() => publishListing(false)} disabled={busy} className="px-[28px] py-3.5 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60">{busy ? t.paying : t.publishBtn}</button>
+          <div className="mt-11 pt-[26px] border-t border-ink/15 flex flex-col gap-4">
+            {/* Highlight opt-in — a prominent container so it gets noticed. */}
+            <button type="button" onClick={() => setHighlight((v) => !v)} aria-pressed={highlight} className={`w-full flex items-start gap-3 text-left rounded-[16px] border-[1.5px] p-4 transition-colors ${highlight ? 'border-ink bg-ink/[0.04] shadow-hard-sm' : 'border-ink/25 hover:border-ink/50'}`}>
+              <span className={`mt-0.5 w-5 h-5 shrink-0 rounded-[6px] border-[1.5px] flex items-center justify-center ${highlight ? 'bg-ink border-ink text-paper' : 'border-ink/40'}`}>
+                {highlight && <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>}
+              </span>
+              <span className="flex-1 min-w-0">
+                <span className="flex items-center gap-2 mb-1 flex-wrap"><span className="text-[15px] font-bold tracking-head">{t.hiCheck}</span><FeaturedTag lang={lang} className="text-[9px] px-2 py-0.5" /></span>
+                <span className="block text-[12.5px] text-ink/60">{t.hiCheckSub}</span>
+              </span>
+            </button>
+            <div className="flex justify-end">
+              <button onClick={() => publishListing(highlight)} disabled={busy} className="px-[28px] py-3.5 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60">{busy ? t.paying : (highlight ? t.publishHiBtn : t.publishBtn)}</button>
+            </div>
           </div>
         )}
       </div>

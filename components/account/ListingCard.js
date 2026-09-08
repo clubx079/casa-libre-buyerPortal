@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { fmtUsd, fmtPyg } from '@/lib/ui';
 import { typeLabel } from '@/lib/propertyType';
 import { useLang } from '@/lib/useLang';
+import FeaturedTag from '@/components/FeaturedTag';
 
 // Compact listing card used across the account pages (saved / my listings).
 export default function ListingCard({ l, action }) {
@@ -23,11 +24,11 @@ export default function ListingCard({ l, action }) {
           : <span className="absolute inset-0 flex items-center justify-center font-mono text-[10px] text-ink/45">{lang === 'es' ? 'Foto próximamente' : 'Photo coming soon'}</span>}
         <span className="absolute top-2 left-2 text-[10px] font-semibold bg-ink text-paper px-2.5 py-1 rounded-pill">{l.mode === 'alquiler' ? (lang === 'es' ? 'Alquiler' : 'Rent') : (lang === 'es' ? 'Venta' : 'Sale')}</span>
         {l.admin_status && l.admin_status !== 'active' && <span className="absolute top-2 right-2 text-[10px] font-semibold bg-paper text-ink border border-ink/20 px-2.5 py-1 rounded-pill capitalize">{l.admin_status}</span>}
-        {l.highlighted && <span className="absolute bottom-2 left-2 text-[9px] font-bold uppercase tracking-label bg-ink text-paper px-2.5 py-1 rounded-pill">{lang === 'es' ? 'Destacada' : 'Featured'}</span>}
       </Link>
-      <div className="p-3.5 flex-1 flex flex-col">
+      <div className="relative p-3.5 flex-1 flex flex-col">
+        {l.highlighted && <FeaturedTag lang={lang} className="absolute top-3 right-3 z-10 text-[9px] px-2 py-0.5" />}
         <Link href={`/propiedad/${l.id}`} className="block">
-          <div className="text-[17px] font-bold tracking-head whitespace-nowrap">{price}</div>
+          <div className="text-[17px] font-bold tracking-head whitespace-nowrap pr-16">{price}</div>
           {priceSub && <div className="text-[11px] font-medium text-ink/50 whitespace-nowrap">{priceSub}</div>}
           <div className="text-[13px] font-medium mt-0.5 line-clamp-1">{title}</div>
           <div className="text-[12px] text-ink/55 line-clamp-1">{place}</div>

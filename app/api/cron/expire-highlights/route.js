@@ -3,6 +3,7 @@
 // ranking and loses its ribbon. Schedule alongside the other crons with the
 // CRON_SECRET; also callable manually with ?secret=<CRON_SECRET> for testing.
 import { NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { update } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
@@ -28,6 +29,7 @@ async function handle(req) {
   } catch (e) {
     return NextResponse.json({ error: 'update_failed', detail: e?.message }, { status: 500 });
   }
+  if (expired) { try { revalidateTag('listings'); } catch {} }
   return NextResponse.json({ ok: true, expired, at: nowIso });
 }
 

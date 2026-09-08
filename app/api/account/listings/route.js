@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { getSession } from '@/lib/auth';
 import { getUserListings } from '@/lib/listings';
 import { select, remove } from '@/lib/db';
@@ -30,5 +31,6 @@ export async function DELETE(req) {
   } catch (e) {
     return NextResponse.json({ error: 'delete_failed', detail: e?.message }, { status: 500 });
   }
+  try { revalidateTag('listings'); } catch {}   // deleted listing drops off home/marketplace now
   return NextResponse.json({ ok: true });
 }

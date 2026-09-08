@@ -18,7 +18,7 @@ const getInitialPage = unstable_cache(
     return { dRes, mRes };
   },
   ['cl-initial-marketplace-v1'],
-  { revalidate: 120 },
+  { revalidate: 120, tags: ['listings'] },
 );
 
 // #17 Canonical consolidation — every filtered/sorted variant of the marketplace

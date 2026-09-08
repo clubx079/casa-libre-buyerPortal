@@ -11,6 +11,7 @@ import { useFavorites } from '@/components/FavoritesProvider';
 import { typeLabel, typeKey } from '@/lib/propertyType';
 import { T, fmtUsd, fmtPyg, shortUsd, titleCaseZone, bedAbbr, bathWord, parkWord, loc } from '@/lib/ui';
 import { loadGoogleMapsAPI, mapOptions, pinIcon, clusterIcon, inParaguay } from '@/utils/gmap';
+import FeaturedTag from '@/components/FeaturedTag';
 
 const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const PER_PAGE = 24;
@@ -266,7 +267,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
         <div className="px-4 pb-8 flex flex-col gap-4">
           {rows.length === 0 && !loadingList && <div className="py-14 text-center font-mono text-[13px] text-ink/45">{X.noResults}</div>}
           {rows.map((l) => (
-            <Link key={l.id} href={`/propiedad/${l.id}`} className="block bg-card border border-ink/12 rounded-[18px] overflow-hidden">
+            <Link key={l.id} href={`/propiedad/${l.id}`} className={`block bg-card rounded-[18px] overflow-hidden ${l.highlighted ? 'border border-ink ring-[1.5px] ring-ink shadow-hard-sm' : 'border border-ink/12'}`}>
               <div className="relative h-[220px] cl-hatch">
                 {imgMap[l.id] && /* eslint-disable-next-line @next/next/no-img-element */ <img src={imgMap[l.id]} alt="" loading="lazy" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
                 <span className="absolute top-3 left-3 text-[12px] font-semibold bg-ink text-paper px-3 py-1.5 rounded-pill">{l.mode === 'alquiler' ? X.forRent : X.forSale}</span>
@@ -276,8 +277,9 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
                   className="absolute top-3 right-3 w-9 h-9 rounded-full bg-paper/90 flex items-center justify-center text-[16px]"
                 >{isSaved(l.id) ? '♥' : '♡'}</button>
               </div>
-              <div className="px-4 pt-3.5 pb-4">
-                <div className="text-[24px] font-bold tracking-[-0.02em]">{priceMain(l)}</div>
+              <div className="relative px-4 pt-3.5 pb-4">
+                {l.highlighted && <FeaturedTag lang={lang} className="absolute top-3.5 right-4 text-[10px] px-2.5 py-1" />}
+                <div className="text-[24px] font-bold tracking-[-0.02em] pr-28">{priceMain(l)}</div>
                 {priceSub(l) && <div className="text-[13px] font-medium text-ink/50">{priceSub(l)}</div>}
                 <div className="text-[15px] font-bold mt-1.5 line-clamp-1">{title(l)}</div>
                 <div className="text-[13px] text-ink/55 mt-0.5 line-clamp-1">{meta(l)}</div>
