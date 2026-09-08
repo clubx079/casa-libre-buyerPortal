@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // sharp is a native module used server-side (Casa Libre logo stamping in
+  // /api/publish) — keep it external so Next never tries to bundle the binary.
+  experimental: { serverComponentsExternalPackages: ['sharp'] },
   // Images are served through the /api/media proxy (private Backblaze bucket),
   // rendered with plain <img>, so the next/image optimizer stays unconfigured.
 

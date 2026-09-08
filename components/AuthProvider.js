@@ -46,6 +46,14 @@ export default function AuthProvider({ children }) {
   const openAuth = useCallback((cb) => { onDone.current = typeof cb === 'function' ? cb : null; setOpen(true); }, []);
   const closeAuth = useCallback(() => { onDone.current = null; setOpen(false); }, []);
 
+  // Re-fetch the session and update `user` — used after an inline login (e.g. the
+  // sell wizard's "you already have an account" screen) so the whole app sees the
+  // logged-in user without opening the modal.
+  const refreshUser = useCallback(async () => {
+    try { const j = await (await fetch('/api/auth/me')).json(); setUser(j.user || null); return j.user || null; }
+    catch { return null; }
+  }, []);
+
   const handleAuthed = useCallback((u) => {
     setUser(u);
     setOpen(false);
@@ -60,7 +68,7 @@ export default function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, openAuth, closeAuth, logout }}>
+    <AuthContext.Provider value={{ user, loading, openAuth, closeAuth, logout, refreshUser }}>
       {children}
       {open && <AuthModal onAuthed={handleAuthed} onClose={closeAuth} />}
     </AuthContext.Provider>

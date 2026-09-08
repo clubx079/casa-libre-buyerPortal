@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server';
 import { insert, update } from '@/lib/db';
 import { zoneCanonical, dedupeKey } from '@/lib/dedupe';
 import { put } from '@/lib/b2';
+import { stampLogo } from '@/lib/stampLogo';
 import { getUsdToPyg } from '@/lib/fx';
 import { getSession } from '@/lib/auth';
 import { sendListingPublishedEmail } from '@/lib/email';
@@ -158,9 +159,13 @@ export async function POST(req) {
   for (let i = 0; i < files.length && i < 20; i++) {
     const f = files[i];
     try {
-      const buf = Buffer.from(await f.arrayBuffer());
-      const ext = (f.name?.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
-      const stored = await put(`user-uploads/${slug}/${i}.${ext}`, buf, f.type || 'image/jpeg');
+      const raw = Buffer.from(await f.arrayBuffer());
+      // Brand every user photo with the Casa Libre mascot — the same stamp the
+      // scraper applies. Best-effort: if stamping fails (e.g. sharp unavailable),
+      // fall back to the original bytes so a photo is never lost.
+      let buf = raw, ext = (f.name?.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg', ct = f.type || 'image/jpeg';
+      try { buf = await stampLogo(raw); ext = 'webp'; ct = 'image/webp'; } catch {}
+      const stored = await put(`user-uploads/${slug}/${i}.${ext}`, buf, ct);
       if (i === 0) firstUrl = stored.url;
       images.push({
         property_id: propertyId,
