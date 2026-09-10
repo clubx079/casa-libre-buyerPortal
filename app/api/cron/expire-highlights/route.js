@@ -17,7 +17,8 @@ async function handle(req) {
     if (auth !== `Bearer ${secret}` && qs !== secret) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
   const nowIso = new Date().toISOString();
-  let expired = 0;
+  let expired = 0;      // legacy is_highlighted rows (keeps the deployed prod site correct)
+  let expiredPromos = 0; // new promotion_plan rows (verified/home)
   try {
     const res = await update(
       'properties',
@@ -29,8 +30,22 @@ async function handle(req) {
   } catch (e) {
     return NextResponse.json({ error: 'update_failed', detail: e?.message }, { status: 500 });
   }
-  if (expired) { try { revalidateTag('listings'); } catch {} }
-  return NextResponse.json({ ok: true, expired, at: nowIso });
+  try {
+    // Promotion lapsed → back to a normal listing (drops the Verified badge, map star,
+    // and any home-page placement). Reads already double-guard on the date, so this is
+    // just cleanup for ordering/scan clarity + resets the reminder flag for next cycle.
+    const res2 = await update(
+      'properties',
+      `promotion_plan=not.is.null&promotion_expires_at=lt.${encodeURIComponent(nowIso)}`,
+      { promotion_plan: null, renewal_reminded_at: null },
+      { returning: 'representation' }
+    );
+    expiredPromos = Array.isArray(res2) ? res2.length : 0;
+  } catch (e) {
+    return NextResponse.json({ error: 'promo_update_failed', detail: e?.message }, { status: 500 });
+  }
+  if (expired || expiredPromos) { try { revalidateTag('listings'); } catch {} }
+  return NextResponse.json({ ok: true, expired, expiredPromos, at: nowIso });
 }
 
 export async function GET(req) { return handle(req); }

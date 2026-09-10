@@ -10,7 +10,7 @@ import { useLang } from '@/lib/useLang';
 import { useSellFlow } from '@/components/SellFlow';
 import { typeLabel } from '@/lib/propertyType';
 import { fmtUsd } from '@/lib/ui';
-import FeaturedTag from '@/components/FeaturedTag';
+import VerifiedTag from '@/components/VerifiedTag';
 
 const H = {
   es: {
@@ -127,13 +127,13 @@ export default function MobileHome({ featured = [], count = 0, tickerData = [] }
         <Link href="/propiedades" className="inline-block mt-[18px] mb-[22px] border-[1.5px] border-paper/40 rounded-pill px-[22px] py-[11px] text-[14px] font-bold">{t.viewAll}</Link>
         <div className="flex flex-col gap-4">
           {featured.map((l) => (
-            <Link key={l.id} href={`/propiedad/${l.id}`} className={`bg-paper text-ink rounded-card overflow-hidden block ${l.highlighted ? 'ring-2 ring-paper ring-offset-2 ring-offset-ink' : ''}`}>
+            <Link key={l.id} href={`/propiedad/${l.id}`} className={`bg-paper text-ink rounded-card overflow-hidden block ${l.verified ? 'ring-2 ring-paper ring-offset-2 ring-offset-ink' : ''}`}>
               <div className="h-[190px] cl-hatch relative">
                 {l.image && /* eslint-disable-next-line @next/next/no-img-element */ <img src={l.image} alt="" className="w-full h-full object-cover" />}
                 <span className="absolute top-3 left-3 text-[12px] font-semibold bg-ink text-paper px-3 py-1.5 rounded-pill">{l.mode === 'alquiler' ? t.forRent : t.forSale}</span>
               </div>
               <div className="relative p-4">
-                {l.highlighted && <FeaturedTag lang={lang} className="absolute top-4 right-4 text-[10px] px-2.5 py-1" />}
+                {l.verified && <VerifiedTag lang={lang} className="absolute top-4 right-4 text-[10px] px-2.5 py-1" />}
                 <div className="text-[22px] font-bold tracking-[-0.02em] pr-28">{price(l)}</div>
                 <div className="text-[15px] font-bold mt-1.5 line-clamp-1">{fTitle(l)}</div>
                 <div className="text-[13px] text-ink/60 mt-0.5 line-clamp-1">{fMeta(l)}</div>

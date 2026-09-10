@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
 import AuthButton from '@/components/AuthButton';
 import { useSellFlow } from '@/components/SellFlow';
-import FeaturedTag from '@/components/FeaturedTag';
+import VerifiedTag from '@/components/VerifiedTag';
 import { useRouter } from 'next/navigation';
 import { typeLabel } from '@/lib/propertyType';
 import { fmtUsd, fmtPyg, bathWord } from '@/lib/ui';
@@ -141,13 +141,13 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
         </div>
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {featured.map((l) => (
-            <Link key={l.id} href={`/propiedad/${l.id}`} className={`bg-paper text-ink rounded-card overflow-hidden hover:-translate-y-1 transition-transform block ${l.highlighted ? 'ring-2 ring-paper ring-offset-2 ring-offset-ink' : ''}`}>
+            <Link key={l.id} href={`/propiedad/${l.id}`} className={`bg-paper text-ink rounded-card overflow-hidden hover:-translate-y-1 transition-transform block ${l.verified ? 'ring-2 ring-paper ring-offset-2 ring-offset-ink' : ''}`}>
               <div className="h-[180px] cl-hatch relative">
                 {l.image && /* eslint-disable-next-line @next/next/no-img-element */ <img src={l.image} alt="" className="w-full h-full object-cover" />}
                 <span className="absolute top-3 left-3 text-[11px] font-semibold bg-ink text-paper px-2.5 py-1 rounded-pill">{l.mode === 'alquiler' ? t.forRent : t.forSale}</span>
               </div>
               <div className="relative p-[18px] pt-4 pb-5">
-                {l.highlighted && <FeaturedTag lang={lang} className="absolute top-4 right-4 text-[9px] px-2 py-0.5" />}
+                {l.verified && <VerifiedTag lang={lang} className="absolute top-4 right-4 text-[9px] px-2 py-0.5" />}
                 <div className="text-[21px] font-bold tracking-[-0.02em] mb-1 pr-20">{price(l)}</div>
                 <div className="text-[15px] font-medium mb-0.5 line-clamp-1">{title(l)}</div>
                 <div className="text-[13px] text-ink/55 line-clamp-1">{place(l)}{meta(l) ? ` · ${meta(l)}` : ''}</div>

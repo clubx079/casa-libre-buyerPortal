@@ -11,7 +11,7 @@ import { useFavorites } from '@/components/FavoritesProvider';
 import { typeLabel, typeKey } from '@/lib/propertyType';
 import { T, fmtUsd, fmtPyg, shortUsd, titleCaseZone, bedAbbr, bathWord, parkWord, loc } from '@/lib/ui';
 import { loadGoogleMapsAPI, mapOptions, pinIcon, clusterIcon, inParaguay } from '@/utils/gmap';
-import FeaturedTag from '@/components/FeaturedTag';
+import VerifiedTag from '@/components/VerifiedTag';
 
 const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const PER_PAGE = 24;
@@ -150,6 +150,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
   const mapEl = useRef(null);
   const mapRef = useRef(null);
   const clusterRef = useRef(null);
+  const promotedMarkersRef = useRef([]);    // paid pins kept OUT of the clusterer (always visible)
   useEffect(() => {
     if (view !== 'map' || mapRef.current || !mapEl.current) return;
     let cancelled = false;
@@ -173,14 +174,20 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
     if (!ref || !cluster) return;
     const { google, map } = ref;
     cluster.clearMarkers();
+    promotedMarkersRef.current.forEach((m) => { try { m.setMap(null); } catch {} });
+    promotedMarkersRef.current = [];
     const markers = [];
     const bounds = new google.maps.LatLngBounds();
     let n = 0;
     pins.forEach((l) => {
       if (!inParaguay(l.lat, l.lng)) return; // never plot mis-geocoded listings outside PY
-      const mk = new google.maps.Marker({ position: { lat: l.lat, lng: l.lng }, icon: pinIcon(google, shortUsd(l.usd), false) });
+      const promoted = !!(l.hl || l.verified);
+      const mk = new google.maps.Marker({ position: { lat: l.lat, lng: l.lng }, icon: pinIcon(google, shortUsd(l.usd), false, { promoted }), zIndex: promoted ? 10000 : undefined });
       mk.addListener('click', () => { window.location.href = `/propiedad/${l.id}`; });
-      markers.push(mk); bounds.extend({ lat: l.lat, lng: l.lng }); n++;
+      // A paid listing is never swallowed by a cluster — add it straight to the map.
+      if (promoted) { mk.setMap(map); promotedMarkersRef.current.push(mk); }
+      else markers.push(mk);
+      bounds.extend({ lat: l.lat, lng: l.lng }); n++;
     });
     cluster.addMarkers(markers);
     if (n && (typeF !== 'all' || priceF !== 'all' || bedF !== 'all' || barrioF !== 'all' || q)) { try { map.fitBounds(bounds, 36); } catch {} }
@@ -267,7 +274,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
         <div className="px-4 pb-8 flex flex-col gap-4">
           {rows.length === 0 && !loadingList && <div className="py-14 text-center font-mono text-[13px] text-ink/45">{X.noResults}</div>}
           {rows.map((l) => (
-            <Link key={l.id} href={`/propiedad/${l.id}`} className={`block bg-card rounded-[18px] overflow-hidden ${l.highlighted ? 'border border-ink ring-[1.5px] ring-ink shadow-hard-sm' : 'border border-ink/12'}`}>
+            <Link key={l.id} href={`/propiedad/${l.id}`} className={`block bg-card rounded-[18px] overflow-hidden ${l.verified ? 'border border-ink ring-[1.5px] ring-ink shadow-hard-sm' : 'border border-ink/12'}`}>
               <div className="relative h-[220px] cl-hatch">
                 {imgMap[l.id] && /* eslint-disable-next-line @next/next/no-img-element */ <img src={imgMap[l.id]} alt="" loading="lazy" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
                 <span className="absolute top-3 left-3 text-[12px] font-semibold bg-ink text-paper px-3 py-1.5 rounded-pill">{l.mode === 'alquiler' ? X.forRent : X.forSale}</span>
@@ -278,7 +285,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
                 >{isSaved(l.id) ? '♥' : '♡'}</button>
               </div>
               <div className="relative px-4 pt-3.5 pb-4">
-                {l.highlighted && <FeaturedTag lang={lang} className="absolute top-3.5 right-4 text-[10px] px-2.5 py-1" />}
+                {l.verified && <VerifiedTag lang={lang} className="absolute top-3.5 right-4 text-[10px] px-2.5 py-1" />}
                 <div className="text-[24px] font-bold tracking-[-0.02em] pr-28">{priceMain(l)}</div>
                 {priceSub(l) && <div className="text-[13px] font-medium text-ink/50">{priceSub(l)}</div>}
                 <div className="text-[15px] font-bold mt-1.5 line-clamp-1">{title(l)}</div>

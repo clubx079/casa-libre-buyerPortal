@@ -8,8 +8,8 @@ import HighlightModal from '@/components/HighlightModal';
 import { CardGridSkeleton } from '@/components/account/Skeletons';
 
 const T = {
-  es: { title: 'Mis publicaciones', sub: (n) => `${n} ${n === 1 ? 'propiedad publicada' : 'propiedades publicadas'}`, empty: 'Todavía no publicaste ninguna propiedad.', publish: 'Publicar propiedad', del: 'Eliminar', confirmT: 'Eliminar publicación', confirm: 'Esta acción no se puede deshacer. ¿Querés eliminar esta propiedad?', cancel: 'Cancelar', deleting: 'Eliminando…', view: 'Ver', loading: 'Cargando…', highlight: 'Destacar · US$5', highlighted: 'Destacada', daysLeft: (n) => `faltan ${n} ${n === 1 ? 'día' : 'días'}` },
-  en: { title: 'My listings', sub: (n) => `${n} published ${n === 1 ? 'property' : 'properties'}`, empty: "You haven't published any properties yet.", publish: 'List a property', del: 'Delete', confirmT: 'Delete listing', confirm: "This can't be undone. Delete this property?", cancel: 'Cancel', deleting: 'Deleting…', view: 'View', loading: 'Loading…', highlight: 'Feature · US$5', highlighted: 'Featured', daysLeft: (n) => `${n} ${n === 1 ? 'day' : 'days'} left` },
+  es: { title: 'Mis publicaciones', sub: (n) => `${n} ${n === 1 ? 'propiedad publicada' : 'propiedades publicadas'}`, empty: 'Todavía no publicaste ninguna propiedad.', publish: 'Publicar propiedad', del: 'Eliminar', confirmT: 'Eliminar publicación', confirm: 'Esta acción no se puede deshacer. ¿Querés eliminar esta propiedad?', cancel: 'Cancelar', deleting: 'Eliminando…', view: 'Ver', loading: 'Cargando…', promoteVerify: 'Verificar · US$5', promoteHome: 'Portada · US$20', renew: 'Renovar', verifiedChip: 'Verificada', homeChip: 'En portada', daysLeft: (n) => `faltan ${n} ${n === 1 ? 'día' : 'días'}` },
+  en: { title: 'My listings', sub: (n) => `${n} published ${n === 1 ? 'property' : 'properties'}`, empty: "You haven't published any properties yet.", publish: 'List a property', del: 'Delete', confirmT: 'Delete listing', confirm: "This can't be undone. Delete this property?", cancel: 'Cancel', deleting: 'Deleting…', view: 'View', loading: 'Loading…', promoteVerify: 'Verify · US$5', promoteHome: 'Landing · US$20', renew: 'Renew', verifiedChip: 'Verified', homeChip: 'On landing', daysLeft: (n) => `${n} ${n === 1 ? 'day' : 'days'} left` },
 };
 
 const daysLeft = (iso) => { try { return Math.max(1, Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000)); } catch { return 0; } };
@@ -20,7 +20,7 @@ export default function MyListingsPage() {
   const [listings, setListings] = useState(null);
   const [confirmId, setConfirmId] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [hiId, setHiId] = useState(null);
+  const [promo, setPromo] = useState(null); // { id, plan } — open the promotion modal for this listing
 
   useEffect(() => {
     fetch('/api/account/listings').then((r) => r.json()).then((j) => setListings(j.listings || [])).catch(() => setListings([]));
@@ -36,7 +36,7 @@ export default function MyListingsPage() {
     } finally { setBusy(false); setConfirmId(null); }
   };
 
-  const hi = listings && hiId ? listings.find((l) => l.id === hiId) : null;
+  const hi = listings && promo ? listings.find((l) => l.id === promo.id) : null;
   const hiLabel = hi ? [hi.type, hi.neighborhood, hi.city].filter(Boolean).join(' · ') : '';
 
   return (
@@ -61,9 +61,17 @@ export default function MyListingsPage() {
           {listings.map((l) => (
             <ListingCard key={l.id} l={l} action={
               <div className="flex flex-col gap-2">
-                {l.highlighted
-                  ? <div className="text-center py-2 rounded-pill bg-card text-ink text-[12px] font-bold border-[1.5px] border-ink">{t.highlighted}{l.highlighted_until ? ` · ${t.daysLeft(daysLeft(l.highlighted_until))}` : ''}</div>
-                  : <button onClick={() => setHiId(l.id)} disabled={!!(l.admin_status && l.admin_status !== 'active')} className="w-full py-2 rounded-pill bg-ink text-paper text-[13px] font-bold hover:bg-ink/90 disabled:opacity-40 disabled:cursor-not-allowed">{t.highlight}</button>}
+                {l.verified ? (
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 text-center py-2 rounded-pill bg-card text-ink text-[12px] font-bold border-[1.5px] border-ink">{(l.plan === 'home' ? t.homeChip : t.verifiedChip)}{l.promotion_expires_at ? ` · ${t.daysLeft(daysLeft(l.promotion_expires_at))}` : ''}</div>
+                    <button onClick={() => setPromo({ id: l.id, plan: l.plan || 'verified' })} className="shrink-0 px-4 py-2 rounded-pill bg-ink text-paper text-[13px] font-bold hover:bg-ink/90">{t.renew}</button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    <button onClick={() => setPromo({ id: l.id, plan: 'verified' })} disabled={!!(l.admin_status && l.admin_status !== 'active')} className="py-2 rounded-pill border-[1.5px] border-ink text-[12.5px] font-bold hover:bg-ink hover:text-paper transition-colors disabled:opacity-40 disabled:cursor-not-allowed">{t.promoteVerify}</button>
+                    <button onClick={() => setPromo({ id: l.id, plan: 'home' })} disabled={!!(l.admin_status && l.admin_status !== 'active')} className="py-2 rounded-pill bg-ink text-paper text-[12.5px] font-bold hover:bg-ink/90 disabled:opacity-40 disabled:cursor-not-allowed">{t.promoteHome}</button>
+                  </div>
+                )}
                 <div className="flex gap-2">
                   <Link href={`/propiedad/${l.id}`} className="flex-1 text-center py-2 rounded-pill border-[1.5px] border-ink text-[13px] font-semibold">{t.view}</Link>
                   <button onClick={() => setConfirmId(l.id)} className="flex-1 py-2 rounded-pill border-[1.5px] border-red-300 text-red-700 text-[13px] font-semibold">{t.del}</button>
@@ -86,12 +94,14 @@ export default function MyListingsPage() {
         onCancel={() => setConfirmId(null)}
       />
 
-      {hiId && (
+      {promo && (
         <HighlightModal
-          propertyId={hiId}
+          propertyId={promo.id}
+          plan={promo.plan}
+          lang={lang}
           propertyLabel={hiLabel}
-          onClose={() => setHiId(null)}
-          onSuccess={(until) => { setListings((ls) => ls.map((x) => (x.id === hiId ? { ...x, highlighted: true, highlighted_until: until } : x))); setHiId(null); }}
+          onClose={() => setPromo(null)}
+          onSuccess={(until) => { setListings((ls) => ls.map((x) => (x.id === promo.id ? { ...x, verified: true, highlighted: true, plan: promo.plan, onHome: promo.plan === 'home', promotion_expires_at: until } : x))); setPromo(null); }}
         />
       )}
     </div>

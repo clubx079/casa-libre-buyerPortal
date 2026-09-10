@@ -1,14 +1,14 @@
 // POST /api/highlight/confirm — called after the client confirms the Payment
 // Element (new-card path) or completes 3-D Secure. The server re-reads the
 // PaymentIntent straight from Stripe (never trusts the client), and only then
-// grants the 30-day highlight, vaults the card, and records the transaction.
+// grants the promotion, vaults the card, and records the transaction.
 // Idempotent: a retried confirm never double-grants or double-charges.
 import { NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { getSession } from '@/lib/auth';
 import { select } from '@/lib/db';
-import { stripe, HIGHLIGHT_USD } from '@/lib/stripe';
-import { getUserBillingRow, ensureStripeCustomer, grantHighlight, saveDefaultCard, recordPayment, paymentAlreadyRecorded } from '@/lib/billing';
+import { stripe, promoPlan, promoUsd } from '@/lib/stripe';
+import { getUserBillingRow, ensureStripeCustomer, grantPromotion, saveDefaultCard, recordPayment, paymentAlreadyRecorded } from '@/lib/billing';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -36,24 +36,27 @@ export async function POST(req) {
   if (pi.status === 'processing') return NextResponse.json({ status: 'processing' });
   if (pi.status !== 'succeeded') return NextResponse.json({ status: 'failed', error: 'El pago no se completó.' });
 
+  // The plan the charge was created for (falls back to verified for old intents).
+  const plan = promoPlan(pi?.metadata?.plan);
+
   // Idempotency — already granted for this PaymentIntent?
   const already = await paymentAlreadyRecorded(pi.id);
-  if (already) return NextResponse.json({ status: 'succeeded', highlightUntil: already.highlight_until, already: true });
+  if (already) return NextResponse.json({ status: 'succeeded', plan, promotionUntil: already.highlight_until, already: true });
 
-  const until = await grantHighlight(propertyId);
+  const until = await grantPromotion(propertyId, plan);
   const user = await getUserBillingRow(session.uid);
   let customerId = user?.stripe_customer_id;
   try { if (!customerId) customerId = await ensureStripeCustomer(user); } catch {}
   let card = null;
   try { card = await saveDefaultCard(session.uid, customerId, typeof pi.payment_method === 'string' ? pi.payment_method : pi.payment_method?.id); } catch {}
   await recordPayment({
-    user_id: session.uid, property_id: propertyId, kind: 'highlight',
-    amount_usd: HIGHLIGHT_USD, currency: 'usd', status: 'succeeded',
+    user_id: session.uid, property_id: propertyId, kind: 'highlight', plan,
+    amount_usd: promoUsd(plan), currency: 'usd', status: 'succeeded',
     stripe_payment_intent_id: pi.id,
     card_brand: card?.brand || user?.card_brand || null,
     card_last4: card?.last4 || user?.card_last4 || null,
     highlight_until: until,
   });
-  try { revalidateTag('listings'); } catch {}   // reflect the new highlight on home/marketplace now
-  return NextResponse.json({ status: 'succeeded', highlightUntil: until, card: card ? { brand: card.brand, last4: card.last4 } : null });
+  try { revalidateTag('listings'); } catch {}
+  return NextResponse.json({ status: 'succeeded', plan, promotionUntil: until, card: card ? { brand: card.brand, last4: card.last4 } : null });
 }

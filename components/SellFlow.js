@@ -16,7 +16,9 @@ import { useAuth } from '@/components/AuthProvider';
 import { track } from '@/lib/analytics';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import HighlightModal from '@/components/HighlightModal';
-import FeaturedTag from '@/components/FeaturedTag';
+import RecommendedTag from '@/components/RecommendedTag';
+import PlanBox from '@/components/PlanBox';
+import { VerifiedIcon } from '@/components/VerifiedTag';
 import { savePendingSell } from '@/lib/pendingSell';
 
 const SellFlowContext = createContext({ openSell: () => {} });
@@ -41,8 +43,14 @@ const DICT = {
     fPhotos: 'Arrastrá o elegí tus fotos', fPhotosSub: 'mín. 1 foto · JPG o PNG', photosChosen: (n) => `${n} foto${n === 1 ? '' : 's'} seleccionada${n === 1 ? '' : 's'}`,
     publishBtn: 'Publicar gratis', publishing: 'Publicando…',
     doneTitle: '¡Tu propiedad está publicada!', doneSub: 'Ya aparece en el marketplace de Casa Libre.', doneView: 'Ver mi propiedad', doneBrowse: 'Ver propiedades',
-    hiOffer: 'Destacá tu propiedad', hiOfferSub: 'Aparecé arriba de todo en el mapa y la lista por 30 días, con una insignia destacada.', hiBtn: 'Destacar · US$5', hiDone: '¡Tu propiedad está destacada por 30 días!',
-    hiCheck: 'Destacar esta propiedad', hiCheckSub: 'Aparecerá arriba de todo en el mapa y la lista, con una insignia destacada, durante 30 días — US$5.', hiPublishBtn: 'Publicar por US$5',
+    // Promotion plans (optional paid visibility at publish) — two boxes, pick one.
+    planTitle: 'Sumá visibilidad (opcional)',
+    v5Title: 'Insignia Verificada en el marketplace', v5Price: 'US$5 · 30 días',
+    v20Title: 'Mostrá tu propiedad en la portada con la insignia Verificada', v20Price: 'US$20 · 30 días',
+    publishVerified: 'Publicar por US$5', publishHome: 'Publicar por US$20',
+    usTitle: 'Sumá visibilidad a tu propiedad', usSub: 'Elegí un plan y destacá tu aviso por 30 días.',
+    usVerify: 'Verificar · US$5', usHome: 'En la portada · US$20',
+    hiDoneVerified: '¡Tu propiedad está verificada por 30 días!', hiDoneHome: '¡Tu propiedad está en la portada por 30 días!',
     next: 'Siguiente', back: '← Atrás', close: 'Cerrar', sending: 'Enviando…',
     errSeller: 'Elegí propietario o agente', errName: 'Ingresá tu nombre', errEmail: 'Ingresá un correo válido', errAddr: 'Elegí una dirección',
     errSendOtp: 'No se pudo enviar el código. Intentá de nuevo.', emailTaken: 'Este correo ya tiene una cuenta.', loginInstead: 'Iniciar sesión para continuar',
@@ -69,8 +77,14 @@ const DICT = {
     fPhotos: 'Drag or choose your photos', fPhotosSub: 'min. 1 photo · JPG or PNG', photosChosen: (n) => `${n} photo${n === 1 ? '' : 's'} selected`,
     publishBtn: 'Publish for free', publishing: 'Publishing…',
     doneTitle: 'Your listing is live!', doneSub: 'It already shows in the Casa Libre marketplace.', doneView: 'View my listing', doneBrowse: 'Browse listings',
-    hiOffer: 'Feature your property', hiOfferSub: 'Appear on top of the map and list for 30 days, with a featured badge.', hiBtn: 'Feature · US$5', hiDone: 'Your property is featured for 30 days!',
-    hiCheck: 'Highlight this property', hiCheckSub: 'It appears on top of the map and list, with a featured badge, for 30 days — US$5.', hiPublishBtn: 'Publish for US$5',
+    // Promotion plans (optional paid visibility at publish) — two boxes, pick one.
+    planTitle: 'Add visibility (optional)',
+    v5Title: 'Verified badge on marketplace', v5Price: 'US$5 · 30 days',
+    v20Title: 'Display your property on the Landing page with the Verified badge', v20Price: 'US$20 · 30 days',
+    publishVerified: 'Publish for US$5', publishHome: 'Publish for US$20',
+    usTitle: 'Add visibility to your listing', usSub: 'Pick a plan to feature your listing for 30 days.',
+    usVerify: 'Verify · US$5', usHome: 'On the landing page · US$20',
+    hiDoneVerified: 'Your listing is verified for 30 days!', hiDoneHome: 'Your listing is on the landing page for 30 days!',
     next: 'Next', back: '← Back', close: 'Close', sending: 'Sending…',
     errSeller: 'Choose owner or agent', errName: 'Enter your name', errEmail: 'Enter a valid email', errAddr: 'Choose an address',
     errSendOtp: 'Could not send the code. Please try again.', emailTaken: 'This email already has an account.', loginInstead: 'Log in to continue',
@@ -114,14 +128,14 @@ export default function SellFlowProvider({ children }) {
   const [loginPw, setLoginPw] = useState('');
   const [photos, setPhotos] = useState([]);      // {file,url}
   const [result, setResult] = useState(null);    // {id, ref}
-  const [showHi, setShowHi] = useState(false);    // highlight payment modal (post-publish upsell)
+  const [showHi, setShowHi] = useState(false);    // promotion payment modal (post-publish upsell)
   const [highlighted, setHighlighted] = useState(false);
-  const [highlight, setHighlight] = useState(false); // opted in to highlight (US$5) at publish
+  const [plan, setPlan] = useState(null);         // selected promo plan: null | 'verified' | 'home'
   const fileRef = useRef(null);
   const [f, setF] = useState({ mode: '', seller_type: '', neighborhood: '', city: '', addressText: '', contact_name: '', email: '', ptype: 'casa', price: '', currency: '', area: '', description: '', contact_phone: '' });
 
   const reset = () => {
-    setStep(0); setPhase(''); setErr(''); setErrs({}); setBusy(false); setCode(''); setVerified(false); setEmailTaken(false); setLoginPw(''); setPhotos([]); setResult(null); setShowHi(false); setHighlighted(false); setHighlight(false);
+    setStep(0); setPhase(''); setErr(''); setErrs({}); setBusy(false); setCode(''); setVerified(false); setEmailTaken(false); setLoginPw(''); setPhotos([]); setResult(null); setShowHi(false); setHighlighted(false); setPlan(null);
     setF({ mode: '', seller_type: '', neighborhood: '', city: '', addressText: '', contact_name: '', email: '', ptype: 'casa', price: '', currency: '', area: '', description: '', contact_phone: '' });
   };
   const close = () => { setOpen(false); reset(); };
@@ -281,14 +295,17 @@ export default function SellFlowProvider({ children }) {
                 <p className="text-[14px] text-ink/55 mb-1">{t.doneSub}</p>
                 <div className="font-mono text-[11px] text-ink/45 mb-5">REF: {result.ref}</div>
 
-                {/* Highlight upsell — publish is already done (free); this is optional. */}
+                {/* Promotion upsell — publish is already done (free); this is optional. */}
                 {highlighted ? (
-                  <div className="mb-5 rounded-[16px] border-[1.5px] border-ink bg-card px-4 py-3 text-[13px] font-bold text-ink">{t.hiDone}</div>
+                  <div className="mb-5 rounded-[16px] border-[1.5px] border-ink bg-card px-4 py-3 text-[13px] font-bold text-ink">{plan === 'home' ? t.hiDoneHome : t.hiDoneVerified}</div>
                 ) : (
                   <div className="mb-5 rounded-[16px] border-[1.5px] border-ink bg-card px-4 py-4 text-left shadow-hard-sm">
-                    <div className="text-[15px] font-bold tracking-head mb-1">{t.hiOffer}</div>
-                    <p className="text-[12.5px] text-ink/60 mb-3">{t.hiOfferSub}</p>
-                    <button onClick={() => setShowHi(true)} className="w-full py-2.5 rounded-pill bg-ink text-paper font-bold text-[14px] hover:bg-ink/90">{t.hiBtn}</button>
+                    <div className="text-[15px] font-bold tracking-head mb-1">{t.usTitle}</div>
+                    <p className="text-[12.5px] text-ink/60 mb-3">{t.usSub}</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button onClick={() => { setPlan('verified'); setShowHi(true); }} className="py-2.5 rounded-pill border-[1.5px] border-ink font-bold text-[13px] hover:bg-ink hover:text-paper transition-colors">{t.usVerify}</button>
+                      <button onClick={() => { setPlan('home'); setShowHi(true); }} className="py-2.5 rounded-pill bg-ink text-paper font-bold text-[13px] hover:bg-ink/90">{t.usHome}</button>
+                    </div>
                   </div>
                 )}
 
@@ -300,6 +317,8 @@ export default function SellFlowProvider({ children }) {
                 {showHi && result?.id && (
                   <HighlightModal
                     propertyId={result.id}
+                    plan={plan || 'verified'}
+                    lang={lang}
                     propertyLabel={[(t.types.find(([v]) => v === f.ptype) || [])[1], f.neighborhood].filter(Boolean).join(' · ')}
                     onClose={() => setShowHi(false)}
                     onSuccess={() => { setHighlighted(true); setShowHi(false); }}
@@ -434,16 +453,14 @@ export default function SellFlowProvider({ children }) {
                       </div>
                     )}
 
-                    {/* Highlight opt-in — prominent container so it gets noticed. */}
-                    <button type="button" onClick={() => setHighlight((v) => !v)} aria-pressed={highlight} className={`w-full flex items-start gap-3 text-left rounded-[14px] border-[1.5px] p-3.5 mt-4 transition-colors ${highlight ? 'border-ink bg-ink/[0.04] shadow-hard-sm' : 'border-ink/25 hover:border-ink/50'}`}>
-                      <span className={`mt-0.5 w-5 h-5 shrink-0 rounded-[6px] border-[1.5px] flex items-center justify-center ${highlight ? 'bg-ink border-ink text-paper' : 'border-ink/40'}`}>
-                        {highlight && <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>}
-                      </span>
-                      <span className="flex-1 min-w-0">
-                        <span className="flex items-center gap-2 mb-1 flex-wrap"><span className="text-[14px] font-bold tracking-head">{t.hiCheck}</span><FeaturedTag lang={lang} className="text-[9px] px-2 py-0.5" /></span>
-                        <span className="block text-[12px] text-ink/60">{t.hiCheckSub}</span>
-                      </span>
-                    </button>
+                    {/* Promotion plans — two prominent, mutually-exclusive boxes. */}
+                    <div className="mt-4">
+                      <div className="text-[13px] font-semibold mb-2">{t.planTitle}</div>
+                      <div className="grid gap-2.5">
+                        <PlanBox on={plan === 'verified'} onClick={() => setPlan((p) => (p === 'verified' ? null : 'verified'))} title={t.v5Title} price={t.v5Price} benefits={[]} icon={<VerifiedIcon className="w-4 h-4" />} />
+                        <PlanBox on={plan === 'home'} onClick={() => setPlan((p) => (p === 'home' ? null : 'home'))} title={t.v20Title} price={t.v20Price} benefits={[]} icon={<VerifiedIcon className="w-4 h-4" />} badge={<RecommendedTag lang={lang} className="text-[8px] px-1.5 py-0.5" />} />
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -456,7 +473,7 @@ export default function SellFlowProvider({ children }) {
                     {step < 3 ? (
                       <button onClick={next} disabled={busy} className="px-7 py-3 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60 inline-flex items-center justify-center min-w-[108px]">{busy ? <Spinner /> : t.next}</button>
                     ) : (
-                      <button onClick={() => publish(highlight)} disabled={busy} className="px-7 py-3 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60">{busy ? t.publishing : (highlight ? t.hiPublishBtn : t.publishBtn)}</button>
+                      <button onClick={() => publish(plan)} disabled={busy} className="px-7 py-3 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60">{busy ? t.publishing : (plan === 'home' ? t.publishHome : plan === 'verified' ? t.publishVerified : t.publishBtn)}</button>
                     )}
                   </div>
                 )}

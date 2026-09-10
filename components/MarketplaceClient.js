@@ -6,7 +6,7 @@ import { T, fmtUsd, fmtPyg, shortUsd, titleCaseZone, bedAbbr, bathWord, parkWord
 import { fmtRate } from '@/lib/money';
 import { useLang } from '@/lib/useLang';
 import AuthButton from '@/components/AuthButton';
-import FeaturedTag from '@/components/FeaturedTag';
+import VerifiedTag from '@/components/VerifiedTag';
 import { useSellFlow } from '@/components/SellFlow';
 import { track } from '@/lib/analytics';
 import { loadGoogleMapsAPI, mapOptions, pinIcon, clusterIcon, inParaguay } from '@/utils/gmap';
@@ -66,6 +66,7 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
   const clusterRef = useRef(null);
   const infoRef = useRef(null); // shared Google InfoWindow (hover popup)
   const markersRef = useRef({});
+  const promotedMarkersRef = useRef([]);    // paid pins kept OUT of the clusterer (always visible)
   const didFit = useRef(false);
   const hoverRevealRef = useRef(null); // id of the pin currently styled/opened by hover
   const hoverTargetRef = useRef(null); // latest hover target requested; guards stale zoomToShowLayer callbacks
@@ -263,6 +264,10 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
     if (!ref || !cluster) return;
     const { google, map } = ref;
     cluster.clearMarkers();
+    // Promoted pins live directly on the map (not in the clusterer) — remove the
+    // previous batch before redrawing.
+    promotedMarkersRef.current.forEach((m) => { try { m.setMap(null); } catch {} });
+    promotedMarkersRef.current = [];
     markersRef.current = {};
     const markers = [];
     const bounds = new google.maps.LatLngBounds();
@@ -270,8 +275,10 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
     pins.forEach((l) => {
       if (!inParaguay(l.lat, l.lng)) return; // never plot mis-geocoded listings outside PY
       const label = shortPill(l);
-      const marker = new google.maps.Marker({ position: { lat: l.lat, lng: l.lng }, icon: pinIcon(google, label, false) });
+      const promoted = !!(l.hl || l.verified);
+      const marker = new google.maps.Marker({ position: { lat: l.lat, lng: l.lng }, icon: pinIcon(google, label, false, { promoted }), zIndex: promoted ? 10000 : undefined });
       marker.__label = label;
+      marker.__promoted = promoted;
       marker.addListener('mouseover', () => setHot(l.id));
       marker.addListener('mouseout', () => setHot(null));
       marker.addListener('click', () => {
@@ -288,7 +295,10 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
         window.open(`/propiedad/${l.id}`, '_blank', 'noopener');
       });
       markersRef.current[l.id] = marker;
-      markers.push(marker);
+      // A paid listing is never swallowed by a cluster — add it straight to the map so
+      // it's always visible; everything else goes through the clusterer as before.
+      if (promoted) { marker.setMap(map); promotedMarkersRef.current.push(marker); }
+      else markers.push(marker);
       bounds.extend({ lat: l.lat, lng: l.lng });
       n++;
     });
@@ -343,7 +353,7 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
     } else {
       // Standalone pin → invert its pill + open its popup (lazy-load image, then refresh).
       hotMarkerRef.current = { marker: mk, icon: mk.getIcon() };
-      mk.setIcon(pinIcon(google, mk.__label, true));
+      mk.setIcon(pinIcon(google, mk.__label, true, { promoted: mk.__promoted }));
       hoverRevealRef.current = hot;
       const l = rowsById.get(hot) || pinsById.get(hot);
       if (l && infoRef.current) {
@@ -448,9 +458,9 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
               <Link
                 key={l.id} href={`/propiedad/${l.id}`} target="_blank" rel="noopener noreferrer"
                 onMouseEnter={() => setHot(l.id)} onMouseLeave={() => setHot(null)}
-                className={`relative flex items-stretch shrink-0 min-h-[120px] bg-card border rounded-[18px] overflow-hidden transition-all ${l.highlighted ? 'border-ink ring-[1.5px] ring-ink shadow-hard-sm' : hot === l.id ? 'border-ink -translate-y-0.5 shadow-hard-sm' : 'border-ink/15'}`}
+                className={`relative flex items-stretch shrink-0 min-h-[120px] bg-card border rounded-[18px] overflow-hidden transition-all ${l.verified ? 'border-ink ring-[1.5px] ring-ink shadow-hard-sm' : hot === l.id ? 'border-ink -translate-y-0.5 shadow-hard-sm' : 'border-ink/15'}`}
               >
-                {l.highlighted && <FeaturedTag lang={lang} className="absolute top-2 right-2 z-20 text-[9px] px-2 py-0.5" />}
+                {l.verified && <VerifiedTag lang={lang} className="absolute top-2 right-2 z-20 text-[9px] px-2 py-0.5" />}
                 <div className="relative w-[150px] max-[560px]:w-[110px] shrink-0 cl-hatch overflow-hidden flex items-center justify-center">
                   {imgMap[l.id]
                     ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={imgMap[l.id]} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />

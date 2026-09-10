@@ -4,8 +4,8 @@ import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
 
 const T = {
-  es: { title: 'Pagos', sub: 'Tu tarjeta guardada y el historial de transacciones', cardTitle: 'Tarjeta guardada', noCard: 'Todavía no tenés una tarjeta guardada. Se guardará automáticamente la primera vez que destaques una propiedad.', histTitle: 'Historial de transacciones', empty: 'Todavía no realizaste ningún pago.', th: { prop: 'Propiedad', amount: 'Monto', status: 'Estado', date: 'Fecha' }, succeeded: 'Exitoso', failed: 'Fallido', deleted: 'Propiedad eliminada', highlight: 'Destacar propiedad', loading: 'Cargando…' },
-  en: { title: 'Payments', sub: 'Your saved card and transaction history', cardTitle: 'Saved card', noCard: "You don't have a saved card yet. It's saved automatically the first time you feature a property.", histTitle: 'Transaction history', empty: "You haven't made any payments yet.", th: { prop: 'Property', amount: 'Amount', status: 'Status', date: 'Date' }, succeeded: 'Succeeded', failed: 'Failed', deleted: 'Deleted property', highlight: 'Feature property', loading: 'Loading…' },
+  es: { title: 'Pagos', sub: 'Tu tarjeta guardada y el historial de transacciones', cardTitle: 'Tarjeta guardada', noCard: 'Todavía no tenés una tarjeta guardada. Se guardará automáticamente la primera vez que destaques una propiedad.', histTitle: 'Historial de transacciones', empty: 'Todavía no realizaste ningún pago.', th: { prop: 'Propiedad', amount: 'Monto', status: 'Estado', date: 'Fecha' }, succeeded: 'Exitoso', failed: 'Fallido', deleted: 'Propiedad eliminada', highlight: 'Destacar propiedad', planV: 'Verificada', planH: 'Portada', renewal: 'Renovación', loading: 'Cargando…' },
+  en: { title: 'Payments', sub: 'Your saved card and transaction history', cardTitle: 'Saved card', noCard: "You don't have a saved card yet. It's saved automatically the first time you feature a property.", histTitle: 'Transaction history', empty: "You haven't made any payments yet.", th: { prop: 'Property', amount: 'Amount', status: 'Status', date: 'Date' }, succeeded: 'Succeeded', failed: 'Failed', deleted: 'Deleted property', highlight: 'Feature property', planV: 'Verified', planH: 'Landing', renewal: 'Renewal', loading: 'Loading…' },
 };
 const brandLabel = (b) => ({ visa: 'Visa', mastercard: 'Mastercard', amex: 'American Express' }[b] || (b ? b[0].toUpperCase() + b.slice(1) : 'Tarjeta'));
 
@@ -22,6 +22,7 @@ export default function PaymentsPage() {
   const payments = data?.payments || [];
   const fmtDate = (iso) => { try { return new Date(iso).toLocaleDateString(lang === 'es' ? 'es-PY' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' }); } catch { return ''; } };
   const propLabel = (p) => { const pr = p.property; if (!pr) return t.deleted; return [pr.property_type, pr.neighborhood || pr.city].filter(Boolean).join(' · ') || t.highlight; };
+  const planText = (p) => { const base = p.plan === 'home' ? t.planH : p.plan === 'verified' ? t.planV : t.highlight; return p.kind === 'renewal' ? `${base} · ${t.renewal}` : base; };
 
   return (
     <div>
@@ -69,6 +70,7 @@ export default function PaymentsPage() {
                     <tr key={p.id} className="border-t border-ink/[.08]">
                       <td className="px-5 py-3">
                         {p.property_id && p.property ? <Link href={`/propiedad/${p.property_id}`} className="font-medium hover:underline">{propLabel(p)}</Link> : <span className="text-ink/55">{propLabel(p)}</span>}
+                        <div className="text-[11px] text-ink/45 mt-0.5">{planText(p)}</div>
                       </td>
                       <td className="px-3 py-3 font-semibold tabular-nums">US${Number(p.amount_usd).toFixed(0)}</td>
                       <td className="px-3 py-3">

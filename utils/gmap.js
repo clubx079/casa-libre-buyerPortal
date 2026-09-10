@@ -44,14 +44,25 @@ export function inParaguay(lat, lng) {
 const uri = (svg) => 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
 
 // Price pill (matches the old `.marker-pill`: black pill, cream border/text; hover = inverted).
-export function pinIcon(google, label, hot) {
+// A PROMOTED pin (paid verified/home listing) is drawn slightly larger, with a paper
+// star before the price, so a paid listing stands out on the map. The client also keeps
+// promoted pins out of clusters so they're always visible.
+export function pinIcon(google, label, hot, opts = {}) {
+  const promoted = !!opts.promoted;
   const t = String(label ?? '•');
-  const w = Math.max(28, Math.round(16 + t.length * 7.6));
-  const h = 24;
+  const h = promoted ? 28 : 24;
+  const fs = promoted ? 13 : 12;
+  const lpad = promoted ? 22 : 0;                 // reserved left region for the star
+  const w = Math.max(promoted ? 48 : 28, Math.round(16 + lpad + t.length * (promoted ? 8.0 : 7.6)));
   const bg = hot ? '#fff' : INK, fg = hot ? INK : CREAM, st = hot ? INK : CREAM;
+  const star = promoted
+    ? `<path transform='translate(6.5 ${h / 2 - 6.5}) scale(0.54)' fill='${fg}' d='M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z'/>`
+    : '';
+  const textX = promoted ? (lpad + (w - lpad) / 2) : w / 2;
   const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}'>` +
-    `<rect x='1.5' y='1.5' width='${w - 3}' height='${h - 3}' rx='${(h - 3) / 2}' fill='${bg}' stroke='${st}' stroke-width='2'/>` +
-    `<text x='${w / 2}' y='${h / 2 + 1}' dominant-baseline='middle' text-anchor='middle' font-family='Space Grotesk, Arial, sans-serif' font-size='12' font-weight='700' fill='${fg}'>${t}</text></svg>`;
+    `<rect x='1.5' y='1.5' width='${w - 3}' height='${h - 3}' rx='${(h - 3) / 2}' fill='${bg}' stroke='${st}' stroke-width='${promoted ? 2.5 : 2}'/>` +
+    star +
+    `<text x='${textX}' y='${h / 2 + 1}' dominant-baseline='middle' text-anchor='middle' font-family='Space Grotesk, Arial, sans-serif' font-size='${fs}' font-weight='700' fill='${fg}'>${t}</text></svg>`;
   return { url: uri(svg), scaledSize: new google.maps.Size(w, h), anchor: new google.maps.Point(w / 2, h / 2) };
 }
 

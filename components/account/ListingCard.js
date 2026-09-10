@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { fmtUsd, fmtPyg } from '@/lib/ui';
 import { typeLabel } from '@/lib/propertyType';
 import { useLang } from '@/lib/useLang';
-import FeaturedTag from '@/components/FeaturedTag';
+import VerifiedTag from '@/components/VerifiedTag';
 
 // Compact listing card used across the account pages (saved / my listings).
 export default function ListingCard({ l, action }) {
@@ -17,7 +17,7 @@ export default function ListingCard({ l, action }) {
   const meta = [l.area && `${l.area} m²`, l.baths && `${l.baths} ${lang === 'es' ? 'baños' : 'ba'}`].filter(Boolean).join(' · ');
 
   return (
-    <div className={`bg-card rounded-[18px] overflow-hidden flex flex-col ${l.highlighted ? 'border border-ink ring-[1.5px] ring-ink shadow-hard-sm' : 'border border-ink/15'}`}>
+    <div className={`bg-card rounded-[18px] overflow-hidden flex flex-col ${l.verified ? 'border border-ink ring-[1.5px] ring-ink shadow-hard-sm' : 'border border-ink/15'}`}>
       <Link href={`/propiedad/${l.id}`} className="relative block h-[150px] cl-hatch">
         {l.image
           ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={l.image} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
@@ -26,7 +26,7 @@ export default function ListingCard({ l, action }) {
         {l.admin_status && l.admin_status !== 'active' && <span className="absolute top-2 right-2 text-[10px] font-semibold bg-paper text-ink border border-ink/20 px-2.5 py-1 rounded-pill capitalize">{l.admin_status}</span>}
       </Link>
       <div className="relative p-3.5 flex-1 flex flex-col">
-        {l.highlighted && <FeaturedTag lang={lang} className="absolute top-3 right-3 z-10 text-[9px] px-2 py-0.5" />}
+        {l.verified && <VerifiedTag lang={lang} className="absolute top-3 right-3 z-10 text-[9px] px-2 py-0.5" />}
         <Link href={`/propiedad/${l.id}`} className="block">
           <div className="text-[17px] font-bold tracking-head whitespace-nowrap pr-16">{price}</div>
           {priceSub && <div className="text-[11px] font-medium text-ink/50 whitespace-nowrap">{priceSub}</div>}
