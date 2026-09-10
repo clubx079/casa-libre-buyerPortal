@@ -338,10 +338,11 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
     const mk = markersRef.current[hot];
     if (!mk) return;
 
-    // Pan only when the pin is off-screen — keep the current zoom level intact.
+    // Pan when the pin is off-screen; ALWAYS pan for a promoted (verified/home) pin so
+    // hovering a paid listing visibly moves the map straight to its star pin.
     const p = mk.getPosition?.();
     const b = map.getBounds();
-    if (p && b && !b.contains(p)) map.panTo(p);
+    if (p && (mk.__promoted || (b && !b.contains(p)))) map.panTo(p);
 
     // Is this marker currently rolled up inside a multi-marker cluster bubble?
     const parent = (cluster.clusters || []).find((c) => (c.markers?.length > 1) && c.markers.includes(mk));
