@@ -46,7 +46,9 @@ export default function MyListingsPage() {
           <h1 className="text-[clamp(26px,4vw,36px)] font-bold tracking-display leading-tight">{t.title}</h1>
           <p className="text-[14px] text-ink/55 mt-1">{t.sub(listings?.length ?? 0)}</p>
         </div>
-        <Link href="/publicar" className="shrink-0 px-5 py-3 rounded-pill bg-ink text-paper font-semibold text-[14px] shadow-hard-soft">{t.publish}</Link>
+        {listings && listings.length > 0 && (
+          <Link href="/publicar" className="shrink-0 px-5 py-3 rounded-pill bg-ink text-paper font-semibold text-[14px] shadow-hard-soft">{t.publish}</Link>
+        )}
       </div>
 
       {listings === null && <CardGridSkeleton n={3} />}

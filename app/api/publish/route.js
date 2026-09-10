@@ -30,7 +30,7 @@ const slugify = (s) =>
 async function geocodeOne(q) {
   try {
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 10000);
+    const timer = setTimeout(() => ctrl.abort(), 4000);
     const res = await fetch(
       `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=py&q=${encodeURIComponent(q)}`,
       { signal: ctrl.signal, cache: 'no-store', headers: { 'User-Agent': 'CasaLibre/1.0 (listings@casalibre.py)' } }
@@ -103,7 +103,10 @@ export async function POST(req) {
   }
 
   const slug = `${slugify(`${property_type}-${neighborhood}`) || 'propiedad'}-${Date.now().toString(36)}`;
-  const coords = await geocode(neighborhood, city);
+  // Geocode runs in PARALLEL with the DB insert + photo uploads below (it's the
+  // slowest external call), and its result is patched onto the row once ready — so
+  // it no longer blocks publish start-to-finish.
+  const geocodePromise = geocode(neighborhood, city).catch(() => null);
 
   const row = {
     slug,
@@ -122,8 +125,8 @@ export async function POST(req) {
     description: description || null,
     contact_name: contactName,
     contact_phone: contactPhone,
-    latitude: coords?.lat ?? null,
-    longitude: coords?.lng ?? null,
+    latitude: null,   // patched after geocodePromise resolves
+    longitude: null,
     status: 'published',
     admin_status: 'active',
     property_status: 'available',
@@ -152,23 +155,19 @@ export async function POST(req) {
   }
   const propertyId = created?.id;
 
-  // Upload photos to B2 and link them. Non-fatal: a listing publishes even if a
-  // photo fails to upload.
-  const files = form.getAll('photos').filter((f) => f && typeof f.arrayBuffer === 'function' && f.size > 0);
-  const images = [];
-  let firstUrl = null;
-  for (let i = 0; i < files.length && i < 20; i++) {
-    const f = files[i];
+  // Upload photos to B2 and link them — CONCURRENTLY (was one-at-a-time, the main
+  // cause of slow publishes). Non-fatal: a listing publishes even if a photo fails.
+  const files = form.getAll('photos').filter((f) => f && typeof f.arrayBuffer === 'function' && f.size > 0).slice(0, 20);
+  const processed = await Promise.all(files.map(async (f, i) => {
     try {
       const raw = Buffer.from(await f.arrayBuffer());
-      // Brand every user photo with the Casa Libre mascot — the same stamp the
-      // scraper applies. Best-effort: if stamping fails (e.g. sharp unavailable),
-      // fall back to the original bytes so a photo is never lost.
+      // Brand every user photo with the Casa Libre mascot — best-effort: if stamping
+      // fails (e.g. sharp unavailable), fall back to the original bytes.
       let buf = raw, ext = (f.name?.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg', ct = f.type || 'image/jpeg';
       try { buf = await stampLogo(raw); ext = 'webp'; ct = 'image/webp'; } catch {}
       const stored = await put(`user-uploads/${slug}/${i}.${ext}`, buf, ct);
-      if (i === 0) firstUrl = stored.url;
-      images.push({
+      return {
+        __i: i, __url: stored.url,
         property_id: propertyId,
         source_url: stored.url, // no external source for user uploads — reuse the stored URL (NOT NULL column)
         storage_key: stored.key,
@@ -177,14 +176,21 @@ export async function POST(req) {
         bytes: stored.bytes,
         is_feature: i === 0,
         position: i,
-      });
-    } catch {}
-  }
+      };
+    } catch { return null; }
+  }));
+  const images = processed.filter(Boolean).map(({ __i, __url, ...rec }) => rec);
+  const firstUrl = (processed.find((r) => r && r.__i === 0) || {}).__url || null;
 
-  if (images.length) {
-    try { await insert('property_images', images, { returning: 'minimal' }); } catch {}
-    if (firstUrl && propertyId) { try { await update('properties', `id=eq.${propertyId}`, { feature_image_url: firstUrl }, { returning: 'minimal' }); } catch {} }
-  }
+  if (images.length) { try { await insert('property_images', images, { returning: 'minimal' }); } catch {} }
+
+  // Patch the geocoded coords (resolved in parallel with the uploads) + the feature
+  // image in ONE update.
+  const coords = await geocodePromise;
+  const patch = {};
+  if (coords) { patch.latitude = coords.lat; patch.longitude = coords.lng; }
+  if (firstUrl) patch.feature_image_url = firstUrl;
+  if (propertyId && Object.keys(patch).length) { try { await update('properties', `id=eq.${propertyId}`, patch, { returning: 'minimal' }); } catch {} }
 
   const ref = `CL-${new Date().getFullYear()}-${String(propertyId || '').replace(/\D/g, '').slice(-5).padStart(5, '0') || '00000'}`;
 

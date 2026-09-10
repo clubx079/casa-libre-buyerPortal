@@ -50,19 +50,27 @@ const uri = (svg) => 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(sv
 export function pinIcon(google, label, hot, opts = {}) {
   const promoted = !!opts.promoted;
   const t = String(label ?? '•');
-  const h = promoted ? 28 : 24;
-  const fs = promoted ? 13 : 12;
-  const lpad = promoted ? 22 : 0;                 // reserved left region for the star
-  const w = Math.max(promoted ? 48 : 28, Math.round(16 + lpad + t.length * (promoted ? 8.0 : 7.6)));
+  if (promoted) {
+    // Bigger, with a dark outer edge + cream ring + a cream "coin" holding an ink
+    // star, so a paid pin clearly pops on the map. Brand ink/paper only.
+    const h = 30, fs = 13, lpad = 31, coinCx = 16, coinCy = h / 2, coinR = 9.5;
+    const w = Math.max(62, Math.round(18 + lpad + t.length * 8.2));
+    const bodyFill = hot ? '#fff' : INK, ring = hot ? INK : CREAM, coinFill = hot ? INK : CREAM, starFill = bodyFill, textFill = hot ? INK : CREAM;
+    const s = 0.6, sc = 12 * s;
+    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}'>` +
+      `<rect x='0' y='0' width='${w}' height='${h}' rx='${h / 2}' fill='${INK}'/>` +
+      `<rect x='2' y='2' width='${w - 4}' height='${h - 4}' rx='${(h - 4) / 2}' fill='${bodyFill}' stroke='${ring}' stroke-width='2.5'/>` +
+      `<circle cx='${coinCx}' cy='${coinCy}' r='${coinR}' fill='${coinFill}'/>` +
+      `<path transform='translate(${coinCx - sc} ${coinCy - sc}) scale(${s})' fill='${starFill}' d='M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z'/>` +
+      `<text x='${lpad + (w - lpad) / 2}' y='${h / 2 + 1}' dominant-baseline='middle' text-anchor='middle' font-family='Space Grotesk, Arial, sans-serif' font-size='${fs}' font-weight='700' fill='${textFill}'>${t}</text></svg>`;
+    return { url: uri(svg), scaledSize: new google.maps.Size(w, h), anchor: new google.maps.Point(w / 2, h / 2) };
+  }
+  const w = Math.max(28, Math.round(16 + t.length * 7.6));
+  const h = 24;
   const bg = hot ? '#fff' : INK, fg = hot ? INK : CREAM, st = hot ? INK : CREAM;
-  const star = promoted
-    ? `<path transform='translate(6.5 ${h / 2 - 6.5}) scale(0.54)' fill='${fg}' d='M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z'/>`
-    : '';
-  const textX = promoted ? (lpad + (w - lpad) / 2) : w / 2;
   const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}'>` +
-    `<rect x='1.5' y='1.5' width='${w - 3}' height='${h - 3}' rx='${(h - 3) / 2}' fill='${bg}' stroke='${st}' stroke-width='${promoted ? 2.5 : 2}'/>` +
-    star +
-    `<text x='${textX}' y='${h / 2 + 1}' dominant-baseline='middle' text-anchor='middle' font-family='Space Grotesk, Arial, sans-serif' font-size='${fs}' font-weight='700' fill='${fg}'>${t}</text></svg>`;
+    `<rect x='1.5' y='1.5' width='${w - 3}' height='${h - 3}' rx='${(h - 3) / 2}' fill='${bg}' stroke='${st}' stroke-width='2'/>` +
+    `<text x='${w / 2}' y='${h / 2 + 1}' dominant-baseline='middle' text-anchor='middle' font-family='Space Grotesk, Arial, sans-serif' font-size='12' font-weight='700' fill='${fg}'>${t}</text></svg>`;
   return { url: uri(svg), scaledSize: new google.maps.Size(w, h), anchor: new google.maps.Point(w / 2, h / 2) };
 }
 

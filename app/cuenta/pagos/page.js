@@ -2,10 +2,11 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
+import CardModal from '@/components/CardModal';
 
 const T = {
-  es: { title: 'Pagos', sub: 'Tu tarjeta guardada y el historial de transacciones', cardTitle: 'Tarjeta guardada', noCard: 'Todavía no tenés una tarjeta guardada. Se guardará automáticamente la primera vez que destaques una propiedad.', histTitle: 'Historial de transacciones', empty: 'Todavía no realizaste ningún pago.', th: { prop: 'Propiedad', amount: 'Monto', status: 'Estado', date: 'Fecha' }, succeeded: 'Exitoso', failed: 'Fallido', deleted: 'Propiedad eliminada', highlight: 'Destacar propiedad', planV: 'Verificada', planH: 'Portada', renewal: 'Renovación', loading: 'Cargando…' },
-  en: { title: 'Payments', sub: 'Your saved card and transaction history', cardTitle: 'Saved card', noCard: "You don't have a saved card yet. It's saved automatically the first time you feature a property.", histTitle: 'Transaction history', empty: "You haven't made any payments yet.", th: { prop: 'Property', amount: 'Amount', status: 'Status', date: 'Date' }, succeeded: 'Succeeded', failed: 'Failed', deleted: 'Deleted property', highlight: 'Feature property', planV: 'Verified', planH: 'Landing', renewal: 'Renewal', loading: 'Loading…' },
+  es: { title: 'Pagos', sub: 'Tu tarjeta guardada y el historial de transacciones', cardTitle: 'Tarjeta guardada', noCard: 'Todavía no tenés una tarjeta guardada. Se guardará automáticamente la primera vez que destaques una propiedad.', histTitle: 'Historial de transacciones', empty: 'Todavía no realizaste ningún pago.', th: { prop: 'Propiedad', amount: 'Monto', status: 'Estado', date: 'Fecha' }, succeeded: 'Exitoso', failed: 'Fallido', deleted: 'Propiedad eliminada', highlight: 'Destacar propiedad', planV: 'Verificada', planH: 'Portada', renewal: 'Renovación', loading: 'Cargando…', changeCard: 'Cambiar tarjeta', addCard: 'Agregar tarjeta' },
+  en: { title: 'Payments', sub: 'Your saved card and transaction history', cardTitle: 'Saved card', noCard: "You don't have a saved card yet. It's saved automatically the first time you feature a property.", histTitle: 'Transaction history', empty: "You haven't made any payments yet.", th: { prop: 'Property', amount: 'Amount', status: 'Status', date: 'Date' }, succeeded: 'Succeeded', failed: 'Failed', deleted: 'Deleted property', highlight: 'Feature property', planV: 'Verified', planH: 'Landing', renewal: 'Renewal', loading: 'Loading…', changeCard: 'Change card', addCard: 'Add card' },
 };
 const brandLabel = (b) => ({ visa: 'Visa', mastercard: 'Mastercard', amex: 'American Express' }[b] || (b ? b[0].toUpperCase() + b.slice(1) : 'Tarjeta'));
 
@@ -13,10 +14,9 @@ export default function PaymentsPage() {
   const [lang] = useLang();
   const t = T[lang];
   const [data, setData] = useState(null);
-
-  useEffect(() => {
-    fetch('/api/account/payments').then((r) => r.json()).then(setData).catch(() => setData({ card: null, payments: [] }));
-  }, []);
+  const [showCard, setShowCard] = useState(false);
+  const load = () => fetch('/api/account/payments').then((r) => r.json()).then(setData).catch(() => setData({ card: null, payments: [] }));
+  useEffect(() => { load(); }, []);
 
   const card = data?.card;
   const payments = data?.payments || [];
@@ -47,6 +47,9 @@ export default function PaymentsPage() {
               {card.exp_month && <span className="font-mono text-[12px] text-ink/50">{String(card.exp_month).padStart(2, '0')}/{String(card.exp_year).slice(-2)}</span>}
             </div>
           ) : <div className="text-[13px] text-ink/55">{t.noCard}</div>}
+        {data !== null && (
+          <button onClick={() => setShowCard(true)} className="mt-4 px-4 py-2 rounded-pill border-[1.5px] border-ink text-[13px] font-semibold hover:bg-ink hover:text-paper transition-colors">{card ? t.changeCard : t.addCard}</button>
+        )}
       </div>
 
       {/* Transaction history */}
@@ -86,6 +89,8 @@ export default function PaymentsPage() {
             </div>
           )}
       </div>
+
+      {showCard && <CardModal lang={lang} onClose={() => setShowCard(false)} onSaved={() => { setShowCard(false); load(); }} />}
     </div>
   );
 }

@@ -116,21 +116,6 @@ export default function HighlightModal({ propertyId, plan = 'verified', lang = '
     } catch { setError(t.startFail); setPhase('error'); }
   }, [propertyId, plan, t]);
 
-  // Load the saved card (if any) to decide the first screen.
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        const r = await fetch('/api/account/payments');
-        const j = await r.json().catch(() => ({}));
-        if (!alive) return;
-        if (j?.card?.last4) { setSavedCard(j.card); setPhase('choose'); }
-        else { await startNewCard(); }
-      } catch { if (alive) await startNewCard(); }
-    })();
-    return () => { alive = false; };
-  }, [startNewCard]);
-
   // Server-side authoritative confirm after a client success.
   const serverConfirm = useCallback(async (piId) => {
     setPhase('processing');
@@ -160,6 +145,22 @@ export default function HighlightModal({ propertyId, plan = 'verified', lang = '
     } catch { setError(t.payFail); setPhase('error'); }
   }, [propertyId, plan, onSuccess, serverConfirm, t]);
 
+  // On mount: with a saved card, charge it straight away — no extra confirm screen
+  // (card management lives in /cuenta/pagos). No saved card → open the new-card form.
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const r = await fetch('/api/account/payments');
+        const j = await r.json().catch(() => ({}));
+        if (!alive) return;
+        if (j?.card?.last4) { setSavedCard(j.card); paySaved(); }
+        else { await startNewCard(); }
+      } catch { if (alive) await startNewCard(); }
+    })();
+    return () => { alive = false; };
+  }, [startNewCard, paySaved]);
+
   const fmtUntil = (iso) => { try { return new Date(iso).toLocaleDateString(t.locale, { day: 'numeric', month: 'long', year: 'numeric' }); } catch { return ''; } };
 
   return (
@@ -173,21 +174,6 @@ export default function HighlightModal({ propertyId, plan = 'verified', lang = '
         {propertyLabel && <p className="text-[13px] text-ink/55 mb-5 truncate">{propertyLabel}</p>}
 
         {phase === 'loading' && <div className="py-10 text-center text-ink/50 text-[14px]">{t.loading}</div>}
-
-        {phase === 'choose' && savedCard && (
-          <div>
-            <div className="text-[13px] text-ink/55 mb-3">{t.what(plan)}</div>
-            <div className="flex items-center justify-between bg-card border-[1.5px] border-ink/20 rounded-[14px] px-4 py-3.5 mb-4">
-              <div className="flex items-center gap-3">
-                <span className="font-mono text-[11px] uppercase tracking-label text-ink/45">{brandLabel(savedCard.brand)}</span>
-                <span className="font-semibold tracking-head">•••• {savedCard.last4}</span>
-              </div>
-              {savedCard.exp_month && <span className="font-mono text-[11px] text-ink/45">{String(savedCard.exp_month).padStart(2, '0')}/{String(savedCard.exp_year).slice(-2)}</span>}
-            </div>
-            <button onClick={paySaved} className="w-full py-3.5 bg-ink text-paper rounded-pill font-bold text-[15px]">{t.payWith(price)}</button>
-            <button onClick={startNewCard} className="w-full mt-2 py-2.5 text-[13px] font-medium text-ink/60 hover:text-ink underline underline-offset-2">{t.otherCard}</button>
-          </div>
-        )}
 
         {phase === 'card' && clientSecret && stripePromise && (
           <div>
@@ -217,7 +203,7 @@ export default function HighlightModal({ propertyId, plan = 'verified', lang = '
             <div className="text-[15px] font-semibold mb-1">{t.errTitle}</div>
             <div className="text-[13px] text-ink/60 mb-6">{error || t.tryAgain}</div>
             <div className="flex gap-2">
-              <button onClick={() => (savedCard ? setPhase('choose') : startNewCard())} className="flex-1 py-3 bg-ink text-paper rounded-pill font-bold text-[14px]">{t.retry}</button>
+              <button onClick={() => (savedCard ? paySaved() : startNewCard())} className="flex-1 py-3 bg-ink text-paper rounded-pill font-bold text-[14px]">{t.retry}</button>
               <button onClick={onClose} className="flex-1 py-3 border-[1.5px] border-ink/25 rounded-pill font-bold text-[14px]">{t.close}</button>
             </div>
           </div>

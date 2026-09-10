@@ -9,13 +9,12 @@ export const dynamic = 'force-dynamic';
 
 export default async function Landing() {
   const [{ listings }, activeCount] = await Promise.all([getLandingListings(), getActiveCountCached()]);
-  // Home ("Feature on landing page", US$20) listings own the featured slots. If there
-  // are fewer than 3, top up with the newest listings so the section still looks full;
-  // cap at 6 so a burst of paid listings doesn't overrun the hero.
+  // Paid "Landing" (US$20) listings OWN the home featured strip — nothing unpaid is
+  // mixed in when any exist. Only when there are zero paid listings do we fall back to
+  // the most recent ones so the section is never empty.
   const withImg = listings.filter((l) => l.image);
   const onHome = withImg.filter((l) => l.onHome);
-  const rest = withImg.filter((l) => !l.onHome);
-  const featured = [...onHome, ...rest].slice(0, Math.min(6, Math.max(3, onHome.length)));
+  const featured = onHome.length ? onHome.slice(0, 6) : withImg.slice(0, 3);
   const ticker = listings
     .filter((l) => l.usd)
     .slice(0, 8)
