@@ -49,7 +49,7 @@ const DICT = {
     v20Title: 'Mostrá tu propiedad en la portada con la insignia Verificada', v20Price: 'US$20 · 30 días',
     publishVerified: 'Publicar por US$5', publishHome: 'Publicar por US$20',
     usTitle: 'Sumá visibilidad a tu propiedad', usSub: 'Elegí un plan y destacá tu aviso por 30 días.',
-    usVerify: 'Verificar · US$5', usHome: 'En la portada · US$20',
+    usVerify: 'Verificar · US$5', usHome: 'En la portada · US$20', payingMsg: 'Procesando pago…',
     hiDoneVerified: '¡Tu propiedad está verificada por 30 días!', hiDoneHome: '¡Tu propiedad está en la portada por 30 días!',
     next: 'Siguiente', back: '← Atrás', close: 'Cerrar', sending: 'Enviando…',
     errSeller: 'Elegí propietario o agente', errName: 'Ingresá tu nombre', errEmail: 'Ingresá un correo válido', errAddr: 'Elegí una dirección',
@@ -83,7 +83,7 @@ const DICT = {
     v20Title: 'Display your property on the Landing page with the Verified badge', v20Price: 'US$20 · 30 days',
     publishVerified: 'Publish for US$5', publishHome: 'Publish for US$20',
     usTitle: 'Add visibility to your listing', usSub: 'Pick a plan to feature your listing for 30 days.',
-    usVerify: 'Verify · US$5', usHome: 'On the landing page · US$20',
+    usVerify: 'Verify · US$5', usHome: 'On the landing page · US$20', payingMsg: 'Processing payment…',
     hiDoneVerified: 'Your listing is verified for 30 days!', hiDoneHome: 'Your listing is on the landing page for 30 days!',
     next: 'Next', back: '← Back', close: 'Close', sending: 'Sending…',
     errSeller: 'Choose owner or agent', errName: 'Enter your name', errEmail: 'Enter a valid email', errAddr: 'Choose an address',
@@ -128,14 +128,15 @@ export default function SellFlowProvider({ children }) {
   const [loginPw, setLoginPw] = useState('');
   const [photos, setPhotos] = useState([]);      // {file,url}
   const [result, setResult] = useState(null);    // {id, ref}
-  const [showHi, setShowHi] = useState(false);    // promotion payment modal (post-publish upsell)
+  const [showHi, setShowHi] = useState(false);    // promotion payment modal (only when a card must be entered / 3DS)
   const [highlighted, setHighlighted] = useState(false);
+  const [paying, setPaying] = useState(false);    // silently charging a saved card (no modal)
   const [plan, setPlan] = useState(null);         // selected promo plan: null | 'verified' | 'home'
   const fileRef = useRef(null);
   const [f, setF] = useState({ mode: '', seller_type: '', neighborhood: '', city: '', addressText: '', contact_name: '', email: '', ptype: 'casa', price: '', currency: '', area: '', description: '', contact_phone: '' });
 
   const reset = () => {
-    setStep(0); setPhase(''); setErr(''); setErrs({}); setBusy(false); setCode(''); setVerified(false); setEmailTaken(false); setLoginPw(''); setPhotos([]); setResult(null); setShowHi(false); setHighlighted(false); setPlan(null);
+    setStep(0); setPhase(''); setErr(''); setErrs({}); setBusy(false); setCode(''); setVerified(false); setEmailTaken(false); setLoginPw(''); setPhotos([]); setResult(null); setShowHi(false); setHighlighted(false); setPaying(false); setPlan(null);
     setF({ mode: '', seller_type: '', neighborhood: '', city: '', addressText: '', contact_name: '', email: '', ptype: 'casa', price: '', currency: '', area: '', description: '', contact_phone: '' });
   };
   const close = () => { setOpen(false); reset(); };
@@ -248,6 +249,23 @@ export default function SellFlowProvider({ children }) {
     if (photos.length < 1) e.photos = t.errPhotos;
     return e;
   };
+  // Pay for a promotion. If the user already has a saved card, charge it silently
+  // (NO modal). Only open the payment modal when there's no card yet, or a 3DS/decline
+  // needs finishing — this kills the ugly open/close flash for returning users.
+  const payWithPlan = async (pl, propertyId) => {
+    setPlan(pl);
+    let hasCard = false;
+    try { const pr = await fetch('/api/account/payments'); const pj = await pr.json(); hasCard = !!(pj?.card?.last4); } catch {}
+    if (!hasCard) { setShowHi(true); return; }        // first-time → enter a card in the modal
+    setPaying(true);
+    try {
+      const r = await fetch('/api/highlight/create-intent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ propertyId, plan: pl, useSavedCard: true }) });
+      const j = await r.json().catch(() => ({}));
+      if (j.status === 'succeeded') { setHighlighted(true); setPaying(false); return; }
+      setPaying(false); setShowHi(true);              // 3DS / declined → finish in the modal
+    } catch { setPaying(false); setShowHi(true); }
+  };
+
   const publish = async (openHighlightAfter = false) => {
     const e = validateDetails();
     if (Object.keys(e).length) { setErrs(e); setErr(''); return; }
@@ -263,7 +281,7 @@ export default function SellFlowProvider({ children }) {
       if (!res.ok || !j.ok) throw new Error(j.error || 'failed');
       track('listing_created', { property_id: j.id, slug: j.slug, ref: j.ref, operation: f.mode, property_type: f.ptype, city: f.city, neighborhood: f.neighborhood, price: f.price ? Number(f.price) : null, currency: priceCurrency, photos: photos.length });
       setResult({ id: j.id, ref: j.ref });
-      if (openHighlightAfter) setShowHi(true);
+      if (openHighlightAfter) await payWithPlan(openHighlightAfter, j.id);
     } catch { setErr(t.errSubmit); } finally { setBusy(false); }
   };
 
@@ -298,13 +316,15 @@ export default function SellFlowProvider({ children }) {
                 {/* Promotion upsell — publish is already done (free); this is optional. */}
                 {highlighted ? (
                   <div className="mb-5 rounded-[16px] border-[1.5px] border-ink bg-card px-4 py-3 text-[13px] font-bold text-ink">{plan === 'home' ? t.hiDoneHome : t.hiDoneVerified}</div>
+                ) : paying ? (
+                  <div className="mb-5 rounded-[16px] border-[1.5px] border-ink bg-card px-4 py-3 text-[13px] font-bold text-ink flex items-center justify-center gap-2"><Spinner />{t.payingMsg}</div>
                 ) : (
                   <div className="mb-5 rounded-[16px] border-[1.5px] border-ink bg-card px-4 py-4 text-left shadow-hard-sm">
                     <div className="text-[15px] font-bold tracking-head mb-1">{t.usTitle}</div>
                     <p className="text-[12.5px] text-ink/60 mb-3">{t.usSub}</p>
                     <div className="grid grid-cols-2 gap-2">
-                      <button onClick={() => { setPlan('verified'); setShowHi(true); }} className="py-2.5 rounded-pill border-[1.5px] border-ink font-bold text-[13px] hover:bg-ink hover:text-paper transition-colors">{t.usVerify}</button>
-                      <button onClick={() => { setPlan('home'); setShowHi(true); }} className="py-2.5 rounded-pill bg-ink text-paper font-bold text-[13px] hover:bg-ink/90">{t.usHome}</button>
+                      <button onClick={() => payWithPlan('verified', result.id)} className="py-2.5 rounded-pill border-[1.5px] border-ink font-bold text-[13px] hover:bg-ink hover:text-paper transition-colors">{t.usVerify}</button>
+                      <button onClick={() => payWithPlan('home', result.id)} className="py-2.5 rounded-pill bg-ink text-paper font-bold text-[13px] hover:bg-ink/90">{t.usHome}</button>
                     </div>
                   </div>
                 )}

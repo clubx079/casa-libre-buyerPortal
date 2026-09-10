@@ -36,7 +36,7 @@ const DICT = {
     planTitle: 'Sumá visibilidad (opcional)',
     v5Title: 'Insignia Verificada en el marketplace', v5Price: 'US$5 · 30 días',
     v20Title: 'Mostrá tu propiedad en la portada con la insignia Verificada', v20Price: 'US$20 · 30 días',
-    usTitle: 'Sumá visibilidad a tu propiedad', usSub: 'Elegí un plan y destacá tu aviso por 30 días.', usVerify: 'Verificar · US$5', usHome: 'En la portada · US$20',
+    usTitle: 'Sumá visibilidad a tu propiedad', usSub: 'Elegí un plan y destacá tu aviso por 30 días.', usVerify: 'Verificar · US$5', usHome: 'En la portada · US$20', payingMsg: 'Procesando pago…',
     hiDoneVerified: '¡Tu propiedad está verificada por 30 días!', hiDoneHome: '¡Tu propiedad está en la portada por 30 días!',
     backLabel: '← Atrás',
     errType: 'Elegí un tipo de propiedad', errHood: 'Ingresá el barrio', errCity: 'Ingresá la ciudad', errPrice: 'Ingresá un precio válido',
@@ -69,7 +69,7 @@ const DICT = {
     planTitle: 'Add visibility (optional)',
     v5Title: 'Verified badge on marketplace', v5Price: 'US$5 · 30 days',
     v20Title: 'Display your property on the Landing page with the Verified badge', v20Price: 'US$20 · 30 days',
-    usTitle: 'Add visibility to your listing', usSub: 'Pick a plan to feature your listing for 30 days.', usVerify: 'Verify · US$5', usHome: 'On the landing page · US$20',
+    usTitle: 'Add visibility to your listing', usSub: 'Pick a plan to feature your listing for 30 days.', usVerify: 'Verify · US$5', usHome: 'On the landing page · US$20', payingMsg: 'Processing payment…',
     hiDoneVerified: 'Your listing is verified for 30 days!', hiDoneHome: 'Your listing is on the landing page for 30 days!',
     backLabel: '← Back',
     errType: 'Choose a property type', errHood: 'Enter the neighborhood', errCity: 'Enter the city', errPrice: 'Enter a valid price',
@@ -98,8 +98,9 @@ export default function PublicarClient() {
   const [errs, setErrs] = useState({}); // per-field errors { field: message }
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null); // {ref, slug}
-  const [showHi, setShowHi] = useState(false);       // promotion payment modal (post-publish upsell)
+  const [showHi, setShowHi] = useState(false);       // promotion payment modal (only when a card must be entered / 3DS)
   const [highlighted, setHighlighted] = useState(false);
+  const [paying, setPaying] = useState(false);       // silently charging a saved card (no modal)
   const [plan, setPlan] = useState(null);            // selected promo plan: null | 'verified' | 'home'
   const fileRef = useRef(null);
   const autoOpened = useRef(false);
@@ -198,9 +199,25 @@ export default function PublicarClient() {
   };
   const back = () => { setErr(''); setStep(1); };
 
+  // Pay for a promotion. Saved card → charge silently (NO modal); no card / 3DS /
+  // decline → open the modal. Kills the ugly modal open/close flash for returning users.
+  const payWithPlan = async (pl, propertyId) => {
+    setPlan(pl);
+    let hasCard = false;
+    try { const pr = await fetch('/api/account/payments'); const pj = await pr.json(); hasCard = !!(pj?.card?.last4); } catch {}
+    if (!hasCard) { setShowHi(true); return; }
+    setPaying(true);
+    try {
+      const r = await fetch('/api/highlight/create-intent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ propertyId, plan: pl, useSavedCard: true }) });
+      const j = await r.json().catch(() => ({}));
+      if (j.status === 'succeeded') { setHighlighted(true); setPaying(false); return; }
+      setPaying(false); setShowHi(true);
+    } catch { setPaying(false); setShowHi(true); }
+  };
+
   // Free publish — no plan, no payment. Requires login (gated below).
-  // openHighlightAfter=true opens the US$5 highlight payment modal once the
-  // (free) listing is created, so a cancelled/failed payment still leaves it published.
+  // openHighlightAfter = the selected plan; a saved card is then charged silently,
+  // otherwise the payment modal opens. A cancelled/failed payment still leaves it published.
   const publishListing = async (openHighlightAfter = false) => {
     const e = validate();
     if (Object.keys(e).length) {
@@ -245,7 +262,7 @@ export default function PublicarClient() {
       });
       setResult({ ref: j.ref, id: j.id });
       setStep(2);
-      if (openHighlightAfter) setShowHi(true);
+      if (openHighlightAfter) await payWithPlan(openHighlightAfter, j.id);
     } catch {
       setErr(t.errSubmit);
     } finally {
@@ -254,7 +271,7 @@ export default function PublicarClient() {
   };
 
   const restart = () => {
-    setStep(1); setMode('venta'); setResult(null); setErr(''); setErrs({}); setShowHi(false); setHighlighted(false); setPlan(null);
+    setStep(1); setMode('venta'); setResult(null); setErr(''); setErrs({}); setShowHi(false); setHighlighted(false); setPaying(false); setPlan(null);
     setF({ ptype: 'casa', neighborhood: '', city: '', price: '', currency: '', area: '', description: '', contact_name: '', contact_phone: '', seller_type: 'owner' });
     setPhotos([]);
   };
@@ -435,13 +452,15 @@ export default function PublicarClient() {
             <div className="max-w-[440px] mx-auto mb-7">
               {highlighted ? (
                 <div className="rounded-[16px] border-[1.5px] border-ink bg-card px-4 py-3 text-[14px] font-bold text-ink">{plan === 'home' ? t.hiDoneHome : t.hiDoneVerified}</div>
+              ) : paying ? (
+                <div className="rounded-[16px] border-[1.5px] border-ink bg-card px-4 py-3 text-[14px] font-bold text-ink">{t.payingMsg}</div>
               ) : (
                 <div className="rounded-[16px] border-[1.5px] border-ink bg-card px-5 py-4 text-left shadow-hard-sm">
                   <div className="text-[16px] font-bold tracking-head mb-1">{t.usTitle}</div>
                   <p className="text-[13px] text-ink/60 mb-3">{t.usSub}</p>
                   <div className="grid grid-cols-2 gap-2.5">
-                    <button onClick={() => { setPlan('verified'); setShowHi(true); }} className="py-3 rounded-pill border-[1.5px] border-ink font-bold text-[13px] hover:bg-ink hover:text-paper transition-colors">{t.usVerify}</button>
-                    <button onClick={() => { setPlan('home'); setShowHi(true); }} className="py-3 rounded-pill bg-ink text-paper font-bold text-[13px] hover:bg-ink/90">{t.usHome}</button>
+                    <button onClick={() => payWithPlan('verified', result.id)} className="py-3 rounded-pill border-[1.5px] border-ink font-bold text-[13px] hover:bg-ink hover:text-paper transition-colors">{t.usVerify}</button>
+                    <button onClick={() => payWithPlan('home', result.id)} className="py-3 rounded-pill bg-ink text-paper font-bold text-[13px] hover:bg-ink/90">{t.usHome}</button>
                   </div>
                 </div>
               )}

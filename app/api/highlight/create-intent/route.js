@@ -42,9 +42,9 @@ export async function POST(req) {
   if (!prop) return NextResponse.json({ error: 'not_found' }, { status: 404 });
   if (String(prop.created_by) !== String(session.uid)) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   if (prop.admin_status !== 'active' || prop.is_complete === false) return NextResponse.json({ error: 'not_publishable' }, { status: 400 });
-  if (prop.promotion_plan && prop.promotion_expires_at && new Date(prop.promotion_expires_at) > new Date()) {
-    return NextResponse.json({ error: 'already_promoted', plan: prop.promotion_plan, promotionUntil: prop.promotion_expires_at }, { status: 400 });
-  }
+  // A listing that's already promoted can still be RENEWED or UPGRADED (verified → home)
+  // — we don't block it; new days stack onto whatever is left (extendFrom below).
+  const extendFrom = prop.promotion_plan && prop.promotion_expires_at ? prop.promotion_expires_at : null;
 
   const user = await getUserBillingRow(session.uid);
   if (!user) return NextResponse.json({ error: 'no_user' }, { status: 400 });
@@ -66,7 +66,7 @@ export async function POST(req) {
         metadata, description,
       });
       if (pi.status === 'succeeded') {
-        const until = await grantPromotion(propertyId, plan);
+        const until = await grantPromotion(propertyId, plan, { extendFrom });
         await recordPayment({ user_id: session.uid, property_id: propertyId, kind: 'highlight', plan, amount_usd: usd, currency: 'usd', status: 'succeeded', stripe_payment_intent_id: pi.id, card_brand: user.card_brand, card_last4: user.card_last4, highlight_until: until });
         try { revalidateTag('listings'); } catch {}
         return NextResponse.json({ status: 'succeeded', plan, promotionUntil: until, card: { brand: user.card_brand, last4: user.card_last4 } });

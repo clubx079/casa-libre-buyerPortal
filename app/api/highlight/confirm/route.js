@@ -29,9 +29,11 @@ export async function POST(req) {
   if (String(pi?.metadata?.user_id) !== String(session.uid) || String(pi?.metadata?.property_id) !== String(propertyId)) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   }
-  const rows = await select('properties', `select=id,created_by&id=eq.${encodeURIComponent(propertyId)}&limit=1`).catch(() => []);
+  const rows = await select('properties', `select=id,created_by,promotion_plan,promotion_expires_at&id=eq.${encodeURIComponent(propertyId)}&limit=1`).catch(() => []);
   const prop = Array.isArray(rows) && rows[0];
   if (!prop || String(prop.created_by) !== String(session.uid)) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+  // Renew/upgrade of an already-promoted listing stacks onto the time left.
+  const extendFrom = prop.promotion_plan && prop.promotion_expires_at ? prop.promotion_expires_at : null;
 
   if (pi.status === 'processing') return NextResponse.json({ status: 'processing' });
   if (pi.status !== 'succeeded') return NextResponse.json({ status: 'failed', error: 'El pago no se completó.' });
@@ -43,7 +45,7 @@ export async function POST(req) {
   const already = await paymentAlreadyRecorded(pi.id);
   if (already) return NextResponse.json({ status: 'succeeded', plan, promotionUntil: already.highlight_until, already: true });
 
-  const until = await grantPromotion(propertyId, plan);
+  const until = await grantPromotion(propertyId, plan, { extendFrom });
   const user = await getUserBillingRow(session.uid);
   let customerId = user?.stripe_customer_id;
   try { if (!customerId) customerId = await ensureStripeCustomer(user); } catch {}

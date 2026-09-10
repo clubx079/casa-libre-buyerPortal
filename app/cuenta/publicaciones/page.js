@@ -8,8 +8,8 @@ import HighlightModal from '@/components/HighlightModal';
 import { CardGridSkeleton } from '@/components/account/Skeletons';
 
 const T = {
-  es: { title: 'Mis publicaciones', sub: (n) => `${n} ${n === 1 ? 'propiedad publicada' : 'propiedades publicadas'}`, empty: 'Todavía no publicaste ninguna propiedad.', publish: 'Publicar propiedad', del: 'Eliminar', confirmT: 'Eliminar publicación', confirm: 'Esta acción no se puede deshacer. ¿Querés eliminar esta propiedad?', cancel: 'Cancelar', deleting: 'Eliminando…', view: 'Ver', loading: 'Cargando…', promoteVerify: 'Verificar · US$5', promoteHome: 'Portada · US$20', renew: 'Renovar', verifiedChip: 'Verificada', homeChip: 'En portada', daysLeft: (n) => `faltan ${n} ${n === 1 ? 'día' : 'días'}` },
-  en: { title: 'My listings', sub: (n) => `${n} published ${n === 1 ? 'property' : 'properties'}`, empty: "You haven't published any properties yet.", publish: 'List a property', del: 'Delete', confirmT: 'Delete listing', confirm: "This can't be undone. Delete this property?", cancel: 'Cancel', deleting: 'Deleting…', view: 'View', loading: 'Loading…', promoteVerify: 'Verify · US$5', promoteHome: 'Landing · US$20', renew: 'Renew', verifiedChip: 'Verified', homeChip: 'On landing', daysLeft: (n) => `${n} ${n === 1 ? 'day' : 'days'} left` },
+  es: { title: 'Mis publicaciones', sub: (n) => `${n} ${n === 1 ? 'propiedad publicada' : 'propiedades publicadas'}`, empty: 'Todavía no publicaste ninguna propiedad.', publish: 'Publicar propiedad', del: 'Eliminar', confirmT: 'Eliminar publicación', confirm: 'Esta acción no se puede deshacer. ¿Querés eliminar esta propiedad?', cancel: 'Cancelar', deleting: 'Eliminando…', view: 'Ver', loading: 'Cargando…', promoteVerify: 'Verificar · US$5', promoteHome: 'Portada · US$20', renew: 'Renovar', verifiedChip: 'Verificada', homeChip: 'En portada', upgradeHome: 'Subir a portada · US$20', paying: 'Procesando…', daysLeft: (n) => `faltan ${n} ${n === 1 ? 'día' : 'días'}` },
+  en: { title: 'My listings', sub: (n) => `${n} published ${n === 1 ? 'property' : 'properties'}`, empty: "You haven't published any properties yet.", publish: 'List a property', del: 'Delete', confirmT: 'Delete listing', confirm: "This can't be undone. Delete this property?", cancel: 'Cancel', deleting: 'Deleting…', view: 'View', loading: 'Loading…', promoteVerify: 'Verify · US$5', promoteHome: 'Landing · US$20', renew: 'Renew', verifiedChip: 'Verified', homeChip: 'On landing', upgradeHome: 'Move to Landing · US$20', paying: 'Processing…', daysLeft: (n) => `${n} ${n === 1 ? 'day' : 'days'} left` },
 };
 
 const daysLeft = (iso) => { try { return Math.max(1, Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000)); } catch { return 0; } };
@@ -20,11 +20,30 @@ export default function MyListingsPage() {
   const [listings, setListings] = useState(null);
   const [confirmId, setConfirmId] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [promo, setPromo] = useState(null); // { id, plan } — open the promotion modal for this listing
+  const [promo, setPromo] = useState(null);     // { id, plan } — open the payment modal (no card / 3DS)
+  const [payingId, setPayingId] = useState(null); // id being charged silently on a saved card
 
   useEffect(() => {
     fetch('/api/account/listings').then((r) => r.json()).then((j) => setListings(j.listings || [])).catch(() => setListings([]));
   }, []);
+
+  // Charge a saved card silently (renew / promote / upgrade) — NO modal flash. Only
+  // open the modal when there's no saved card, or a 3DS/decline needs finishing.
+  const payFor = async (id, pl) => {
+    setPayingId(id);
+    let hasCard = false;
+    try { const pr = await fetch('/api/account/payments'); const pj = await pr.json(); hasCard = !!(pj?.card?.last4); } catch {}
+    if (!hasCard) { setPayingId(null); setPromo({ id, plan: pl }); return; }
+    try {
+      const r = await fetch('/api/highlight/create-intent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ propertyId: id, plan: pl, useSavedCard: true }) });
+      const j = await r.json().catch(() => ({}));
+      if (j.status === 'succeeded') {
+        setListings((ls) => ls.map((x) => (x.id === id ? { ...x, verified: true, highlighted: true, plan: pl, onHome: pl === 'home', promotion_expires_at: j.promotionUntil } : x)));
+        setPayingId(null); return;
+      }
+      setPayingId(null); setPromo({ id, plan: pl });
+    } catch { setPayingId(null); setPromo({ id, plan: pl }); }
+  };
 
   const del = async () => {
     const id = confirmId;
@@ -63,15 +82,22 @@ export default function MyListingsPage() {
           {listings.map((l) => (
             <ListingCard key={l.id} l={l} action={
               <div className="flex flex-col gap-2">
-                {l.verified ? (
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 text-center py-2 rounded-pill bg-card text-ink text-[12px] font-bold border-[1.5px] border-ink">{(l.plan === 'home' ? t.homeChip : t.verifiedChip)}{l.promotion_expires_at ? ` · ${t.daysLeft(daysLeft(l.promotion_expires_at))}` : ''}</div>
-                    <button onClick={() => setPromo({ id: l.id, plan: l.plan || 'verified' })} className="shrink-0 px-4 py-2 rounded-pill bg-ink text-paper text-[13px] font-bold hover:bg-ink/90">{t.renew}</button>
-                  </div>
+                {payingId === l.id ? (
+                  <div className="text-center py-2 rounded-pill bg-card text-ink text-[12.5px] font-bold border-[1.5px] border-ink">{t.paying}</div>
+                ) : l.verified ? (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 text-center py-2 rounded-pill bg-card text-ink text-[12px] font-bold border-[1.5px] border-ink">{(l.plan === 'home' ? t.homeChip : t.verifiedChip)}{l.promotion_expires_at ? ` · ${t.daysLeft(daysLeft(l.promotion_expires_at))}` : ''}</div>
+                      <button onClick={() => payFor(l.id, l.plan || 'verified')} className="shrink-0 px-4 py-2 rounded-pill bg-ink text-paper text-[13px] font-bold hover:bg-ink/90">{t.renew}</button>
+                    </div>
+                    {l.plan !== 'home' && (
+                      <button onClick={() => payFor(l.id, 'home')} className="w-full py-2 rounded-pill border-[1.5px] border-ink text-[12.5px] font-bold hover:bg-ink hover:text-paper transition-colors">{t.upgradeHome}</button>
+                    )}
+                  </>
                 ) : (
                   <div className="grid grid-cols-2 gap-2">
-                    <button onClick={() => setPromo({ id: l.id, plan: 'verified' })} disabled={!!(l.admin_status && l.admin_status !== 'active')} className="py-2 rounded-pill border-[1.5px] border-ink text-[12.5px] font-bold hover:bg-ink hover:text-paper transition-colors disabled:opacity-40 disabled:cursor-not-allowed">{t.promoteVerify}</button>
-                    <button onClick={() => setPromo({ id: l.id, plan: 'home' })} disabled={!!(l.admin_status && l.admin_status !== 'active')} className="py-2 rounded-pill bg-ink text-paper text-[12.5px] font-bold hover:bg-ink/90 disabled:opacity-40 disabled:cursor-not-allowed">{t.promoteHome}</button>
+                    <button onClick={() => payFor(l.id, 'verified')} disabled={!!(l.admin_status && l.admin_status !== 'active')} className="py-2 rounded-pill border-[1.5px] border-ink text-[12.5px] font-bold hover:bg-ink hover:text-paper transition-colors disabled:opacity-40 disabled:cursor-not-allowed">{t.promoteVerify}</button>
+                    <button onClick={() => payFor(l.id, 'home')} disabled={!!(l.admin_status && l.admin_status !== 'active')} className="py-2 rounded-pill bg-ink text-paper text-[12.5px] font-bold hover:bg-ink/90 disabled:opacity-40 disabled:cursor-not-allowed">{t.promoteHome}</button>
                   </div>
                 )}
                 <div className="flex gap-2">
