@@ -6,8 +6,8 @@ import { useLang } from '@/lib/useLang';
 import ConfirmModal from './ConfirmModal';
 
 const T = {
-  es: { login: 'Ingresar', logout: 'Salir', account: 'Mi panel', saved: 'Guardadas', mine: 'Mis publicaciones', settings: 'Ajustes', logoutT: 'Cerrar sesión', logoutMsg: '¿Querés cerrar tu sesión?', cancel: 'Cancelar' },
-  en: { login: 'Log in', logout: 'Log out', account: 'Dashboard', saved: 'Saved', mine: 'My listings', settings: 'Settings', logoutT: 'Log out', logoutMsg: 'Are you sure you want to log out?', cancel: 'Cancel' },
+  es: { login: 'Ingresar', logout: 'Salir', account: 'Mi panel', saved: 'Guardadas', mine: 'Mis publicaciones', payments: 'Pagos', settings: 'Ajustes', logoutT: 'Cerrar sesión', logoutMsg: '¿Querés cerrar tu sesión?', cancel: 'Cancelar' },
+  en: { login: 'Log in', logout: 'Log out', account: 'Dashboard', saved: 'Saved', mine: 'My listings', payments: 'Payments', settings: 'Settings', logoutT: 'Log out', logoutMsg: 'Are you sure you want to log out?', cancel: 'Cancel' },
 };
 
 export default function AuthButton({ variant = 'light' }) {
@@ -39,7 +39,7 @@ export default function AuthButton({ variant = 'light' }) {
           <div className="fixed inset-0 z-[1190]" onClick={() => setMenu(false)} />
           <div className="absolute right-0 mt-2 w-[200px] bg-card border border-ink/15 rounded-[14px] shadow-hard-sm p-1.5 z-[1200]">
             <div className="px-3 py-2 text-[12px] text-ink/55 font-mono truncate border-b border-ink/10 mb-1">{user.email}</div>
-            {[[t.account, '/cuenta'], [t.saved, '/cuenta/guardadas'], [t.mine, '/cuenta/publicaciones'], [t.settings, '/cuenta/ajustes']].map(([label, href]) => (
+            {[[t.account, '/cuenta'], [t.saved, '/cuenta/guardadas'], [t.mine, '/cuenta/publicaciones'], [t.payments, '/cuenta/pagos'], [t.settings, '/cuenta/ajustes']].map(([label, href]) => (
               <Link key={href} href={href} onClick={() => setMenu(false)} className="block px-3 py-2 rounded-[10px] text-[14px] font-medium hover:bg-ink/5">{label}</Link>
             ))}
             <button onClick={() => { setMenu(false); setShowLogout(true); }} className="w-full text-left px-3 py-2 rounded-[10px] text-[14px] font-medium text-ink/70 hover:bg-ink/5 border-t border-ink/10 mt-1">{t.logout}</button>
