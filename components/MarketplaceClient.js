@@ -230,7 +230,9 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
       const renderer = {
         render: ({ count, position }) => new google.maps.Marker({ position, zIndex: 1000 + count, icon: clusterIcon(google, count, false) }),
       };
-      const cluster = new MarkerClusterer({ map, renderer, algorithm: new SuperClusterAlgorithm({ radius: 46, maxZoom: 16 }) });
+      // Bigger radius → fewer, larger clusters so the streets stay readable when
+      // there are many listings (was 46). Zoom in to break clusters apart.
+      const cluster = new MarkerClusterer({ map, renderer, algorithm: new SuperClusterAlgorithm({ radius: 90, maxZoom: 16 }) });
       mapRef.current = { google, map };
       clusterRef.current = cluster;
       infoRef.current = info;

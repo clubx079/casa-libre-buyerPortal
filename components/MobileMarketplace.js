@@ -151,6 +151,9 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
   const mapRef = useRef(null);
   const clusterRef = useRef(null);
   const promotedMarkersRef = useRef([]);    // paid pins kept OUT of the clusterer (always visible)
+  const infoRef = useRef(null);             // shared InfoWindow (tap-preview popup)
+  const previewRef = useRef(null);          // { id, l } of the pin currently previewed
+  const imgMapRef = useRef({});             // fresh image map for the click closure (avoids stale state)
   useEffect(() => {
     if (view !== 'map' || mapRef.current || !mapEl.current) return;
     let cancelled = false;
@@ -161,8 +164,13 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
       const google = window.google;
       const map = new google.maps.Map(mapEl.current, mapOptions(google, { center: { lat: -25.293, lng: -57.60 }, zoom: 12, gestureHandling: 'greedy' }));
       const renderer = { render: ({ count, position }) => new google.maps.Marker({ position, zIndex: 1000 + count, icon: clusterIcon(google, count, false) }) };
-      const cluster = new MarkerClusterer({ map, renderer, algorithm: new SuperClusterAlgorithm({ radius: 46, maxZoom: 16 }) });
+      // Bigger radius → fewer, larger clusters so the streets stay readable when
+      // there are many listings (was 46). Zoom in to break clusters apart.
+      const cluster = new MarkerClusterer({ map, renderer, algorithm: new SuperClusterAlgorithm({ radius: 90, maxZoom: 16 }) });
       mapRef.current = { google, map }; clusterRef.current = cluster;
+      const info = new google.maps.InfoWindow();
+      infoRef.current = info;
+      map.addListener('click', () => { info.close(); previewRef.current = null; });
       drawMarkers();
     })();
     return () => { cancelled = true; };
@@ -183,7 +191,15 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
       if (!inParaguay(l.lat, l.lng)) return; // never plot mis-geocoded listings outside PY
       const promoted = !!(l.hl || l.verified);
       const mk = new google.maps.Marker({ position: { lat: l.lat, lng: l.lng }, icon: pinIcon(google, shortUsd(l.usd), false, { promoted }), zIndex: promoted ? 10000 : undefined });
-      mk.addListener('click', () => { window.location.href = `/propiedad/${l.id}`; });
+      // Tap a pin → show a preview card (image + price + details); tapping the card
+      // opens the listing in a NEW TAB. (Was: navigate directly in the same tab.)
+      mk.addListener('click', () => {
+        const info = infoRef.current; if (!info) return;
+        previewRef.current = { id: l.id, l };
+        info.setContent(popupHtml(l, imgMapRef.current[l.id]));
+        info.open({ map, anchor: mk });
+        ensureImages([l.id]);
+      });
       // A paid listing is never swallowed by a cluster — add it straight to the map.
       if (promoted) { mk.setMap(map); promotedMarkersRef.current.push(mk); }
       else markers.push(mk);
@@ -198,6 +214,30 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
   const priceSub = (l) => (fmtPyg(l.pyg, lang) ? fmtPyg(l.pyg, lang) + (l.mode === 'alquiler' ? t.perMonth : '') : '');
   const title = (l) => { let tp = typeLabel(l.type, lang) || (lang === 'es' ? 'Inmueble' : 'Property'); const zone = titleCaseZone(l.neighborhood || l.city || ''); const base = l.beds ? `${tp} · ${l.beds} ${bedAbbr(lang)}` : tp; return zone ? `${base} · ${zone}` : base; };
   const meta = (l) => [l.area && `${l.area} m²`, l.baths && `${l.baths} ${bathWord(l.baths, lang)}`, l.parking && `${l.parking} ${parkWord(l.parking, lang)}`].filter(Boolean).join(' · ');
+
+  // Map tap-preview card (mirrors the desktop hover popup). The card is a link that
+  // opens the listing in a NEW TAB.
+  const popupHtml = (l, imgUrl) => {
+    const img = imgUrl
+      ? `<img src="${imgUrl}" alt="" style="width:100%;height:118px;object-fit:cover;display:block" onerror="this.style.display='none'"/>`
+      : `<div style="height:64px;display:flex;align-items:center;justify-content:center;background:repeating-linear-gradient(45deg,#EAE6DD,#EAE6DD 10px,#F4F1EA 10px,#F4F1EA 20px);font:600 10px 'IBM Plex Mono',monospace;color:rgba(17,17,17,.45)">${t.noImg}</div>`;
+    return `<a href="/propiedad/${l.id}" target="_blank" rel="noopener noreferrer" style="display:block;width:210px;text-decoration:none;color:#111">
+      ${img}
+      <div style="padding:9px 11px 10px">
+        <div style="font:700 15px 'Space Grotesk',sans-serif">${priceMain(l)}</div>
+        ${priceSub(l) ? `<div style="font:500 11px 'Space Grotesk',sans-serif;color:rgba(17,17,17,.5)">${priceSub(l)}</div>` : ''}
+        <div style="font:500 12px 'Space Grotesk',sans-serif;margin-top:2px">${title(l)}</div>
+        <div style="font:400 11px 'Space Grotesk',sans-serif;color:rgba(17,17,17,.55);margin-top:1px">${meta(l)}</div>
+      </div></a>`;
+  };
+
+  // When the previewed pin's image finishes loading, refresh the open preview card.
+  useEffect(() => {
+    imgMapRef.current = imgMap;
+    const p = previewRef.current;
+    if (p && infoRef.current && imgMap[p.id]) infoRef.current.setContent(popupHtml(p.l, imgMap[p.id]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [imgMap]);
 
   const Pill = ({ label, on, onClick }) => (
     <button onClick={onClick} className={`shrink-0 border-[1.5px] rounded-pill px-4 py-[9px] text-[14px] font-medium ${on ? 'bg-ink text-paper border-ink' : 'bg-card border-ink/30 text-ink'}`}>{label}</button>
@@ -274,7 +314,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
         <div className="px-4 pb-8 flex flex-col gap-4">
           {rows.length === 0 && !loadingList && <div className="py-14 text-center font-mono text-[13px] text-ink/45">{X.noResults}</div>}
           {rows.map((l) => (
-            <Link key={l.id} href={`/propiedad/${l.id}`} className={`block bg-card rounded-[18px] overflow-hidden ${l.verified ? 'border border-ink ring-[1.5px] ring-ink shadow-hard-sm' : 'border border-ink/12'}`}>
+            <Link key={l.id} href={`/propiedad/${l.id}`} target="_blank" rel="noopener noreferrer" className={`block bg-card rounded-[18px] overflow-hidden ${l.verified ? 'border border-ink ring-[1.5px] ring-ink shadow-hard-sm' : 'border border-ink/12'}`}>
               <div className="relative h-[220px] cl-hatch">
                 {imgMap[l.id] && /* eslint-disable-next-line @next/next/no-img-element */ <img src={imgMap[l.id]} alt="" loading="lazy" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
                 <span className="absolute top-3 left-3 text-[12px] font-semibold bg-ink text-paper px-3 py-1.5 rounded-pill">{l.mode === 'alquiler' ? X.forRent : X.forSale}</span>

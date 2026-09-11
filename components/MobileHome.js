@@ -62,9 +62,10 @@ export default function MobileHome({ featured = [], count = 0, tickerData = [] }
   const fTitle = (l) => `${typeLabel(l.type, lang) || (lang === 'es' ? 'Propiedad' : 'Property')}${l.beds ? ` · ${l.beds} ${t.bd}` : ''}`;
   const fMeta = (l) => [[l.neighborhood, l.city].filter(Boolean).join(', '), l.area && `${l.area} m²`].filter(Boolean).join(' · ');
 
-  // The tapped segment stays black (selected) through the route change, instead
-  // of only flashing black on :active. One selected at a time.
-  const segCls = (k) => `flex-1 text-center py-[13px] rounded-pill text-[15px] font-bold transition-colors ${sel === k ? 'bg-ink text-paper' : 'text-ink'}`;
+  // Three distinct buttons (buy / rent / sell), each its own bordered pill. The
+  // tapped one stays black (selected) through the route change instead of only
+  // flashing black on :active. One selected at a time.
+  const btnCls = (k) => `flex-1 text-center py-[10px] rounded-pill border-[1.5px] border-ink text-[14px] font-bold transition-all ${sel === k ? 'bg-ink text-paper shadow-hard-sm' : 'bg-paper text-ink shadow-hard-sm active:translate-y-0.5 active:shadow-none'}`;
 
   return (
     <div className="bg-paper">
@@ -92,12 +93,12 @@ export default function MobileHome({ featured = [], count = 0, tickerData = [] }
         <p className="text-[17px] leading-[1.5] text-ink/60 mt-5">{t.heroSub.map((line, i) => <span key={i} className="block">{line}</span>)}</p>
       </div>
 
-      {/* BUY / RENT / SELL */}
+      {/* BUY / RENT / SELL — one container, three button-styled items inside */}
       <div className="px-4 mt-7">
-        <div className="flex bg-card border-[1.5px] border-ink rounded-pill p-1">
-          <Link href="/propiedades?op=venta" onClick={() => setSel('venta')} className={segCls('venta')}>{t.buy}</Link>
-          <Link href="/propiedades?op=alquiler" onClick={() => setSel('alquiler')} className={segCls('alquiler')}>{t.rent}</Link>
-          <button onClick={() => { setSel('sell'); openSell(); }} className={segCls('sell')}>{t.sell}</button>
+        <div className="flex gap-2 bg-card border-[1.5px] border-ink rounded-pill p-2">
+          <Link href="/propiedades?op=venta" onClick={() => setSel('venta')} className={btnCls('venta')}>{t.buy}</Link>
+          <Link href="/propiedades?op=alquiler" onClick={() => setSel('alquiler')} className={btnCls('alquiler')}>{t.rent}</Link>
+          <button onClick={() => { setSel('sell'); openSell(); }} className={btnCls('sell')}>{t.sell}</button>
         </div>
       </div>
 
