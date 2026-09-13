@@ -6,6 +6,7 @@
 import { NextResponse } from 'next/server';
 import { select, update } from '@/lib/db';
 import { sendPromotionRenewalEmail } from '@/lib/email';
+import { COUNTRY } from '@/lib/country';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -52,7 +53,7 @@ async function handle(req) {
     const title = [r.property_type, r.neighborhood || r.city].filter(Boolean).join(' · ') || 'Tu propiedad';
     const ref = (r.slug || r.id || '').toString().slice(0, 8).toUpperCase();
     let expiresText = '';
-    try { expiresText = new Date(r.promotion_expires_at).toLocaleDateString('es-PY', { day: 'numeric', month: 'long', year: 'numeric' }); } catch {}
+    try { expiresText = new Date(r.promotion_expires_at).toLocaleDateString(COUNTRY.locale, { day: 'numeric', month: 'long', year: 'numeric' }); } catch {}
     const res = await sendPromotionRenewalEmail(owner.email, {
       userId: r.created_by, propertyId: r.id, plan: r.promotion_plan, name: owner.full_name, title, ref, expiresText,
     });

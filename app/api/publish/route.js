@@ -11,6 +11,7 @@ import { stampLogo } from '@/lib/stampLogo';
 import { getUsdToPyg } from '@/lib/fx';
 import { getSession } from '@/lib/auth';
 import { sendListingPublishedEmail } from '@/lib/email';
+import { COUNTRY } from '@/lib/country';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -32,8 +33,8 @@ async function geocodeOne(q) {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 4000);
     const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=py&q=${encodeURIComponent(q)}`,
-      { signal: ctrl.signal, cache: 'no-store', headers: { 'User-Agent': 'CasaLibre/1.0 (listings@casalibre.py)' } }
+      `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=${COUNTRY.geoCountryCode}&q=${encodeURIComponent(q)}`,
+      { signal: ctrl.signal, cache: 'no-store', headers: { 'User-Agent': `CasaLibre/1.0 (listings@casalibre${COUNTRY.tld})` } }
     );
     clearTimeout(timer);
     if (!res.ok) return null;
@@ -43,7 +44,7 @@ async function geocodeOne(q) {
   return null;
 }
 async function geocode(neighborhood, city) {
-  const queries = [`${neighborhood}, ${city}, Paraguay`, `${city}, Paraguay`];
+  const queries = [`${neighborhood}, ${city}, ${COUNTRY.name}`, `${city}, ${COUNTRY.name}`];
   for (const q of queries) { const hit = await geocodeOne(q); if (hit) return hit; }
   return null;
 }
@@ -63,7 +64,7 @@ export async function POST(req) {
   const city = get('city') || 'Asunción';
   const priceRaw = get('price').replace(/[^\d.]/g, '');
   const price = Number(priceRaw);
-  const currency = get('currency').toUpperCase() === 'PYG' || mode === 'alquiler' ? 'PYG' : 'USD';
+  const currency = get('currency').toUpperCase() === COUNTRY.currencyCode || mode === 'alquiler' ? COUNTRY.currencyCode : 'USD';
   const area = Number(get('area').replace(/[^\d.]/g, '')) || null;
   const description = get('description');
   // Default the public contact to the logged-in user's name/email when not given.
@@ -86,7 +87,7 @@ export async function POST(req) {
 
   const property_type = TYPE_MAP[ptype];
   const isLand = ptype === 'terreno';
-  const rate = await getUsdToPyg().catch(() => Number(process.env.PYG_PER_USD) || 7300);
+  const rate = await getUsdToPyg().catch(() => Number(process.env[`${COUNTRY.fxTarget}_PER_USD`]) || COUNTRY.fxFallback);
   const price_usd = currency === 'USD' ? Math.round(price) : rate ? Math.round(price / rate) : null;
 
   // Area required + plausible for buildings (land has no upper cap); price floors
@@ -98,8 +99,8 @@ export async function POST(req) {
   if (mode === 'venta') {
     if (!(Number(price_usd) >= 5000)) return NextResponse.json({ error: 'price_too_low' }, { status: 400 });
   } else {
-    const pygVal = currency === 'PYG' ? price : Math.round(price * rate);
-    if (!(pygVal >= 300000)) return NextResponse.json({ error: 'price_too_low' }, { status: 400 });
+    const pygVal = currency === COUNTRY.currencyCode ? price : Math.round(price * rate);
+    if (!(pygVal >= COUNTRY.rentFloorLocal)) return NextResponse.json({ error: 'price_too_low' }, { status: 400 });
   }
 
   const slug = `${slugify(`${property_type}-${neighborhood}`) || 'propiedad'}-${Date.now().toString(36)}`;
@@ -119,8 +120,8 @@ export async function POST(req) {
     address: neighborhood,
     neighborhood,
     city,
-    province: 'Central',
-    country: 'Paraguay',
+    province: COUNTRY.defaultProvince,
+    country: COUNTRY.name,
     [isLand ? 'land_area' : 'covered_area']: area,
     description: description || null,
     contact_name: contactName,
@@ -198,7 +199,7 @@ export async function POST(req) {
   // after the response, killing fire-and-forget sends). Wrapped so it never
   // blocks publish.
   if (session.email) {
-    const site = (process.env.APP_PUBLIC_URL || 'https://casa-libre.com.py').replace(/\/$/, '');
+    const site = (process.env.APP_PUBLIC_URL || COUNTRY.defaultUrl).replace(/\/$/, '');
     await sendListingPublishedEmail(session.email, {
       name: session.name || contactName,
       title: `${property_type} · ${neighborhood}`,

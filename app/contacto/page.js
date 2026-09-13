@@ -1,9 +1,10 @@
 import MarketingShell from '@/components/MarketingShell';
 import Article from '@/components/marketing/Article';
+import { COUNTRY } from '@/lib/country';
 
 export const metadata = {
   title: 'Contacto — Casa Libre',
-  description: 'Contactate con el equipo de Casa Libre. Estamos para ayudarte a comprar, alquilar o publicar propiedades en Paraguay.',
+  description: `Contactate con el equipo de Casa Libre. Estamos para ayudarte a comprar, alquilar o publicar propiedades en ${COUNTRY.name}.`,
   alternates: { canonical: '/contacto' },
 };
 

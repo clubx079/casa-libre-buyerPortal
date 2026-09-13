@@ -1,15 +1,16 @@
 import MarketingShell from '@/components/MarketingShell';
 import Article from '@/components/marketing/Article';
+import { COUNTRY } from '@/lib/country';
 
 export const metadata = {
-  title: 'Publicá tu propiedad gratis en Paraguay — Vender o alquilar | Casa Libre',
+  title: `Publicá tu propiedad gratis en ${COUNTRY.name} — Vender o alquilar | Casa Libre`,
   description: 'Publicá tu casa, departamento o local gratis en Casa Libre. Sin comisiones, sin planes. Tu propiedad aparece al instante en el mapa y llega a miles de personas.',
   alternates: { canonical: '/vender' },
 };
 
 const content = {
   es: {
-    hero: { eyebrow: 'Para quienes publican', title: 'Publicá tu propiedad', titleSerif: 'gratis.', sub: 'Vendé o alquilá tu propiedad en Paraguay sin pagar comisiones ni planes. Se publica al instante.' },
+    hero: { eyebrow: 'Para quienes publican', title: 'Publicá tu propiedad', titleSerif: 'gratis.', sub: `Vendé o alquilá tu propiedad en ${COUNTRY.name} sin pagar comisiones ni planes. Se publica al instante.` },
     blocks: [
       { type: 'features', items: [
         { t: 'Sin costo', d: 'Publicar es 100% gratis. No cobramos por publicar ni comisión por la operación.' },
@@ -23,7 +24,7 @@ const content = {
     ],
   },
   en: {
-    hero: { eyebrow: 'For listers', title: 'List your property', titleSerif: 'free.', sub: 'Sell or rent your property in Paraguay without paying commissions or plans. It goes live instantly.' },
+    hero: { eyebrow: 'For listers', title: 'List your property', titleSerif: 'free.', sub: `Sell or rent your property in ${COUNTRY.name} without paying commissions or plans. It goes live instantly.` },
     blocks: [
       { type: 'features', items: [
         { t: 'No cost', d: 'Listing is 100% free. We charge nothing to list and take no commission on the deal.' },

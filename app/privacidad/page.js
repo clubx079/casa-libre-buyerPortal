@@ -1,9 +1,10 @@
 import MarketingShell from '@/components/MarketingShell';
 import Article from '@/components/marketing/Article';
+import { COUNTRY } from '@/lib/country';
 
 export const metadata = {
   title: 'Política de privacidad — Casa Libre',
-  description: 'Cómo Casa Libre recopila, usa y protege tus datos en el marketplace de propiedades de Paraguay.',
+  description: `Cómo Casa Libre recopila, usa y protege tus datos en el marketplace de propiedades de ${COUNTRY.name}.`,
   alternates: { canonical: '/privacidad' },
 };
 

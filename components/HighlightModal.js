@@ -9,6 +9,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
+import { COUNTRY } from '@/lib/country';
 
 const pk = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
 const stripePromise = pk ? loadStripe(pk) : null;
@@ -41,7 +42,7 @@ const DICT = {
     errTitle: 'El pago no se completó', retry: 'Reintentar', close: 'Cerrar', tryAgain: 'Intentá nuevamente.',
     payFail: 'El pago no se completó.', startFail: 'No se pudo iniciar el pago.', confirmFail: 'No se pudo confirmar el pago.', authFail: 'La autenticación de la tarjeta falló.',
     err: { unauthorized: 'Iniciá sesión para destacar tu propiedad.', already_promoted: 'Esta propiedad ya tiene una promoción activa.', not_publishable: 'La propiedad debe estar publicada y completa para destacarla.', forbidden: 'No podés destacar esta propiedad.', not_found: 'No encontramos la propiedad.', stripe_not_configured: 'El pago no está disponible en este momento.' },
-    locale: 'es-PY',
+    locale: COUNTRY.locale,
   },
   en: {
     eyebrow: (p) => (p === 'home' ? 'Feature on the landing page' : 'Verify property'),

@@ -2,12 +2,13 @@
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
 import { CITIES, COMPETITORS } from '@/lib/site';
+import { COUNTRY } from '@/lib/country';
 
 // Site-wide footer. The dense internal linking here is the main signal Google
 // uses to choose sitelinks, so every marketing page links to every other.
 const L = {
   es: {
-    tagline: 'Comprá, alquilá y publicá propiedades en Paraguay — gratis.',
+    tagline: `Comprá, alquilá y publicá propiedades en ${COUNTRY.name} — gratis.`,
     platform: 'Plataforma', company: 'Empresa', cities: 'Ciudades', compare: 'Comparar',
     buy: 'Comprar propiedades', rent: 'Alquilar propiedades', all: 'Ver todas las propiedades', publish: 'Publicar gratis',
     story: 'Nuestra historia', how: 'Cómo funciona', sell: 'Publicá tu propiedad', business: 'Para empresas', pmgmt: 'Administración de propiedades', contact: 'Contacto', faq: 'Preguntas frecuentes',
@@ -16,7 +17,7 @@ const L = {
     fxNote: 'Conversión referencial al tipo de cambio del día · fuente open.er-api.com',
   },
   en: {
-    tagline: 'Buy, rent and list properties in Paraguay — free.',
+    tagline: `Buy, rent and list properties in ${COUNTRY.name} — free.`,
     platform: 'Platform', company: 'Company', cities: 'Cities', compare: 'Compare',
     buy: 'Buy properties', rent: 'Rent properties', all: 'Browse all listings', publish: 'List for free',
     story: 'Our story', how: 'How it works', sell: 'List your property', business: 'For businesses', pmgmt: 'Property management', contact: 'Contact', faq: 'FAQ',
@@ -40,7 +41,7 @@ export default function Footer() {
       <div className="max-w-[1200px] mx-auto px-5 md:px-11 py-14">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
           <div className="col-span-2 md:col-span-1">
-            <Link href="/" className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif italic font-normal">.py</em></Link>
+            <Link href="/" className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></Link>
             <p className="text-[13px] text-paper/60 mt-3 leading-relaxed max-w-[220px]">{t.tagline}</p>
           </div>
           {sections.map((s) => (
@@ -55,7 +56,7 @@ export default function Footer() {
           ))}
         </div>
         <div className="mt-12 pt-6 border-t border-paper/15 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="font-mono text-[11px] text-paper/45">© {new Date().getFullYear()} Casa Libre — Paraguay</div>
+          <div className="font-mono text-[11px] text-paper/45">© {new Date().getFullYear()} {COUNTRY.brand} — {COUNTRY.name}</div>
           <div className="flex gap-5 text-[12px] text-paper/60">
             <Link href="/terminos" className="hover:text-paper">{t.terms}</Link>
             <Link href="/privacidad" className="hover:text-paper">{t.privacy}</Link>

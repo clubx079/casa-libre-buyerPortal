@@ -10,13 +10,14 @@ import { useLang } from '@/lib/useLang';
 import { useSellFlow } from '@/components/SellFlow';
 import { typeLabel } from '@/lib/propertyType';
 import { fmtUsd } from '@/lib/ui';
+import { COUNTRY } from '@/lib/country';
 import VerifiedTag from '@/components/VerifiedTag';
 
 const H = {
   es: {
     cta: 'Publicá gratis', buy: 'Comprar', rent: 'Alquilar', sell: 'Vender',
     heroL1: 'Encontrá tu lugar,', heroL2: 'libremente.',
-    heroSub: ['La forma más amigable de comprar,', 'alquilar y vender casas en', 'Paraguay.'],
+    heroSub: ['La forma más amigable de comprar,', 'alquilar y vender casas en', `${COUNTRY.name}.`],
     searchPh: '¿Dónde querés vivir?', mascotCaption: '“¡Vamos que se puede!” — Cuate, tu guía',
     justListed: 'Recién publicadas', justListedSerif: 'lo más nuevo del mercado', viewAll: 'Ver todas →',
     forSale: 'En venta', forRent: 'En alquiler', perMonth: '/mes', bd: 'dorm',
@@ -28,12 +29,12 @@ const H = {
     ],
     statActive: 'propiedades activas', statComm: 'comisión al publicar', statInstant: 'Al instante', statInstantL: 'publicás tu aviso',
     ctaTitle: 'Tu casa te está buscando', ctaSerif: 'a vos.', ctaSub: 'Gratis para buscar, gratis para publicar. Empezá hoy.',
-    explore: 'Explorar propiedades', chips: ['Villa Morra', 'Carmelitas', 'Recoleta', 'Las Mercedes', 'Barrio Jara'],
+    explore: 'Explorar propiedades', chips: COUNTRY.featuredZones,
   },
   en: {
     cta: 'List for free', buy: 'Buy', rent: 'Rent', sell: 'Sell',
     heroL1: 'Find your place,', heroL2: 'freely.',
-    heroSub: ['The friendliest way to buy,', 'rent and sell homes in', 'Paraguay.'],
+    heroSub: ['The friendliest way to buy,', 'rent and sell homes in', `${COUNTRY.name}.`],
     searchPh: 'Where do you want to live?', mascotCaption: '“Let’s go!” — Cuate, your guide',
     justListed: 'Just listed', justListedSerif: 'fresh on the market', viewAll: 'View all →',
     forSale: 'For sale', forRent: 'For rent', perMonth: '/mo', bd: 'bd',
@@ -45,7 +46,7 @@ const H = {
     ],
     statActive: 'active listings', statComm: 'listing commission', statInstant: 'Instant', statInstantL: 'your listing goes live',
     ctaTitle: 'Your home is out there looking', ctaSerif: 'for you.', ctaSub: 'Free to browse, free to list. Start today.',
-    explore: 'Explore homes', chips: ['Villa Morra', 'Carmelitas', 'Recoleta', 'Las Mercedes', 'Barrio Jara'],
+    explore: 'Explore homes', chips: COUNTRY.featuredZones,
   },
 };
 
@@ -155,7 +156,7 @@ export default function MobileHome({ featured = [], count = 0, tickerData = [] }
         </div>
 
         <div className="border-t border-paper/20 mt-[18px] pt-6 flex flex-col gap-4">
-          {[[`${count.toLocaleString(lang === 'en' ? 'en-US' : 'es-PY')}+`, t.statActive], ['0%', t.statComm], [t.statInstant, t.statInstantL]].map(([v, l], i) => (
+          {[[`${count.toLocaleString(lang === 'en' ? 'en-US' : COUNTRY.locale)}+`, t.statActive], ['0%', t.statComm], [t.statInstant, t.statInstantL]].map(([v, l], i) => (
             <div key={i} className="flex items-baseline"><span className="text-[30px] font-bold tracking-[-0.02em]">{v}</span><span className="font-mono text-[12px] text-paper/50 ml-3">{l}</span></div>
           ))}
         </div>

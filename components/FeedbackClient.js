@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
 import { useAuth } from '@/components/AuthProvider';
+import { COUNTRY } from '@/lib/country';
 
 const T = {
   es: {
@@ -95,7 +96,7 @@ export default function FeedbackClient() {
   return (
     <div className="bg-paper text-ink min-h-screen">
       <nav className="flex items-center justify-between flex-wrap gap-3 px-5 md:px-9 py-4 border-b border-ink/12">
-        <Link href="/" className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif italic font-normal">.py</em></Link>
+        <Link href="/" className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></Link>
         <div className="flex items-center gap-3.5">
           <div className="flex items-center h-[40px] border border-ink/30 rounded-pill p-[3px] text-[12px] font-semibold">
             {['es', 'en'].map((x) => (

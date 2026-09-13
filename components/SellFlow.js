@@ -20,6 +20,7 @@ import RecommendedTag from '@/components/RecommendedTag';
 import PlanBox from '@/components/PlanBox';
 import { VerifiedIcon } from '@/components/VerifiedTag';
 import { savePendingSell } from '@/lib/pendingSell';
+import { COUNTRY } from '@/lib/country';
 
 const SellFlowContext = createContext({ openSell: () => {} });
 export const useSellFlow = () => useContext(SellFlowContext);
@@ -55,7 +56,7 @@ const DICT = {
     errSeller: 'Elegí propietario o agente', errName: 'Ingresá tu nombre', errEmail: 'Ingresá un correo válido', errAddr: 'Elegí una dirección',
     errSendOtp: 'No se pudo enviar el código. Intentá de nuevo.', emailTaken: 'Este correo ya tiene una cuenta.', loginInstead: 'Iniciar sesión para continuar',
     errCode: 'Código inválido o vencido', errType: 'Elegí un tipo', errPrice: 'Ingresá un precio válido',
-    errPriceFloorSale: 'El precio de venta debe ser de al menos US$ 5.000', errPriceFloorRent: 'El alquiler mensual debe ser de al menos ₲ 300.000',
+    errPriceFloorSale: 'El precio de venta debe ser de al menos US$ 5.000', errPriceFloorRent: `El alquiler mensual debe ser de al menos ${COUNTRY.currencySymbol} 300.000`,
     errArea: 'Ingresá la superficie', errAreaRange: 'La superficie debe estar entre 5 y 2.000 m²', errPhone: 'Ingresá un teléfono válido', errPhotos: 'Agregá al menos una foto',
     errSubmit: 'No se pudo publicar. Intentá de nuevo.',
   },
@@ -89,7 +90,7 @@ const DICT = {
     errSeller: 'Choose owner or agent', errName: 'Enter your name', errEmail: 'Enter a valid email', errAddr: 'Choose an address',
     errSendOtp: 'Could not send the code. Please try again.', emailTaken: 'This email already has an account.', loginInstead: 'Log in to continue',
     errCode: 'Invalid or expired code', errType: 'Choose a type', errPrice: 'Enter a valid price',
-    errPriceFloorSale: 'Sale price must be at least US$ 5,000', errPriceFloorRent: 'Monthly rent must be at least ₲ 300,000',
+    errPriceFloorSale: 'Sale price must be at least US$ 5,000', errPriceFloorRent: `Monthly rent must be at least ${COUNTRY.currencySymbol} 300,000`,
     errArea: 'Enter the area', errAreaRange: 'Area must be between 5 and 2,000 m²', errPhone: 'Enter a valid phone', errPhotos: 'Add at least one photo',
     errSubmit: 'Could not publish. Please try again.',
   },
@@ -149,7 +150,7 @@ export default function SellFlowProvider({ children }) {
 
   const set = (k, v) => setF((s) => ({ ...s, [k]: v }));
   const setField = (k) => (e) => { const v = e.target.value; setF((s) => ({ ...s, [k]: v })); setErrs((er) => (er[k] ? { ...er, [k]: undefined } : er)); };
-  const priceCurrency = f.currency || (f.mode === 'alquiler' ? 'PYG' : 'USD');
+  const priceCurrency = f.currency || (f.mode === 'alquiler' ? COUNTRY.currencyCode : 'USD');
 
   // If a returning user logs in via the fallback auth modal while the wizard is
   // open (e.g. their email was already registered), jump them straight to details.
@@ -242,7 +243,7 @@ export default function SellFlowProvider({ children }) {
     const p = numOf(f.price);
     if (!Number.isFinite(p) || p <= 0) e.price = t.errPrice;
     else if (f.mode === 'venta') { const usd = priceCurrency === 'USD' ? p : p / APPROX_RATE; if (usd < 5000) e.price = t.errPriceFloorSale; }
-    else { const pyg = priceCurrency === 'PYG' ? p : p * APPROX_RATE; if (pyg < 300000) e.price = t.errPriceFloorRent; }
+    else { const pyg = priceCurrency === 'PYG' ? p : p * APPROX_RATE; if (pyg < COUNTRY.rentFloorLocal) e.price = t.errPriceFloorRent; }
     const a = numOf(f.area); const isLand = f.ptype === 'terreno';
     if (!Number.isFinite(a) || a <= 0) e.area = t.errArea; else if (!isLand && (a < 5 || a > 2000)) e.area = t.errAreaRange;
     if (String(f.contact_phone).replace(/\D/g, '').length < 6) e.contact_phone = t.errPhone;
@@ -439,7 +440,7 @@ export default function SellFlowProvider({ children }) {
                         <label className="flex-1 min-w-0"><span className={labelCls}>{t.fPrice(f.mode)}</span>
                           <div className="flex gap-2">
                             <input value={f.price} onChange={setField('price')} inputMode="numeric" placeholder={t.fPricePh(f.mode)} className={`${fieldCls('price')} flex-1 min-w-0`} />
-                            <select value={priceCurrency} onChange={setField('currency')} className="px-2.5 py-[13px] border-[1.5px] border-ink/30 rounded-input bg-card font-medium text-[15px] outline-none focus:border-ink cursor-pointer w-[68px] sm:w-[80px] shrink-0"><option value="USD">US$</option><option value="PYG">₲</option></select>
+                            <select value={priceCurrency} onChange={setField('currency')} className="px-2.5 py-[13px] border-[1.5px] border-ink/30 rounded-input bg-card font-medium text-[15px] outline-none focus:border-ink cursor-pointer w-[68px] sm:w-[80px] shrink-0"><option value="USD">US$</option><option value={COUNTRY.currencyCode}>{COUNTRY.currencySymbol}</option></select>
                           </div>
                           <FErr k="price" />
                         </label>

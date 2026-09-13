@@ -10,23 +10,24 @@ import { select } from '@/lib/db';
 import { stripe, promoPlan, promoCents, promoUsd, PROMO } from '@/lib/stripe';
 import { getUserBillingRow, ensureStripeCustomer, grantPromotion, recordPayment } from '@/lib/billing';
 import { verifyRenewToken } from '@/lib/promoToken';
+import { COUNTRY } from '@/lib/country';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const SITE = (process.env.APP_PUBLIC_URL || 'https://casa-libre.com.py').replace(/\/$/, '');
+const SITE = (process.env.APP_PUBLIC_URL || COUNTRY.defaultUrl).replace(/\/$/, '');
 
 function page({ title, body, cta }) {
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>${title}</title></head>
   <body style="margin:0;background:#f9f4ee;font-family:'Space Grotesk',Helvetica,Arial,sans-serif;color:#111">
     <div style="max-width:460px;margin:8vh auto;padding:0 20px">
-      <div style="font-size:22px;font-weight:700;letter-spacing:-0.03em;margin-bottom:22px">casa-libre<span style="font-style:italic">.py</span></div>
+      <div style="font-size:22px;font-weight:700;letter-spacing:-0.03em;margin-bottom:22px">casa-libre<span style="font-style:italic">${COUNTRY.tld}</span></div>
       <div style="background:#fff;border:1.5px solid rgba(17,17,17,.12);border-radius:20px;padding:28px 26px">
         <div style="font-size:20px;font-weight:700;letter-spacing:-0.02em">${title}</div>
         <div style="font-size:14px;color:rgba(17,17,17,.65);margin-top:10px;line-height:1.6">${body}</div>
         ${cta ? `<div style="margin-top:20px"><a href="${cta.href}" style="display:inline-block;background:#111;color:#f9f4ee;text-decoration:none;font-size:14px;font-weight:600;padding:12px 22px;border-radius:999px">${cta.label}</a></div>` : ''}
       </div>
-      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:rgba(17,17,17,.4);margin-top:16px">Casa Libre — Paraguay</div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:rgba(17,17,17,.4);margin-top:16px">${COUNTRY.brand} — ${COUNTRY.name}</div>
     </div>
   </body></html>`;
 }
@@ -81,7 +82,7 @@ export async function GET(req) {
       const until = await grantPromotion(pid, plan, { extendFrom: prop.promotion_expires_at });
       await recordPayment({ user_id: uid, property_id: pid, kind: 'renewal', plan, amount_usd: usd, currency: 'usd', status: 'succeeded', stripe_payment_intent_id: pi.id, card_brand: user.card_brand, card_last4: user.card_last4, highlight_until: until });
       try { revalidateTag('listings'); } catch {}
-      const untilEs = new Date(until).toLocaleDateString('es-PY', { day: 'numeric', month: 'long', year: 'numeric' });
+      const untilEs = new Date(until).toLocaleDateString(COUNTRY.locale, { day: 'numeric', month: 'long', year: 'numeric' });
       return html(page({ title: '¡Renovada por 30 días!', body: `Cobramos US$${usd} a tu tarjeta terminada en ${user.card_last4 || '••••'}. Tu propiedad seguirá ${plan === 'home' ? 'en la portada y verificada' : 'verificada'} hasta el ${untilEs}.`, cta: { href: `${SITE}/cuenta/publicaciones`, label: 'Ver mis publicaciones' } }));
     }
     // Needs authentication → finish in the account page.

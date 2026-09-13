@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
 import CardModal from '@/components/CardModal';
+import { COUNTRY } from '@/lib/country';
 
 const T = {
   es: { title: 'Pagos', sub: 'Tu tarjeta guardada y el historial de transacciones', cardTitle: 'Tarjeta guardada', noCard: 'Todavía no tenés una tarjeta guardada. Se guardará automáticamente la primera vez que destaques una propiedad.', histTitle: 'Historial de transacciones', empty: 'Todavía no realizaste ningún pago.', th: { prop: 'Propiedad', amount: 'Monto', status: 'Estado', date: 'Fecha' }, succeeded: 'Exitoso', failed: 'Fallido', deleted: 'Propiedad eliminada', highlight: 'Destacar propiedad', planV: 'Verificada', planH: 'Portada', renewal: 'Renovación', loading: 'Cargando…', changeCard: 'Cambiar tarjeta', addCard: 'Agregar tarjeta' },
@@ -20,7 +21,7 @@ export default function PaymentsPage() {
 
   const card = data?.card;
   const payments = data?.payments || [];
-  const fmtDate = (iso) => { try { return new Date(iso).toLocaleDateString(lang === 'es' ? 'es-PY' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' }); } catch { return ''; } };
+  const fmtDate = (iso) => { try { return new Date(iso).toLocaleDateString(lang === 'es' ? COUNTRY.locale : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' }); } catch { return ''; } };
   const propLabel = (p) => { const pr = p.property; if (!pr) return t.deleted; return [pr.property_type, pr.neighborhood || pr.city].filter(Boolean).join(' · ') || t.highlight; };
   const planText = (p) => { const base = p.plan === 'home' ? t.planH : p.plan === 'verified' ? t.planV : t.highlight; return p.kind === 'renewal' ? `${base} · ${t.renewal}` : base; };
 

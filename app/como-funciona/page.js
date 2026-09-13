@@ -1,5 +1,6 @@
 import MarketingShell from '@/components/MarketingShell';
 import Article from '@/components/marketing/Article';
+import { COUNTRY } from '@/lib/country';
 
 export const metadata = {
   title: 'Cómo funciona Casa Libre — Comprar, alquilar y publicar propiedades',
@@ -13,7 +14,7 @@ const content = {
     blocks: [
       { type: 'heading', text: 'Si buscás una propiedad' },
       { type: 'features', items: [
-        { t: '1 · Explorá el mapa', d: 'Filtrá por ciudad, barrio, tipo, precio y dormitorios. Mirá cada propiedad en el mapa con fotos reales y precio en ₲ y US$.' },
+        { t: '1 · Explorá el mapa', d: `Filtrá por ciudad, barrio, tipo, precio y dormitorios. Mirá cada propiedad en el mapa con fotos reales y precio en ${COUNTRY.currencySymbol} y US$.` },
         { t: '2 · Guardá tus favoritas', d: 'Creá tu cuenta y guardá las propiedades que te interesan para volver a verlas desde tu panel.' },
         { t: '3 · Contactá al dueño', d: 'Cada aviso tiene el contacto del publicador. Coordiná una visita directamente, sin intermediarios.' },
       ] },
@@ -31,7 +32,7 @@ const content = {
     blocks: [
       { type: 'heading', text: 'If you’re looking for a property' },
       { type: 'features', items: [
-        { t: '1 · Explore the map', d: 'Filter by city, neighborhood, type, price and bedrooms. See each property on the map with real photos and prices in ₲ and US$.' },
+        { t: '1 · Explore the map', d: `Filter by city, neighborhood, type, price and bedrooms. See each property on the map with real photos and prices in ${COUNTRY.currencySymbol} and US$.` },
         { t: '2 · Save your favorites', d: 'Create your account and save the properties you like to revisit them from your dashboard.' },
         { t: '3 · Contact the owner', d: 'Every listing has the lister’s contact. Arrange a visit directly, with no middlemen.' },
       ] },

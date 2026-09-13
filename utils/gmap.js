@@ -6,6 +6,7 @@
 // play together (Advanced Markers would have forced a Cloud mapId and dropped
 // inline styling).
 import { loadGoogleMapsAPI } from './googleMapsLoader';
+import { COUNTRY } from '@/lib/country';
 export { loadGoogleMapsAPI };
 
 const CREAM = '#F9F4EE';
@@ -35,11 +36,15 @@ export const CL_MAP_STYLE = [
   { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#7d8d86' }] },
 ];
 
-// Paraguay bounding box (generous). Listings with coordinates outside it are
-// mis-geocoded (e.g. stuck at 0,0 or a wrong country) and must NOT be plotted.
-export function inParaguay(lat, lng) {
-  return lat != null && lng != null && lat >= -28 && lat <= -19 && lng >= -63 && lng <= -54;
+// Country bounding box (generous), from lib/country.js. Listings with coordinates
+// outside it are mis-geocoded (e.g. stuck at 0,0 or a wrong country) and must NOT
+// be plotted. Paraguay bounds are unchanged (lat -28..-19, lng -63..-54).
+export function inCountry(lat, lng) {
+  const b = COUNTRY.bounds;
+  return lat != null && lng != null && lat >= b.latMin && lat <= b.latMax && lng >= b.lngMin && lng <= b.lngMax;
 }
+// Back-compat alias (existing imports use inParaguay).
+export const inParaguay = inCountry;
 
 const uri = (svg) => 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
 

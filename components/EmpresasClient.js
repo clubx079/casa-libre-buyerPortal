@@ -7,11 +7,12 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
+import { COUNTRY } from '@/lib/country';
 
 // Placeholder test number until the real business WhatsApp line is set — the
 // previous placeholder (595981000000) was a real person's number, so this is a
 // harmless dummy. Replace with the real line when available.
-const BIZ_WA = '00000000';
+const BIZ_WA = COUNTRY.businessWhatsApp;
 
 const T = {
   es: {
@@ -27,7 +28,7 @@ const T = {
       ['01', 'Leads directos, sin intermediarios', 'Cada aviso muestra tu contacto. Los interesados te escriben por WhatsApp o te llaman a vos — nunca vendemos tus leads ni nos metemos en el medio.'],
       ['02', 'Publicación instantánea', 'Cargás la propiedad y queda visible al instante. Sin esperas ni trámites: tu cartera completa, en línea hoy.'],
       ['03', 'Gratis durante el lanzamiento', 'Publicar no cuesta nada durante el lanzamiento. Sin comisiones sobre tus operaciones — tus negocios son tuyos.'],
-      ['04', 'Visibilidad donde importa', 'Trabajamos para que quien busque propiedades en Paraguay nos encuentre primero en Google. Tu cartera crece con ese tráfico.'],
+      ['04', 'Visibilidad donde importa', `Trabajamos para que quien busque propiedades en ${COUNTRY.name} nos encuentre primero en Google. Tu cartera crece con ese tráfico.`],
       ['05', 'Migración de tu cartera', '¿Tenés decenas o cientos de avisos? Te ayudamos a migrar tu inventario completo para que arranques con todo publicado.'],
       ['06', 'Datos que sirven', 'Sabé qué avisos generan contactos: cada toque de WhatsApp, llamada y número copiado queda registrado para tu análisis.'],
     ],
@@ -74,7 +75,7 @@ const T = {
       ['01', 'Direct leads, no middlemen', 'Every listing shows your contact. Interested buyers message you on WhatsApp or call you — we never sell your leads or sit in the middle.'],
       ['02', 'Instant publishing', 'Upload a property and it goes live instantly. No waiting, no red tape: your full portfolio, online today.'],
       ['03', 'Free during launch', 'Listing costs nothing during launch. No commission on your deals — your business stays yours.'],
-      ['04', 'Visibility where it counts', 'We work to be the first result when people search for property in Paraguay on Google. Your portfolio grows with that traffic.'],
+      ['04', 'Visibility where it counts', `We work to be the first result when people search for property in ${COUNTRY.name} on Google. Your portfolio grows with that traffic.`],
       ['05', 'Portfolio migration', 'Dozens or hundreds of listings? We help you migrate your full inventory so you start with everything live.'],
       ['06', 'Data that works for you', 'Know which listings generate contacts: every WhatsApp tap, call and copied number is tracked for your analysis.'],
     ],
@@ -161,7 +162,7 @@ export default function EmpresasClient() {
     <div className="bg-paper text-ink min-h-screen">
       {/* NAV */}
       <nav className="flex items-center justify-between flex-wrap gap-3 px-5 md:px-9 py-4 border-b border-ink/12">
-        <Link href="/" className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif italic font-normal">.py</em></Link>
+        <Link href="/" className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></Link>
         <div className="hidden md:flex gap-2">
           {t.tabs.map(([label, href]) => (
             <Link key={label} href={href} className="inline-flex items-center h-[40px] px-[18px] rounded-pill text-[14px] font-medium border border-ink">{label}</Link>
@@ -257,7 +258,7 @@ export default function EmpresasClient() {
                 </label>
                 <label className="flex flex-col gap-1.5">
                   <span className="font-mono text-[11px] tracking-[.08em] uppercase text-ink/55">{t.lPhone}</span>
-                  <input value={form.phone} onChange={set('phone')} type="tel" placeholder="0981 123 456" autoComplete="tel" className={fieldCls('phone')} />
+                  <input value={form.phone} onChange={set('phone')} type="tel" placeholder={COUNTRY.phonePlaceholder} autoComplete="tel" className={fieldCls('phone')} />
                 </label>
                 <label className="flex flex-col gap-1.5">
                   <span className="font-mono text-[11px] tracking-[.08em] uppercase text-ink/55">{t.lEmail}</span>

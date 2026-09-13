@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import MarketingShell from '@/components/MarketingShell';
 import CityContent from '@/components/marketing/CityContent';
 import { CITIES, cityBySlug, SITE } from '@/lib/site';
+import { COUNTRY } from '@/lib/country';
 
 export const dynamic = 'force-static';
 export function generateStaticParams() { return CITIES.map((c) => ({ ciudad: c.slug })); }
@@ -11,7 +12,7 @@ export function generateMetadata({ params }) {
   if (!c) return {};
   return {
     title: `Propiedades en ${c.name} — Casas y departamentos en venta y alquiler`,
-    description: `Encontrá casas, departamentos y locales en venta y alquiler en ${c.name}, Paraguay. Explorá las propiedades de ${c.name} en el mapa con Casa Libre. Buscar es gratis.`,
+    description: `Encontrá casas, departamentos y locales en venta y alquiler en ${c.name}, ${COUNTRY.name}. Explorá las propiedades de ${c.name} en el mapa con Casa Libre. Buscar es gratis.`,
     alternates: { canonical: `/propiedades-en/${c.slug}` },
   };
 }

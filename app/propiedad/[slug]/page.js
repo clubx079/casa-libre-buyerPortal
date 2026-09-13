@@ -5,10 +5,11 @@ import { fmtUsd } from '@/lib/ui';
 import PropertyViewTracker from '@/components/PropertyViewTracker';
 import PropertyDetailView from '@/components/PropertyDetailView';
 import { SITE } from '@/lib/site';
+import { COUNTRY } from '@/lib/country';
 
 export const dynamic = 'force-dynamic';
 
-const listingTitle = (l) => `${typeLabel(l.type, 'es') || 'Propiedad'}${l.beds ? ` de ${l.beds} dorm.` : ''} en ${l.neighborhood || l.city || 'Paraguay'}`;
+const listingTitle = (l) => `${typeLabel(l.type, 'es') || 'Propiedad'}${l.beds ? ` de ${l.beds} dorm.` : ''} en ${l.neighborhood || l.city || COUNTRY.name}`;
 
 export async function generateMetadata({ params }) {
   const l = await getListing(params.slug);

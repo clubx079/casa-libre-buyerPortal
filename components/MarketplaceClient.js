@@ -10,6 +10,7 @@ import VerifiedTag from '@/components/VerifiedTag';
 import { useSellFlow } from '@/components/SellFlow';
 import { track } from '@/lib/analytics';
 import { loadGoogleMapsAPI, mapOptions, pinIcon, clusterIcon, inParaguay } from '@/utils/gmap';
+import { COUNTRY } from '@/lib/country';
 
 // Marketplace-specific bilingual strings (search / filters / sort).
 const M = {
@@ -224,7 +225,7 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
       await loadGoogleMapsAPI();
       if (cancelled || !mapEl.current || mapRef.current || !window.google?.maps) return;
       const google = window.google;
-      const map = new google.maps.Map(mapEl.current, mapOptions(google, { center: { lat: -25.293, lng: -57.60 }, zoom: 13, gestureHandling: 'greedy' }));
+      const map = new google.maps.Map(mapEl.current, mapOptions(google, { center: COUNTRY.mapCenter, zoom: COUNTRY.mapZoom, gestureHandling: 'greedy' }));
       const info = new google.maps.InfoWindow({ disableAutoPan: true });
       // Cluster bubble → brand-coloured SVG pill (matches `.cluster-pill`).
       const renderer = {

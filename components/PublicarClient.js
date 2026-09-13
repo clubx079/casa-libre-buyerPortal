@@ -12,6 +12,7 @@ import RecommendedTag from '@/components/RecommendedTag';
 import PlanBox from '@/components/PlanBox';
 import { VerifiedIcon } from '@/components/VerifiedTag';
 import { loadPendingSell, clearPendingSell } from '@/lib/pendingSell';
+import { COUNTRY } from '@/lib/country';
 
 const DICT = {
   es: {
@@ -22,7 +23,7 @@ const DICT = {
     opVenta: 'Vender', opAlquiler: 'Alquilar',
     roleQ: '¿Sos el propietario o un agente?', roleOwner: 'Propietario', roleAgent: 'Agente',
     fType: 'Tipo de propiedad', types: [['casa', 'Casa'], ['departamento', 'Departamento'], ['duplex', 'Dúplex'], ['terreno', 'Terreno']],
-    fHood: 'Barrio', fHoodPh: 'Villa Morra, Recoleta…', fCity: 'Ciudad', fCityPh: 'Asunción',
+    fHood: 'Barrio', fHoodPh: 'Villa Morra, Recoleta…', fCity: 'Ciudad', fCityPh: COUNTRY.capital,
     fPrice: (m) => (m === 'venta' ? 'Precio' : 'Alquiler mensual'), fPricePh: (m) => (m === 'venta' ? '145.000' : '4.500.000'),
     fArea: 'Superficie (m²)', fDesc: 'Descripción', fDescPh: 'Depto luminoso con balcón, a 2 cuadras del Shopping del Sol…',
     fName: 'Tu nombre', fNamePh: 'Ana Giménez', fPhone: 'WhatsApp / teléfono', fPhonePh: '0981 123 456',
@@ -45,7 +46,7 @@ const DICT = {
     errName: 'Ingresá tu nombre', errPhone: 'Ingresá un WhatsApp / teléfono válido (mín. 6 dígitos)', errPhotos: 'Agregá al menos una foto',
     errFix: 'Faltan algunos datos. Revisá los campos marcados para publicar.',
     errSubmit: 'No se pudo publicar. Intentá de nuevo.',
-    fmtGs: (v) => '₲ ' + v.toLocaleString('es-PY'), fmtUsd: (v) => '≈ US$ ' + v, locale: 'es-PY',
+    fmtGs: (v) => COUNTRY.currencySymbol + ' ' + v.toLocaleString(COUNTRY.locale), fmtUsd: (v) => '≈ US$ ' + v, locale: COUNTRY.locale,
   },
   en: {
     navBack: 'Browse listings', navBuy: 'Buy', navRent: 'Rent', navSell: 'Sell', navCta: 'List for free', stepLabels: ['Details', 'Done'],
@@ -55,7 +56,7 @@ const DICT = {
     opVenta: 'Sell', opAlquiler: 'Rent out',
     roleQ: 'Are you the owner or an agent?', roleOwner: 'Owner', roleAgent: 'Agent',
     fType: 'Property type', types: [['casa', 'House'], ['departamento', 'Apartment'], ['duplex', 'Duplex'], ['terreno', 'Lot']],
-    fHood: 'Neighborhood', fHoodPh: 'Villa Morra, Recoleta…', fCity: 'City', fCityPh: 'Asunción',
+    fHood: 'Neighborhood', fHoodPh: 'Villa Morra, Recoleta…', fCity: 'City', fCityPh: COUNTRY.capital,
     fPrice: (m) => (m === 'venta' ? 'Price' : 'Monthly rent'), fPricePh: (m) => (m === 'venta' ? '145,000' : '4,500,000'),
     fArea: 'Area (m²)', fDesc: 'Description', fDescPh: 'Bright apartment with balcony, 2 blocks from Shopping del Sol…',
     fName: 'Your name', fNamePh: 'Ana Giménez', fPhone: 'WhatsApp / phone', fPhonePh: '0981 123 456',
@@ -78,7 +79,7 @@ const DICT = {
     errName: 'Enter your name', errPhone: 'Enter a valid WhatsApp / phone number (min. 6 digits)', errPhotos: 'Add at least one photo',
     errFix: 'Some details are missing. Please fix the highlighted fields to publish.',
     errSubmit: 'Could not publish. Please try again.',
-    fmtGs: (v) => '₲ ' + v.toLocaleString('en-US'), fmtUsd: (v) => '≈ US$ ' + v, locale: 'en-US',
+    fmtGs: (v) => COUNTRY.currencySymbol + ' ' + v.toLocaleString('en-US'), fmtUsd: (v) => '≈ US$ ' + v, locale: 'en-US',
   },
 };
 
@@ -183,7 +184,7 @@ export default function PublicarClient() {
       if (usd < 5000) e.price = t.errPriceFloorSale;
     } else {
       const pyg = priceCurrency === 'PYG' ? p : p * APPROX_RATE;
-      if (pyg < 300000) e.price = t.errPriceFloorRent;
+      if (pyg < COUNTRY.rentFloorLocal) e.price = t.errPriceFloorRent;
     }
 
     const isLand = f.ptype === 'terreno';
@@ -287,7 +288,7 @@ export default function PublicarClient() {
 
   const nav = (
     <nav className="flex items-center justify-center md:justify-between flex-wrap gap-3 px-5 md:px-9 py-4 border-b border-ink/12">
-      <Link href="/" className="font-bold text-[22px] tracking-head">casa-libre<em className="font-serif italic font-normal">.py</em></Link>
+      <Link href="/" className="font-bold text-[22px] tracking-head">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></Link>
       <div className="flex gap-2 flex-wrap text-[14px] font-medium">
         <Link href="/propiedades?op=venta" className="inline-flex items-center h-[40px] px-[18px] border border-ink rounded-pill">{t.navBuy}</Link>
         <Link href="/propiedades?op=alquiler" className="inline-flex items-center h-[40px] px-[18px] border border-ink rounded-pill">{t.navRent}</Link>
@@ -390,7 +391,7 @@ export default function PublicarClient() {
                   <input value={f.price} onChange={set('price')} inputMode="numeric" placeholder={t.fPricePh(mode)} className={`${fieldCls('price')} flex-1 min-w-0`} />
                   <select value={priceCurrency} onChange={set('currency')} className={`${inputCls} cursor-pointer w-[92px]`}>
                     <option value="USD">US$</option>
-                    <option value="PYG">₲</option>
+                    <option value={COUNTRY.currencyCode}>{COUNTRY.currencySymbol}</option>
                   </select>
                 </div>
                 <FErr k="price" />

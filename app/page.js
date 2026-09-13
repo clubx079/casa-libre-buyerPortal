@@ -4,6 +4,7 @@ import { fmtUsd } from '@/lib/ui';
 import LandingClient from '@/components/LandingClient';
 import MobileHome from '@/components/MobileHome';
 import Footer from '@/components/Footer';
+import { COUNTRY } from '@/lib/country';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,7 +19,7 @@ export default async function Landing() {
   const ticker = listings
     .filter((l) => l.usd)
     .slice(0, 8)
-    .map((l) => `${(l.neighborhood || l.city || 'Paraguay').toUpperCase()} — ${(typeLabel(l.type, 'es') || 'Propiedad').toUpperCase()} — ${fmtUsd(l.usd, 'es')}${l.mode === 'alquiler' ? '/mes' : ''}`);
+    .map((l) => `${(l.neighborhood || l.city || COUNTRY.name).toUpperCase()} — ${(typeLabel(l.type, 'es') || 'Propiedad').toUpperCase()} — ${fmtUsd(l.usd, 'es')}${l.mode === 'alquiler' ? '/mes' : ''}`);
   const count = activeCount || listings.length;
   return (
     <>

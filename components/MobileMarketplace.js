@@ -11,6 +11,7 @@ import { useFavorites } from '@/components/FavoritesProvider';
 import { typeLabel, typeKey } from '@/lib/propertyType';
 import { T, fmtUsd, fmtPyg, shortUsd, titleCaseZone, bedAbbr, bathWord, parkWord, loc } from '@/lib/ui';
 import { loadGoogleMapsAPI, mapOptions, pinIcon, clusterIcon, inParaguay } from '@/utils/gmap';
+import { COUNTRY } from '@/lib/country';
 import VerifiedTag from '@/components/VerifiedTag';
 
 const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -70,7 +71,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
   useEffect(() => { setPriceF('all'); }, [mode]);
 
   // Static barrio options (server-side search — we don't hold all listings client-side).
-  const barrios = ['Villa Morra', 'Carmelitas', 'Recoleta', 'Las Mercedes', 'Barrio Jara', 'Ycuá Satí', 'Mburucuyá', 'San Vicente', 'Trinidad', 'Sajonia', 'Los Laureles', 'Ciudad Nueva'];
+  const barrios = COUNTRY.barrios;
   const buckets = priceBuckets(mode, lang);
 
   // ---- server-driven data: filtered page + all-pins for the map ----
@@ -162,7 +163,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
       await loadGoogleMapsAPI();
       if (cancelled || !mapEl.current || mapRef.current || !window.google?.maps) return;
       const google = window.google;
-      const map = new google.maps.Map(mapEl.current, mapOptions(google, { center: { lat: -25.293, lng: -57.60 }, zoom: 12, gestureHandling: 'greedy' }));
+      const map = new google.maps.Map(mapEl.current, mapOptions(google, { center: COUNTRY.mapCenter, zoom: COUNTRY.mapZoomMobile, gestureHandling: 'greedy' }));
       const renderer = { render: ({ count, position }) => new google.maps.Marker({ position, zIndex: 1000 + count, icon: clusterIcon(google, count, false) }) };
       // Bigger radius → fewer, larger clusters so the streets stay readable when
       // there are many listings (was 46). Zoom in to break clusters apart.

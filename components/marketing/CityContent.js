@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
+import { COUNTRY } from '@/lib/country';
 import { Hero, CTABand } from './Parts';
 
 const PROSE = 'px-5 md:px-11 py-6 max-w-[760px] mx-auto text-[16px] leading-relaxed text-ink/80 [&>h2]:text-[26px] [&>h2]:font-bold [&>h2]:tracking-head [&>h2]:text-ink [&>h2]:mt-10 [&>h2]:mb-3 [&>p]:mb-4 [&_a]:font-semibold [&_a]:underline [&_a]:decoration-ink/30 hover:[&_a]:decoration-ink';
@@ -11,7 +12,7 @@ export default function CityContent({ name, others }) {
   const q = encodeURIComponent(name);
   const t = es
     ? {
-        eyebrow: `Paraguay · ${name}`, title: 'Propiedades en', sub: `Casas, departamentos y locales en venta y alquiler en ${name}. Mirá todo en el mapa, con precio en guaraníes y dólares.`,
+        eyebrow: `${COUNTRY.name} · ${name}`, title: 'Propiedades en', sub: `Casas, departamentos y locales en venta y alquiler en ${name}. Mirá todo en el mapa, con precio en ${COUNTRY.currencyName} y dólares.`,
         all: `Ver propiedades en ${name} →`, sale: 'En venta', rent: 'En alquiler',
         p1: `¿Buscás una propiedad en <strong>${name}</strong>? Casa Libre reúne los avisos de casas, departamentos, dúplex y locales disponibles en ${name} y sus alrededores. Filtrá por precio, dormitorios y tipo, y compará cada opción en el mapa con fotos reales.`,
         p2pre: `Publicar tu propiedad en ${name} también es gratis: `, p2link: 'publicá en minutos', p2post: ' y llegá a miles de personas que buscan en la zona.',
@@ -19,7 +20,7 @@ export default function CityContent({ name, others }) {
         ctaTitle: `Tu próximo lugar en ${name}`, ctaSub: 'Buscá o publicá gratis en Casa Libre.', ctaPrimary: [`Ver en ${name}`, `/propiedades?q=${q}`], ctaSecondary: ['Publicar gratis', '/publicar'],
       }
     : {
-        eyebrow: `Paraguay · ${name}`, title: 'Properties in', sub: `Houses, apartments and commercial spaces for sale and rent in ${name}. See everything on the map, with prices in guaraníes and dollars.`,
+        eyebrow: `${COUNTRY.name} · ${name}`, title: 'Properties in', sub: `Houses, apartments and commercial spaces for sale and rent in ${name}. See everything on the map, with prices in ${COUNTRY.currencyName} and dollars.`,
         all: `View properties in ${name} →`, sale: 'For sale', rent: 'For rent',
         p1: `Looking for a property in <strong>${name}</strong>? Casa Libre gathers listings of houses, apartments, duplexes and commercial spaces available in ${name} and its surroundings. Filter by price, bedrooms and type, and compare each option on the map with real photos.`,
         p2pre: `Listing your property in ${name} is free too: `, p2link: 'list in minutes', p2post: ' and reach thousands of people searching in the area.',

@@ -1,9 +1,10 @@
 import MarketingShell from '@/components/MarketingShell';
 import Article from '@/components/marketing/Article';
+import { COUNTRY } from '@/lib/country';
 
 export const metadata = {
   title: 'Términos y condiciones — Casa Libre',
-  description: 'Términos y condiciones de uso de Casa Libre, el marketplace de propiedades de Paraguay.',
+  description: `Términos y condiciones de uso de Casa Libre, el marketplace de propiedades de ${COUNTRY.name}.`,
   alternates: { canonical: '/terminos' },
 };
 
@@ -12,7 +13,7 @@ const content = {
     hero: { title: 'Términos y condiciones' },
     blocks: [
       { type: 'prose', nodes: [
-        ['p', 'Al usar Casa Libre aceptás estos términos. Casa Libre es una plataforma que conecta a quienes publican propiedades con quienes las buscan en Paraguay.'],
+        ['p', `Al usar Casa Libre aceptás estos términos. Casa Libre es una plataforma que conecta a quienes publican propiedades con quienes las buscan en ${COUNTRY.name}.`],
         ['h2', 'Uso de la plataforma'],
         ['p', 'Publicar propiedades es gratuito y requiere una cuenta. Sos responsable de la veracidad de la información y las fotos que publicás. Casa Libre no es parte de las operaciones entre usuarios ni cobra comisiones.'],
         ['h2', 'Contenido'],
@@ -26,7 +27,7 @@ const content = {
     hero: { title: 'Terms and conditions' },
     blocks: [
       { type: 'prose', nodes: [
-        ['p', 'By using Casa Libre you accept these terms. Casa Libre is a platform that connects those who list properties with those who search for them in Paraguay.'],
+        ['p', `By using Casa Libre you accept these terms. Casa Libre is a platform that connects those who list properties with those who search for them in ${COUNTRY.name}.`],
         ['h2', 'Use of the platform'],
         ['p', 'Listing properties is free and requires an account. You are responsible for the accuracy of the information and photos you post. Casa Libre is not a party to transactions between users and charges no commissions.'],
         ['h2', 'Content'],

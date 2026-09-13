@@ -4,21 +4,22 @@ import AuthProvider from '@/components/AuthProvider';
 import FavoritesProvider from '@/components/FavoritesProvider';
 import SellFlowProvider from '@/components/SellFlow';
 import { SITE, SITE_NAME, SITE_DESC, INDEXABLE } from '@/lib/site';
+import { COUNTRY } from '@/lib/country';
 
 export const metadata = {
   metadataBase: new URL(SITE),
   title: {
-    default: 'Casa Libre — Propiedades en Paraguay | Comprar, Alquilar y Publicar',
-    template: '%s | Casa Libre',
+    default: `${COUNTRY.brand} — ${COUNTRY.tagline} | Comprar, Alquilar y Publicar`,
+    template: `%s | ${COUNTRY.brand}`,
   },
   description: SITE_DESC,
-  keywords: ['propiedades Paraguay', 'casas en Asunción', 'departamentos Paraguay', 'comprar casa Paraguay', 'alquilar departamento Asunción', 'inmuebles Paraguay', 'publicar propiedad gratis'],
+  keywords: COUNTRY.seoKeywords,
   icons: { icon: '/favicon.png', shortcut: '/favicon.png', apple: '/favicon.png' },
   alternates: { canonical: '/' },
-  // Google Search Console site ownership verification.
-  verification: { google: 'pYOvxtOG8ggKnLLL8itfNb1yBjuAHWeZ6cHzk7Tl87E' },
-  openGraph: { title: 'Casa Libre — Propiedades en Paraguay', description: SITE_DESC, url: SITE, siteName: SITE_NAME, locale: 'es_PY', type: 'website' },
-  twitter: { card: 'summary_large_image', title: 'Casa Libre — Propiedades en Paraguay', description: SITE_DESC },
+  // Google Search Console site ownership verification (per-country token).
+  verification: COUNTRY.gscToken ? { google: COUNTRY.gscToken } : undefined,
+  openGraph: { title: `${COUNTRY.brand} — ${COUNTRY.tagline}`, description: SITE_DESC, url: SITE, siteName: SITE_NAME, locale: COUNTRY.ogLocale, type: 'website' },
+  twitter: { card: 'summary_large_image', title: `${COUNTRY.brand} — ${COUNTRY.tagline}`, description: SITE_DESC },
   // #18 Non-production hosts return noindex,nofollow so staging isn't indexed.
   robots: INDEXABLE
     ? { index: true, follow: true }
@@ -35,14 +36,14 @@ const orgLd = {
   url: SITE,
   logo: `${SITE}/logo.png`,
   description: SITE_DESC,
-  areaServed: { '@type': 'Country', name: 'Paraguay' },
+  areaServed: { '@type': 'Country', name: COUNTRY.name },
 };
 const siteLd = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
   name: SITE_NAME,
   url: SITE,
-  inLanguage: 'es-PY',
+  inLanguage: COUNTRY.locale,
   potentialAction: {
     '@type': 'SearchAction',
     target: { '@type': 'EntryPoint', urlTemplate: `${SITE}/propiedades?q={search_term_string}` },
@@ -52,7 +53,7 @@ const siteLd = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="es">
+    <html lang={COUNTRY.htmlLang}>
       <body>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgLd) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(siteLd) }} />

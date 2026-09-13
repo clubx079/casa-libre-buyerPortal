@@ -16,6 +16,8 @@ import { useSellFlow } from '@/components/SellFlow';
 import SaveButton from '@/components/SaveButton';
 import ShareButton from '@/components/ShareButton';
 import { genToken, shortUrl, trackContact, markOpened } from '@/lib/contactTrack';
+import { COUNTRY } from '@/lib/country';
+import { inCountry } from '@/utils/gmap';
 
 const T = {
   es: {
@@ -51,7 +53,7 @@ const WaGlyph = ({ size = 19 }) => (
 const fmtDate = (v, lang) => {
   if (!v) return null;
   try {
-    return new Date(v).toLocaleDateString(lang === 'es' ? 'es-PY' : 'en-US', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
+    return new Date(v).toLocaleDateString(lang === 'es' ? COUNTRY.locale : 'en-US', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
   } catch { return null; }
 };
 
@@ -74,8 +76,8 @@ export default function PropertyDetailView({ l, url }) {
   const sfx = l.mode === 'alquiler' ? t.perMonth : '';
   // Nav toggle: only the operation matching THIS listing is selected (not both).
   const navActive = l.mode === 'alquiler' ? 1 : 0;
-  // Paraguay bbox — hide the location map for mis-geocoded listings (bad coords abroad).
-  const hasGeo = l.lat != null && l.lng != null && l.lat >= -28 && l.lat <= -19 && l.lng >= -63 && l.lng <= -54;
+  // Country bbox — hide the location map for mis-geocoded listings (bad coords abroad).
+  const hasGeo = inCountry(l.lat, l.lng);
 
   // Location map — a single pin at the property's coordinates (Google Maps).
   useEffect(() => {
@@ -204,7 +206,7 @@ export default function PropertyDetailView({ l, url }) {
     <div className="min-h-screen bg-paper text-ink">
       {/* ── NAV ── */}
       <nav className="flex items-center justify-between flex-wrap gap-3 px-5 md:px-9 py-4 border-b border-ink/12">
-        <Link href="/" className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif italic font-normal">.py</em></Link>
+        <Link href="/" className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></Link>
         <div className="hidden md:flex gap-2">
           {t.tabs.map(([label, href], i) => (
             <Link key={label} href={href} className={`inline-flex items-center h-[40px] px-[18px] rounded-pill text-[14px] font-medium border border-ink ${i === navActive ? 'bg-ink text-paper' : ''}`}>{label}</Link>

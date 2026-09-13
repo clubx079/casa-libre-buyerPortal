@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
+import { COUNTRY } from '@/lib/country';
 import { Hero, CTABand } from './Parts';
 
 export default function CompareContent({ name, blurb, blurbEn, others }) {
@@ -9,31 +10,31 @@ export default function CompareContent({ name, blurb, blurbEn, others }) {
   const t = es
     ? {
         eyebrow: 'Comparación', title: 'Casa Libre',
-        sub: `${name} es ${blurb} Casa Libre es un marketplace donde buscar y publicar propiedades en Paraguay es simple y gratis.`,
+        sub: `${name} es ${blurb} Casa Libre es un marketplace donde buscar y publicar propiedades en ${COUNTRY.name} es simple y gratis.`,
         rows: [
           ['Costo de publicar', 'Gratis', 'Planes pagos / comisiones'],
           ['Comisión por venta', 'Sin comisión', 'Suele cobrar'],
           ['Publicación al instante', 'Sí', 'Depende del plan'],
           ['Mapa con todas las propiedades', 'Sí', 'Limitado'],
-          ['Precio en ₲ y US$', 'Sí', 'Varía'],
+          [`Precio en ${COUNTRY.currencySymbol} y US$`, 'Sí', 'Varía'],
           ['Contacto directo con el dueño', 'Sí', 'A veces vía inmobiliaria'],
         ],
-        note: 'Si estás decidiendo dónde publicar o buscar tu próxima propiedad en Paraguay, la diferencia principal es simple: en <strong>Casa Libre</strong> publicar es gratis, sin comisiones, y todo se ve en un mapa claro con precios en guaraníes y dólares.',
+        note: `Si estás decidiendo dónde publicar o buscar tu próxima propiedad en ${COUNTRY.name}, la diferencia principal es simple: en <strong>Casa Libre</strong> publicar es gratis, sin comisiones, y todo se ve en un mapa claro con precios en ${COUNTRY.currencyName} y dólares.`,
         chip: (n) => `Casa Libre vs ${n}`,
         ctaTitle: 'Probá Casa Libre gratis', ctaSub: 'Buscá miles de propiedades o publicá la tuya sin costo.', ctaPrimary: ['Ver propiedades', '/propiedades'], ctaSecondary: ['Publicar gratis', '/publicar'],
       }
     : {
         eyebrow: 'Comparison', title: 'Casa Libre',
-        sub: `${name} is ${blurbEn || blurb} Casa Libre is a marketplace where searching and listing properties in Paraguay is simple and free.`,
+        sub: `${name} is ${blurbEn || blurb} Casa Libre is a marketplace where searching and listing properties in ${COUNTRY.name} is simple and free.`,
         rows: [
           ['Cost to list', 'Free', 'Paid plans / commissions'],
           ['Sales commission', 'No commission', 'Usually charges'],
           ['Instant publishing', 'Yes', 'Depends on the plan'],
           ['Map with every property', 'Yes', 'Limited'],
-          ['Price in ₲ and US$', 'Yes', 'Varies'],
+          [`Price in ${COUNTRY.currencySymbol} and US$`, 'Yes', 'Varies'],
           ['Direct contact with the owner', 'Yes', 'Sometimes via an agency'],
         ],
-        note: 'If you’re deciding where to list or search for your next property in Paraguay, the main difference is simple: on <strong>Casa Libre</strong> listing is free, with no commissions, and everything shows on a clear map with prices in guaraníes and dollars.',
+        note: `If you’re deciding where to list or search for your next property in ${COUNTRY.name}, the main difference is simple: on <strong>Casa Libre</strong> listing is free, with no commissions, and everything shows on a clear map with prices in ${COUNTRY.currencyName} and dollars.`,
         chip: (n) => `Casa Libre vs ${n}`,
         ctaTitle: 'Try Casa Libre for free', ctaSub: 'Search thousands of properties or list yours at no cost.', ctaPrimary: ['Browse listings', '/propiedades'], ctaSecondary: ['List for free', '/publicar'],
       };

@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
 import AuthButton from '@/components/AuthButton';
+import { COUNTRY } from '@/lib/country';
 
 const NAV = {
   es: { buy: 'Comprar', rent: 'Alquilar', sell: 'Vender', browse: 'Ver propiedades' },
@@ -13,7 +14,7 @@ export default function SiteNav() {
   const t = NAV[lang];
   return (
     <nav className="flex items-center justify-between flex-wrap gap-3 px-5 md:px-11 py-4 border-b border-ink/12">
-      <Link href="/" className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif italic font-normal">.py</em></Link>
+      <Link href="/" className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></Link>
       <div className="hidden sm:flex gap-2 text-[14px] font-medium">
         <Link href="/propiedades?op=venta" className="px-[18px] py-2.5 border border-ink rounded-pill">{t.buy}</Link>
         <Link href="/propiedades?op=alquiler" className="px-[18px] py-2.5 border border-ink rounded-pill">{t.rent}</Link>
