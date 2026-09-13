@@ -45,7 +45,7 @@ const DICT = {
     locale: COUNTRY.locale,
   },
   en: {
-    eyebrow: (p) => (p === 'home' ? 'Feature on the landing page' : 'Verify property'),
+    eyebrow: (p) => (p === 'home' ? 'Feature on the home page' : 'Verify property'),
     title: (price) => `US$${price} · 30 days`,
     what: (p) => (p === 'home'
       ? 'Your listing gets the Verified badge, a star pin on the map (never hidden in a cluster) and a spot on the home page, for 30 days.'
@@ -55,7 +55,7 @@ const DICT = {
     otherCard: 'Use another card', backSaved: 'Back to saved card',
     newHint: 'Enter your card details. We store it securely with Stripe for your next renewal.',
     testHint: '· future date · any CVC', notConfigured: 'Payments are not configured.',
-    okTitle: (p) => (p === 'home' ? 'Your listing is on the landing page!' : 'Property verified!'),
+    okTitle: (p) => (p === 'home' ? 'Your listing is on the home page!' : 'Property verified!'),
     okUntil: (d) => `Active until ${d}.`, done: 'Done',
     errTitle: 'Payment did not complete', retry: 'Try again', close: 'Close', tryAgain: 'Please try again.',
     payFail: 'Payment did not complete.', startFail: 'Could not start the payment.', confirmFail: 'Could not confirm the payment.', authFail: 'Card authentication failed.',
@@ -84,10 +84,6 @@ function CardForm({ onDone, t, price }) {
     <div>
       <div className="bg-white border-[1.5px] border-ink/25 rounded-[16px] p-4">
         <PaymentElement options={{ layout: 'tabs' }} />
-      </div>
-      <div className="font-mono text-[11px] text-ink/45 mt-3 flex items-center gap-2">
-        <span className="border border-ink/30 rounded-[6px] px-2 py-0.5 font-medium">test</span>
-        4242 4242 4242 4242 {t.testHint}
       </div>
       {err && <div className="mt-3 text-[12px] font-medium text-red-700 bg-red-50 border border-red-200 rounded-[10px] px-3 py-2">{err}</div>}
       <button onClick={pay} disabled={busy || !stripe} className="mt-4 w-full py-3.5 bg-ink text-paper rounded-pill font-bold text-[15px] disabled:opacity-60">

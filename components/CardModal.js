@@ -42,10 +42,6 @@ function SetupForm({ onDone, t }) {
       <div className="bg-white border-[1.5px] border-ink/25 rounded-[16px] p-4">
         <PaymentElement options={{ layout: 'tabs' }} />
       </div>
-      <div className="font-mono text-[11px] text-ink/45 mt-3 flex items-center gap-2">
-        <span className="border border-ink/30 rounded-[6px] px-2 py-0.5 font-medium">test</span>
-        4242 4242 4242 4242 {t.testHint}
-      </div>
       {err && <div className="mt-3 text-[12px] font-medium text-red-700 bg-red-50 border border-red-200 rounded-[10px] px-3 py-2">{err}</div>}
       <button onClick={save} disabled={busy || !stripe} className="mt-4 w-full py-3.5 bg-ink text-paper rounded-pill font-bold text-[15px] disabled:opacity-60">
         {busy ? t.saving : t.save}
