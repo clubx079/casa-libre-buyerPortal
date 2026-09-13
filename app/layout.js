@@ -55,6 +55,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang={COUNTRY.htmlLang}>
       <body>
+        {/* Runtime country → client (read by lib/country.js in the browser). Must run
+            before the app bundle hydrates, so it's the first thing in <body>. */}
+        <script dangerouslySetInnerHTML={{ __html: `window.__CL_COUNTRY__=${JSON.stringify(COUNTRY.code)}` }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgLd) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(siteLd) }} />
         <PostHogProvider>
