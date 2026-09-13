@@ -385,7 +385,7 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
     <div className="h-screen flex flex-col overflow-hidden">
       {/* NAV */}
       <nav className="flex items-center justify-between flex-wrap gap-3 px-5 md:px-9 py-4 border-b border-ink/12">
-        <Link href="/" className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif italic font-normal">.py</em></Link>
+        <Link href="/" className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></Link>
         <div className="hidden sm:flex gap-2">
           {t.tabs.map(([label, href, op], i) => (
             op ? (
