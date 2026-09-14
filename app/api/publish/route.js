@@ -12,6 +12,7 @@ import { getUsdToPyg } from '@/lib/fx';
 import { getSession } from '@/lib/auth';
 import { sendListingPublishedEmail } from '@/lib/email';
 import { COUNTRY } from '@/lib/country';
+import { genShortCode } from '@/lib/shortcode';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -133,6 +134,8 @@ export async function POST(req) {
     property_status: 'available',
     is_complete: true, // passed the form's completeness validation → searchable immediately
     origin: 'user',
+    // Short WhatsApp-link code (PY only — the column exists on the PY DB).
+    ...(COUNTRY.code === 'py' ? { short_code: genShortCode() } : {}),
     seller_type: sellerType,
     is_delisted: false,
     created_by: session.uid,   // who published this deal

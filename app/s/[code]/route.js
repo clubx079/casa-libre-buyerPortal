@@ -18,8 +18,9 @@ export const dynamic = 'force-dynamic';
 
 const UTM = 'utm_source=whatsapp&utm_medium=seller_contact&utm_campaign=property_share';
 
+// token is optional: the short_code form carries no per-share token.
 const dest = (base, pid, token) =>
-  `${base}/propiedad/${encodeURIComponent(pid)}?${UTM}&t=${encodeURIComponent(token)}`;
+  `${base}/propiedad/${encodeURIComponent(pid)}?${UTM}${token ? `&t=${encodeURIComponent(token)}` : ''}`;
 
 export async function GET(req, { params }) {
   const base = SITE.replace(/\/$/, '');
@@ -28,14 +29,23 @@ export async function GET(req, { params }) {
 
   const { propertyId, token } = parseCode(raw);
 
-  // New self-encoding format: the property UUID is in the code — resolve with no
-  // DB dependency, so the link works even if the tracking write was dropped.
+  // 1. Self-encoding format (base62(uuid)-token): the property UUID is in the
+  // code — resolve with NO DB dependency, so it works even if tracking dropped.
   if (propertyId && token) {
     return NextResponse.redirect(dest(base, propertyId, token), 302);
   }
 
-  // Legacy token-only links (created before self-encoding): recover the property
-  // from the contact-tracking row.
+  // 2. Per-property short_code (bare 6-char code): look up the property and
+  // redirect WITH the UTM params (no per-share token in this compact form).
+  try {
+    const rows = await select('properties', `short_code=eq.${encodeURIComponent(raw)}&select=id&limit=1`);
+    const pid = rows?.[0]?.id;
+    if (pid) return NextResponse.redirect(dest(base, pid, null), 302);
+  } catch {
+    /* column may not exist on this country's DB — fall through */
+  }
+
+  // 3. Legacy token-only links: recover the property from the contact-tracking row.
   try {
     const rows = await select(
       'contact_link_clicks',

@@ -33,7 +33,7 @@ const WaGlyph = ({ size = 21 }) => (
   </svg>
 );
 
-export default function PropertyContactCard({ sellerName, waDigits, url, listingRef, trackProps }) {
+export default function PropertyContactCard({ sellerName, waDigits, url, listingRef, trackProps, shortCode }) {
   const [lang] = useLang();
   const [copied, setCopied] = useState(false);
   // One tracking token per card render — embedded in the WhatsApp link so we can
@@ -46,7 +46,7 @@ export default function PropertyContactCard({ sellerName, waDigits, url, listing
   // The message reaches a local (Paraguayan) seller, so it is always in
   // Spanish regardless of the buyer's UI language. The link back to the listing
   // carries UTM + the tracking token.
-  const message = T.es.msg('', shortUrl(url, token));
+  const message = T.es.msg('', shortUrl(url, token, shortCode));
   const waUrl = waDigits ? `https://wa.me/${waDigits}?text=${encodeURIComponent(message)}` : null;
 
   // Record the contact attempt (who/seller/property) as the buyer taps WhatsApp.
