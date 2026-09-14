@@ -139,7 +139,7 @@ export default function PropertyDetailView({ l, url }) {
   // Trackable mobile-bar WhatsApp (own token; only one WA button shows per
   // viewport, so it never collides with the contact card's).
   const [mbarToken] = useState(genToken);
-  const mbarMsg = `¡Hola! ¿Sigue disponible esta propiedad?\n${shortUrl(url, mbarToken)}`;
+  const mbarMsg = `Hola! Que tal? Está disponible la propiedad?\n${shortUrl(url, mbarToken)}`;
   const mbarWa = waDigits ? `https://wa.me/${waDigits}?text=${encodeURIComponent(mbarMsg)}` : null;
   const recordMbarContact = () =>
     trackContact({ token: mbarToken, channel: 'whatsapp', property_id: l.id, listing_ref: listingRef, seller_name: l.contact_name || null, seller_phone: waDigits || null });
