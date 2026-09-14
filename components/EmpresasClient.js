@@ -13,6 +13,7 @@ import { COUNTRY } from '@/lib/country';
 // previous placeholder (595981000000) was a real person's number, so this is a
 // harmless dummy. Replace with the real line when available.
 const BIZ_WA = COUNTRY.businessWhatsApp;
+const BIZ_EMAIL = COUNTRY.businessEmail || `empresas@casa-libre${COUNTRY.tld}`;
 
 const T = {
   es: {
@@ -51,6 +52,7 @@ const T = {
     sideH: 'Por qué conviene entrar ahora',
     side: ['Publicación gratuita durante todo el lanzamiento', 'Tu contacto en cada aviso — los leads son tuyos', 'Publicación instantánea, sin esperas', 'Ayuda para migrar carteras grandes'],
     sideH2: '¿Preferís hablar directo?', waLbl: 'Escribinos por WhatsApp',
+    emailH: 'O escribinos por correo', emailPh: 'Tu correo electrónico', queryPh: 'Tu consulta', emailBtn: 'Enviar correo',
     faqH: 'Preguntas frecuentes',
     faq: [
       ['¿Cuánto cuesta publicar?', 'Nada. Durante el lanzamiento, publicar en Casa Libre es gratis para empresas y profesionales, sin límite de avisos y sin comisiones sobre tus operaciones.'],
@@ -98,6 +100,7 @@ const T = {
     sideH: 'Why join now',
     side: ['Free listings for the entire launch', 'Your contact on every listing — the leads are yours', 'Instant publishing, no waiting', 'Help migrating large portfolios'],
     sideH2: 'Prefer to talk directly?', waLbl: 'Message us on WhatsApp',
+    emailH: 'Or send us an email', emailPh: 'Your email', queryPh: 'Your question', emailBtn: 'Send email',
     faqH: 'Frequently asked questions',
     faq: [
       ['How much does listing cost?', 'Nothing. During launch, listing on Casa Libre is free for businesses and professionals, with no listing limit and no commission on your deals.'],
@@ -127,6 +130,10 @@ export default function EmpresasClient() {
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
   const waHref = `https://wa.me/${BIZ_WA}?text=${encodeURIComponent(t.waMsg(form.name))}`;
+
+  // Quick email contact (frontend-only): opens the visitor's mail app pre-filled.
+  const [biz, setBiz] = useState({ email: '', query: '' });
+  const mailtoHref = `mailto:${BIZ_EMAIL}?subject=${encodeURIComponent('Consulta — Casa Libre Empresas')}&body=${encodeURIComponent(`${biz.query || ''}\n\n${biz.email ? 'Email: ' + biz.email : ''}`)}`;
 
   const submit = async (e) => {
     e.preventDefault();
@@ -296,6 +303,29 @@ export default function EmpresasClient() {
                 <WaGlyph /> {t.waLbl}
               </a>
             )}
+          </div>
+
+          {/* Email contact */}
+          <p className="font-mono text-[12px] tracking-[.08em] uppercase text-ink/55 mb-2 mt-6">{t.emailH}</p>
+          <div className="flex flex-col gap-2.5">
+            <input
+              type="email"
+              value={biz.email}
+              onChange={(e) => setBiz((b) => ({ ...b, email: e.target.value }))}
+              placeholder={t.emailPh}
+              className="font-sans text-[15px] px-3.5 py-3 rounded-[12px] bg-paper text-ink outline-none border border-ink/45 focus:border-ink"
+            />
+            <textarea
+              value={biz.query}
+              onChange={(e) => setBiz((b) => ({ ...b, query: e.target.value }))}
+              placeholder={t.queryPh}
+              rows={3}
+              className="font-sans text-[15px] px-3.5 py-3 rounded-[12px] bg-paper text-ink outline-none border border-ink/45 focus:border-ink resize-y"
+            />
+            <a
+              href={mailtoHref}
+              className="inline-flex items-center justify-center gap-2.5 px-[22px] py-3 rounded-pill font-semibold text-[15px] bg-ink text-paper border-[1.5px] border-ink shadow-[4px_4px_0_rgba(17,17,17,.85)]"
+            >{t.emailBtn}</a>
           </div>
         </div>
       </section>
