@@ -10,16 +10,18 @@ import { useSellFlow } from '@/components/SellFlow';
 import { useFavorites } from '@/components/FavoritesProvider';
 import { typeLabel, typeKey } from '@/lib/propertyType';
 import { T, fmtUsd, fmtPyg, shortUsd, titleCaseZone, bedAbbr, bathWord, parkWord, loc } from '@/lib/ui';
-import { loadGoogleMapsAPI, mapOptions, pinIcon, clusterIcon, inParaguay } from '@/utils/gmap';
+import { loadGoogleMapsAPI, mapOptions, pinIcon, clusterIcon, inParaguay, youAreHereIcon } from '@/utils/gmap';
+import { distanceKm, getUserLocation, NEAR_RADIUS_KM } from '@/utils/geo';
 import { COUNTRY } from '@/lib/country';
 import VerifiedTag from '@/components/VerifiedTag';
+import AppComingSoon from '@/components/AppComingSoon';
 
 const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const PER_PAGE = 24;
 
 const TXT = {
-  es: { forSale: 'En venta', forRent: 'En alquiler', filters: 'Filtros', type: 'Tipo', price: 'Precio', beds: 'Dorm.', list: 'Lista', map: 'Mapa', cta: 'Publicá gratis', searchPh: 'Barrio, ciudad o edificio…', propType: 'Tipo de propiedad', priceUsd: 'Precio · US$', bedrooms: 'Dormitorios', barrio: 'Barrio', listedBy: 'Publicado por', ownerDirect: 'Dueño directo', agent: 'Inmobiliaria', clearAll: 'Borrar todo', show: 'Ver', close: 'Cerrar', sortBy: 'Ordenar por', noResults: 'Sin resultados', loadMore: 'Ver más', propsWord: 'propiedades' },
-  en: { forSale: 'For sale', forRent: 'For rent', filters: 'Filters', type: 'Type', price: 'Price', beds: 'Beds', list: 'List', map: 'Map', cta: 'List for free', searchPh: 'Neighborhood, city or building…', propType: 'Property type', priceUsd: 'Price · US$', bedrooms: 'Bedrooms', barrio: 'Barrio', listedBy: 'Listed by', ownerDirect: 'Owner direct', agent: 'Agent', clearAll: 'Clear all', show: 'Show', close: 'Close', sortBy: 'Sort by', noResults: 'No results', loadMore: 'Load more', propsWord: 'listings' },
+  es: { forSale: 'En venta', forRent: 'En alquiler', filters: 'Filtros', type: 'Tipo', price: 'Precio', beds: 'Dorm.', list: 'Lista', map: 'Mapa', cta: 'Publicá gratis', searchPh: 'Barrio, ciudad o edificio…', propType: 'Tipo de propiedad', priceUsd: 'Precio · US$', bedrooms: 'Dormitorios', barrio: 'Barrio', listedBy: 'Publicado por', ownerDirect: 'Dueño directo', agent: 'Inmobiliaria', clearAll: 'Borrar todo', show: 'Ver', close: 'Cerrar', sortBy: 'Ordenar por', noResults: 'Sin resultados', loadMore: 'Ver más', propsWord: 'propiedades', nearMe: 'Cerca de mí', myLocation: 'Mi ubicación', geoDenied: 'No pudimos acceder a tu ubicación' },
+  en: { forSale: 'For sale', forRent: 'For rent', filters: 'Filters', type: 'Type', price: 'Price', beds: 'Beds', list: 'List', map: 'Map', cta: 'List for free', searchPh: 'Neighborhood, city or building…', propType: 'Property type', priceUsd: 'Price · US$', bedrooms: 'Bedrooms', barrio: 'Barrio', listedBy: 'Listed by', ownerDirect: 'Owner direct', agent: 'Agent', clearAll: 'Clear all', show: 'Show', close: 'Close', sortBy: 'Sort by', noResults: 'No results', loadMore: 'Load more', propsWord: 'listings', nearMe: 'Near me', myLocation: 'My location', geoDenied: "We couldn't access your location" },
 };
 
 const TYPE_PILLS = [
@@ -62,6 +64,14 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
   const [sellerF, setSellerF] = useState('all');
   const [sort, setSort] = useState('relevancia');
   const [view, setView] = useState('list');
+  // "My location" / "Near me" — real user coords (country-agnostic; COUNTRY.mapCenter
+  // fallback), radius toggle, and a small non-blocking toast on denial.
+  const [userLoc, setUserLoc] = useState(null);
+  const [nearMe, setNearMe] = useState(false);
+  const [locating, setLocating] = useState(false);
+  const [geoMsg, setGeoMsg] = useState('');
+  const youMarkerRef = useRef(null);
+  const geoMsgTimer = useRef(null);
   const [page, setPage] = useState(1);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
@@ -216,6 +226,62 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
   const title = (l) => { let tp = typeLabel(l.type, lang) || (lang === 'es' ? 'Inmueble' : 'Property'); const zone = titleCaseZone(l.neighborhood || l.city || ''); const base = l.beds ? `${tp} · ${l.beds} ${bedAbbr(lang)}` : tp; return zone ? `${base} · ${zone}` : base; };
   const meta = (l) => [l.area && `${l.area} m²`, l.baths && `${l.baths} ${bathWord(l.baths, lang)}`, l.parking && `${l.parking} ${parkWord(l.parking, lang)}`].filter(Boolean).join(' · ');
 
+  // ---- geolocation: "my location" recenter + "near me" radius filter ----
+  const pinsById = useMemo(() => new Map(pins.map((p) => [p.id, p])), [pins]);
+  const showGeoMsg = (text) => {
+    setGeoMsg(text);
+    if (geoMsgTimer.current) clearTimeout(geoMsgTimer.current);
+    geoMsgTimer.current = setTimeout(() => setGeoMsg(''), 3400);
+  };
+  const coordsOf = (l) => {
+    if (l && l.lat != null && l.lng != null) return { lat: l.lat, lng: l.lng };
+    const p = pinsById.get(l?.id);
+    return p && p.lat != null && p.lng != null ? { lat: p.lat, lng: p.lng } : null;
+  };
+  const dropYouMarker = (loc) => {
+    const ref = mapRef.current;
+    if (!ref) return;
+    const { google, map } = ref;
+    if (youMarkerRef.current) { try { youMarkerRef.current.setMap(null); } catch {} }
+    youMarkerRef.current = new google.maps.Marker({
+      position: loc, map, zIndex: 99999, icon: youAreHereIcon(google),
+      title: lang === 'es' ? 'Estás aquí' : 'You are here',
+    });
+  };
+  const flyToMe = async () => {
+    setLocating(true);
+    const loc = userLoc || await getUserLocation();
+    setLocating(false);
+    if (!loc) { showGeoMsg(X.geoDenied); return; }
+    setUserLoc(loc);
+    const ref = mapRef.current;
+    if (ref) { try { ref.map.panTo(loc); ref.map.setZoom(14); } catch {} dropYouMarker(loc); }
+  };
+  const toggleNearMe = async () => {
+    if (nearMe) { setNearMe(false); return; }
+    let loc = userLoc;
+    if (!loc) { loc = await getUserLocation(); if (loc) setUserLoc(loc); }
+    if (!loc) { showGeoMsg(X.geoDenied); setNearMe(false); return; }
+    setNearMe(true);
+    const ref = mapRef.current;
+    if (ref) { try { ref.map.panTo(loc); ref.map.setZoom(13); } catch {} dropYouMarker(loc); }
+  };
+  // Rows the user sees: normal, or — when "near me" is on and coords exist — only
+  // listings within NEAR_RADIUS_KM, nearest first (combines with the other filters).
+  const displayRows = useMemo(() => {
+    if (!nearMe || !userLoc) return rows;
+    const out = [];
+    for (const l of rows) {
+      const c = coordsOf(l);
+      if (!c) continue;
+      const d = distanceKm(userLoc.lat, userLoc.lng, c.lat, c.lng);
+      if (d <= NEAR_RADIUS_KM) out.push([d, l]);
+    }
+    out.sort((a, b) => a[0] - b[0]);
+    return out.map((x) => x[1]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nearMe, userLoc, rows, pinsById]);
+
   // Map tap-preview card (mirrors the desktop hover popup). The card is a link that
   // opens the listing in a NEW TAB.
   const popupHtml = (l, imgUrl) => {
@@ -248,9 +314,16 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
 
   return (
     <div className="min-h-screen bg-paper flex flex-col">
+      {/* Non-blocking geolocation toast (near-me can be toggled from the list view). */}
+      {geoMsg && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[600] max-w-[90%] px-4 py-2.5 rounded-pill bg-ink text-paper text-[13px] font-medium shadow-hard text-center">{geoMsg}</div>
+      )}
       {/* HEADER */}
       <div className="flex items-center justify-between px-4 py-2.5">
-        <Link href="/" className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></Link>
+        <div className="flex flex-col gap-0.5 leading-none">
+          <Link href="/" className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></Link>
+          <AppComingSoon />
+        </div>
         <div className="flex items-center gap-2.5">
           <div className="flex items-center border-[1.5px] border-ink rounded-pill overflow-hidden text-[12px] font-semibold">
             {['es', 'en'].map((l) => <button key={l} onClick={() => setLang(l)} className={`px-3 py-1.5 ${lang === l ? 'bg-ink text-paper' : 'text-ink'}`}>{l.toUpperCase()}</button>)}
@@ -289,6 +362,11 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
               <span className="text-[14px] font-medium">{label}</span><span className="text-[11px] opacity-70">▾</span>
             </button>
           ))}
+          {/* Near me — filters the list to listings within ~10 km of the user, nearest first. */}
+          <button onClick={toggleNearMe} aria-pressed={nearMe} className={`shrink-0 flex items-center gap-1.5 border-[1.5px] rounded-pill h-10 px-4 ${nearMe ? 'bg-ink text-paper border-ink' : 'bg-card border-ink/30 text-ink'}`}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style={{ transform: 'rotate(45deg)' }} aria-hidden="true"><path d="M12 2 4.5 20.3l.7.7L12 18l6.8 3 .7-.7z" /></svg>
+            <span className="text-[14px] font-medium">{X.nearMe}</span>
+          </button>
         </div>
       </div>
 
@@ -307,14 +385,24 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
 
       {/* BODY */}
       {view === 'map' ? (
-        <div className="relative flex-1 min-h-[70vh]">
+        <div className="relative flex-1 min-h-0">
           <div ref={mapEl} className="absolute inset-0 z-0" />
+          {/* My-location control — Google-style navigation triangle, above the map's
+              zoom buttons (bottom-right), in Casa Libre ink/paper colors. */}
+          <button
+            type="button" onClick={flyToMe} aria-label={X.myLocation} title={X.myLocation}
+            className="absolute bottom-[104px] right-4 z-[400] w-11 h-11 rounded-full bg-white shadow-[0_1px_4px_rgba(0,0,0,0.3)] flex items-center justify-center text-[#3c4043] active:translate-y-px"
+          >
+            {locating
+              ? <span className="w-4 h-4 rounded-full border-2 border-black/15 border-t-[#3c4043] animate-spin" aria-hidden="true" />
+              : <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor" style={{ transform: 'rotate(45deg)' }} aria-hidden="true"><path d="M12 2 4.5 20.3l.7.7L12 18l6.8 3 .7-.7z" /></svg>}
+          </button>
           <button onClick={() => setView('list')} className="absolute bottom-5 left-1/2 -translate-x-1/2 z-[400] flex items-center gap-2 bg-ink text-paper rounded-pill py-3 px-5 text-[15px] font-medium shadow-hard">☰ {X.list}</button>
         </div>
       ) : (
         <div className="px-4 pb-8 flex flex-col gap-4">
-          {rows.length === 0 && !loadingList && <div className="py-14 text-center font-mono text-[13px] text-ink/45">{X.noResults}</div>}
-          {rows.map((l) => (
+          {displayRows.length === 0 && !loadingList && <div className="py-14 text-center font-mono text-[13px] text-ink/45">{X.noResults}</div>}
+          {displayRows.map((l) => (
             <Link key={l.id} href={`/propiedad/${l.id}`} target="_blank" rel="noopener noreferrer" className={`block bg-card rounded-[18px] overflow-hidden ${l.verified ? 'border border-ink ring-[1.5px] ring-ink shadow-hard-sm' : 'border border-ink/12'}`}>
               <div className="relative h-[220px] cl-hatch">
                 {imgMap[l.id] && /* eslint-disable-next-line @next/next/no-img-element */ <img src={imgMap[l.id]} alt="" loading="lazy" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
@@ -335,7 +423,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
               </div>
             </Link>
           ))}
-          {rows.length < count && (
+          {!nearMe && rows.length < count && (
             <button onClick={loadMore} className="self-center mt-1 px-6 py-2.5 rounded-pill bg-ink text-paper text-[13px] font-semibold">{X.loadMore}</button>
           )}
         </div>
@@ -377,6 +465,10 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
               <div className="flex flex-wrap gap-2.5">
                 <Pill label={X.ownerDirect} on={sellerF === 'owner'} onClick={() => setSellerF(sellerF === 'owner' ? 'all' : 'owner')} />
                 <Pill label={X.agent} on={sellerF === 'agent'} onClick={() => setSellerF(sellerF === 'agent' ? 'all' : 'agent')} />
+              </div>
+              <Section>{X.myLocation}</Section>
+              <div className="flex flex-wrap gap-2.5">
+                <Pill label={X.nearMe} on={nearMe} onClick={toggleNearMe} />
               </div>
             </div>
             <div className="flex gap-3 p-5 pb-8 border-t border-ink/8">

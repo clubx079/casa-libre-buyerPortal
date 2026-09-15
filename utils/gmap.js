@@ -79,6 +79,17 @@ export function pinIcon(google, label, hot, opts = {}) {
   return { url: uri(svg), scaledSize: new google.maps.Size(w, h), anchor: new google.maps.Point(w / 2, h / 2) };
 }
 
+// "You are here" marker — a distinct Google-style blue dot (white ring + soft
+// halo), clearly different from the ink/cream property price pins. Used by the
+// marketplace "my location" button.
+export function youAreHereIcon(google) {
+  const s = 24, c = s / 2;
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${s}' height='${s}'>` +
+    `<circle cx='${c}' cy='${c}' r='11' fill='#4285F4' fill-opacity='0.18'/>` +
+    `<circle cx='${c}' cy='${c}' r='6' fill='#4285F4' stroke='#FFFFFF' stroke-width='2.5'/></svg>`;
+  return { url: uri(svg), scaledSize: new google.maps.Size(s, s), anchor: new google.maps.Point(c, c) };
+}
+
 // Cluster bubble (matches `.cluster-pill`).
 export function clusterIcon(google, count, hot) {
   const s = 40;

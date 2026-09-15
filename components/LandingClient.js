@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import { typeLabel } from '@/lib/propertyType';
 import { fmtUsd, fmtPyg, bathWord } from '@/lib/ui';
 import { COUNTRY } from '@/lib/country';
+import AppComingSoon from '@/components/AppComingSoon';
 
 const DICT = {
   es: {
@@ -88,7 +89,10 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
 
       {/* NAV */}
       <nav className="flex items-center justify-center md:justify-between flex-wrap gap-3 px-5 md:px-11 py-5">
-        <span className="font-bold text-[22px] tracking-head">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></span>
+        <span className="flex flex-col gap-0.5 leading-none">
+          <span className="font-bold text-[22px] tracking-head">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></span>
+          <AppComingSoon />
+        </span>
         <div className="flex gap-2 flex-wrap text-[14px] font-medium">
           <Link href="/propiedades?op=venta" className="inline-flex items-center h-[40px] px-[18px] border border-ink rounded-pill">{t.navBuy}</Link>
           <Link href="/propiedades?op=alquiler" className="inline-flex items-center h-[40px] px-[18px] border border-ink rounded-pill">{t.navRent}</Link>

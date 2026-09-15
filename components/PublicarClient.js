@@ -13,6 +13,7 @@ import PlanBox from '@/components/PlanBox';
 import { VerifiedIcon } from '@/components/VerifiedTag';
 import { loadPendingSell, clearPendingSell } from '@/lib/pendingSell';
 import { COUNTRY } from '@/lib/country';
+import AppComingSoon from '@/components/AppComingSoon';
 
 const DICT = {
   es: {
@@ -288,7 +289,10 @@ export default function PublicarClient() {
 
   const nav = (
     <nav className="flex items-center justify-center md:justify-between flex-wrap gap-3 px-5 md:px-9 py-4 border-b border-ink/12">
-      <Link href="/" className="font-bold text-[22px] tracking-head">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></Link>
+      <div className="flex flex-col gap-0.5 leading-none">
+        <Link href="/" className="font-bold text-[22px] tracking-head">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></Link>
+        <AppComingSoon />
+      </div>
       <div className="flex gap-2 flex-wrap text-[14px] font-medium">
         <Link href="/propiedades?op=venta" className="inline-flex items-center h-[40px] px-[18px] border border-ink rounded-pill">{t.navBuy}</Link>
         <Link href="/propiedades?op=alquiler" className="inline-flex items-center h-[40px] px-[18px] border border-ink rounded-pill">{t.navRent}</Link>

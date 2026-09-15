@@ -16,14 +16,14 @@ const T = {
     wa: 'Hablar por WhatsApp', call: 'Llamar', copy: 'Copiar número', copied: 'Número copiado',
     noContact: 'Sin contacto disponible',
     // ALWAYS Spanish, both languages. Locked format.
-    msg: (name, url) => `Hola! Que tal? Está disponible la propiedad?\n${url}`,
+    msg: (name, url) => `Hola! Que tal? Está disponible la propiedad?\n\n${url}`,
   },
   en: {
     owner: 'The owner',
     wa: 'Chat on WhatsApp', call: 'Call', copy: 'Copy number', copied: 'Number copied',
     noContact: 'No contact available',
     // The outgoing message is ALWAYS Spanish regardless of UI language.
-    msg: (name, url) => `Hola! Que tal? Está disponible la propiedad?\n${url}`,
+    msg: (name, url) => `Hola! Que tal? Está disponible la propiedad?\n\n${url}`,
   },
 };
 

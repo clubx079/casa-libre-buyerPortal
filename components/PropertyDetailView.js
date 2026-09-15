@@ -17,6 +17,7 @@ import SaveButton from '@/components/SaveButton';
 import ShareButton from '@/components/ShareButton';
 import { genToken, shortUrl, trackContact, markOpened } from '@/lib/contactTrack';
 import { COUNTRY } from '@/lib/country';
+import AppComingSoon from '@/components/AppComingSoon';
 import { inCountry } from '@/utils/gmap';
 
 const T = {
@@ -139,7 +140,7 @@ export default function PropertyDetailView({ l, url }) {
   // Trackable mobile-bar WhatsApp (own token; only one WA button shows per
   // viewport, so it never collides with the contact card's).
   const [mbarToken] = useState(genToken);
-  const mbarMsg = `Hola! Que tal? Está disponible la propiedad?\n${shortUrl(url, mbarToken, l.short_code)}`;
+  const mbarMsg = `Hola! Que tal? Está disponible la propiedad?\n\n${shortUrl(url, mbarToken, l.short_code)}`;
   const mbarWa = waDigits ? `https://wa.me/${waDigits}?text=${encodeURIComponent(mbarMsg)}` : null;
   const recordMbarContact = () =>
     trackContact({ token: mbarToken, channel: 'whatsapp', property_id: l.id, listing_ref: listingRef, seller_name: l.contact_name || null, seller_phone: waDigits || null });
@@ -206,7 +207,10 @@ export default function PropertyDetailView({ l, url }) {
     <div className="min-h-screen bg-paper text-ink">
       {/* ── NAV ── */}
       <nav className="flex items-center justify-between flex-wrap gap-3 px-5 md:px-9 py-4 border-b border-ink/12">
-        <Link href="/" className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></Link>
+        <div className="flex flex-col gap-0.5 leading-none">
+          <Link href="/" className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></Link>
+          <AppComingSoon />
+        </div>
         <div className="hidden md:flex gap-2">
           {t.tabs.map(([label, href], i) => (
             <Link key={label} href={href} className={`inline-flex items-center h-[40px] px-[18px] rounded-pill text-[14px] font-medium border border-ink ${i === navActive ? 'bg-ink text-paper' : ''}`}>{label}</Link>

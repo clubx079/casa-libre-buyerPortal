@@ -7,9 +7,11 @@ import { fmtRate } from '@/lib/money';
 import { useLang } from '@/lib/useLang';
 import AuthButton from '@/components/AuthButton';
 import VerifiedTag from '@/components/VerifiedTag';
+import AppComingSoon from '@/components/AppComingSoon';
 import { useSellFlow } from '@/components/SellFlow';
 import { track } from '@/lib/analytics';
-import { loadGoogleMapsAPI, mapOptions, pinIcon, clusterIcon, inParaguay } from '@/utils/gmap';
+import { loadGoogleMapsAPI, mapOptions, pinIcon, clusterIcon, inParaguay, youAreHereIcon } from '@/utils/gmap';
+import { distanceKm, getUserLocation, NEAR_RADIUS_KM } from '@/utils/geo';
 import { COUNTRY } from '@/lib/country';
 
 // Marketplace-specific bilingual strings (search / filters / sort).
@@ -23,6 +25,8 @@ const M = {
     beds: { all: 'Dormitorios: todos', b1: '1+', b2: '2+', b3: '3+' },
     sort: { relevancia: 'Relevancia', precio_asc: 'Precio: menor a mayor', precio_desc: 'Precio: mayor a menor', area_desc: 'Superficie: mayor primero' },
     listView: 'Lista', mapView: 'Mapa',
+    nearMe: 'Cerca de mí', myLocation: 'Mi ubicación',
+    geoDenied: 'No pudimos acceder a tu ubicación',
     loadMore: 'Ver más propiedades', showing: (n, total) => `Mostrando ${n} de ${total}`,
   },
   en: {
@@ -34,6 +38,8 @@ const M = {
     beds: { all: 'Bedrooms: any', b1: '1+', b2: '2+', b3: '3+' },
     sort: { relevancia: 'Relevance', precio_asc: 'Price: low to high', precio_desc: 'Price: high to low', area_desc: 'Area: largest first' },
     listView: 'List', mapView: 'Map',
+    nearMe: 'Near me', myLocation: 'My location',
+    geoDenied: "We couldn't access your location",
     loadMore: 'Load more properties', showing: (n, total) => `Showing ${n} of ${total}`,
   },
 };
@@ -57,6 +63,15 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
   const [mobileView, setMobileView] = useState('list'); // mobile: 'list' | 'map'
   const [hot, setHot] = useState(null);
   const [mapReady, setMapReady] = useState(false); // show a branded loader until tiles paint
+  // "My location" / "Near me" — the user's real coords (country-agnostic; falls
+  // back to COUNTRY.mapCenter on denial), a near-me radius toggle, and a small
+  // non-blocking toast when geolocation is unavailable.
+  const [userLoc, setUserLoc] = useState(null);
+  const [nearMe, setNearMe] = useState(false);
+  const [locating, setLocating] = useState(false);
+  const [geoMsg, setGeoMsg] = useState('');
+  const youMarkerRef = useRef(null);
+  const geoMsgTimer = useRef(null);
   // Feature images are NOT shipped with the listings (keeps the page light);
   // they're fetched lazily for the cards/popups actually on screen.
   const [imgMap, setImgMap] = useState({}); // { id: url | null }
@@ -213,6 +228,68 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
   const priceMain = (l) => ((fmtUsd(l.usd, lang) || '—') + (l.mode === 'alquiler' ? t.perMonth : ''));
   const priceSub = (l) => (fmtPyg(l.pyg, lang) ? fmtPyg(l.pyg, lang) + (l.mode === 'alquiler' ? t.perMonth : '') : '');
   const shortPill = (l) => shortUsd(l.usd);
+
+  // ---- geolocation: "my location" recenter + "near me" radius filter ----
+  const showGeoMsg = (text) => {
+    setGeoMsg(text);
+    if (geoMsgTimer.current) clearTimeout(geoMsgTimer.current);
+    geoMsgTimer.current = setTimeout(() => setGeoMsg(''), 3400);
+  };
+  // Resolve a listing's coords (rows carry lat/lng; fall back to the pin set).
+  const coordsOf = (l) => {
+    if (l && l.lat != null && l.lng != null) return { lat: l.lat, lng: l.lng };
+    const p = pinsById.get(l?.id);
+    return p && p.lat != null && p.lng != null ? { lat: p.lat, lng: p.lng } : null;
+  };
+  // Drop / move the distinct blue "you are here" marker.
+  const dropYouMarker = (loc) => {
+    const ref = mapRef.current;
+    if (!ref) return;
+    const { google, map } = ref;
+    if (youMarkerRef.current) { try { youMarkerRef.current.setMap(null); } catch {} }
+    youMarkerRef.current = new google.maps.Marker({
+      position: loc, map, zIndex: 99999, icon: youAreHereIcon(google),
+      title: lang === 'es' ? 'Estás aquí' : 'You are here',
+    });
+  };
+  // Locate button: recenter the map on the user + drop the blue dot; toast + no
+  // destructive change on denial (map stays on COUNTRY.mapCenter).
+  const flyToMe = async () => {
+    setLocating(true);
+    const loc = userLoc || await getUserLocation();
+    setLocating(false);
+    if (!loc) { showGeoMsg(m.geoDenied); return; }
+    setUserLoc(loc);
+    const ref = mapRef.current;
+    if (ref) { try { ref.map.panTo(loc); ref.map.setZoom(14); } catch {} dropYouMarker(loc); }
+  };
+  // Near-me toggle: needs the user's coords (reuses them if already fetched).
+  const toggleNearMe = async () => {
+    if (nearMe) { setNearMe(false); return; }
+    let loc = userLoc;
+    if (!loc) { loc = await getUserLocation(); if (loc) setUserLoc(loc); }
+    if (!loc) { showGeoMsg(m.geoDenied); setNearMe(false); return; }
+    setNearMe(true);
+    const ref = mapRef.current;
+    if (ref) { try { ref.map.panTo(loc); ref.map.setZoom(13); } catch {} dropYouMarker(loc); }
+  };
+
+  // The list the user sees: normal rows, or — when "near me" is on and we have
+  // coords — only listings within NEAR_RADIUS_KM, nearest first. Combines with
+  // every other (server-applied) filter since it operates on the current rows.
+  const displayRows = useMemo(() => {
+    if (!nearMe || !userLoc) return rows;
+    const out = [];
+    for (const l of rows) {
+      const c = coordsOf(l);
+      if (!c) continue;
+      const d = distanceKm(userLoc.lat, userLoc.lng, c.lat, c.lng);
+      if (d <= NEAR_RADIUS_KM) out.push([d, l]);
+    }
+    out.sort((a, b) => a[0] - b[0]);
+    return out.map((x) => x[1]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nearMe, userLoc, rows, pinsById]);
 
   // ---- Google Maps init with marker clustering (Advanced Markers) ----
   useEffect(() => {
@@ -385,7 +462,10 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
     <div className="h-screen flex flex-col overflow-hidden">
       {/* NAV */}
       <nav className="flex items-center justify-between flex-wrap gap-3 px-5 md:px-9 py-4 border-b border-ink/12">
-        <Link href="/" className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></Link>
+        <div className="flex flex-col gap-0.5 leading-none">
+          <Link href="/" className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></Link>
+          <AppComingSoon />
+        </div>
         <div className="hidden sm:flex gap-2">
           {t.tabs.map(([label, href, op], i) => (
             op ? (
@@ -424,6 +504,12 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
         <select value={bedF} onChange={(e) => setBedF(e.target.value)} className={selCls}>
           {Object.entries(m.beds).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
+        {/* Near me — filters the list to listings within ~10 km of the user, nearest
+            first; combines with the filters above. */}
+        <button type="button" onClick={toggleNearMe} className={`${chipCls(nearMe)} inline-flex items-center gap-1.5`} aria-pressed={nearMe}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style={{ transform: 'rotate(45deg)' }} aria-hidden="true"><path d="M12 2 4.5 20.3l.7.7L12 18l6.8 3 .7-.7z" /></svg>
+          {m.nearMe}
+        </button>
         {/* view toggle — mockup .view-toggle, right-aligned, mobile only */}
         <div className="ml-auto md:hidden inline-flex items-center border-[1.5px] border-ink rounded-pill p-[3px] bg-card">
           {[['list', m.listView], ['map', m.mapView]].map(([v, label]) => (
@@ -457,8 +543,8 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
 
           {/* list */}
           <div className="flex-1 min-h-0 overflow-y-auto px-4 md:px-7 py-5 flex flex-col gap-4">
-            {rows.length === 0 && !loadingList && <div className="py-10 text-center font-mono text-[12px] text-ink/45">{m.empty}</div>}
-            {rows.map((l) => (
+            {displayRows.length === 0 && !loadingList && <div className="py-10 text-center font-mono text-[12px] text-ink/45">{m.empty}</div>}
+            {displayRows.map((l) => (
               <Link
                 key={l.id} href={`/propiedad/${l.id}`} target="_blank" rel="noopener noreferrer"
                 onMouseEnter={() => setHot(l.id)} onMouseLeave={() => setHot(null)}
@@ -479,8 +565,9 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
                 </div>
               </Link>
             ))}
-            {/* Pagination — the list grows a page at a time from the server; the map keeps every pin. */}
-            {rows.length < count && (
+            {/* Pagination — the list grows a page at a time from the server; the map keeps every pin.
+                Hidden while "near me" is active (that view is a filtered/sorted client slice). */}
+            {!nearMe && rows.length < count && (
               <div className="flex flex-col items-center gap-2 pt-1 pb-2">
                 <button
                   onClick={loadMore}
@@ -497,6 +584,19 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
             mobile overflow where pins spilled outside the map) + hosts the loader. */}
         <div className={`relative min-h-0 md:block md:flex-1 md:border-l border-ink/12 ${mobileView === 'list' ? 'hidden' : 'block flex-1'}`}>
           <div ref={mapEl} className="absolute inset-0 z-0 overflow-hidden" />
+          {/* My-location control — Google-style navigation triangle, ABOVE the map's
+              zoom buttons (bottom-right), in Casa Libre ink/paper colors. */}
+          <button
+            type="button" onClick={flyToMe} aria-label={m.myLocation} title={m.myLocation}
+            className="absolute bottom-[110px] right-4 z-[6] w-10 h-10 rounded-full bg-white shadow-[0_1px_4px_rgba(0,0,0,0.3)] flex items-center justify-center text-[#3c4043] hover:bg-[#f5f5f5] active:translate-y-px"
+          >
+            {locating
+              ? <span className="w-4 h-4 rounded-full border-2 border-black/15 border-t-[#3c4043] animate-spin" aria-hidden="true" />
+              : <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style={{ transform: 'rotate(45deg)' }} aria-hidden="true"><path d="M12 2 4.5 20.3l.7.7L12 18l6.8 3 .7-.7z" /></svg>}
+          </button>
+          {geoMsg && (
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[7] max-w-[90%] px-3.5 py-2 rounded-pill bg-ink text-paper text-[12px] font-medium shadow-hard-sm text-center">{geoMsg}</div>
+          )}
           {!mapReady && (
             <div className="absolute inset-0 z-[5] flex flex-col items-center justify-center gap-3" style={{ background: 'repeating-linear-gradient(45deg,#EAE6DD,#EAE6DD 10px,#F4F1EA 10px,#F4F1EA 20px)' }}>
               <span className="w-7 h-7 rounded-full border-2 border-ink/20 border-t-ink animate-spin" aria-hidden="true" />

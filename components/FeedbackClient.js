@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
 import { useAuth } from '@/components/AuthProvider';
 import { COUNTRY } from '@/lib/country';
+import AppComingSoon from '@/components/AppComingSoon';
 
 const T = {
   es: {
@@ -96,7 +97,10 @@ export default function FeedbackClient() {
   return (
     <div className="bg-paper text-ink min-h-screen">
       <nav className="flex items-center justify-between flex-wrap gap-3 px-5 md:px-9 py-4 border-b border-ink/12">
-        <Link href="/" className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></Link>
+        <div className="flex flex-col gap-0.5 leading-none">
+          <Link href="/" className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></Link>
+          <AppComingSoon />
+        </div>
         <div className="flex items-center gap-3.5">
           <div className="flex items-center h-[40px] border border-ink/30 rounded-pill p-[3px] text-[12px] font-semibold">
             {['es', 'en'].map((x) => (
