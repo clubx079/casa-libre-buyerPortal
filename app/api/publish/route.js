@@ -13,6 +13,7 @@ import { getSession } from '@/lib/auth';
 import { sendListingPublishedEmail } from '@/lib/email';
 import { COUNTRY } from '@/lib/country';
 import { genShortCode } from '@/lib/shortcode';
+import { submitToIndexNow } from '@/lib/indexnow';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -212,5 +213,19 @@ export async function POST(req) {
   }
 
   try { revalidateTag('listings'); } catch {}   // new listing shows on home/marketplace immediately
+
+  // Instant-index via IndexNow: ping Bing (+ participating engines) with the new
+  // listing's canonical URL and the pages that list it, so it's crawled in minutes
+  // instead of days. Best-effort — never blocks or fails the publish.
+  if (propertyId) {
+    const site = (process.env.APP_PUBLIC_URL || COUNTRY.defaultUrl).replace(/\/$/, '');
+    await submitToIndexNow([
+      `${site}/propiedad/${propertyId}`,
+      `${site}/`,
+      `${site}/${mode === 'alquiler' ? 'alquilar' : 'comprar'}`,
+      `${site}/propiedades`,
+    ]).catch(() => {});
+  }
+
   return NextResponse.json({ ok: true, slug, id: propertyId, ref, images: images.length });
 }
