@@ -31,7 +31,7 @@ const content = {
         ['p', `Somos la plataforma inmobiliaria más amigable de ${COUNTRY.name}. Conocemos el mercado local, hablamos claro y trabajamos para que ser propietario sea simple.`],
         ['p', 'Ya tengas una propiedad o varias, adaptamos el servicio a lo que necesitás — sin letra chica ni sorpresas. Vos decidís cuánto querés delegar; nosotros nos encargamos de que funcione.'],
       ] },
-      { type: 'cta', title: 'Hablemos de tu propiedad', sub: 'Contanos qué necesitás y te ayudamos a gestionarla.', primary: ['Contactar', '/contacto'], secondary: ['Para empresas', '/empresas'] },
+      { type: 'cta', title: 'Hablemos de tu propiedad', sub: 'Contanos qué necesitás y te ayudamos a gestionarla.', primary: ['Contactar', '/contacto'], secondary: ['Para inversores', '/empresas'] },
     ],
   },
   en: {
@@ -56,7 +56,7 @@ const content = {
         ['p', `We’re ${COUNTRY.name}’s friendliest real-estate platform. We know the local market, we speak plainly, and we work to make being a landlord simple.`],
         ['p', 'Whether you own one property or several, we tailor the service to what you need — no fine print, no surprises. You decide how much to delegate; we make sure it works.'],
       ] },
-      { type: 'cta', title: 'Let’s talk about your property', sub: 'Tell us what you need and we’ll help you manage it.', primary: ['Contact us', '/contacto'], secondary: ['For businesses', '/empresas'] },
+      { type: 'cta', title: 'Let’s talk about your property', sub: 'Tell us what you need and we’ll help you manage it.', primary: ['Contact us', '/contacto'], secondary: ['For Investors', '/empresas'] },
     ],
   },
 };

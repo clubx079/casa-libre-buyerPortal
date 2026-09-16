@@ -4,6 +4,7 @@
 // live. Anonymous — no session required.
 import { NextResponse } from 'next/server';
 import { insert } from '@/lib/db';
+import { sendBusinessInquiryEmail } from '@/lib/email';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -39,5 +40,14 @@ export async function POST(req) {
   } catch (e) {
     return NextResponse.json({ error: 'failed', detail: e?.message }, { status: 500 });
   }
+
+  // Notify the internal investor inbox (Resend, branded) — best-effort: the lead
+  // is already saved, so a mail hiccup must not fail the submission.
+  await sendBusinessInquiryEmail({
+    fromEmail: email, name, company: row.company, phone,
+    type: row.business_type, size: row.portfolio_size, city: row.city,
+    message: row.message, lang: row.lang, source: row.source,
+  }).catch(() => {});
+
   return NextResponse.json({ ok: true });
 }
