@@ -31,7 +31,7 @@ export default function Footer() {
   const [lang] = useLang();
   const t = L[lang];
   const sections = [
-    { title: t.platform, links: [[t.buy, '/comprar'], [t.rent, '/alquilar'], [t.all, '/propiedades'], [t.publish, '/publicar'], [t.getApp, '/app']] },
+    { title: t.platform, links: [[t.buy, '/comprar'], [t.rent, '/alquilar'], [t.all, '/propiedades'], [t.publish, '/publicar'], [t.getApp, '/descargar']] },
     { title: t.company, links: [[t.story, '/nuestra-historia'], [t.how, '/como-funciona'], [t.sell, '/vender'], [t.business, '/empresas'], [t.pmgmt, '/administracion-de-propiedades'], [t.contact, '/contacto'], [t.faq, '/preguntas-frecuentes']] },
     { title: t.cities, links: CITIES.slice(0, 8).map((c) => [c.name, `/propiedades-en/${c.slug}`]) },
     { title: t.compare, links: COMPETITORS.map((c) => [t.vs(c.name), `/comparar/${c.slug}`]) },

@@ -31,7 +31,7 @@ function Badge({ store, big }) {
   const top = isApple ? 'Download on the' : 'GET IT ON';
   const name = isApple ? 'App Store' : 'Google Play';
   return (
-    <Link href="/app" aria-label={name} className={`inline-flex items-center rounded-[9px] bg-ink text-paper transition-transform active:translate-y-px ${big ? 'gap-2.5 px-4 py-2' : 'gap-2 px-3 py-[7px]'}`}>
+    <Link href="/descargar" aria-label={name} className={`inline-flex items-center rounded-[9px] bg-ink text-paper transition-transform active:translate-y-px ${big ? 'gap-2.5 px-4 py-2' : 'gap-2 px-3 py-[7px]'}`}>
       {isApple ? <Apple s={big ? 22 : 18} /> : <Play s={big ? 18 : 15} />}
       <span className="flex flex-col leading-none text-left gap-[3px]">
         <span className={`uppercase tracking-[.06em] text-paper/75 ${big ? 'text-[9px]' : 'text-[8px]'}`}>{top}</span>
