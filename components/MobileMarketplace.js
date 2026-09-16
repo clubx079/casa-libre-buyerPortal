@@ -72,10 +72,15 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
   const [geoMsg, setGeoMsg] = useState('');
   const youMarkerRef = useRef(null);
   const geoMsgTimer = useRef(null);
+  const prevViewRef = useRef(null);   // map center+zoom saved when near-me is turned on
+  const skipFitRef = useRef(false);   // one-shot: skip the next auto-fit (near-me toggle)
+  const nearMeRef = useRef(false);    // latest nearMe, for the map-click listener closure
+  const deactivateNearRef = useRef(null);
   const [page, setPage] = useState(1);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
   const [imgMap, setImgMap] = useState({});
+  const [nearListings, setNearListings] = useState(null); // hydrated nearby listings when near-me is on
   const imgReq = useRef(new Set());
 
   useEffect(() => { setPriceF('all'); }, [mode]);
@@ -181,12 +186,23 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
       mapRef.current = { google, map }; clusterRef.current = cluster;
       const info = new google.maps.InfoWindow();
       infoRef.current = info;
-      map.addListener('click', () => { info.close(); previewRef.current = null; });
+      map.addListener('click', () => {
+        info.close(); previewRef.current = null;
+        // A click on the map (not a pin) exits near-me and returns to the prior view.
+        if (nearMeRef.current && deactivateNearRef.current) deactivateNearRef.current();
+      });
       drawMarkers();
     })();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view]);
+
+  // Pins shown on the map: all of them, or — when "near me" is active — only the
+  // ones within NEAR_RADIUS_KM of the user, so the map and list stay in sync.
+  const displayPins = useMemo(() => {
+    if (!nearMe || !userLoc) return pins;
+    return pins.filter((p) => p.lat != null && p.lng != null && distanceKm(userLoc.lat, userLoc.lng, p.lat, p.lng) <= NEAR_RADIUS_KM);
+  }, [nearMe, userLoc, pins]);
 
   const drawMarkers = useCallback(() => {
     const ref = mapRef.current, cluster = clusterRef.current;
@@ -198,7 +214,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
     const markers = [];
     const bounds = new google.maps.LatLngBounds();
     let n = 0;
-    pins.forEach((l) => {
+    displayPins.forEach((l) => {
       if (!inParaguay(l.lat, l.lng)) return; // never plot mis-geocoded listings outside PY
       const promoted = !!(l.hl || l.verified);
       const mk = new google.maps.Marker({ position: { lat: l.lat, lng: l.lng }, icon: pinIcon(google, shortUsd(l.usd), false, { promoted }), zIndex: promoted ? 10000 : undefined });
@@ -217,8 +233,11 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
       bounds.extend({ lat: l.lat, lng: l.lng }); n++;
     });
     cluster.addMarkers(markers);
-    if (n && (typeF !== 'all' || priceF !== 'all' || bedF !== 'all' || barrioF !== 'all' || q)) { try { map.fitBounds(bounds, 36); } catch {} }
-  }, [pins, typeF, priceF, bedF, barrioF, q]);
+    // Don't refit while near-me is locked, nor on the toggle itself (so deselect
+    // can restore the previous view instead of snapping to the filtered bounds).
+    if (n && !nearMe && !skipFitRef.current && (typeF !== 'all' || priceF !== 'all' || bedF !== 'all' || barrioF !== 'all' || q)) { try { map.fitBounds(bounds, 36); } catch {} }
+    skipFitRef.current = false;
+  }, [displayPins, nearMe, typeF, priceF, bedF, barrioF, q]);
   useEffect(() => { if (view === 'map') drawMarkers(); }, [view, drawMarkers]);
 
   const priceMain = (l) => (fmtUsd(l.usd, lang) || '—') + (l.mode === 'alquiler' ? t.perMonth : '');
@@ -248,39 +267,71 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
       title: lang === 'es' ? 'Estás aquí' : 'You are here',
     });
   };
-  const flyToMe = async () => {
+  // Locate + "near me" as ONE toggle, fired by the map's triangle button. On:
+  // find the user, drop the you-are-here dot, zoom in and LOCK the map on that
+  // spot (gestures off), restricting the list + pins to what's nearby. Off:
+  // unlock, remove the dot, restore the full results.
+  // Turn near-me OFF: clear the selection, drop the you-are-here dot, and return
+  // the map to where it was before. The map is never locked, so drag/zoom stay
+  // free while selected; a plain click on the map also calls this.
+  const deactivateNear = () => {
+    const ref = mapRef.current;
+    skipFitRef.current = true;
+    setNearMe(false);
+    setNearListings(null);
+    if (youMarkerRef.current) { try { youMarkerRef.current.setMap(null); } catch {} youMarkerRef.current = null; }
+    if (ref && prevViewRef.current) { try { ref.map.setZoom(prevViewRef.current.zoom); ref.map.panTo(prevViewRef.current.center); } catch {} }
+    prevViewRef.current = null;
+  };
+  nearMeRef.current = nearMe;
+  deactivateNearRef.current = deactivateNear;
+
+  const toggleNear = async () => {
+    if (nearMe) { deactivateNear(); return; }
     setLocating(true);
     const loc = userLoc || await getUserLocation();
     setLocating(false);
     if (!loc) { showGeoMsg(X.geoDenied); return; }
+    const ref = mapRef.current;
+    // Remember the current view so deselect can return to it.
+    if (ref) { try { prevViewRef.current = { center: ref.map.getCenter().toJSON(), zoom: ref.map.getZoom() }; } catch {} }
+    skipFitRef.current = true;
     setUserLoc(loc);
-    const ref = mapRef.current;
-    if (ref) { try { ref.map.panTo(loc); ref.map.setZoom(14); } catch {} dropYouMarker(loc); }
-  };
-  const toggleNearMe = async () => {
-    if (nearMe) { setNearMe(false); return; }
-    let loc = userLoc;
-    if (!loc) { loc = await getUserLocation(); if (loc) setUserLoc(loc); }
-    if (!loc) { showGeoMsg(X.geoDenied); setNearMe(false); return; }
     setNearMe(true);
-    const ref = mapRef.current;
-    if (ref) { try { ref.map.panTo(loc); ref.map.setZoom(13); } catch {} dropYouMarker(loc); }
+    loadNearListings(loc);   // hydrate the real nearby list + count
+    if (ref) {
+      try { ref.map.panTo(loc); ref.map.setZoom(15); } catch {}   // no lock — user can pan/zoom freely
+      dropYouMarker(loc);
+    }
   };
   // Rows the user sees: normal, or — when "near me" is on and coords exist — only
   // listings within NEAR_RADIUS_KM, nearest first (combines with the other filters).
-  const displayRows = useMemo(() => {
-    if (!nearMe || !userLoc) return rows;
-    const out = [];
-    for (const l of rows) {
-      const c = coordsOf(l);
-      if (!c) continue;
-      const d = distanceKm(userLoc.lat, userLoc.lng, c.lat, c.lng);
-      if (d <= NEAR_RADIUS_KM) out.push([d, l]);
-    }
-    out.sort((a, b) => a[0] - b[0]);
-    return out.map((x) => x[1]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nearMe, userLoc, rows, pinsById]);
+  // When near-me is on, the list = the nearby listings hydrated from the near
+  // pins (nearest first); otherwise the normal paginated rows. The count follows
+  // the same set, so it reflects the real number nearby — not the total.
+  const displayRows = (nearMe && nearListings) ? nearListings : rows;
+  const displayCount = (nearMe && nearListings) ? nearListings.length : count;
+
+  // Fetch full card data for every listing within NEAR_RADIUS_KM of `loc`
+  // (nearest first, capped at 200) so the near-me list + count are accurate.
+  const loadNearListings = async (loc) => {
+    const near = pins
+      .filter((p) => p.lat != null && p.lng != null)
+      .map((p) => ({ id: p.id, d: distanceKm(loc.lat, loc.lng, p.lat, p.lng) }))
+      .filter((x) => x.d <= NEAR_RADIUS_KM)
+      .sort((a, b) => a.d - b.d)
+      .slice(0, 200);
+    const ids = near.map((x) => x.id);
+    if (!ids.length) { setNearListings([]); return; }
+    try {
+      const res = await fetch('/api/mobile/byids', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids }) });
+      const j = await res.json();
+      const byId = new Map((j.listings || []).map((l) => [l.id, l]));
+      const ordered = ids.map((id) => byId.get(id)).filter(Boolean);
+      setNearListings(ordered);
+      setImgMap((mp) => { const n = { ...mp }; ordered.forEach((l) => { if (l.image) n[l.id] = l.image; }); return n; });
+    } catch { setNearListings([]); }
+  };
 
   // Map tap-preview card (mirrors the desktop hover popup). The card is a link that
   // opens the listing in a NEW TAB.
@@ -366,17 +417,12 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
               <span className="text-[14px] font-medium">{label}</span><span className="text-[11px] opacity-70">▾</span>
             </button>
           ))}
-          {/* Near me — filters the list to listings within ~10 km of the user, nearest first. */}
-          <button onClick={toggleNearMe} aria-pressed={nearMe} className={`shrink-0 flex items-center gap-1.5 border-[1.5px] rounded-pill h-10 px-4 ${nearMe ? 'bg-ink text-paper border-ink' : 'bg-card border-ink/30 text-ink'}`}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style={{ transform: 'rotate(45deg)' }} aria-hidden="true"><path d="M12 2 4.5 20.3l.7.7L12 18l6.8 3 .7-.7z" /></svg>
-            <span className="text-[14px] font-medium">{X.nearMe}</span>
-          </button>
         </div>
       </div>
 
       {/* RESULTS ROW */}
       <div className="flex items-center gap-2.5 px-4 pb-3">
-        <span className="font-mono text-[12.5px] text-ink/60 shrink-0">{nf(count)} {X.propsWord}</span>
+        <span className="font-mono text-[12.5px] text-ink/60 shrink-0">{nf(displayCount)} {X.propsWord}</span>
         <div className="flex-1 flex items-center justify-end gap-2.5">
           <div className="flex bg-ink rounded-pill p-[3px]">
             {[['list', X.list], ['map', X.map]].map(([k, lb]) => (
@@ -391,14 +437,15 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
       {view === 'map' ? (
         <div className="relative flex-1 min-h-0">
           <div ref={mapEl} className="absolute inset-0 z-0" />
-          {/* My-location control — Google-style navigation triangle, above the map's
-              zoom buttons (bottom-right), in Casa Libre ink/paper colors. */}
+          {/* "Near me" toggle — Google-style navigation triangle. Tap to lock the
+              map on the user + show only nearby listings; tap again to reset.
+              Selected state = filled ink. */}
           <button
-            type="button" onClick={flyToMe} aria-label={X.myLocation} title={X.myLocation}
-            className="absolute bottom-[104px] right-4 z-[400] w-11 h-11 rounded-full bg-white shadow-[0_1px_4px_rgba(0,0,0,0.3)] flex items-center justify-center text-[#3c4043] active:translate-y-px"
+            type="button" onClick={toggleNear} aria-pressed={nearMe} aria-label={X.nearMe} title={X.nearMe}
+            className={`absolute bottom-[104px] right-4 z-[400] w-11 h-11 rounded-full shadow-[0_1px_4px_rgba(0,0,0,0.3)] flex items-center justify-center active:translate-y-px ${nearMe ? 'bg-white text-ink ring-2 ring-ink' : 'bg-white text-[#3c4043]'}`}
           >
             {locating
-              ? <span className="w-4 h-4 rounded-full border-2 border-black/15 border-t-[#3c4043] animate-spin" aria-hidden="true" />
+              ? <span className="w-4 h-4 rounded-full border-2 border-current/20 border-t-current animate-spin" aria-hidden="true" />
               : <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor" style={{ transform: 'rotate(45deg)' }} aria-hidden="true"><path d="M12 2 4.5 20.3l.7.7L12 18l6.8 3 .7-.7z" /></svg>}
           </button>
           <button onClick={() => setView('list')} className="absolute bottom-5 left-1/2 -translate-x-1/2 z-[400] flex items-center gap-2 bg-ink text-paper rounded-pill py-3 px-5 text-[15px] font-medium shadow-hard">☰ {X.list}</button>
@@ -469,10 +516,6 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
               <div className="flex flex-wrap gap-2.5">
                 <Pill label={X.ownerDirect} on={sellerF === 'owner'} onClick={() => setSellerF(sellerF === 'owner' ? 'all' : 'owner')} />
                 <Pill label={X.agent} on={sellerF === 'agent'} onClick={() => setSellerF(sellerF === 'agent' ? 'all' : 'agent')} />
-              </div>
-              <Section>{X.myLocation}</Section>
-              <div className="flex flex-wrap gap-2.5">
-                <Pill label={X.nearMe} on={nearMe} onClick={toggleNearMe} />
               </div>
             </div>
             <div className="flex gap-3 p-5 pb-8 border-t border-ink/8">

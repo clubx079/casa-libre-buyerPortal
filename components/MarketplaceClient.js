@@ -72,9 +72,14 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
   const [geoMsg, setGeoMsg] = useState('');
   const youMarkerRef = useRef(null);
   const geoMsgTimer = useRef(null);
+  const prevViewRef = useRef(null);   // map center+zoom saved when near-me is turned on
+  const skipFitRef = useRef(false);   // one-shot: skip the next auto-fit (near-me toggle)
+  const nearMeRef = useRef(false);    // latest nearMe, for the map-click listener closure
+  const deactivateNearRef = useRef(null);
   // Feature images are NOT shipped with the listings (keeps the page light);
   // they're fetched lazily for the cards/popups actually on screen.
   const [imgMap, setImgMap] = useState({}); // { id: url | null }
+  const [nearListings, setNearListings] = useState(null); // hydrated nearby listings when near-me is on
   const imgMapRef = useRef({});             // latest map, for imperative Leaflet handlers
   const imgReq = useRef(new Set());         // ids already requested (dedupe)
   const mapEl = useRef(null);
@@ -166,7 +171,7 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
 
   const rowsById = useMemo(() => new Map(rows.map((l) => [l.id, l])), [rows]);
   const pinsById = useMemo(() => new Map(pins.map((p) => [p.id, p])), [pins]);
-  const headerCount = count;
+  const headerCount = (nearMe && nearListings) ? nearListings.length : count;
 
   // Lazily fetch feature images for a set of ids (deduped). imgMapRef is the
   // source of truth (readable synchronously by the imperative map popups);
@@ -252,44 +257,78 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
       title: lang === 'es' ? 'Estás aquí' : 'You are here',
     });
   };
-  // Locate button: recenter the map on the user + drop the blue dot; toast + no
-  // destructive change on denial (map stays on COUNTRY.mapCenter).
-  const flyToMe = async () => {
+  // Locate + "near me" as ONE toggle, fired by the map's triangle button. On:
+  // find the user, drop the you-are-here dot, zoom in and LOCK the map on that
+  // spot (gestures off), restricting the list + pins to what's nearby. Off:
+  // unlock, remove the dot, restore the full results.
+  // Turn near-me OFF: clear the selection, drop the you-are-here dot, and return
+  // the map to where it was before. The map is never locked, so drag/zoom stay
+  // free while selected; a plain click on the map also calls this.
+  const deactivateNear = () => {
+    const ref = mapRef.current;
+    skipFitRef.current = true;
+    setNearMe(false);
+    setNearListings(null);
+    if (youMarkerRef.current) { try { youMarkerRef.current.setMap(null); } catch {} youMarkerRef.current = null; }
+    if (ref && prevViewRef.current) { try { ref.map.setZoom(prevViewRef.current.zoom); ref.map.panTo(prevViewRef.current.center); } catch {} }
+    prevViewRef.current = null;
+  };
+  nearMeRef.current = nearMe;
+  deactivateNearRef.current = deactivateNear;
+
+  const toggleNear = async () => {
+    if (nearMe) { deactivateNear(); return; }
     setLocating(true);
     const loc = userLoc || await getUserLocation();
     setLocating(false);
     if (!loc) { showGeoMsg(m.geoDenied); return; }
+    const ref = mapRef.current;
+    // Remember the current view so deselect can return to it.
+    if (ref) { try { prevViewRef.current = { center: ref.map.getCenter().toJSON(), zoom: ref.map.getZoom() }; } catch {} }
+    skipFitRef.current = true;
     setUserLoc(loc);
-    const ref = mapRef.current;
-    if (ref) { try { ref.map.panTo(loc); ref.map.setZoom(14); } catch {} dropYouMarker(loc); }
-  };
-  // Near-me toggle: needs the user's coords (reuses them if already fetched).
-  const toggleNearMe = async () => {
-    if (nearMe) { setNearMe(false); return; }
-    let loc = userLoc;
-    if (!loc) { loc = await getUserLocation(); if (loc) setUserLoc(loc); }
-    if (!loc) { showGeoMsg(m.geoDenied); setNearMe(false); return; }
     setNearMe(true);
-    const ref = mapRef.current;
-    if (ref) { try { ref.map.panTo(loc); ref.map.setZoom(13); } catch {} dropYouMarker(loc); }
+    loadNearListings(loc);   // hydrate the real nearby list + count
+    if (ref) {
+      try { ref.map.panTo(loc); ref.map.setZoom(15); } catch {}   // no lock — user can pan/zoom freely
+      dropYouMarker(loc);
+    }
   };
 
   // The list the user sees: normal rows, or — when "near me" is on and we have
   // coords — only listings within NEAR_RADIUS_KM, nearest first. Combines with
   // every other (server-applied) filter since it operates on the current rows.
-  const displayRows = useMemo(() => {
-    if (!nearMe || !userLoc) return rows;
-    const out = [];
-    for (const l of rows) {
-      const c = coordsOf(l);
-      if (!c) continue;
-      const d = distanceKm(userLoc.lat, userLoc.lng, c.lat, c.lng);
-      if (d <= NEAR_RADIUS_KM) out.push([d, l]);
-    }
-    out.sort((a, b) => a[0] - b[0]);
-    return out.map((x) => x[1]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nearMe, userLoc, rows, pinsById]);
+  // When near-me is on, the list = the nearby listings hydrated from the near
+  // pins (nearest first); otherwise the normal paginated rows.
+  const displayRows = (nearMe && nearListings) ? nearListings : rows;
+
+  // Fetch full card data for every listing within NEAR_RADIUS_KM of `loc`
+  // (nearest first, capped at 200) so the near-me list + count are accurate.
+  const loadNearListings = async (loc) => {
+    const near = pins
+      .filter((p) => p.lat != null && p.lng != null)
+      .map((p) => ({ id: p.id, d: distanceKm(loc.lat, loc.lng, p.lat, p.lng) }))
+      .filter((x) => x.d <= NEAR_RADIUS_KM)
+      .sort((a, b) => a.d - b.d)
+      .slice(0, 200);
+    const ids = near.map((x) => x.id);
+    if (!ids.length) { setNearListings([]); return; }
+    try {
+      const res = await fetch('/api/mobile/byids', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids }) });
+      const j = await res.json();
+      const byId = new Map((j.listings || []).map((l) => [l.id, l]));
+      const ordered = ids.map((id) => byId.get(id)).filter(Boolean);
+      setNearListings(ordered);
+      setImgMap((mp) => { const n = { ...mp }; ordered.forEach((l) => { if (l.image) n[l.id] = l.image; }); return n; });
+    } catch { setNearListings([]); }
+  };
+
+  // Pins shown on the map: all of them, or — when "near me" is active — only the
+  // ones within NEAR_RADIUS_KM of the user, so the map and list stay in sync.
+  const displayPins = useMemo(() => {
+    if (!nearMe || !userLoc) return pins;
+    return pins.filter((p) => p.lat != null && p.lng != null && distanceKm(userLoc.lat, userLoc.lng, p.lat, p.lng) <= NEAR_RADIUS_KM);
+  }, [nearMe, userLoc, pins]);
 
   // ---- Google Maps init with marker clustering (Advanced Markers) ----
   useEffect(() => {
@@ -314,6 +353,8 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
       mapRef.current = { google, map };
       clusterRef.current = cluster;
       infoRef.current = info;
+      // A click on the map (not a pin) exits near-me and returns to the prior view.
+      map.addListener('click', () => { if (nearMeRef.current && deactivateNearRef.current) deactivateNearRef.current(); });
       google.maps.event.addListenerOnce(map, 'tilesloaded', () => { if (!cancelled) setMapReady(true); });
       setTimeout(() => { if (!cancelled) setMapReady(true); }, 1500);
       drawMarkers();
@@ -322,7 +363,7 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => { didFit.current = false; drawMarkers(); /* eslint-disable-next-line */ }, [pins, lang]);
+  useEffect(() => { didFit.current = false; drawMarkers(); /* eslint-disable-next-line */ }, [pins, lang, nearMe, userLoc]);
 
   function popupHtml(l, imgUrl) {
     const img = imgUrl
@@ -352,7 +393,7 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
     const markers = [];
     const bounds = new google.maps.LatLngBounds();
     let n = 0;
-    pins.forEach((l) => {
+    displayPins.forEach((l) => {
       if (!inParaguay(l.lat, l.lng)) return; // never plot mis-geocoded listings outside PY
       const label = shortPill(l);
       const promoted = !!(l.hl || l.verified);
@@ -386,7 +427,10 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
     // Default view stays zoomed on Asunción; only auto-fit to the results once
     // the user actually filters/searches (Buy/Rent/All keep the default view).
     const isFiltered = typeF !== 'all' || priceF !== 'all' || bedF !== 'all' || !!query;
-    if (n && !didFit.current && isFiltered) { didFit.current = true; try { map.fitBounds(bounds, 40); } catch {} }
+    // Don't refit while near-me is locked, nor on the toggle itself (so deselect
+    // can restore the previous view instead of snapping to the filtered bounds).
+    if (n && !didFit.current && isFiltered && !nearMe && !skipFitRef.current) { didFit.current = true; try { map.fitBounds(bounds, 40); } catch {} }
+    skipFitRef.current = false;
   }
 
   // Highlight the hovered card's pin on the map WITHOUT changing zoom: pan the
@@ -508,12 +552,6 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
         <select value={bedF} onChange={(e) => setBedF(e.target.value)} className={selCls}>
           {Object.entries(m.beds).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
-        {/* Near me — filters the list to listings within ~10 km of the user, nearest
-            first; combines with the filters above. */}
-        <button type="button" onClick={toggleNearMe} className={`${chipCls(nearMe)} inline-flex items-center gap-1.5`} aria-pressed={nearMe}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style={{ transform: 'rotate(45deg)' }} aria-hidden="true"><path d="M12 2 4.5 20.3l.7.7L12 18l6.8 3 .7-.7z" /></svg>
-          {m.nearMe}
-        </button>
         {/* view toggle — mockup .view-toggle, right-aligned, mobile only */}
         <div className="ml-auto md:hidden inline-flex items-center border-[1.5px] border-ink rounded-pill p-[3px] bg-card">
           {[['list', m.listView], ['map', m.mapView]].map(([v, label]) => (
@@ -588,14 +626,15 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
             mobile overflow where pins spilled outside the map) + hosts the loader. */}
         <div className={`relative min-h-0 md:block md:flex-1 md:border-l border-ink/12 ${mobileView === 'list' ? 'hidden' : 'block flex-1'}`}>
           <div ref={mapEl} className="absolute inset-0 z-0 overflow-hidden" />
-          {/* My-location control — Google-style navigation triangle, ABOVE the map's
-              zoom buttons (bottom-right), in Casa Libre ink/paper colors. */}
+          {/* "Near me" toggle — Google-style navigation triangle. Click to lock the
+              map on the user + show only nearby listings; click again to reset.
+              Selected state = filled ink. */}
           <button
-            type="button" onClick={flyToMe} aria-label={m.myLocation} title={m.myLocation}
-            className="absolute bottom-[110px] right-4 z-[6] w-10 h-10 rounded-full bg-white shadow-[0_1px_4px_rgba(0,0,0,0.3)] flex items-center justify-center text-[#3c4043] hover:bg-[#f5f5f5] active:translate-y-px"
+            type="button" onClick={toggleNear} aria-pressed={nearMe} aria-label={m.nearMe} title={m.nearMe}
+            className={`absolute bottom-[110px] right-4 z-[6] w-10 h-10 rounded-full shadow-[0_1px_4px_rgba(0,0,0,0.3)] flex items-center justify-center active:translate-y-px ${nearMe ? 'bg-white text-ink ring-2 ring-ink' : 'bg-white text-[#3c4043] hover:bg-[#f5f5f5]'}`}
           >
             {locating
-              ? <span className="w-4 h-4 rounded-full border-2 border-black/15 border-t-[#3c4043] animate-spin" aria-hidden="true" />
+              ? <span className="w-4 h-4 rounded-full border-2 border-current/20 border-t-current animate-spin" aria-hidden="true" />
               : <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style={{ transform: 'rotate(45deg)' }} aria-hidden="true"><path d="M12 2 4.5 20.3l.7.7L12 18l6.8 3 .7-.7z" /></svg>}
           </button>
           {geoMsg && (
