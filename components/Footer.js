@@ -10,7 +10,7 @@ const L = {
   es: {
     tagline: `Comprá, alquilá y publicá propiedades en ${COUNTRY.name} — gratis.`,
     platform: 'Plataforma', company: 'Empresa', cities: 'Ciudades', compare: 'Comparar',
-    buy: 'Comprar propiedades', rent: 'Alquilar propiedades', all: 'Ver todas las propiedades', publish: 'Publicar gratis',
+    buy: 'Comprar propiedades', rent: 'Alquilar propiedades', all: 'Ver todas las propiedades', publish: 'Publicar gratis', getApp: 'Descargá la app',
     story: 'Nuestra historia', how: 'Cómo funciona', sell: 'Publicá tu propiedad', business: 'Para inversores', pmgmt: 'Administración de propiedades', contact: 'Contacto', faq: 'Preguntas frecuentes',
     cityPrefix: '', vs: (n) => `Casa Libre vs ${n}`,
     terms: 'Términos', privacy: 'Privacidad',
@@ -19,7 +19,7 @@ const L = {
   en: {
     tagline: `Buy, rent and list properties in ${COUNTRY.name} — free.`,
     platform: 'Platform', company: 'Company', cities: 'Cities', compare: 'Compare',
-    buy: 'Buy properties', rent: 'Rent properties', all: 'Browse all listings', publish: 'List for free',
+    buy: 'Buy properties', rent: 'Rent properties', all: 'Browse all listings', publish: 'List for free', getApp: 'Get the app',
     story: 'Our story', how: 'How it works', sell: 'List your property', business: 'For Investors', pmgmt: 'Property management', contact: 'Contact', faq: 'FAQ',
     cityPrefix: '', vs: (n) => `Casa Libre vs ${n}`,
     terms: 'Terms', privacy: 'Privacy',
@@ -31,7 +31,7 @@ export default function Footer() {
   const [lang] = useLang();
   const t = L[lang];
   const sections = [
-    { title: t.platform, links: [[t.buy, '/comprar'], [t.rent, '/alquilar'], [t.all, '/propiedades'], [t.publish, '/publicar']] },
+    { title: t.platform, links: [[t.buy, '/comprar'], [t.rent, '/alquilar'], [t.all, '/propiedades'], [t.publish, '/publicar'], [t.getApp, '/app']] },
     { title: t.company, links: [[t.story, '/nuestra-historia'], [t.how, '/como-funciona'], [t.sell, '/vender'], [t.business, '/empresas'], [t.pmgmt, '/administracion-de-propiedades'], [t.contact, '/contacto'], [t.faq, '/preguntas-frecuentes']] },
     { title: t.cities, links: CITIES.slice(0, 8).map((c) => [c.name, `/propiedades-en/${c.slug}`]) },
     { title: t.compare, links: COMPETITORS.map((c) => [t.vs(c.name), `/comparar/${c.slug}`]) },

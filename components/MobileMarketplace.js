@@ -14,7 +14,7 @@ import { loadGoogleMapsAPI, mapOptions, pinIcon, clusterIcon, inParaguay, youAre
 import { distanceKm, getUserLocation, NEAR_RADIUS_KM } from '@/utils/geo';
 import { COUNTRY } from '@/lib/country';
 import VerifiedTag from '@/components/VerifiedTag';
-import AppComingSoon from '@/components/AppComingSoon';
+import AppBadges from '@/components/AppBadges';
 
 const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const PER_PAGE = 24;
@@ -322,7 +322,6 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
       <div className="flex items-center justify-between px-4 py-2.5">
         <div className="flex flex-col gap-0.5 leading-none">
           <Link href="/" className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></Link>
-          <AppComingSoon />
         </div>
         <div className="flex items-center gap-2.5">
           <div className="flex items-center border-[1.5px] border-ink rounded-pill overflow-hidden text-[12px] font-semibold">
@@ -330,6 +329,11 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
           </div>
           <button onClick={openSell} className="bg-ink text-paper rounded-pill px-4 py-[9px] text-[13px] font-bold">{X.cta}</button>
         </div>
+      </div>
+
+      {/* APP BADGES — centered, just above the search bar */}
+      <div className="px-4 pb-2">
+        <AppBadges />
       </div>
 
       {/* SEARCH */}

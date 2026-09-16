@@ -6,7 +6,6 @@ import { useAuth } from '@/components/AuthProvider';
 import { useLang } from '@/lib/useLang';
 import ConfirmModal from '@/components/ConfirmModal';
 import { COUNTRY } from '@/lib/country';
-import AppComingSoon from '@/components/AppComingSoon';
 
 const NAV = {
   es: [['/cuenta', 'Panel', 'dash'], ['/cuenta/guardadas', 'Guardadas', 'heart'], ['/cuenta/publicaciones', 'Mis publicaciones', 'home'], ['/cuenta/pagos', 'Pagos', 'card'], ['/cuenta/ajustes', 'Ajustes', 'gear']],
@@ -46,7 +45,6 @@ export default function AccountShell({ children }) {
         <div className="flex items-center justify-between px-5 h-[68px] border-b border-ink/10 shrink-0">
           <span className="flex flex-col gap-0.5 leading-none">
             <Link href="/" className="text-[20px] font-bold tracking-head">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></Link>
-            <AppComingSoon />
           </span>
           <button onClick={() => setOpen(false)} aria-label="Cerrar" className="lg:hidden w-8 h-8 rounded-pill flex items-center justify-center text-ink/60 hover:bg-ink/5">×</button>
         </div>
@@ -85,7 +83,6 @@ export default function AccountShell({ children }) {
           </button>
           <span className="lg:hidden flex flex-col gap-0.5 leading-none">
             <span className="text-[18px] font-bold tracking-head">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></span>
-            <AppComingSoon />
           </span>
           <div className="hidden lg:block flex-1" />
           <div className="flex items-center border border-ink/30 rounded-pill p-[3px] text-[12px] font-semibold">

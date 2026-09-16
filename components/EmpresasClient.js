@@ -8,7 +8,6 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
 import { COUNTRY } from '@/lib/country';
-import AppComingSoon from '@/components/AppComingSoon';
 
 // Placeholder test number until the real business WhatsApp line is set — the
 // previous placeholder (595981000000) was a real person's number, so this is a
@@ -188,7 +187,6 @@ export default function EmpresasClient() {
       <nav className="flex items-center justify-between flex-wrap gap-3 px-5 md:px-9 py-4 border-b border-ink/12">
         <div className="flex flex-col gap-0.5 leading-none">
           <Link href="/" className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></Link>
-          <AppComingSoon />
         </div>
         <div className="hidden md:flex gap-2">
           {t.tabs.map(([label, href]) => (

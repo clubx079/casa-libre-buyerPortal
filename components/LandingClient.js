@@ -5,11 +5,11 @@ import { useLang } from '@/lib/useLang';
 import AuthButton from '@/components/AuthButton';
 import { useSellFlow } from '@/components/SellFlow';
 import VerifiedTag from '@/components/VerifiedTag';
+import AppBadges from '@/components/AppBadges';
 import { useRouter } from 'next/navigation';
 import { typeLabel } from '@/lib/propertyType';
 import { fmtUsd, fmtPyg, bathWord } from '@/lib/ui';
 import { COUNTRY } from '@/lib/country';
-import AppComingSoon from '@/components/AppComingSoon';
 
 const DICT = {
   es: {
@@ -91,7 +91,6 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
       <nav className="flex items-center justify-center md:justify-between flex-wrap gap-3 px-5 md:px-11 py-5">
         <span className="flex flex-col gap-0.5 leading-none">
           <span className="font-bold text-[22px] tracking-head">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></span>
-          <AppComingSoon />
         </span>
         <div className="flex gap-2 flex-wrap text-[14px] font-medium">
           <Link href="/propiedades?op=venta" className="inline-flex items-center h-[40px] px-[18px] border border-ink rounded-pill">{t.navBuy}</Link>
@@ -129,6 +128,10 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
             {t.chips.map((c) => (
               <Link key={c} href={`/propiedades?q=${encodeURIComponent(c)}`} className="text-[13px] font-medium px-3.5 py-[7px] border border-ink/25 rounded-pill bg-card">{c}</Link>
             ))}
+          </div>
+          {/* APP BADGES — below the search bar, side by side */}
+          <div className="mt-5 flex justify-center md:justify-start">
+            <AppBadges variant="row" />
           </div>
         </div>
         <div className="flex flex-row md:flex-col items-center justify-center gap-2.5 md:gap-3.5 mt-1.5 md:mt-0">

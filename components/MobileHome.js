@@ -11,8 +11,8 @@ import { useSellFlow } from '@/components/SellFlow';
 import { typeLabel } from '@/lib/propertyType';
 import { fmtUsd } from '@/lib/ui';
 import { COUNTRY } from '@/lib/country';
-import AppComingSoon from '@/components/AppComingSoon';
 import VerifiedTag from '@/components/VerifiedTag';
+import AppBadges from '@/components/AppBadges';
 
 const H = {
   es: {
@@ -82,7 +82,6 @@ export default function MobileHome({ featured = [], count = 0, tickerData = [] }
       <div className="flex items-center justify-between px-4 py-3.5">
         <span className="flex flex-col gap-0.5 leading-none">
           <span className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></span>
-          <AppComingSoon />
         </span>
         <div className="flex items-center gap-2.5">
           <div className="flex items-center border-[1.5px] border-ink rounded-pill overflow-hidden text-[12px] font-semibold">
@@ -118,6 +117,11 @@ export default function MobileHome({ featured = [], count = 0, tickerData = [] }
       {/* CHIPS */}
       <div className="flex flex-wrap gap-2.5 px-4 mt-[18px] justify-center">
         {t.chips.map((c) => <Link key={c} href={`/propiedades?q=${encodeURIComponent(c)}`} className="text-[13.5px] font-bold px-4 py-[9px] border-[1.5px] border-ink/25 rounded-pill bg-card">{c}</Link>)}
+      </div>
+
+      {/* APP BADGES — also below the city searches */}
+      <div className="px-4 mt-4 flex justify-center">
+        <AppBadges variant="row" />
       </div>
 
       {/* MASCOT + CAPTION */}

@@ -7,7 +7,7 @@ import { fmtRate } from '@/lib/money';
 import { useLang } from '@/lib/useLang';
 import AuthButton from '@/components/AuthButton';
 import VerifiedTag from '@/components/VerifiedTag';
-import AppComingSoon from '@/components/AppComingSoon';
+import AppBadges from '@/components/AppBadges';
 import { useSellFlow } from '@/components/SellFlow';
 import { track } from '@/lib/analytics';
 import { loadGoogleMapsAPI, mapOptions, pinIcon, clusterIcon, inParaguay, youAreHereIcon } from '@/utils/gmap';
@@ -464,7 +464,6 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
       <nav className="flex items-center justify-between flex-wrap gap-3 px-5 md:px-9 py-4 border-b border-ink/12">
         <div className="flex flex-col gap-0.5 leading-none">
           <Link href="/" className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></Link>
-          <AppComingSoon />
         </div>
         <div className="hidden sm:flex gap-2">
           {t.tabs.map(([label, href, op], i) => (
@@ -485,6 +484,11 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
           <button onClick={openSell} className="inline-flex items-center h-[40px] px-[18px] rounded-pill bg-ink text-paper text-[14px] font-medium border border-ink">{t.cta}</button>
         </div>
       </nav>
+
+      {/* APP BADGES — centered, just above the search / filters bar */}
+      <div className="flex justify-center px-5 md:px-9 py-2 border-b border-ink/12">
+        <AppBadges />
+      </div>
 
       {/* FILTERS */}
       <div className="flex items-center gap-2.5 flex-wrap px-5 md:px-9 py-3 border-b border-ink/12">

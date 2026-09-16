@@ -17,7 +17,6 @@ import SaveButton from '@/components/SaveButton';
 import ShareButton from '@/components/ShareButton';
 import { genToken, shortUrl, trackContact, markOpened } from '@/lib/contactTrack';
 import { COUNTRY } from '@/lib/country';
-import AppComingSoon from '@/components/AppComingSoon';
 import { inCountry } from '@/utils/gmap';
 
 const T = {
@@ -206,23 +205,22 @@ export default function PropertyDetailView({ l, url }) {
   return (
     <div className="min-h-screen bg-paper text-ink">
       {/* ── NAV ── */}
-      <nav className="flex items-center justify-between flex-wrap gap-3 px-5 md:px-9 py-4 border-b border-ink/12">
-        <div className="flex flex-col gap-0.5 leading-none">
+      <nav className="flex items-center justify-between flex-nowrap md:flex-wrap gap-2 md:gap-3 px-5 md:px-9 py-4 border-b border-ink/12">
+        <div className="flex flex-col gap-0.5 leading-none shrink-0">
           <Link href="/" className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></Link>
-          <AppComingSoon />
         </div>
         <div className="hidden md:flex gap-2">
           {t.tabs.map(([label, href], i) => (
             <Link key={label} href={href} className={`inline-flex items-center h-[40px] px-[18px] rounded-pill text-[14px] font-medium border border-ink ${i === navActive ? 'bg-ink text-paper' : ''}`}>{label}</Link>
           ))}
         </div>
-        <div className="flex items-center gap-3.5">
-          <div className="flex items-center h-[40px] border border-ink/30 rounded-pill p-[3px] text-[12px] font-semibold">
+        <div className="flex items-center gap-2 md:gap-3.5 shrink-0">
+          <div className="flex items-center h-9 md:h-[40px] border border-ink/30 rounded-pill p-[3px] text-[12px] font-semibold">
             {['es', 'en'].map((x) => (
-              <button key={x} onClick={() => setLang(x)} className={`h-full flex items-center px-3 rounded-pill ${lang === x ? 'bg-ink text-paper' : 'text-ink/55'}`}>{x.toUpperCase()}</button>
+              <button key={x} onClick={() => setLang(x)} className={`h-full flex items-center px-2.5 md:px-3 rounded-pill ${lang === x ? 'bg-ink text-paper' : 'text-ink/55'}`}>{x.toUpperCase()}</button>
             ))}
           </div>
-          <Link href="/publicar" className="inline-flex items-center h-[40px] px-[22px] rounded-pill text-[14px] font-medium bg-ink text-paper">{t.cta}</Link>
+          <Link href="/publicar" className="inline-flex items-center h-9 md:h-[40px] px-3.5 md:px-[22px] rounded-pill text-[13px] md:text-[14px] font-medium bg-ink text-paper whitespace-nowrap">{t.cta}</Link>
         </div>
       </nav>
 
