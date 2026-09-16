@@ -43,26 +43,34 @@ const T = {
   },
 };
 
-export default function AppDownloadClient() {
+export default function AppDownloadClient({ tickerData = [] }) {
   const [lang, setLang] = useLang();
   const t = T[lang] || T.es;
+  const ticker = tickerData.length ? tickerData : ['CASA LIBRE — PROPIEDADES EN PARAGUAY'];
   return (
     <div className="bg-paper text-ink min-h-screen">
-      {/* NAV */}
-      <nav className="flex items-center justify-between flex-wrap gap-3 px-5 md:px-9 py-4 border-b border-ink/12">
-        <Link href="/" className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></Link>
+      {/* RUNNING STRIP — same marquee as the home page */}
+      <div className="bg-ink text-paper overflow-hidden whitespace-nowrap font-mono text-[12px] py-2">
+        <div className="cl-marquee">
+          {[0, 1].map((rep) => <span key={rep} className="pr-10">{ticker.map((x, i) => <span key={i} className="px-6 border-r border-paper/30">{x}</span>)}</span>)}
+        </div>
+      </div>
+
+      {/* NAV — wordmark + controls on one line */}
+      <nav className="flex items-center justify-between flex-nowrap md:flex-wrap gap-2 md:gap-3 px-5 md:px-9 py-4 border-b border-ink/12">
+        <Link href="/" className="text-[22px] font-bold tracking-head shrink-0">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></Link>
         <div className="hidden md:flex gap-2">
           {t.tabs.map(([label, href]) => (
             <Link key={label} href={href} className="inline-flex items-center h-[40px] px-[18px] rounded-pill text-[14px] font-medium border border-ink">{label}</Link>
           ))}
         </div>
-        <div className="flex items-center gap-3.5">
-          <div className="flex items-center h-[40px] border border-ink/30 rounded-pill p-[3px] text-[12px] font-semibold">
+        <div className="flex items-center gap-2 md:gap-3.5 shrink-0">
+          <div className="flex items-center h-9 md:h-[40px] border border-ink/30 rounded-pill p-[3px] text-[12px] font-semibold">
             {['es', 'en'].map((x) => (
-              <button key={x} onClick={() => setLang(x)} className={`h-full flex items-center px-3 rounded-pill ${lang === x ? 'bg-ink text-paper' : 'text-ink/55'}`}>{x.toUpperCase()}</button>
+              <button key={x} onClick={() => setLang(x)} className={`h-full flex items-center px-2.5 md:px-3 rounded-pill ${lang === x ? 'bg-ink text-paper' : 'text-ink/55'}`}>{x.toUpperCase()}</button>
             ))}
           </div>
-          <Link href="/publicar" className="inline-flex items-center h-[40px] px-[22px] rounded-pill text-[14px] font-medium bg-ink text-paper">{t.cta}</Link>
+          <Link href="/publicar" className="inline-flex items-center h-9 md:h-[40px] px-3.5 md:px-[22px] rounded-pill text-[13px] md:text-[14px] font-medium bg-ink text-paper whitespace-nowrap">{t.cta}</Link>
         </div>
       </nav>
 
