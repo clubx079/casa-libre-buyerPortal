@@ -1,6 +1,9 @@
 import { unstable_cache } from 'next/cache';
 import { getActiveCountCached } from '@/lib/listings';
 import { searchListings } from '@/lib/marketplace';
+import { SITE } from '@/lib/site';
+import { COUNTRY } from '@/lib/country';
+import { collectionListingLd } from '@/lib/schema';
 import MarketplaceClient from '@/components/MarketplaceClient';
 import MobileMarketplace from '@/components/MobileMarketplace';
 
@@ -36,8 +39,22 @@ export default async function PropiedadesPage({ searchParams }) {
   const [{ dRes, mRes }, totalCount] = await Promise.all([
     getInitialPage(initialOp, initialQuery), getActiveCountCached(),
   ]);
+  // SEO: a keyword H1 (sr-only, so the search-first UI is unchanged) + CollectionPage
+  // /ItemList schema for the listings this page SSRs. Invisible to users; gives the
+  // main marketplace page the structured data it was missing.
+  const opLabel = initialOp === 'venta' ? 'en venta' : initialOp === 'alquiler' ? 'en alquiler' : 'en venta y alquiler';
+  const h1 = `Propiedades ${opLabel} en ${COUNTRY.name}`;
+  const ld = collectionListingLd({
+    name: h1,
+    description: `Casas, departamentos, dúplex, terrenos y locales ${opLabel} en ${COUNTRY.name}. Explorá ${Number(totalCount || 0).toLocaleString('es')} propiedades en el mapa con Casa Libre.`,
+    url: `${SITE}/propiedades`,
+    listings: dRes.listings,
+    site: SITE,
+  });
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
+      <h1 className="sr-only">{h1} — Casa Libre</h1>
       {/* Mobile: the app-style listing UI. Desktop: the existing marketplace (unchanged). */}
       <div className="md:hidden">
         <MobileMarketplace initialListings={mRes.listings} initialCount={mRes.count} totalCount={totalCount} initialOp={initialOp} initialQuery={initialQuery} />

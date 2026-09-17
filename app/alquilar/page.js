@@ -1,6 +1,8 @@
 import MarketingShell from '@/components/MarketingShell';
 import Article from '@/components/marketing/Article';
 import { COUNTRY } from '@/lib/country';
+import { SITE } from '@/lib/site';
+import { breadcrumbLd } from '@/lib/schema';
 
 export const metadata = {
   title: `Alquilar propiedades en ${COUNTRY.name} — Casas y departamentos en alquiler | Casa Libre`,
@@ -36,8 +38,13 @@ const content = {
 };
 
 export default function Page() {
+  const ld = breadcrumbLd([
+    { name: 'Casa Libre', url: SITE },
+    { name: 'Alquilar', url: `${SITE}/alquilar` },
+  ]);
   return (
     <MarketingShell>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
       <Article content={content} />
     </MarketingShell>
   );
