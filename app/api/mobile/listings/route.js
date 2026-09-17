@@ -24,12 +24,14 @@ export async function GET(req) {
     // Clamp to the app's real need (≤600). Was 5000 — a single call that dumped
     // the whole catalog. The app requests 600, so this is invisible to it.
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '600', 10) || 600, 600);
-    const mode = url.searchParams.get('mode');
-    const { rate, listings } = await getListings({ limit });
-    let out = listings;
-    if (mode === 'venta') out = listings.filter((l) => l.mode === 'venta');
-    else if (mode === 'alquiler') out = listings.filter((l) => l.mode === 'alquiler');
-    return NextResponse.json({ rate, count: out.length, listings: out }, { headers: CORS });
+    const modeParam = url.searchParams.get('mode');
+    const mode = modeParam === 'venta' || modeParam === 'alquiler' ? modeParam : undefined;
+    // Pass mode so the fetch AND the exact count are per-mode — `totalCount` is the
+    // real total for THIS view, not the all-modes total.
+    const { rate, listings, totalCount } = await getListings({ limit, mode });
+    // `total` = the real active-inventory total for this view (uncapped, count=exact);
+    // the app shows it as the "N results" count instead of the load cap (600).
+    return NextResponse.json({ rate, count: listings.length, total: totalCount, listings }, { headers: CORS });
   } catch (e) {
     return NextResponse.json({ error: 'failed', detail: String(e?.message || e) }, { status: 500, headers: CORS });
   }
