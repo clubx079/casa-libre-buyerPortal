@@ -48,7 +48,7 @@ const SORTS = [
   { k: 'area_desc', es: 'Superficie: mayor primero', en: 'Area: largest first', esS: 'Mayor', enS: 'Largest' },
 ];
 
-export default function MobileMarketplace({ initialListings = [], initialCount = 0, initialPins = [], totalCount = 0, initialOp = 'all', initialQuery = '' }) {
+export default function MobileMarketplace({ initialListings = [], initialCount = 0, initialPins = [], totalCount = 0, initialOp = 'all', initialQuery = '', initialType = 'all' }) {
   const [lang, setLang] = useLang();
   const { openSell } = useSellFlow();
   const { isSaved, toggle } = useFavorites();
@@ -57,7 +57,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
 
   const [mode, setMode] = useState(initialOp === 'alquiler' ? 'alquiler' : 'venta');
   const [q, setQ] = useState(initialQuery || '');
-  const [typeF, setTypeF] = useState('all');
+  const [typeF, setTypeF] = useState(initialType || 'all');
   const [priceF, setPriceF] = useState('all');
   const [bedF, setBedF] = useState('all');
   const [barrioF, setBarrioF] = useState('all');

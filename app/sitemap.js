@@ -1,5 +1,6 @@
 import { SITE, CITIES, COMPETITORS } from '@/lib/site';
 import { getListings } from '@/lib/listings';
+import { indexableCombos } from '@/lib/matrix';
 
 export const revalidate = 3600;
 
@@ -19,5 +20,10 @@ export default async function sitemap() {
     const { listings } = await getListings({ limit: 5000 });
     listings.forEach((l) => entries.push({ url: `${SITE}/propiedad/${l.id}`, lastModified: now, changeFrequency: 'weekly', priority: 0.5 }));
   } catch { /* DB blip — ship the static + programmatic entries anyway */ }
+  // Operation × type × city matrix — only combos that clear the min-listing gate.
+  try {
+    const combos = await indexableCombos();
+    combos.forEach((x) => entries.push({ url: `${SITE}/${x.op}/${x.tipo}/${x.ciudad}`, lastModified: now, changeFrequency: 'daily', priority: 0.7 }));
+  } catch { /* inventory blip — ship the rest */ }
   return entries;
 }

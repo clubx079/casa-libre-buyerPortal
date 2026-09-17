@@ -50,12 +50,12 @@ const PER_PAGE = 24;
 // accent- and case-insensitive text for search ("asuncion" should match "Asunción")
 const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
-export default function MarketplaceClient({ initialListings = [], initialCount = 0, initialPins = [], totalCount = 0, initialOp = 'all', initialQuery = '' }) {
+export default function MarketplaceClient({ initialListings = [], initialCount = 0, initialPins = [], totalCount = 0, initialOp = 'all', initialQuery = '', initialType = 'all' }) {
   const [lang, setLang] = useLang();
   const { openSell } = useSellFlow();
   const [filter, setFilter] = useState(['all', 'venta', 'alquiler'].includes(initialOp) ? initialOp : 'all');
   const [query, setQuery] = useState(initialQuery || '');
-  const [typeF, setTypeF] = useState('all');
+  const [typeF, setTypeF] = useState(initialType || 'all');
   const [priceF, setPriceF] = useState('all');
   const [bedF, setBedF] = useState('all');
   const [sortBy, setSortBy] = useState('relevancia');

@@ -31,6 +31,7 @@ export const metadata = { alternates: { canonical: '/propiedades' } };
 export default async function PropiedadesPage({ searchParams }) {
   const initialOp = searchParams?.op === 'alquiler' ? 'alquiler' : searchParams?.op === 'venta' ? 'venta' : 'all';
   const initialQuery = typeof searchParams?.q === 'string' ? searchParams.q : '';
+  const initialType = typeof searchParams?.type === 'string' ? searchParams.type : 'all';
   // The marketplace fetches server-side (all ~25k). We SSR the FIRST page + pins
   // so the initial paint already has results — no client loading wait. Desktop
   // starts on `initialOp`; mobile's segmented always starts on venta/alquiler.
@@ -57,10 +58,10 @@ export default async function PropiedadesPage({ searchParams }) {
       <h1 className="sr-only">{h1} — Casa Libre</h1>
       {/* Mobile: the app-style listing UI. Desktop: the existing marketplace (unchanged). */}
       <div className="md:hidden">
-        <MobileMarketplace initialListings={mRes.listings} initialCount={mRes.count} totalCount={totalCount} initialOp={initialOp} initialQuery={initialQuery} />
+        <MobileMarketplace initialListings={mRes.listings} initialCount={mRes.count} totalCount={totalCount} initialOp={initialOp} initialQuery={initialQuery} initialType={initialType} />
       </div>
       <div className="hidden md:block">
-        <MarketplaceClient initialListings={dRes.listings} initialCount={dRes.count} totalCount={totalCount} initialOp={initialOp} initialQuery={initialQuery} />
+        <MarketplaceClient initialListings={dRes.listings} initialCount={dRes.count} totalCount={totalCount} initialOp={initialOp} initialQuery={initialQuery} initialType={initialType} />
       </div>
     </>
   );
