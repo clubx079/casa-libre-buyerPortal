@@ -59,7 +59,7 @@ export default function MobileHome({ featured = [], count = 0, tickerData = [] }
   const [q, setQ] = useState('');
   const [sel, setSel] = useState(null); // Buy/Rent/Sell — the tapped one stays black (one at a time)
   const go = () => { const query = q.trim(); router.push(query ? `/propiedades?q=${encodeURIComponent(query)}` : '/propiedades'); };
-  const ticker = tickerData.length ? tickerData : ['CASA LIBRE — PROPIEDADES EN PARAGUAY'];
+  const ticker = tickerData.length ? tickerData : [`CASA LIBRE — PROPIEDADES EN ${(COUNTRY.name || 'Sudamérica').toUpperCase()}`];
   const price = (l) => (fmtUsd(l.usd, lang) || '—') + (l.mode === 'alquiler' ? t.perMonth : '');
   const fTitle = (l) => `${typeLabel(l.type, lang) || (lang === 'es' ? 'Propiedad' : 'Property')}${l.beds ? ` · ${l.beds} ${t.bd}` : ''}`;
   const fMeta = (l) => [[l.neighborhood, l.city].filter(Boolean).join(', '), l.area && `${l.area} m²`].filter(Boolean).join(' · ');

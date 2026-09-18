@@ -72,7 +72,7 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
   const title = (l) => `${typeLabel(l.type, lang) || (lang === 'es' ? 'Propiedad' : 'Property')}${l.beds ? ` · ${l.beds} ${t.beds}` : ''}`;
   const place = (l) => [l.neighborhood, l.city].filter(Boolean).join(', ');
   const meta = (l) => [l.area && `${l.area} m²`, l.baths && `${l.baths} ${bathWord(l.baths, lang)}`].filter(Boolean).join(' · ');
-  const ticker = tickerData.length ? tickerData : ['CASA LIBRE — PROPIEDADES EN PARAGUAY'];
+  const ticker = tickerData.length ? tickerData : [`CASA LIBRE — PROPIEDADES EN ${(COUNTRY.name || 'Sudamérica').toUpperCase()}`];
 
   return (
     <div className="max-w-[1920px] mx-auto">

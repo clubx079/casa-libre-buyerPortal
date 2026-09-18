@@ -46,7 +46,7 @@ const T = {
 export default function AppDownloadClient({ tickerData = [] }) {
   const [lang, setLang] = useLang();
   const t = T[lang] || T.es;
-  const ticker = tickerData.length ? tickerData : ['CASA LIBRE — PROPIEDADES EN PARAGUAY'];
+  const ticker = tickerData.length ? tickerData : [`CASA LIBRE — PROPIEDADES EN ${(COUNTRY.name || 'Sudamérica').toUpperCase()}`];
   return (
     <div className="bg-paper text-ink min-h-screen">
       {/* RUNNING STRIP — same marquee as the home page */}
