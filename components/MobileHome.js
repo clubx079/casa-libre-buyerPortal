@@ -20,7 +20,7 @@ const H = {
     heroL1: 'Encontrá tu lugar,', heroL2: 'libremente.',
     heroSub: ['La forma más amigable de comprar,', 'alquilar y vender casas en', `${COUNTRY.name}.`],
     searchPh: '¿Dónde querés vivir?', mascotCaption: '“¡Vamos que se puede!” — Cuate, tu guía',
-    justListed: 'Recién publicadas', justListedSerif: 'lo más nuevo del mercado', viewAll: 'Ver todas →',
+    justListed: 'Destacadas', justListedSerif: 'de todo el marketplace', viewAll: 'Ver todas →',
     forSale: 'En venta', forRent: 'En alquiler', perMonth: '/mes', bd: 'dorm',
     stepsTitle: 'Tres pasos y listo',
     steps: [
@@ -37,7 +37,7 @@ const H = {
     heroL1: 'Find your place,', heroL2: 'freely.',
     heroSub: ['The friendliest way to buy,', 'rent and sell homes in', `${COUNTRY.name}.`],
     searchPh: 'Where do you want to live?', mascotCaption: '“Let’s go!” — Cuate, your guide',
-    justListed: 'Just listed', justListedSerif: 'fresh on the market', viewAll: 'View all →',
+    justListed: 'Featured', justListedSerif: 'from across the marketplace', viewAll: 'View all →',
     forSale: 'For sale', forRent: 'For rent', perMonth: '/mo', bd: 'bd',
     stepsTitle: 'Three steps and you’re in',
     steps: [

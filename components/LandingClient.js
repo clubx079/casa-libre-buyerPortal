@@ -18,7 +18,7 @@ const DICT = {
     heroSub: `La forma más amigable de comprar, alquilar y vender casas en ${COUNTRY.name}.`,
     searchPlaceholder: '¿Dónde querés vivir? — “Carmelitas”, “Recoleta”…', searchBtn: 'Buscar',
     mascotCaption: '“¡Vamos que se puede!” — Cuate, tu guía',
-    listingsTitle: 'Recién publicadas', listingsTitleSerif: 'lo más nuevo del mercado', listingsAll: 'Ver todas →',
+    listingsTitle: 'Destacadas', listingsTitleSerif: 'de todo el marketplace', listingsAll: 'Ver todas →',
     forSale: 'En venta', forRent: 'En alquiler', perMonth: '/mes', beds: 'dorm', baths: 'baños',
     stepsTitle: 'Tres pasos y listo',
     steps: [
@@ -41,7 +41,7 @@ const DICT = {
     heroSub: `The friendliest way to buy, rent and sell homes in ${COUNTRY.name}.`,
     searchPlaceholder: 'Where do you want to live? — “Carmelitas”, “Recoleta”…', searchBtn: 'Search',
     mascotCaption: '“Let’s go!” — Cuate, your guide',
-    listingsTitle: 'Just listed', listingsTitleSerif: 'fresh on the market', listingsAll: 'View all →',
+    listingsTitle: 'Featured', listingsTitleSerif: 'from across the marketplace', listingsAll: 'View all →',
     forSale: 'For sale', forRent: 'For rent', perMonth: '/mo', beds: 'bd', baths: 'ba',
     stepsTitle: 'Three steps and you’re in',
     steps: [
