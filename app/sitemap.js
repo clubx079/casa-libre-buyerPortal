@@ -1,6 +1,6 @@
 import { SITE, CITIES, COMPETITORS } from '@/lib/site';
 import { getListings } from '@/lib/listings';
-import { indexableCombos } from '@/lib/matrix';
+import { indexableCombos, indexableBarrioCombos } from '@/lib/matrix';
 
 export const revalidate = 3600;
 
@@ -24,6 +24,11 @@ export default async function sitemap() {
   try {
     const combos = await indexableCombos();
     combos.forEach((x) => entries.push({ url: `${SITE}/${x.op}/${x.tipo}/${x.ciudad}`, lastModified: now, changeFrequency: 'daily', priority: 0.7 }));
+  } catch { /* inventory blip — ship the rest */ }
+  // Operation × type × city × NEIGHBORHOOD matrix (Level 4) — gated combos only.
+  try {
+    const barrioCombos = await indexableBarrioCombos();
+    barrioCombos.forEach((x) => entries.push({ url: `${SITE}/${x.op}/${x.tipo}/${x.ciudad}/${x.barrio}`, lastModified: now, changeFrequency: 'daily', priority: 0.6 }));
   } catch { /* inventory blip — ship the rest */ }
   return entries;
 }

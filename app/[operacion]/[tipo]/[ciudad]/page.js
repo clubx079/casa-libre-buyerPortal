@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { unstable_cache } from 'next/cache';
 import MarketingShell from '@/components/MarketingShell';
 import ListingGrid from '@/components/marketing/ListingGrid';
-import { isOp, tipoBySlug, OPS, TIPOS, comboCount, indexableCombos, comboContent, MIN_LISTINGS } from '@/lib/matrix';
+import { isOp, tipoBySlug, OPS, TIPOS, comboCount, indexableCombos, comboContent, barriosForCity, MIN_LISTINGS } from '@/lib/matrix';
 import { searchListings } from '@/lib/marketplace';
 import { CITIES, cityBySlug, SITE, INDEXABLE } from '@/lib/site';
 import { collectionListingLd, breadcrumbLd } from '@/lib/schema';
@@ -56,6 +56,8 @@ export default async function Page({ params }) {
   const idx = await indexableCombos();
   const otherTypes = idx.filter((x) => x.op === v.op && x.ciudad === params.ciudad && x.tipo !== params.tipo).slice(0, 6);
   const otherCities = idx.filter((x) => x.op === v.op && x.tipo === params.tipo && x.ciudad !== params.ciudad).slice(0, 8);
+  // Level-4 internal links → neighborhoods within THIS city that clear the gate.
+  const barrios = (await barriosForCity(v.op, params.tipo, params.ciudad)).slice(0, 12);
 
   const base = `${SITE}/${v.op}/${params.tipo}/${params.ciudad}`;
   const ldCollection = collectionListingLd({ name: c.h1, description: c.description, url: base, listings, site: SITE });
@@ -89,6 +91,21 @@ export default async function Page({ params }) {
             Ver las {count} propiedades en el mapa →
           </Link>
         </div>
+
+        {barrios.length ? (
+          <section className="mt-12 border-t-[1.5px] border-ink/10 pt-8">
+            <h2 className="text-[18px] font-bold text-ink">{OPS[v.op].short} de {v.tipo.plural} por barrio en {c.cityName}</h2>
+            <ul className="mt-4 grid gap-1.5 sm:grid-cols-2">
+              {barrios.map((x) => (
+                <li key={x.barrio}>
+                  <Link href={`/${x.op}/${x.tipo}/${x.ciudad}/${x.barrio}`} className="text-[14px] text-ink hover:underline">
+                    {OPS[x.op].short} de {TIPOS[x.tipo].plural} en {x.barrioName}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
 
         {(otherTypes.length || otherCities.length) ? (
           <section className="mt-12 border-t-[1.5px] border-ink/10 pt-8">
