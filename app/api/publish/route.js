@@ -74,6 +74,12 @@ export async function POST(req) {
   const contactPhone = get('contact_phone') || null;
   // Who is publishing — owner vs. agent. Saved for data quality; not shown publicly.
   const sellerType = get('seller_type') === 'agent' ? 'agent' : 'owner';
+  // Precise coordinates from the mobile map picker (optional). When present we use
+  // them directly and skip geocoding (the picked pin is more accurate than a
+  // neighborhood/city text lookup).
+  const latIn = Number(get('latitude'));
+  const lngIn = Number(get('longitude'));
+  const hasCoords = Number.isFinite(latIn) && Number.isFinite(lngIn) && Math.abs(latIn) <= 90 && Math.abs(lngIn) <= 180 && !(latIn === 0 && lngIn === 0);
 
   // Completeness validation — a published listing must clear the same bar the
   // marketplace gate uses to SHOW it, so a user's listing is never created
@@ -109,7 +115,7 @@ export async function POST(req) {
   // Geocode runs in PARALLEL with the DB insert + photo uploads below (it's the
   // slowest external call), and its result is patched onto the row once ready — so
   // it no longer blocks publish start-to-finish.
-  const geocodePromise = geocode(neighborhood, city).catch(() => null);
+  const geocodePromise = hasCoords ? Promise.resolve({ lat: latIn, lng: lngIn }) : geocode(neighborhood, city).catch(() => null);
 
   const row = {
     slug,

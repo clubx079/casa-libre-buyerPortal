@@ -22,6 +22,7 @@ export default function MyListingsPage() {
   const [busy, setBusy] = useState(false);
   const [promo, setPromo] = useState(null);     // { id, plan } — open the payment modal (no card / 3DS)
   const [payingId, setPayingId] = useState(null); // id being charged silently on a saved card
+  const [autoPay, setAutoPay] = useState(false);  // one-shot: honor a ?pay=&plan= deep link once
 
   useEffect(() => {
     fetch('/api/account/listings').then((r) => r.json()).then((j) => setListings(j.listings || [])).catch(() => setListings([]));
@@ -44,6 +45,17 @@ export default function MyListingsPage() {
       setPayingId(null); setPromo({ id, plan: pl });
     } catch { setPayingId(null); setPromo({ id, plan: pl }); }
   };
+
+  // Deep link from the mobile app after a free publish:
+  // /cuenta/publicaciones?pay=<id>&plan=<verified|home> → jump straight to the
+  // Stripe payment for that listing + plan as soon as the listings load.
+  useEffect(() => {
+    if (autoPay || !listings) return;
+    let id, pl;
+    try { const sp = new URLSearchParams(window.location.search); id = sp.get('pay'); pl = sp.get('plan'); } catch {}
+    if (id && (pl === 'verified' || pl === 'home')) { setAutoPay(true); payFor(id, pl); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listings, autoPay]);
 
   const del = async () => {
     const id = confirmId;
