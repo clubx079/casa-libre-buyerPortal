@@ -93,7 +93,8 @@ export default function MobileHome({ featured = [], count = 0, tickerData = [] }
 
       {/* HERO */}
       <div className="px-5 pt-6 text-center">
-        <h1 className="text-[46px] leading-[1.02] tracking-[-1.5px] font-bold">{t.heroL1}<br /><span className="font-serif italic font-normal">{t.heroL2}</span></h1>
+        {/* h2, not h1: the desktop LandingClient carries the single page <h1> (both render in the DOM; CSS only hides one). */}
+        <h2 className="text-[46px] leading-[1.02] tracking-[-1.5px] font-bold">{t.heroL1}<br /><span className="font-serif italic font-normal">{t.heroL2}</span></h2>
         <p className="text-[17px] leading-[1.5] text-ink/60 mt-5">{t.heroSub.map((line, i) => <span key={i} className="block">{line}</span>)}</p>
       </div>
 
@@ -139,7 +140,7 @@ export default function MobileHome({ featured = [], count = 0, tickerData = [] }
           {featured.map((l) => (
             <Link key={l.id} href={`/propiedad/${l.id}`} className={`bg-paper text-ink rounded-card overflow-hidden block ${l.verified ? 'ring-2 ring-paper ring-offset-2 ring-offset-ink' : ''}`}>
               <div className="h-[190px] cl-hatch relative">
-                {l.image && /* eslint-disable-next-line @next/next/no-img-element */ <img src={l.image} alt="" className="w-full h-full object-cover" />}
+                {l.image && /* eslint-disable-next-line @next/next/no-img-element */ <img src={l.image} alt={fTitle(l)} className="w-full h-full object-cover" />}
                 <span className="absolute top-3 left-3 text-[12px] font-semibold bg-ink text-paper px-3 py-1.5 rounded-pill">{l.mode === 'alquiler' ? t.forRent : t.forSale}</span>
               </div>
               <div className="relative p-4">
@@ -173,7 +174,7 @@ export default function MobileHome({ featured = [], count = 0, tickerData = [] }
       {/* CTA */}
       <div className="bg-paper px-6 py-12 text-center flex flex-col items-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/mascot.png" alt="" className="w-24 object-contain" />
+        <img src="/mascot.png" alt="Casa Libre" className="w-24 object-contain" />
         <h2 className="text-[34px] leading-[1.05] tracking-[-1px] font-bold mt-3.5">{t.ctaTitle} <span className="font-serif italic font-normal">{t.ctaSerif}</span></h2>
         <p className="text-[16px] text-ink/60 mt-3 mb-6">{t.ctaSub}</p>
         <div className="flex gap-3 flex-wrap justify-center">

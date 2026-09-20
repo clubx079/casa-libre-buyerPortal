@@ -151,7 +151,7 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
           {featured.map((l) => (
             <Link key={l.id} href={`/propiedad/${l.id}`} className={`bg-paper text-ink rounded-card overflow-hidden hover:-translate-y-1 transition-transform block ${l.verified ? 'ring-2 ring-paper ring-offset-2 ring-offset-ink' : ''}`}>
               <div className="h-[180px] cl-hatch relative">
-                {l.image && /* eslint-disable-next-line @next/next/no-img-element */ <img src={l.image} alt="" className="w-full h-full object-cover" />}
+                {l.image && /* eslint-disable-next-line @next/next/no-img-element */ <img src={l.image} alt={title(l)} className="w-full h-full object-cover" />}
                 <span className="absolute top-3 left-3 text-[11px] font-semibold bg-ink text-paper px-2.5 py-1 rounded-pill">{l.mode === 'alquiler' ? t.forRent : t.forSale}</span>
               </div>
               <div className="relative p-[18px] pt-4 pb-5">
@@ -187,7 +187,7 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
       {/* CTA FOOTER */}
       <div className="px-5 md:px-11 py-[70px] bg-paper text-center max-[720px]:py-10">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/mascot.png" alt="" className="w-24 object-contain mx-auto mb-3.5" />
+        <img src="/mascot.png" alt="Casa Libre" className="w-24 object-contain mx-auto mb-3.5" />
         <h2 className="text-[clamp(32px,5.5vw,52px)] tracking-[-0.04em] font-bold m-0 mb-3">{t.ctaTitle} <span className="font-serif italic font-normal">{t.ctaTitleSerif}</span></h2>
         <p className="text-[17px] text-ink/55 m-0 mb-[30px]">{t.ctaSub}</p>
         <div className="flex gap-3 justify-center flex-wrap">
