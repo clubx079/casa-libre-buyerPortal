@@ -52,6 +52,19 @@ export async function GET(req) {
 
     if (user.blocked || user.suspended) return NextResponse.redirect(`${base}/?auth_error=blocked`);
 
+    // Mobile app login: hand the session token back to the app via its deep link.
+    // The app's own network jar can't see the in-app browser's cookie, so instead of
+    // setting a cookie here we pass the token and the app exchanges it for the cookie
+    // (POST /api/auth/mobile-exchange). state = 'm|<encoded casalibre:// return url>'.
+    if (typeof state === 'string' && state.startsWith('m|')) {
+      const target = decodeURIComponent(state.slice(2));
+      if (/^(casalibre:\/\/|exp(\+[a-z0-9-]+)?:\/\/)/i.test(target)) {
+        if (user._isNew) await sendWelcomeEmail(g.email, fullName).catch(() => {});
+        const sep = target.includes('?') ? '&' : '?';
+        return NextResponse.redirect(`${target}${sep}token=${encodeURIComponent(makeToken(user))}`);
+      }
+    }
+
     // Welcome email for brand-new Google signups — awaited (serverless kills
     // fire-and-forget work after the redirect). Wrapped so it never blocks login.
     if (user._isNew) await sendWelcomeEmail(g.email, fullName).catch(() => {});
