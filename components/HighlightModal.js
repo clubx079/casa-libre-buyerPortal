@@ -6,13 +6,11 @@
 //   • Otherwise → the Stripe Payment Element; the card is vaulted for next time.
 // The server (/api/highlight/*) is authoritative for granting the promotion; this
 // component only drives the UI + Stripe.js confirmation.
-import { useEffect, useState, useCallback } from 'react';
-import { loadStripe } from '@stripe/stripe-js';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import { COUNTRY } from '@/lib/country';
+import { getStripePromise } from '@/lib/stripeClient';
 
-const pk = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-const stripePromise = pk ? loadStripe(pk) : null;
 const PRICE = { verified: 5, home: 20 };
 
 const appearance = {
@@ -101,6 +99,15 @@ export default function HighlightModal({ propertyId, plan = 'verified', lang = '
   const [clientSecret, setClientSecret] = useState('');
   const [error, setError] = useState('');
   const [until, setUntil] = useState('');
+  const [stripeObj, setStripeObj] = useState(undefined); // undefined=loading | null=not configured | Stripe=ready
+  const stripeRef = useRef(null);
+  useEffect(() => {
+    let alive = true;
+    Promise.resolve(getStripePromise())
+      .then((s) => { if (!alive) return; stripeRef.current = s || null; setStripeObj(s || null); })
+      .catch(() => { if (alive) { stripeRef.current = null; setStripeObj(null); } });
+    return () => { alive = false; };
+  }, []);
 
   // Create a fresh PaymentIntent for a new card.
   const startNewCard = useCallback(async () => {
@@ -131,9 +138,8 @@ export default function HighlightModal({ propertyId, plan = 'verified', lang = '
       const r = await fetch('/api/highlight/create-intent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ propertyId, plan, useSavedCard: true }) });
       const j = await r.json().catch(() => ({}));
       if (j.status === 'succeeded') { const u = j.promotionUntil || j.highlightUntil; setUntil(u); setPhase('success'); onSuccess && onSuccess(u); return; }
-      if (j.status === 'requires_action' && j.clientSecret && stripePromise) {
-        const stripe = await stripePromise;
-        const { error, paymentIntent } = await stripe.handleNextAction({ clientSecret: j.clientSecret });
+      if (j.status === 'requires_action' && j.clientSecret && stripeRef.current) {
+        const { error, paymentIntent } = await stripeRef.current.handleNextAction({ clientSecret: j.clientSecret });
         if (error) { setError(error.message || t.authFail); setPhase('error'); return; }
         if (paymentIntent && paymentIntent.status === 'succeeded') { await serverConfirm(paymentIntent.id); return; }
         setError(t.payFail); setPhase('error'); return;
@@ -172,16 +178,16 @@ export default function HighlightModal({ propertyId, plan = 'verified', lang = '
 
         {phase === 'loading' && <div className="py-10 text-center text-ink/50 text-[14px]">{t.loading}</div>}
 
-        {phase === 'card' && clientSecret && stripePromise && (
+        {phase === 'card' && clientSecret && stripeObj && (
           <div>
             <div className="text-[13px] text-ink/55 mb-4">{t.newHint}</div>
-            <Elements stripe={stripePromise} options={{ clientSecret, appearance }}>
+            <Elements stripe={stripeObj} options={{ clientSecret, appearance }}>
               <CardForm onDone={serverConfirm} t={t} price={price} />
             </Elements>
             {savedCard && <button onClick={() => setPhase('choose')} className="w-full mt-2 py-2.5 text-[13px] font-medium text-ink/60 hover:text-ink underline underline-offset-2">{t.backSaved}</button>}
           </div>
         )}
-        {phase === 'card' && !stripePromise && <div className="py-6 text-center text-[13px] text-red-700">{t.notConfigured}</div>}
+        {phase === 'card' && stripeObj === null && <div className="py-6 text-center text-[13px] text-red-700">{t.notConfigured}</div>}
 
         {phase === 'processing' && <div className="py-10 text-center text-ink/60 text-[14px]">{t.processing}</div>}
 

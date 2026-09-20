@@ -3,11 +3,8 @@
 // PaymentIntent for the chosen plan, renders the card form (Casa Libre themed),
 // and on a successful charge calls onPaid(paymentIntentId).
 import { useEffect, useState } from 'react';
-import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
-
-const pk = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-const stripePromise = pk ? loadStripe(pk) : null;
+import { getStripePromise } from '@/lib/stripeClient';
 
 const appearance = {
   theme: 'flat',
@@ -66,6 +63,13 @@ function PayInner({ tierName, durLabel, ivaStr, totalStr, labels, onPaid }) {
 export default function StripePayment({ plan, tierName, durLabel, ivaStr, totalStr, labels, onPaid }) {
   const [clientSecret, setClientSecret] = useState('');
   const [error, setError] = useState('');
+  const [stripeObj, setStripeObj] = useState(undefined); // undefined=loading | null=not configured | Stripe=ready
+
+  useEffect(() => {
+    let alive = true;
+    Promise.resolve(getStripePromise()).then((s) => { if (alive) setStripeObj(s || null); }).catch(() => { if (alive) setStripeObj(null); });
+    return () => { alive = false; };
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -84,11 +88,11 @@ export default function StripePayment({ plan, tierName, durLabel, ivaStr, totalS
   }, [plan, labels.initError, labels.needLogin]);
 
   if (error) return <div className="text-[14px] font-medium text-red-700 bg-red-50 border border-red-200 rounded-[12px] px-4 py-3">{error}</div>;
-  if (!stripePromise) return <div className="text-[14px] text-ink/60">{labels.initError}</div>;
-  if (!clientSecret) return <div className="text-[14px] text-ink/50 py-10 text-center">{labels.loadingPay}</div>;
+  if (stripeObj === null) return <div className="text-[14px] text-ink/60">{labels.initError}</div>;
+  if (stripeObj === undefined || !clientSecret) return <div className="text-[14px] text-ink/50 py-10 text-center">{labels.loadingPay}</div>;
 
   return (
-    <Elements stripe={stripePromise} options={{ clientSecret, appearance }}>
+    <Elements stripe={stripeObj} options={{ clientSecret, appearance }}>
       <PayInner tierName={tierName} durLabel={durLabel} ivaStr={ivaStr} totalStr={totalStr} labels={labels} onPaid={onPaid} />
     </Elements>
   );

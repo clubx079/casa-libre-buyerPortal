@@ -3,11 +3,9 @@
 // the card WITHOUT charging) + the Payment Element, then saves it as the default via
 // PUT /api/account/card. Bilingual, brand appearance.
 import { useEffect, useState } from 'react';
-import { loadStripe } from '@stripe/stripe-js';
+import { getStripePromise } from '@/lib/stripeClient';
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 
-const pk = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-const stripePromise = pk ? loadStripe(pk) : null;
 
 const appearance = {
   theme: 'flat',
@@ -55,6 +53,13 @@ export default function CardModal({ lang = 'es', onClose, onSaved }) {
   const [phase, setPhase] = useState('loading'); // loading | form | saving | success | error
   const [clientSecret, setClientSecret] = useState('');
   const [error, setError] = useState('');
+  const [stripeObj, setStripeObj] = useState(undefined); // undefined=loading | null=not configured | Stripe=ready
+
+  useEffect(() => {
+    let alive = true;
+    Promise.resolve(getStripePromise()).then((s) => { if (alive) setStripeObj(s || null); }).catch(() => { if (alive) setStripeObj(null); });
+    return () => { alive = false; };
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -91,15 +96,15 @@ export default function CardModal({ lang = 'es', onClose, onSaved }) {
 
           {phase === 'loading' && <div className="py-10 text-center text-ink/50 text-[14px]">{t.loading}</div>}
 
-          {phase === 'form' && clientSecret && stripePromise && (
+          {phase === 'form' && clientSecret && stripeObj && (
             <div>
               <div className="text-[13px] text-ink/55 mb-4">{t.hint}</div>
-              <Elements stripe={stripePromise} options={{ clientSecret, appearance }}>
+              <Elements stripe={stripeObj} options={{ clientSecret, appearance }}>
                 <SetupForm onDone={confirmSaved} t={t} />
               </Elements>
             </div>
           )}
-          {phase === 'form' && !stripePromise && <div className="py-6 text-center text-[13px] text-red-700">{t.notConfigured}</div>}
+          {phase === 'form' && stripeObj === null && <div className="py-6 text-center text-[13px] text-red-700">{t.notConfigured}</div>}
 
           {phase === 'saving' && <div className="py-10 text-center text-ink/60 text-[14px]">{t.saving}</div>}
 
