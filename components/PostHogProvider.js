@@ -5,6 +5,7 @@ import { useEffect, Suspense } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import posthog from 'posthog-js';
 import { POSTHOG_KEY, POSTHOG_HOST } from '@/lib/analytics';
+import { COUNTRY } from '@/lib/country';
 
 function PageviewTracker() {
   const pathname = usePathname();
@@ -33,6 +34,13 @@ export default function PostHogProvider({ children }) {
       // and we posthog.identify() them — keeps the Persons list clean.
       person_profiles: 'identified_only',
     });
+    // Stamp every event with the country site it came from. One PostHog project
+    // serves .com.py / .com.bo / uy / .com.ve, and until now they were only
+    // distinguishable by $host — which breaks the moment a domain changes. The
+    // admin filters on site_country; site_host stays for cross-checking.
+    try {
+      posthog.register({ site_country: COUNTRY.code, site_host: typeof window !== 'undefined' ? window.location.host : undefined });
+    } catch { /* analytics must never break the page */ }
   }, []);
 
   return (
