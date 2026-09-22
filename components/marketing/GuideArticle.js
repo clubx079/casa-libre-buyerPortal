@@ -7,10 +7,13 @@ import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
 import { COUNTRY } from '@/lib/country';
 
+// escribano (PY/UY) vs notario (BO/VE)
+const esc = COUNTRY.notary || 'escribano';
+
 const UI = {
   es: {
     guides: 'Guías', short: 'Respuesta corta', faq: 'Preguntas frecuentes',
-    updated: 'Actualizado', disclaimer: 'Esta guía es informativa y no reemplaza el asesoramiento de un escribano o profesional; los montos y requisitos pueden variar según el caso.',
+    updated: 'Actualizado', disclaimer: `Esta guía es informativa y no reemplaza el asesoramiento de un ${esc} o profesional; los montos y requisitos pueden variar según el caso.`,
     seeNow: 'Mirá propiedades ahora', fullMap: 'Ver el mapa completo',
     ctaTitle: 'Publicá tu propiedad gratis',
     ctaSub: (n) => `Sin comisión y sin planes. Tu aviso aparece en el mapa junto a las propiedades de inmobiliarias y de dueños particulares de ${n}.`,
