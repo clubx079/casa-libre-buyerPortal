@@ -139,6 +139,7 @@ export default function SellFlowProvider({ children }) {
   const fileRef = useRef(null);
   const openedLoggedInRef = useRef(false);        // wizard was opened by a signed-in user
   const [fromApp, setFromApp] = useState(false);  // arrived from the mobile app (?app=1)
+  const [appReturn, setAppReturn] = useState('');  // the app's own deep-link URL (?ret=…)
   const [f, setF] = useState({ mode: '', seller_type: '', neighborhood: '', city: '', addressText: '', contact_name: '', email: '', ptype: 'casa', price: '', currency: '', area: '', description: '', contact_phone: '' });
 
   const reset = () => {
@@ -168,6 +169,7 @@ export default function SellFlowProvider({ children }) {
     if (typeof window === 'undefined' || autoOpenedRef.current || authLoading) return;
     const q = new URLSearchParams(window.location.search);
     if (q.get('app') === '1') setFromApp(true);
+    if (q.get('ret')) setAppReturn(q.get('ret'));
     if (q.get('sell') === '1' || q.get('publicar') === '1') {
       autoOpenedRef.current = true;
       openSell();
@@ -369,7 +371,7 @@ export default function SellFlowProvider({ children }) {
                   {/* Came from the mobile app: hand the session back so the app is
                       signed in too (it may not have been before this listing). */}
                   {fromApp && (
-                    <a href={`/api/auth/app-return?listing=${encodeURIComponent(result.id)}`} className="px-6 py-3 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft">{t.backToApp}</a>
+                    <a href={`/api/auth/app-return?listing=${encodeURIComponent(result.id)}${appReturn ? `&ret=${encodeURIComponent(appReturn)}` : ''}`} className="px-6 py-3 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft">{t.backToApp}</a>
                   )}
                   <button onClick={() => { close(); router.push('/cuenta'); }} className="px-6 py-3 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft">{t.doneDash}</button>
                   <button onClick={() => { const id = result.id; close(); router.push(`/propiedad/${id}`); }} className="px-6 py-3 border-2 border-ink rounded-pill font-semibold text-[14px]">{t.doneView}</button>

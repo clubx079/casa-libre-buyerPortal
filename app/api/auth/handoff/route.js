@@ -20,7 +20,12 @@ function baseUrl(req) {
 }
 
 // Only safe in-app relative paths (may carry a simple query string).
-const safeNext = (n) => (typeof n === 'string' && /^\/[A-Za-z0-9/_.-]*(\?[A-Za-z0-9/_=&.-]*)?$/.test(n) ? n : '/cuenta/publicaciones');
+// Only safe in-app relative paths. Rejects '//host' (protocol-relative) so this
+// can never be pointed at another origin.
+const safeNext = (n) => (
+  typeof n === 'string' && !n.startsWith('//') && /^\/[A-Za-z0-9/_.-]*(\?[A-Za-z0-9/_=&.%:~-]*)?$/.test(n)
+    ? n : '/cuenta/publicaciones'
+);
 
 // POST — authenticated (app cookie) → returns the one-shot browser login URL.
 export async function POST(req) {
