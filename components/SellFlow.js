@@ -7,9 +7,8 @@
 //   -> we email a confirmation code; the user verifies it inline (their account is
 //      created + they're logged in on the spot — no password screen)
 //   4) Details (type, price, area, phone, photos) -> Publish
-// The listing is posted from step 4; we never route to /publicar. A LOGGED-IN user
-// gets the same wizard, minus the parts we already know: their name and email are
-// taken from the session and the confirmation code is skipped entirely.
+// The listing is posted from step 4; we never route to /publicar. (A logged-in
+// user still goes straight to /publicar via openSell.)
 import { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLang } from '@/lib/useLang';
@@ -44,7 +43,6 @@ const DICT = {
     fPhone: 'WhatsApp / teléfono (para compradores)', fPhonePh: '0981 123 456',
     fPhotos: 'Arrastrá o elegí tus fotos', fPhotosSub: 'mín. 1 foto · JPG o PNG', photosChosen: (n) => `${n} foto${n === 1 ? '' : 's'} seleccionada${n === 1 ? '' : 's'}`,
     publishBtn: 'Publicar gratis', publishing: 'Publicando…',
-    signedInAs: 'Publicás como', backToApp: 'Volver a la app',
     doneTitle: '¡Tu propiedad está publicada!', doneSub: 'Ya aparece en el marketplace de Casa Libre.', doneView: 'Ver mi propiedad', doneBrowse: 'Ver propiedades',
     // Promotion plans (optional paid visibility at publish) — two boxes, pick one.
     planTitle: 'Sumá visibilidad (opcional)',
@@ -79,7 +77,6 @@ const DICT = {
     fPhone: 'WhatsApp / phone (for buyers)', fPhonePh: '0981 123 456',
     fPhotos: 'Drag or choose your photos', fPhotosSub: 'min. 1 photo · JPG or PNG', photosChosen: (n) => `${n} photo${n === 1 ? '' : 's'} selected`,
     publishBtn: 'Publish for free', publishing: 'Publishing…',
-    signedInAs: 'Listing as', backToApp: 'Back to the app',
     doneTitle: 'Your listing is live!', doneSub: 'It already shows in the Casa Libre marketplace.', doneView: 'View my listing', doneBrowse: 'Browse listings',
     // Promotion plans (optional paid visibility at publish) — two boxes, pick one.
     planTitle: 'Add visibility (optional)',
@@ -137,8 +134,6 @@ export default function SellFlowProvider({ children }) {
   const [paying, setPaying] = useState(false);    // silently charging a saved card (no modal)
   const [plan, setPlan] = useState(null);         // selected promo plan: null | 'verified' | 'home'
   const fileRef = useRef(null);
-  const openedLoggedInRef = useRef(false);        // wizard was opened by a signed-in user
-  const [fromApp, setFromApp] = useState(false);  // arrived from the mobile app (?app=1)
   const [f, setF] = useState({ mode: '', seller_type: '', neighborhood: '', city: '', addressText: '', contact_name: '', email: '', ptype: 'casa', price: '', currency: '', area: '', description: '', contact_phone: '' });
 
   const reset = () => {
@@ -147,36 +142,11 @@ export default function SellFlowProvider({ children }) {
   };
   const close = () => { setOpen(false); reset(); };
 
-  // Logged in or not, everyone gets the wizard. When we already know the person we
-  // prefill their name/email and skip the email-verification step.
   const openSell = useCallback(() => {
-    reset();
-    openedLoggedInRef.current = !!user;
-    if (user) {
-      setVerified(true);
-      setF((s0) => ({ ...s0, contact_name: user.full_name || user.name || '', email: user.email || '' }));
-    }
-    setOpen(true);
-    track('sell_wizard_opened', { signed_in: !!user });
+    if (user) { router.push('/publicar'); return; }
+    reset(); setOpen(true); track('sell_wizard_opened', {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
-
-  // The mobile app opens the site at /?sell=1&app=1 — open the wizard straight away
-  // so the person never lands on a page that just talks about listing.
-  const autoOpenedRef = useRef(false);
-  useEffect(() => {
-    if (typeof window === 'undefined' || autoOpenedRef.current) return;
-    const q = new URLSearchParams(window.location.search);
-    if (q.get('app') === '1') setFromApp(true);
-    if (q.get('sell') === '1' || q.get('publicar') === '1') {
-      autoOpenedRef.current = true;
-      openSell();
-      // drop the params so a refresh doesn't reopen the wizard over the listing
-      const url = new URL(window.location.href);
-      url.searchParams.delete('sell'); url.searchParams.delete('publicar');
-      window.history.replaceState({}, '', url.toString());
-    }
-  }, [openSell]);
+  }, [user, router]);
 
   const set = (k, v) => setF((s) => ({ ...s, [k]: v }));
   const setField = (k) => (e) => { const v = e.target.value; setF((s) => ({ ...s, [k]: v })); setErrs((er) => (er[k] ? { ...er, [k]: undefined } : er)); };
@@ -184,11 +154,8 @@ export default function SellFlowProvider({ children }) {
 
   // If a returning user logs in via the fallback auth modal while the wizard is
   // open (e.g. their email was already registered), jump them straight to details.
-  // Not when the wizard was opened by someone already signed in — they still have
-  // to choose the operation, say whether they're the owner, and pick the address.
   const advancedRef = useRef(false);
   useEffect(() => {
-    if (openedLoggedInRef.current) return;
     if (user && open && step < 3 && !advancedRef.current) { advancedRef.current = true; setPhase(''); setStep(3); }
     if (!user) advancedRef.current = false;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -196,12 +163,11 @@ export default function SellFlowProvider({ children }) {
 
   // ---- step navigation (collection steps 0..2) ----
   const collectValid = () => {
-    if (step === 1) return !!f.seller_type && (!!user || (f.contact_name.trim() && emailOk(f.email)));
+    if (step === 1) return !!f.seller_type && f.contact_name.trim() && emailOk(f.email);
     if (step === 2) return !!f.neighborhood;
     return true;
   };
   const collectErr = () => (step === 1 ? (!f.seller_type ? t.errSeller : !f.contact_name.trim() ? t.errName : t.errEmail) : t.errAddr);
-  // A signed-in visitor never sees the code step: their email is already verified.
   const next = async () => {
     if (!collectValid()) { setErr(collectErr()); return; }
     setErr('');
@@ -365,11 +331,6 @@ export default function SellFlowProvider({ children }) {
                 )}
 
                 <div className="flex gap-2.5 justify-center flex-wrap">
-                  {/* Came from the mobile app: hand the session back so the app is
-                      signed in too (it may not have been before this listing). */}
-                  {fromApp && (
-                    <a href={`/api/auth/app-return?listing=${encodeURIComponent(result.id)}`} className="px-6 py-3 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft">{t.backToApp}</a>
-                  )}
                   <button onClick={() => { close(); router.push('/cuenta'); }} className="px-6 py-3 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft">{t.doneDash}</button>
                   <button onClick={() => { const id = result.id; close(); router.push(`/propiedad/${id}`); }} className="px-6 py-3 border-2 border-ink rounded-pill font-semibold text-[14px]">{t.doneView}</button>
                 </div>
@@ -436,12 +397,7 @@ export default function SellFlowProvider({ children }) {
                       <button onClick={() => set('seller_type', 'owner')} className={pickCls(f.seller_type === 'owner')}>{t.owner}</button>
                       <button onClick={() => set('seller_type', 'agent')} className={pickCls(f.seller_type === 'agent')}>{t.agent}</button>
                     </div>
-                    {f.seller_type && user && (
-                      <p className="mt-5 text-[13.5px] text-ink/55">
-                        {t.signedInAs} <b className="text-ink">{f.contact_name || user.email}</b>
-                      </p>
-                    )}
-                    {f.seller_type && !user && (
+                    {f.seller_type && (
                       <div className="mt-5">
                         <label className={labelCls}>{t.name}</label>
                         <input value={f.contact_name} onChange={(e) => set('contact_name', e.target.value)} placeholder={t.namePh} className={`${inputCls} mb-3`} autoComplete="name" />
