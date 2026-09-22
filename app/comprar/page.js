@@ -6,13 +6,13 @@ import { breadcrumbLd } from '@/lib/schema';
 
 export const metadata = {
   title: `Comprar propiedades en ${COUNTRY.name} — Casas y departamentos en venta`,
-  description: `Comprá casas, departamentos, dúplex y terrenos en venta en ${COUNTRY.name}. Todas las propiedades en un solo lugar, en la web y en la app: de inmobiliarias y de dueños particulares, en un mapa fácil de usar. Buscar es gratis.`,
+  description: `Comprá casas, departamentos, dúplex y terrenos en venta en ${COUNTRY.name}. Todas las propiedades en una sola app: de inmobiliarias y de dueños particulares, en un mapa fácil de usar. Buscar es gratis.`,
   alternates: { canonical: '/comprar' },
 };
 
 const content = {
   es: {
-    hero: { eyebrow: 'Comprar', title: 'Propiedades en venta', titleSerif: `en ${COUNTRY.name}.`, sub: 'Todas las propiedades en venta del país en un solo lugar, en la web y en la app — de inmobiliarias y de dueños particulares — en un mapa fácil de usar.' },
+    hero: { eyebrow: 'Comprar', title: 'Propiedades en venta', titleSerif: `en ${COUNTRY.name}.`, sub: 'Todas las propiedades en venta del país en una sola app — de inmobiliarias y de dueños particulares — en un mapa fácil de usar.' },
     blocks: [
       { type: 'ctaButton', label: 'Ver propiedades en venta →', href: '/propiedades?op=venta' },
       { type: 'prose', nodes: [

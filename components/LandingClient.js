@@ -15,8 +15,8 @@ const DICT = {
   es: {
     navBuy: 'Comprar', navRent: 'Alquilar', navSell: 'Vender', navCta: 'Publicar gratis',
     heroLine1: 'Encontrá tu lugar,', heroLine2: 'libremente.',
-    heroSub: `Todas las propiedades de ${COUNTRY.name} en un solo lugar, en la web y en la app: de inmobiliarias y de dueños particulares. Comprá, alquilá o publicá sin comisión.`,
-    seoH2: `Todas las propiedades de ${COUNTRY.name} en un solo lugar, en la web y en la app: inmobiliarias y dueños particulares, en venta y en alquiler.`,
+    heroSub: `Todas las propiedades de ${COUNTRY.name} en una sola app: de inmobiliarias y de dueños particulares. Comprá, alquilá o publicá sin comisión.`,
+    seoH2: `Todas las propiedades de ${COUNTRY.name} en una sola app: inmobiliarias y dueños particulares, en venta y en alquiler.`,
     searchPlaceholder: '¿Dónde querés vivir? — “Carmelitas”, “Recoleta”…', searchBtn: 'Buscar',
     mascotCaption: '“¡Vamos que se puede!” — Cuate, tu guía',
     listingsTitle: 'Destacadas', listingsTitleSerif: 'de inmobiliarias y dueños', listingsAll: 'Ver todas →',
@@ -39,8 +39,8 @@ const DICT = {
   en: {
     navBuy: 'Buy', navRent: 'Rent', navSell: 'Sell', navCta: 'List for free',
     heroLine1: 'Find your place,', heroLine2: 'freely.',
-    heroSub: `Every property in ${COUNTRY.name} in one place, on the web and in the app — from agencies and private owners alike. Buy, rent or list with no commission.`,
-    seoH2: `Every property in ${COUNTRY.name} in one place, on the web and in the app: real-estate agencies and private owners, for sale and for rent.`,
+    heroSub: `Every property in ${COUNTRY.name} in one app — from agencies and private owners alike. Buy, rent or list with no commission.`,
+    seoH2: `Every property in ${COUNTRY.name} in one app: real-estate agencies and private owners, for sale and for rent.`,
     searchPlaceholder: 'Where do you want to live? — “Carmelitas”, “Recoleta”…', searchBtn: 'Search',
     mascotCaption: '“Let’s go!” — Cuate, your guide',
     listingsTitle: 'Featured', listingsTitleSerif: 'from agencies and owners', listingsAll: 'View all →',
