@@ -18,14 +18,14 @@ const H = {
   es: {
     cta: 'Publicá gratis', buy: 'Comprar', rent: 'Alquilar', sell: 'Vender',
     heroL1: 'Encontrá tu lugar,', heroL2: 'libremente.',
-    heroSub: ['La forma más amigable de comprar,', 'alquilar y vender casas en', `${COUNTRY.name}.`],
+    heroSub: [`Todas las propiedades de ${COUNTRY.name}`, 'en un solo lugar: inmobiliarias', 'y dueños particulares, sin comisión.'],
     searchPh: '¿Dónde querés vivir?', mascotCaption: '“¡Vamos que se puede!” — Cuate, tu guía',
-    justListed: 'Destacadas', justListedSerif: 'de todo el marketplace', viewAll: 'Ver todas →',
+    justListed: 'Destacadas', justListedSerif: 'de inmobiliarias y dueños', viewAll: 'Ver todas →',
     forSale: 'En venta', forRent: 'En alquiler', perMonth: '/mes', bd: 'dorm',
     stepsTitle: 'Tres pasos y listo',
     steps: [
       { n: '1', t: 'Contanos qué buscás', d: 'Barrio, presupuesto, dormitorios. Cuate te muestra solo lo que vale la pena.' },
-      { n: '2', t: 'Contactá al publicador', d: 'Escribile por WhatsApp o llamá directo desde el aviso. Sin intermediarios ni vueltas.' },
+      { n: '2', t: 'Contactá al publicador', d: 'Escribile por WhatsApp o llamá directo desde el aviso, sea una inmobiliaria o un dueño particular. Sin comisiones ni vueltas.' },
       { n: '3', t: 'Cerrá el trato a tu manera', d: 'Coordinás la visita y la operación directamente con quien publica. Vos manejás los tiempos.' },
     ],
     statActive: 'propiedades activas', statComm: 'comisión al publicar', statInstant: 'Al instante', statInstantL: 'publicás tu aviso',
@@ -35,9 +35,9 @@ const H = {
   en: {
     cta: 'List for free', buy: 'Buy', rent: 'Rent', sell: 'Sell',
     heroL1: 'Find your place,', heroL2: 'freely.',
-    heroSub: ['The friendliest way to buy,', 'rent and sell homes in', `${COUNTRY.name}.`],
+    heroSub: [`Every property in ${COUNTRY.name} in one place —`, 'from agencies and private owners,', 'with no commission.'],
     searchPh: 'Where do you want to live?', mascotCaption: '“Let’s go!” — Cuate, your guide',
-    justListed: 'Featured', justListedSerif: 'from across the marketplace', viewAll: 'View all →',
+    justListed: 'Featured', justListedSerif: 'from agencies and owners', viewAll: 'View all →',
     forSale: 'For sale', forRent: 'For rent', perMonth: '/mo', bd: 'bd',
     stepsTitle: 'Three steps and you’re in',
     steps: [

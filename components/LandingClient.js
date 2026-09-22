@@ -15,15 +15,15 @@ const DICT = {
   es: {
     navBuy: 'Comprar', navRent: 'Alquilar', navSell: 'Vender', navCta: 'Publicar gratis',
     heroLine1: 'Encontrá tu lugar,', heroLine2: 'libremente.',
-    heroSub: `La forma más amigable de comprar, alquilar y vender casas en ${COUNTRY.name}.`,
+    heroSub: `Todas las propiedades de ${COUNTRY.name} en un solo lugar: de inmobiliarias y de dueños particulares. Comprá, alquilá o publicá sin comisión.`,
     searchPlaceholder: '¿Dónde querés vivir? — “Carmelitas”, “Recoleta”…', searchBtn: 'Buscar',
     mascotCaption: '“¡Vamos que se puede!” — Cuate, tu guía',
-    listingsTitle: 'Destacadas', listingsTitleSerif: 'de todo el marketplace', listingsAll: 'Ver todas →',
+    listingsTitle: 'Destacadas', listingsTitleSerif: 'de inmobiliarias y dueños', listingsAll: 'Ver todas →',
     forSale: 'En venta', forRent: 'En alquiler', perMonth: '/mes', beds: 'dorm', baths: 'baños',
     stepsTitle: 'Tres pasos y listo',
     steps: [
       { n: '1', t: 'Contanos qué buscás', d: 'Barrio, presupuesto, cantidad de dormitorios. Cuate te muestra solo lo que vale la pena.' },
-      { n: '2', t: 'Contactá al publicador', d: 'Escribile por WhatsApp o llamá directo desde el aviso. Sin intermediarios ni vueltas.' },
+      { n: '2', t: 'Contactá al publicador', d: 'Escribile por WhatsApp o llamá directo desde el aviso, sea una inmobiliaria o un dueño particular. Sin comisiones ni vueltas.' },
       { n: '3', t: 'Cerrá el trato a tu manera', d: 'Coordinás la visita y la operación directamente con quien publica. Vos manejás los tiempos.' },
     ],
     stats: (c) => [
@@ -38,10 +38,10 @@ const DICT = {
   en: {
     navBuy: 'Buy', navRent: 'Rent', navSell: 'Sell', navCta: 'List for free',
     heroLine1: 'Find your place,', heroLine2: 'freely.',
-    heroSub: `The friendliest way to buy, rent and sell homes in ${COUNTRY.name}.`,
+    heroSub: `Every property in ${COUNTRY.name} in one place — from agencies and private owners alike. Buy, rent or list with no commission.`,
     searchPlaceholder: 'Where do you want to live? — “Carmelitas”, “Recoleta”…', searchBtn: 'Search',
     mascotCaption: '“Let’s go!” — Cuate, your guide',
-    listingsTitle: 'Featured', listingsTitleSerif: 'from across the marketplace', listingsAll: 'View all →',
+    listingsTitle: 'Featured', listingsTitleSerif: 'from agencies and owners', listingsAll: 'View all →',
     forSale: 'For sale', forRent: 'For rent', perMonth: '/mo', beds: 'bd', baths: 'ba',
     stepsTitle: 'Three steps and you’re in',
     steps: [

@@ -25,7 +25,7 @@ const T = {
     mQuote: '“Traé tu cartera. Nosotros traemos los compradores.”', mWho: 'Cuate, tu guía',
     aud: ['Inmobiliarias', 'Corredores', 'Desarrolladores', 'Agentes independientes', 'Administradores de alquileres'],
     props: [
-      ['01', 'Leads directos, sin intermediarios', 'Cada aviso muestra tu contacto. Los interesados te escriben por WhatsApp o te llaman a vos — nunca vendemos tus leads ni nos metemos en el medio.'],
+      ['01', 'Leads directos, sin comisiones', 'Cada aviso muestra tu contacto. Los interesados te escriben por WhatsApp o te llaman a vos — nunca vendemos tus leads ni nos metemos en el medio.'],
       ['02', 'Publicación instantánea', 'Cargás la propiedad y queda visible al instante. Sin esperas ni trámites: tu cartera completa, en línea hoy.'],
       ['03', 'Gratis durante el lanzamiento', 'Publicar no cuesta nada durante el lanzamiento. Sin comisiones sobre tus operaciones — tus negocios son tuyos.'],
       ['04', 'Visibilidad donde importa', `Trabajamos para que quien busque propiedades en ${COUNTRY.name} nos encuentre primero en Google. Tu cartera crece con ese tráfico.`],

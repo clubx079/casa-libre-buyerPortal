@@ -22,7 +22,7 @@ const T = {
       ['Todo el mercado en tu bolsillo', `Las propiedades de todo ${COUNTRY.name}, en un solo lugar.`],
       ['Favoritos y alertas', 'Guardá propiedades y recibí avisos cuando aparezca algo nuevo.'],
       ['Mapa y cerca de mí', 'Buscá por zona y encontrá lo que está cerca tuyo.'],
-      ['WhatsApp directo', 'Contactá a quien publica sin intermediarios.'],
+      ['WhatsApp directo', 'Contactá a quien publica, inmobiliaria o dueño, sin comisiones.'],
     ],
   },
   en: {

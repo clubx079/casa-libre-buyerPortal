@@ -3,7 +3,7 @@ import Article from '@/components/marketing/Article';
 import { COUNTRY } from '@/lib/country';
 
 export const metadata = {
-  title: `Publicá tu propiedad gratis en ${COUNTRY.name} — Vender o alquilar | Casa Libre`,
+  title: `Publicá tu propiedad gratis en ${COUNTRY.name} — Vender o alquilar`,
   description: 'Publicá tu casa, departamento o local gratis en Casa Libre. Sin comisiones, sin planes. Tu propiedad aparece al instante en el mapa y llega a miles de personas.',
   alternates: { canonical: '/vender' },
 };
@@ -17,7 +17,7 @@ const content = {
         { t: 'Al instante', d: 'Tu propiedad aparece en el marketplace y en el mapa apenas la publicás.' },
         { t: 'Llegá a más gente', d: 'Miles de personas buscan propiedades en Casa Libre cada mes, en todo el país.' },
         { t: 'Fotos y ubicación', d: 'Subí tus fotos reales y marcá la ubicación para que te encuentren fácil.' },
-        { t: 'Tu contacto directo', d: 'Los interesados te escriben por WhatsApp o teléfono, sin intermediarios.' },
+        { t: 'Tu contacto directo', d: 'Los interesados te escriben por WhatsApp o teléfono, sin comisiones de por medio.' },
         { t: 'Gestioná todo', d: 'Editá o eliminá tus publicaciones cuando quieras desde tu panel.' },
       ] },
       { type: 'cta', title: 'Publicá en minutos', sub: 'Creá tu cuenta y publicá tu propiedad gratis, hoy mismo.', primary: ['Publicar gratis', '/publicar'], secondary: ['Cómo funciona', '/como-funciona'] },

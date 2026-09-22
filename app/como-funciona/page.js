@@ -16,7 +16,7 @@ const content = {
       { type: 'features', items: [
         { t: '1 · Explorá el mapa', d: `Filtrá por ciudad, barrio, tipo, precio y dormitorios. Mirá cada propiedad en el mapa con fotos reales y precio en ${COUNTRY.currencySymbol} y US$.` },
         { t: '2 · Guardá tus favoritas', d: 'Creá tu cuenta y guardá las propiedades que te interesan para volver a verlas desde tu panel.' },
-        { t: '3 · Contactá al dueño', d: 'Cada aviso tiene el contacto del publicador. Coordiná una visita directamente, sin intermediarios.' },
+        { t: '3 · Contactá a quien publica', d: 'Cada aviso tiene el contacto de quien publica, inmobiliaria o dueño particular. Coordiná la visita directamente, sin comisiones.' },
       ] },
       { type: 'heading', text: 'Si vendés o alquilás' },
       { type: 'features', items: [
