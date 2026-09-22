@@ -17,23 +17,23 @@ const INK = '#111111';
 // washed-out/light). Still the brand cream family — one step bolder, NOT a
 // dark theme.
 export const CL_MAP_STYLE = [
-  { elementType: 'geometry', stylers: [{ color: '#E6DDCD' }] },                 // deeper sand land
-  { elementType: 'labels.text.fill', stylers: [{ color: '#4b4942' }] },         // darker ink labels
-  { elementType: 'labels.text.stroke', stylers: [{ color: '#F3ECDF' }, { weight: 2 }] }, // cream halo
+  { elementType: 'geometry', stylers: [{ color: '#D8CBB2' }] },                 // deeper sand land (matches the app)
+  { elementType: 'labels.text.fill', stylers: [{ color: '#403E37' }] },         // darker ink labels
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#E7DCC6' }, { weight: 2 }] }, // cream halo
   { elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
   { featureType: 'administrative', elementType: 'geometry', stylers: [{ visibility: 'off' }] },
   { featureType: 'administrative.land_parcel', stylers: [{ visibility: 'off' }] },
   { featureType: 'poi', stylers: [{ visibility: 'off' }] },
-  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#D5DFBE' }, { visibility: 'on' }] }, // deeper sage-green park
-  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#FFFFFF' }] },       // white roads pop on darker land
-  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#D8CFBB' }] }, // road casing
-  { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#FBF7EF' }] },
-  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#F4EEE0' }] },
-  { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#CFC4AC' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#C2CFA4' }, { visibility: 'on' }] }, // deeper sage-green park
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#FBF7EF' }] },       // roads pop on the darker land
+  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#C6B99F' }] }, // road casing
+  { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#F6F0E3' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#EFE6D2' }] },
+  { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#BCAE91' }] },
   { featureType: 'road.local', elementType: 'labels', stylers: [{ visibility: 'off' }] },
   { featureType: 'transit', stylers: [{ visibility: 'off' }] },
-  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#C4D3CC' }] },       // deeper sage water
-  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#7d8d86' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#AFC3BA' }] },       // deeper sage water
+  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#6b7a73' }] },
 ];
 
 // Country bounding box (generous), from lib/country.js. Listings with coordinates
