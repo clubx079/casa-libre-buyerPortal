@@ -18,7 +18,7 @@ const H = {
   es: {
     cta: 'Publicá gratis', buy: 'Comprar', rent: 'Alquilar', sell: 'Vender',
     heroL1: 'Encontrá tu lugar,', heroL2: 'libremente.',
-    heroSub: [`Todas las propiedades de ${COUNTRY.name}`, 'en un solo lugar: inmobiliarias', 'y dueños particulares, sin comisión.'],
+    heroSub: [`Todas las propiedades de ${COUNTRY.name} en un solo`, 'lugar, en la web y en la app: inmobiliarias', 'y dueños particulares, sin comisión.'],
     searchPh: '¿Dónde querés vivir?', mascotCaption: '“¡Vamos que se puede!” — Cuate, tu guía',
     justListed: 'Destacadas', justListedSerif: 'de inmobiliarias y dueños', viewAll: 'Ver todas →',
     forSale: 'En venta', forRent: 'En alquiler', perMonth: '/mes', bd: 'dorm',
@@ -35,7 +35,7 @@ const H = {
   en: {
     cta: 'List for free', buy: 'Buy', rent: 'Rent', sell: 'Sell',
     heroL1: 'Find your place,', heroL2: 'freely.',
-    heroSub: [`Every property in ${COUNTRY.name} in one place —`, 'from agencies and private owners,', 'with no commission.'],
+    heroSub: [`Every property in ${COUNTRY.name} in one place,`, 'on the web and in the app — agencies', 'and private owners, no commission.'],
     searchPh: 'Where do you want to live?', mascotCaption: '“Let’s go!” — Cuate, your guide',
     justListed: 'Featured', justListedSerif: 'from agencies and owners', viewAll: 'View all →',
     forSale: 'For sale', forRent: 'For rent', perMonth: '/mo', bd: 'bd',
