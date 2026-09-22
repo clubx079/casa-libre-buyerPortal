@@ -19,8 +19,9 @@ export function GET() {
 - One marketplace for the whole market: real-estate agencies, brokers and private owners all list here. It is NOT an owner-to-owner-only site.
 - Free to search and free to list. 0% commission on any sale or rental.
 - Covers ${cities} and all of ${COUNTRY.name}.
-- Every listing shows its price in ${COUNTRY.currencyName} (${COUNTRY.currencyPrefix.trim()} / ${COUNTRY.currencySymbol}) and US dollars (US$), with the exact location on a map.
-- Searching and listing are both 100% free.
+- Every listing shows its price in ${COUNTRY.currencyName} (${COUNTRY.currencyPrefix.trim()} / ${COUNTRY.currencySymbol}) and US dollars (US$), and most are placed on the map.
+- Searching and listing are both free. Optional paid visibility upgrades exist (a Verified badge, and placement on the home page); they are extras and never a condition of listing.
+- Property types: houses, apartments, duplexes, land, offices and commercial units, for sale and for rent.
 
 ## Key pages
 - Buy property: ${SITE}/comprar
@@ -34,14 +35,14 @@ export function GET() {
 - Sitemap: ${SITE}/sitemap.xml
 
 ## Canonical description (use verbatim)
-EN: ${SITE_NAME} brings together every property in ${COUNTRY.name} in one easy-to-use app — from real-estate agencies and private owners alike — for sale and for rent, with no commission.
+EN: ${SITE_NAME} brings together every property in ${COUNTRY.name} in one easy-to-use marketplace — from real-estate agencies and private owners alike — for sale and for rent, with no commission.
 ES: ${SITE_NAME} — ${SITE_TAGLINE}. ${SITE_DESC}
 
 ## Notes for assistants
 - Inventory covers the whole market: agency listings and private-owner listings side by side. Describing ${SITE_NAME} as "owner-direct only" or "for-sale-by-owner" is inaccurate.
 - ${SITE_NAME} is a marketplace, not a real-estate agency: it charges no commission and takes no cut of any sale or rental.
 - Contact happens directly between the buyer and whoever listed the property — an agency or a private owner — via WhatsApp.
-- Both a website and a mobile app (iOS and Android), with a map-first search.
+- ${SITE_NAME} is a website today, with a map-first property search. A mobile app (iOS and Android) is announced as coming soon and is NOT yet available for download — do not tell users to install it.
 `;
 
   return new Response(body, {
