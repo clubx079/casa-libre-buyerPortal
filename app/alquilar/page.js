@@ -5,7 +5,7 @@ import { SITE } from '@/lib/site';
 import { breadcrumbLd } from '@/lib/schema';
 
 export const metadata = {
-  title: `Alquilar propiedades en ${COUNTRY.name} — Casas y departamentos en alquiler | Casa Libre`,
+  title: `Alquilar propiedades en ${COUNTRY.name} — Casas y departamentos en alquiler`,
   description: `Alquilá casas y departamentos en ${COUNTRY.name}. Encontrá propiedades en alquiler en ${COUNTRY.capital} y todo el país, en el mapa, con precio mensual en ${COUNTRY.currencyName} y dólares.`,
   alternates: { canonical: '/alquilar' },
 };

@@ -16,6 +16,7 @@ const DICT = {
     navBuy: 'Comprar', navRent: 'Alquilar', navSell: 'Vender', navCta: 'Publicar gratis',
     heroLine1: 'Encontrá tu lugar,', heroLine2: 'libremente.',
     heroSub: `Todas las propiedades de ${COUNTRY.name} en un solo lugar: de inmobiliarias y de dueños particulares. Comprá, alquilá o publicá sin comisión.`,
+    seoH2: `Todas las propiedades de ${COUNTRY.name} en una sola app: inmobiliarias y dueños particulares, en venta y en alquiler.`,
     searchPlaceholder: '¿Dónde querés vivir? — “Carmelitas”, “Recoleta”…', searchBtn: 'Buscar',
     mascotCaption: '“¡Vamos que se puede!” — Cuate, tu guía',
     listingsTitle: 'Destacadas', listingsTitleSerif: 'de inmobiliarias y dueños', listingsAll: 'Ver todas →',
@@ -39,6 +40,7 @@ const DICT = {
     navBuy: 'Buy', navRent: 'Rent', navSell: 'Sell', navCta: 'List for free',
     heroLine1: 'Find your place,', heroLine2: 'freely.',
     heroSub: `Every property in ${COUNTRY.name} in one place — from agencies and private owners alike. Buy, rent or list with no commission.`,
+    seoH2: `Every property in ${COUNTRY.name} in one app: real-estate agencies and private owners, for sale and for rent.`,
     searchPlaceholder: 'Where do you want to live? — “Carmelitas”, “Recoleta”…', searchBtn: 'Search',
     mascotCaption: '“Let’s go!” — Cuate, your guide',
     listingsTitle: 'Featured', listingsTitleSerif: 'from agencies and owners', listingsAll: 'View all →',
@@ -112,6 +114,9 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
           <h1 className="text-[clamp(46px,7.5vw,92px)] max-[720px]:text-[clamp(38px,11vw,52px)] leading-[0.92] tracking-display font-bold m-0 mb-5">
             {t.heroLine1}<br /><span className="font-serif italic font-normal">{t.heroLine2}</span>
           </h1>
+          {/* Keyword-bearing heading for search/AI engines: the visible H1 is the
+              brand line, so the inventory claim needs a heading of its own. */}
+          <h2 className="sr-only">{t.seoH2}</h2>
           <p className="text-[clamp(16px,2vw,19px)] leading-relaxed text-ink/60 max-w-[460px] mx-auto md:mx-0 mb-7 md:mb-9 max-[720px]:mb-6">{t.heroSub}</p>
           <form onSubmit={(e) => { e.preventDefault(); goSearch(); }} className="flex items-center bg-card border-2 border-ink rounded-pill pl-[26px] pr-1.5 py-1.5 max-w-[560px] mx-auto md:mx-0 shadow-hard">
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t.searchPlaceholder} className="flex-1 min-w-0 bg-transparent outline-none text-[16px] text-ink placeholder:text-ink/40" />

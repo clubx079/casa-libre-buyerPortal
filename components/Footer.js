@@ -11,7 +11,7 @@ const L = {
     tagline: `Comprá, alquilá y publicá propiedades en ${COUNTRY.name} — gratis.`,
     platform: 'Plataforma', company: 'Empresa', cities: 'Ciudades', compare: 'Comparar',
     buy: 'Comprar propiedades', rent: 'Alquilar propiedades', all: 'Ver todas las propiedades', publish: 'Publicar gratis', getApp: 'Descargá la app',
-    story: 'Nuestra historia', how: 'Cómo funciona', sell: 'Publicá tu propiedad', business: 'Para inversores', pmgmt: 'Administración de propiedades', contact: 'Contacto', faq: 'Preguntas frecuentes',
+    story: 'Nuestra historia', guides: 'Guías', how: 'Cómo funciona', sell: 'Publicá tu propiedad', business: 'Para inversores', pmgmt: 'Administración de propiedades', contact: 'Contacto', faq: 'Preguntas frecuentes',
     cityPrefix: '', vs: (n) => `Casa Libre vs ${n}`,
     terms: 'Términos', privacy: 'Privacidad',
     fxNote: 'Conversión referencial al tipo de cambio del día · fuente open.er-api.com',
@@ -20,7 +20,7 @@ const L = {
     tagline: `Buy, rent and list properties in ${COUNTRY.name} — free.`,
     platform: 'Platform', company: 'Company', cities: 'Cities', compare: 'Compare',
     buy: 'Buy properties', rent: 'Rent properties', all: 'Browse all listings', publish: 'List for free', getApp: 'Get the app',
-    story: 'Our story', how: 'How it works', sell: 'List your property', business: 'For Investors', pmgmt: 'Property management', contact: 'Contact', faq: 'FAQ',
+    story: 'Our story', guides: 'Guides', how: 'How it works', sell: 'List your property', business: 'For Investors', pmgmt: 'Property management', contact: 'Contact', faq: 'FAQ',
     cityPrefix: '', vs: (n) => `Casa Libre vs ${n}`,
     terms: 'Terms', privacy: 'Privacy',
     fxNote: 'Reference exchange rate of the day · source open.er-api.com',
@@ -32,7 +32,7 @@ export default function Footer() {
   const t = L[lang];
   const sections = [
     { title: t.platform, links: [[t.buy, '/comprar'], [t.rent, '/alquilar'], [t.all, '/propiedades'], [t.publish, '/publicar'], [t.getApp, '/descargar']] },
-    { title: t.company, links: [[t.story, '/nuestra-historia'], [t.how, '/como-funciona'], [t.sell, '/vender'], [t.business, '/empresas'], [t.pmgmt, '/administracion-de-propiedades'], [t.contact, '/contacto'], [t.faq, '/preguntas-frecuentes']] },
+    { title: t.company, links: [[t.story, '/nuestra-historia'], [t.how, '/como-funciona'], [t.guides, '/guias'], [t.sell, '/vender'], [t.business, '/empresas'], [t.pmgmt, '/administracion-de-propiedades'], [t.contact, '/contacto'], [t.faq, '/preguntas-frecuentes']] },
     { title: t.cities, links: CITIES.slice(0, 8).map((c) => [c.name, `/propiedades-en/${c.slug}`]) },
     { title: t.compare, links: COMPETITORS.map((c) => [t.vs(c.name), `/comparar/${c.slug}`]) },
   ];

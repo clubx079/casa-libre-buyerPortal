@@ -28,6 +28,7 @@ export function GET() {
 - List your property for free: ${SITE}/publicar
 - All properties (marketplace + map): ${SITE}/propiedades
 - Frequently asked questions: ${SITE}/preguntas-frecuentes
+- Guides (how to sell, what a property is worth, taxes and documents, renting out): ${SITE}/guias
 - How it works: ${SITE}/como-funciona
 - Our story: ${SITE}/nuestra-historia
 - Sitemap: ${SITE}/sitemap.xml
