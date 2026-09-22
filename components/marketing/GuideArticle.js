@@ -15,6 +15,7 @@ const UI = {
     ctaTitle: 'Publicá tu propiedad gratis',
     ctaSub: (n) => `Sin comisión y sin planes. Tu aviso aparece en el mapa junto a las propiedades de inmobiliarias y de dueños particulares de ${n}.`,
     ctaBtn: 'Publicar gratis', others: 'Otras guías',
+    inline: 'Mientras tanto, mirá el mercado:', inlinePublish: 'Publicar gratis →',
   },
   en: {
     guides: 'Guides', short: 'Short answer', faq: 'Frequently asked questions',
@@ -23,6 +24,7 @@ const UI = {
     ctaTitle: 'List your property for free',
     ctaSub: (n) => `No commission, no plans. Your listing appears on the map alongside properties from agencies and private owners across ${n}.`,
     ctaBtn: 'List for free', others: 'Other guides',
+    inline: 'Meanwhile, see the market:', inlinePublish: 'List for free →',
   },
 };
 
@@ -47,6 +49,20 @@ export default function GuideArticle({ content, updated, related = [], others = 
         <div className="text-[12px] font-semibold uppercase tracking-label text-ink/45 mb-2">{t.short}</div>
         <p className="text-[17px] leading-relaxed text-ink">{g.answer}</p>
       </div>
+
+      {/* The reader came for the answer, so the answer comes first — but the way
+          into the product sits right under it, not only at the foot of the page. */}
+      {related.length ? (
+        <div className="flex flex-wrap items-center gap-2.5 mb-10 -mt-3">
+          <span className="text-[13.5px] text-ink/55">{t.inline}</span>
+          {related.slice(0, 2).map((r) => (
+            <Link key={r.href} href={r.href} className="px-3.5 py-1.5 rounded-pill border border-ink/25 bg-card text-[13px] font-medium hover:border-ink">
+              {l === 'en' ? r.labelEn || r.label : r.label}
+            </Link>
+          ))}
+          <Link href="/publicar" className="px-3.5 py-1.5 rounded-pill bg-ink text-paper text-[13px] font-semibold">{t.inlinePublish}</Link>
+        </div>
+      ) : null}
 
       {g.sections.map((s, i) => (
         <section key={i} className="mb-8">
