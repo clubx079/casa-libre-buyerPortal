@@ -3,7 +3,8 @@ import Link from 'next/link';
 import { unstable_cache } from 'next/cache';
 import MarketingShell from '@/components/MarketingShell';
 import ListingGrid from '@/components/marketing/ListingGrid';
-import { isOp, tipoBySlug, OPS, TIPOS, comboCount, indexableCombos, comboContent, barriosForCity, MIN_LISTINGS } from '@/lib/matrix';
+import Bi from '@/components/marketing/Bi';
+import { isOp, tipoBySlug, OPS, TIPOS, comboCount, indexableCombos, comboContent, comboContentEn, barriosForCity, MIN_LISTINGS } from '@/lib/matrix';
 import { searchListings } from '@/lib/marketplace';
 import { CITIES, cityBySlug, SITE, INDEXABLE } from '@/lib/site';
 import { collectionListingLd, breadcrumbLd } from '@/lib/schema';
@@ -67,6 +68,9 @@ export default async function Page({ params }) {
     { name: c.h1, url: base },
   ]);
   const cityName = (s) => (CITIES.find((cc) => cc.slug === s) || {}).name || s;
+  // English twin of the visible copy (same URL — the toggle swaps it client-side).
+  const ce = comboContentEn({ op: v.op, tipo: params.tipo, ciudad: params.ciudad, count });
+  const op = OPS[v.op], tp = v.tipo;
 
   return (
     <MarketingShell>
@@ -74,10 +78,10 @@ export default async function Page({ params }) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ldCrumb) }} />
       <div className="mx-auto max-w-6xl px-4 py-8 md:py-10">
         <nav className="mb-3 text-[13px] text-ink/50">
-          <Link href="/propiedades" className="hover:underline">Propiedades</Link> · {c.h1}
+          <Link href="/propiedades" className="hover:underline"><Bi es="Propiedades" en="Properties" /></Link> · <Bi es={c.h1} en={ce.h1} />
         </nav>
-        <h1 className="text-[28px] font-bold tracking-tight text-ink md:text-[36px]">{c.h1}</h1>
-        <p className="mt-3 max-w-3xl text-[15px] leading-relaxed text-ink/70">{c.intro}</p>
+        <h1 className="text-[28px] font-bold tracking-tight text-ink md:text-[36px]"><Bi es={c.h1} en={ce.h1} /></h1>
+        <p className="mt-3 max-w-3xl text-[15px] leading-relaxed text-ink/70"><Bi es={c.intro} en={ce.intro} /></p>
 
         <div className="mt-6">
           <ListingGrid listings={listings} />
@@ -88,18 +92,18 @@ export default async function Page({ params }) {
             href={`/propiedades?op=${v.op}&type=${v.tipo.type}&q=${encodeURIComponent(v.city.name)}`}
             className="inline-flex items-center gap-2 rounded-pill bg-ink px-5 py-3 text-[14px] font-semibold text-paper"
           >
-            Ver las {count} propiedades en el mapa →
+            <Bi es={`Ver las ${count} propiedades en el mapa →`} en={`See the ${count} properties on the map →`} />
           </Link>
         </div>
 
         {barrios.length ? (
           <section className="mt-12 border-t-[1.5px] border-ink/10 pt-8">
-            <h2 className="text-[18px] font-bold text-ink">{OPS[v.op].short} de {v.tipo.plural} por barrio en {c.cityName}</h2>
+            <h2 className="text-[18px] font-bold text-ink"><Bi es={`${op.short} de ${tp.plural} por barrio en ${c.cityName}`} en={`${tp.pluralEn} ${op.labelEn} by neighbourhood in ${c.cityName}`} /></h2>
             <ul className="mt-4 grid gap-1.5 sm:grid-cols-2">
               {barrios.map((x) => (
                 <li key={x.barrio}>
                   <Link href={`/${x.op}/${x.tipo}/${x.ciudad}/${x.barrio}`} className="text-[14px] text-ink hover:underline">
-                    {OPS[x.op].short} de {TIPOS[x.tipo].plural} en {x.barrioName}
+                    <Bi es={`${OPS[x.op].short} de ${TIPOS[x.tipo].plural} en ${x.barrioName}`} en={`${TIPOS[x.tipo].pluralEn} ${OPS[x.op].labelEn} in ${x.barrioName}`} />
                   </Link>
                 </li>
               ))}
@@ -109,16 +113,16 @@ export default async function Page({ params }) {
 
         {(otherTypes.length || otherCities.length) ? (
           <section className="mt-12 border-t-[1.5px] border-ink/10 pt-8">
-            <h2 className="text-[18px] font-bold text-ink">Búsquedas relacionadas</h2>
+            <h2 className="text-[18px] font-bold text-ink"><Bi es="Búsquedas relacionadas" en="Related searches" /></h2>
             <div className="mt-4 grid gap-6 sm:grid-cols-2">
               {otherTypes.length ? (
                 <div>
-                  <div className="text-[13px] font-semibold uppercase tracking-wide text-ink/50">Otros tipos en {c.cityName}</div>
+                  <div className="text-[13px] font-semibold uppercase tracking-wide text-ink/50"><Bi es={`Otros tipos en ${c.cityName}`} en={`Other property types in ${c.cityName}`} /></div>
                   <ul className="mt-2 space-y-1.5">
                     {otherTypes.map((x) => (
                       <li key={x.tipo}>
                         <Link href={`/${x.op}/${x.tipo}/${x.ciudad}`} className="text-[14px] text-ink hover:underline">
-                          {OPS[x.op].short} de {TIPOS[x.tipo].plural} en {c.cityName}
+                          <Bi es={`${OPS[x.op].short} de ${TIPOS[x.tipo].plural} en ${c.cityName}`} en={`${TIPOS[x.tipo].pluralEn} ${OPS[x.op].labelEn} in ${c.cityName}`} />
                         </Link>
                       </li>
                     ))}
@@ -127,12 +131,12 @@ export default async function Page({ params }) {
               ) : null}
               {otherCities.length ? (
                 <div>
-                  <div className="text-[13px] font-semibold uppercase tracking-wide text-ink/50">{TIPOS[params.tipo].plural} en otras ciudades</div>
+                  <div className="text-[13px] font-semibold uppercase tracking-wide text-ink/50"><Bi es={`${TIPOS[params.tipo].plural} en otras ciudades`} en={`${TIPOS[params.tipo].pluralEn} in other cities`} /></div>
                   <ul className="mt-2 space-y-1.5">
                     {otherCities.map((x) => (
                       <li key={x.ciudad}>
                         <Link href={`/${x.op}/${x.tipo}/${x.ciudad}`} className="text-[14px] text-ink hover:underline">
-                          {OPS[x.op].short} de {TIPOS[x.tipo].plural} en {cityName(x.ciudad)}
+                          <Bi es={`${OPS[x.op].short} de ${TIPOS[x.tipo].plural} en ${cityName(x.ciudad)}`} en={`${TIPOS[x.tipo].pluralEn} ${OPS[x.op].labelEn} in ${cityName(x.ciudad)}`} />
                         </Link>
                       </li>
                     ))}

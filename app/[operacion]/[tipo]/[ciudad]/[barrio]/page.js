@@ -3,7 +3,8 @@ import Link from 'next/link';
 import { unstable_cache } from 'next/cache';
 import MarketingShell from '@/components/MarketingShell';
 import ListingGrid from '@/components/marketing/ListingGrid';
-import { isOp, tipoBySlug, OPS, TIPOS, resolveBarrio, barriosForCity, comboContentBarrio, MIN_LISTINGS } from '@/lib/matrix';
+import Bi from '@/components/marketing/Bi';
+import { isOp, tipoBySlug, OPS, TIPOS, resolveBarrio, barriosForCity, comboContentBarrio, comboContentBarrioEn, MIN_LISTINGS } from '@/lib/matrix';
 import { searchListings } from '@/lib/marketplace';
 import { cityBySlug, SITE, INDEXABLE } from '@/lib/site';
 import { collectionListingLd, breadcrumbLd } from '@/lib/schema';
@@ -60,6 +61,9 @@ export default async function Page({ params }) {
     .filter((x) => x.barrio !== params.barrio)
     .slice(0, 12);
 
+  // English twin of the visible copy (same URL — the toggle swaps it client-side).
+  const ce = comboContentBarrioEn({ op: v.op, tipo: params.tipo, barrioName: combo.barrioName, cityName: v.city.name, count: combo.count });
+  const op = OPS[v.op], tp = v.tipo;
   const cityUrl = `/${v.op}/${params.tipo}/${params.ciudad}`;
   const base = `${SITE}${cityUrl}/${params.barrio}`;
   const ldCollection = collectionListingLd({ name: c.h1, description: c.description, url: base, listings, site: SITE });
@@ -76,13 +80,13 @@ export default async function Page({ params }) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ldCrumb) }} />
       <div className="mx-auto max-w-6xl px-4 py-8 md:py-10">
         <nav className="mb-3 text-[13px] text-ink/50">
-          <Link href="/propiedades" className="hover:underline">Propiedades</Link>
+          <Link href="/propiedades" className="hover:underline"><Bi es="Propiedades" en="Properties" /></Link>
           {' · '}
-          <Link href={cityUrl} className="hover:underline">{OPS[v.op].short} de {v.tipo.plural} en {v.city.name}</Link>
+          <Link href={cityUrl} className="hover:underline"><Bi es={`${op.short} de ${tp.plural} en ${v.city.name}`} en={`${tp.pluralEn} ${op.labelEn} in ${v.city.name}`} /></Link>
           {' · '}{combo.barrioName}
         </nav>
-        <h1 className="text-[28px] font-bold tracking-tight text-ink md:text-[36px]">{c.h1}</h1>
-        <p className="mt-3 max-w-3xl text-[15px] leading-relaxed text-ink/70">{c.intro}</p>
+        <h1 className="text-[28px] font-bold tracking-tight text-ink md:text-[36px]"><Bi es={c.h1} en={ce.h1} /></h1>
+        <p className="mt-3 max-w-3xl text-[15px] leading-relaxed text-ink/70"><Bi es={c.intro} en={ce.intro} /></p>
 
         <div className="mt-6">
           <ListingGrid listings={listings} />
@@ -93,18 +97,18 @@ export default async function Page({ params }) {
             href={`/propiedades?op=${v.op}&type=${v.tipo.type}&q=${encodeURIComponent(combo.barrioName)}`}
             className="inline-flex items-center gap-2 rounded-pill bg-ink px-5 py-3 text-[14px] font-semibold text-paper"
           >
-            Ver las {combo.count} propiedades en el mapa →
+            <Bi es={`Ver las ${combo.count} propiedades en el mapa →`} en={`See the ${combo.count} properties on the map →`} />
           </Link>
         </div>
 
         {siblings.length ? (
           <section className="mt-12 border-t-[1.5px] border-ink/10 pt-8">
-            <h2 className="text-[18px] font-bold text-ink">Otros barrios en {v.city.name}</h2>
+            <h2 className="text-[18px] font-bold text-ink"><Bi es={`Otros barrios en ${v.city.name}`} en={`Other neighbourhoods in ${v.city.name}`} /></h2>
             <ul className="mt-4 grid gap-1.5 sm:grid-cols-2">
               {siblings.map((x) => (
                 <li key={x.barrio}>
                   <Link href={`/${x.op}/${x.tipo}/${x.ciudad}/${x.barrio}`} className="text-[14px] text-ink hover:underline">
-                    {OPS[x.op].short} de {TIPOS[x.tipo].plural} en {x.barrioName}
+                    <Bi es={`${OPS[x.op].short} de ${TIPOS[x.tipo].plural} en ${x.barrioName}`} en={`${TIPOS[x.tipo].pluralEn} ${OPS[x.op].labelEn} in ${x.barrioName}`} />
                   </Link>
                 </li>
               ))}
