@@ -360,19 +360,15 @@ export default function SellFlowProvider({ children }) {
                   <div className="mb-5 rounded-[16px] border-[1.5px] border-ink bg-card px-4 py-4 text-left shadow-hard-sm">
                     <div className="text-[15px] font-bold tracking-head mb-1">{t.usTitle}</div>
                     <p className="text-[12.5px] text-ink/60 mb-3">{t.usSub}</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button onClick={() => payWithPlan('verified', result.id)} className="py-2.5 rounded-pill border-[1.5px] border-ink font-bold text-[13px] hover:bg-ink hover:text-paper transition-colors">{t.usVerify}</button>
-                      <button onClick={() => payWithPlan('home', result.id)} className="py-2.5 rounded-pill bg-ink text-paper font-bold text-[13px] hover:bg-ink/90">{t.usHome}</button>
+                    {/* Same size, same border; stacked full-width on phones, side by side from sm up. */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <button onClick={() => payWithPlan('verified', result.id)} className="min-h-[46px] px-4 flex items-center justify-center text-center leading-tight rounded-pill border-[1.5px] border-ink font-bold text-[13px] hover:bg-ink hover:text-paper transition-colors">{t.usVerify}</button>
+                      <button onClick={() => payWithPlan('home', result.id)} className="min-h-[46px] px-4 flex items-center justify-center text-center leading-tight rounded-pill border-[1.5px] border-ink bg-ink text-paper font-bold text-[13px] hover:bg-ink/90">{t.usHome}</button>
                     </div>
                   </div>
                 )}
 
                 <div className="flex gap-2.5 justify-center flex-wrap">
-                  {/* Came from the mobile app: hand the session back so the app is
-                      signed in too (it may not have been before this listing). */}
-                  {fromApp && (
-                    <a href={`/api/auth/app-return?listing=${encodeURIComponent(result.id)}${appReturn ? `&ret=${encodeURIComponent(appReturn)}` : ''}`} className="px-6 py-3 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft">{t.backToApp}</a>
-                  )}
                   <button onClick={() => { close(); router.push('/cuenta'); }} className="px-6 py-3 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft">{t.doneDash}</button>
                   <button onClick={() => { const id = result.id; close(); router.push(`/propiedad/${id}`); }} className="px-6 py-3 border-2 border-ink rounded-pill font-semibold text-[14px]">{t.doneView}</button>
                 </div>
