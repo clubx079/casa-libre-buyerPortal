@@ -116,7 +116,7 @@ const Spinner = () => (
 );
 
 export default function SellFlowProvider({ children }) {
-  const [lang, setLang] = useLang();
+  const [lang] = useLang();
   const t = DICT[lang];
   const router = useRouter();
   const { user, loading: authLoading, openAuth, refreshUser } = useAuth();
@@ -334,13 +334,9 @@ export default function SellFlowProvider({ children }) {
           <div className="absolute inset-0 bg-ink/40 backdrop-blur-sm" onClick={close} />
           <div className="relative w-full max-w-[480px] bg-paper border-[1.5px] border-ink rounded-[20px] sm:rounded-[24px] shadow-hard p-5 sm:p-6 md:p-7 max-h-[92vh] overflow-y-auto cl-scroll">
             <button onClick={close} aria-label={t.close} className="absolute top-4 right-4 w-8 h-8 rounded-pill border border-ink/25 flex items-center justify-center text-ink/60 hover:text-ink">×</button>
-            {/* ES/EN inside the wizard: the modal covers the page header's switch */}
-            <div className="absolute top-4 right-14 h-8 flex items-center rounded-pill border border-ink/25 p-0.5 font-mono text-[11px] font-bold">
-              {['es', 'en'].map((x) => <button key={x} onClick={() => setLang(x)} className={`h-full flex items-center px-2.5 rounded-pill ${lang === x ? 'bg-ink text-paper' : 'text-ink/55'}`}>{x.toUpperCase()}</button>)}
-            </div>
 
             {/* 4-step stepper */}
-            <div className="flex items-center gap-1.5 mb-5 mt-1 pr-[8.5rem]">
+            <div className="flex items-center gap-1.5 mb-5 mt-1 pr-9">
               {t.steps.map((_, i) => (
                 <span key={i} className={`h-1.5 flex-1 rounded-pill ${i <= step ? 'bg-ink' : 'bg-ink/15'}`} />
               ))}
