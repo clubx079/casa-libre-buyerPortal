@@ -128,6 +128,7 @@ export const AUTOMATION_SCHEMA = {
     email_templates: ['key'],
     automation_runs: ['automation_id,user_id'],
     email_log: ['dedupe_key'],
+    listing_view_milestones: ['property_id'],
   },
   defaults: {
     email_templates: { is_active: true },
