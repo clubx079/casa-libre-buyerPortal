@@ -53,5 +53,10 @@ test('renderTemplate: button dropped when its url resolves to nothing', () => {
 
 test('templateVars lists the supported variables', () => {
   const keys = templateVars.map((v) => v.key);
-  for (const k of ['name', 'property_title', 'property_url', 'free_until', 'days_left', 'free_days', 'extend_url', 'price']) assert.ok(keys.includes(k), k);
+  for (const k of ['name', 'property_title', 'property_url', 'free_until', 'days_left', 'free_days', 'extend_url', 'price', 'views', 'publish_url']) assert.ok(keys.includes(k), k);
+});
+
+test('a variable inside link text and url renders one link', () => {
+  const html = bodyToHtml('Mirá [{{property_title}}]({{property_url}})', { property_title: 'Casa 3', property_url: 'https://x.com/p?a=1&b=2' });
+  assert.match(html, /<a href="https:\/\/x\.com\/p\?a=1&amp;b=2"[^>]*>Casa 3<\/a>/);
 });

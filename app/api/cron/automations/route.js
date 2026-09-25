@@ -1,5 +1,6 @@
-// GET|POST /api/cron/automations — runs the "first listing → free home display"
-// automation for THIS country's DB (lib/automations/firstListing.js). Schedule hourly
+// GET|POST /api/cron/automations — runs the automations for THIS country's DB:
+// "first listing → free home display" (lib/automations/firstListing.js) and
+// "listing getting views" (lib/automations/viewsMilestone.js). Schedule hourly
 // with the CRON_SECRET, like the other crons; also callable manually with ?secret=.
 // Does nothing until an admin switches the automation on (Automations page).
 import { NextResponse } from 'next/server';
@@ -11,6 +12,8 @@ import { signRenewToken } from '@/lib/promoToken';
 import { promoUsd } from '@/lib/stripe';
 import { COUNTRY } from '@/lib/country';
 import { runFirstListing, AUTOMATION_ID } from '@/lib/automations/firstListing';
+import { runViewsMilestone, VIEWS_AUTOMATION_ID } from '@/lib/automations/viewsMilestone';
+import { fetchListingViews, viewsConfigured } from '@/lib/posthogViews';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -24,9 +27,10 @@ async function handle(req) {
     if (auth !== `Bearer ${secret}` && qs !== secret) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
 
-  let automation, templates;
+  let automation, viewsAutomation, templates;
   try {
     [automation] = await db.select('automations', `id=eq.${AUTOMATION_ID}&limit=1`);
+    [viewsAutomation] = await db.select('automations', `id=eq.${VIEWS_AUTOMATION_ID}&limit=1`).catch(() => []);
     templates = await db.select('email_templates', 'select=*');
   } catch (e) {
     // Migration 005 not applied on this country's DB yet.
@@ -50,7 +54,19 @@ async function handle(req) {
       emailOverride: process.env.AUTOMATION_EMAIL_OVERRIDE || '',
     });
     if (result.gifted || result.done || result.converted) revalidateTag('listings');
-    return NextResponse.json({ ok: true, ...result, at: new Date().toISOString() });
+
+    // Listing getting views (needs migration 006 + PostHog read access).
+    let views = { skippedReason: 'not_set_up' };
+    if (viewsAutomation) {
+      views = !viewsConfigured()
+        ? { skippedReason: 'posthog_not_configured' }
+        : await runViewsMilestone({
+          db, automation: viewsAutomation, templates, now: new Date(),
+          fetchViews: fetchListingViews, deliver: sendRenderedEmail, frame: templateFrame(), siteUrl: site,
+          emailOverride: process.env.AUTOMATION_EMAIL_OVERRIDE || '',
+        }).catch((e) => ({ error: e?.message || 'views_failed' }));
+    }
+    return NextResponse.json({ ok: true, ...result, views, at: new Date().toISOString() });
   } catch (e) {
     return NextResponse.json({ error: 'automation_failed', detail: e?.message }, { status: 500 });
   }
