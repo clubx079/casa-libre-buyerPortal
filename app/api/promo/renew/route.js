@@ -36,6 +36,9 @@ const html = (s, status = 200) => new NextResponse(s, { status, headers: { 'cont
 export async function GET(req) {
   const token = new URL(req.url).searchParams.get('token');
   const claim = verifyRenewToken(token);
+  // Only renew-purpose tokens may charge here; the automation's 'extend' link must go
+  // through the pay page (/api/promo/extend), never a silent charge.
+  if (claim && claim.purpose) return html(page({ title: 'Enlace no válido', body: 'Este enlace no sirve para renovar. Podés renovar desde tu cuenta.', cta: { href: `${SITE}/cuenta/pagos`, label: 'Ir a mi cuenta' } }), 400);
   if (!claim) return html(page({ title: 'Enlace no válido', body: 'Este enlace de renovación venció o no es válido. Podés renovar desde tu cuenta.', cta: { href: `${SITE}/cuenta/pagos`, label: 'Ir a mi cuenta' } }), 400);
 
   const plan = promoPlan(claim.plan);

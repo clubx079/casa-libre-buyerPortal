@@ -7,6 +7,7 @@ import { NextResponse } from 'next/server';
 import { select, update } from '@/lib/db';
 import { sendPromotionRenewalEmail } from '@/lib/email';
 import { COUNTRY } from '@/lib/country';
+import { getFreeHomeIdsRaw } from '@/lib/listings';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -36,6 +37,10 @@ async function handle(req) {
   let rows = [];
   try { rows = await select('properties', q); } catch (e) { return NextResponse.json({ error: 'query_failed', detail: e?.message }, { status: 500 }); }
   if (!Array.isArray(rows) || !rows.length) return NextResponse.json({ ok: true, due: 0, sent: 0, at: nowIso });
+  // Free first-listing gifts get their own ending-soon email from the automation
+  // (with a pay link, not a one-click charge) — never this paid-renewal reminder.
+  const freeIds = new Set(await getFreeHomeIdsRaw());
+  rows = rows.filter((r) => !freeIds.has(String(r.id)));
 
   // Resolve owner emails in one shot.
   const ownerIds = [...new Set(rows.map((r) => r.created_by).filter(Boolean))];

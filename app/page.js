@@ -1,4 +1,5 @@
-import { getLandingListings, getActiveCountCached } from '@/lib/listings';
+import { getLandingListings, getActiveCountCached, getFreeHomeIds } from '@/lib/listings';
+import { orderHomeFeatured } from '@/lib/homeOrder';
 import { typeLabel } from '@/lib/propertyType';
 import { fmtUsd } from '@/lib/ui';
 import LandingClient from '@/components/LandingClient';
@@ -9,7 +10,7 @@ import { COUNTRY } from '@/lib/country';
 export const dynamic = 'force-dynamic';
 
 export default async function Landing() {
-  const [{ listings }, activeCount] = await Promise.all([getLandingListings(), getActiveCountCached()]);
+  const [{ listings }, activeCount, freeIds] = await Promise.all([getLandingListings(), getActiveCountCached(), getFreeHomeIds()]);
   // Paid "Landing" (US$20) listings OWN the home featured strip — nothing unpaid is
   // mixed in when any exist (unchanged). Only when there are ZERO paid listings do we
   // fall back to a RANDOM blend of BOTH sale and rental listings (not just the newest
@@ -25,7 +26,9 @@ export default async function Landing() {
   const alquileres = shuffle(withImg.filter((l) => l.mode === 'alquiler'));
   const blend = shuffle([...ventas.slice(0, 4), ...alquileres.slice(0, 3)]);
   const fallback = (blend.length >= 3 ? blend : shuffle(withImg)).slice(0, 6);
-  const featured = onHome.length ? onHome.slice(0, 6) : fallback;
+  // Paid first; free first-listing gifts (automation) only fill leftover slots, rotated hourly.
+  const homeOrdered = orderHomeFeatured(onHome, new Set(freeIds), { slots: 6, seed: Math.floor(Date.now() / 3600000) });
+  const featured = homeOrdered.length ? homeOrdered : fallback;
   const ticker = listings
     .filter((l) => l.usd)
     .slice(0, 8)
