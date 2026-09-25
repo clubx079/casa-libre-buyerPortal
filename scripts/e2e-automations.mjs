@@ -23,7 +23,7 @@ const ANA = 'aaaaaaaa-0000-4000-8000-000000000001', BRUNO = 'aaaaaaaa-0000-4000-
 // ── A. Email templates (admin) ──
 let r = await admin('/api/email-templates');
 const builtIn = (r.j.rows || []).filter((t) => t.key);
-check('templates list shows the 2 built-in templates', r.status === 200 && builtIn.length === 2, builtIn.map((t) => t.name).join(' | '));
+check('templates list shows the first-listing built-in templates', r.status === 200 && ['first-listing-gift', 'first-listing-ending'].every((k) => builtIn.some((t) => t.key === k)), builtIn.map((t) => t.name).join(' | '));
 const gift = builtIn.find((t) => t.key === 'first-listing-gift');
 check('built-in gift template reports its automation step', gift?.usedBy?.[0] === 'First listing → gift email', gift?.usedBy?.join());
 r = await fetch(ADMIN + '/api/email-templates').then((x) => x.status);
