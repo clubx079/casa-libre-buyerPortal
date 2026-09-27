@@ -14,11 +14,10 @@ export function useZoningOverlay(mapRef, on, height = 'all') {
     const sync = (tries = 0) => {
       const ref = mapRef.current;
       if (on && !ref) { if (tries < 20) timer = setTimeout(() => sync(tries + 1), 300); return; }   // map still loading
-      if (layer.current && (!on || layer.current.map !== ref?.map || layer.current.key !== key)) { layer.current.handle.remove(); layer.current = null; }
-      if (on && ref && !layer.current) {
-        const categories = key === 'all' ? ZONE_CATEGORIES : [key];
-        layer.current = { map: ref.map, key, handle: addZoningOverlay(ref.google, ref.map, { categories }) };
-      }
+      const categories = key === 'all' ? ZONE_CATEGORIES : [key];
+      if (layer.current && (!on || layer.current.map !== ref?.map)) { layer.current.handle.remove(); layer.current = null; }
+      if (on && ref && layer.current && layer.current.key !== key) { layer.current.handle.setCategories(categories); layer.current.key = key; }
+      if (on && ref && !layer.current) layer.current = { map: ref.map, key, handle: addZoningOverlay(ref.google, ref.map, { categories }) };
     };
     sync();
     return () => clearTimeout(timer);
