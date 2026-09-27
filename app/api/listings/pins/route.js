@@ -14,7 +14,7 @@ const cachedPins = unstable_cache(
 
 export async function GET(req) {
   const sp = req.nextUrl.searchParams;
-  const p = Object.fromEntries(['op', 'type', 'beds', 'priceMin', 'priceMax', 'barrio', 'seller', 'q'].map((k) => [k, sp.get(k) || '']));
+  const p = Object.fromEntries(['op', 'type', 'beds', 'priceMin', 'priceMax', 'barrio', 'seller', 'q', 'height'].map((k) => [k, sp.get(k) || '']));
   const pins = await cachedPins(JSON.stringify(p), p);
   return NextResponse.json({ pins, count: pins.length });
 }
