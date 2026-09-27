@@ -7,6 +7,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
+import ZoningBadge from '@/components/ZoningBadge';
 import { typeLabel } from '@/lib/propertyType';
 import { track } from '@/lib/analytics';
 import { fmtUsd, fmtPyg, normalizePy, clRef } from '@/lib/ui';
@@ -288,6 +289,8 @@ export default function PropertyDetailView({ l, url }) {
               ))}
             </div>
           )}
+
+          {l.zoning && <div className="mb-6 max-w-[62ch]"><ZoningBadge zoning={l.zoning} lang={lang} /></div>}
 
           {paras.length > 0 && (
             <>

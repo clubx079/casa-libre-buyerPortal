@@ -13,6 +13,8 @@ import { T, fmtUsd, fmtPyg, shortUsd, titleCaseZone, bedAbbr, bathWord, parkWord
 import { loadGoogleMapsAPI, mapOptions, pinIcon, clusterIcon, inParaguay, youAreHereIcon } from '@/utils/gmap';
 import { distanceKm, getUserLocation, NEAR_RADIUS_KM } from '@/utils/geo';
 import { COUNTRY } from '@/lib/country';
+import { CATEGORIES } from '@/lib/zoning/categories';
+import ZoningMapToggle, { useZoningOverlay } from '@/components/ZoningMapToggle';
 import VerifiedTag from '@/components/VerifiedTag';
 import AppBadges from '@/components/AppBadges';
 
@@ -48,7 +50,7 @@ const SORTS = [
   { k: 'area_desc', es: 'Superficie: mayor primero', en: 'Area: largest first', esS: 'Mayor', enS: 'Largest' },
 ];
 
-export default function MobileMarketplace({ initialListings = [], initialCount = 0, initialPins = [], totalCount = 0, initialOp = 'all', initialQuery = '', initialType = 'all' }) {
+export default function MobileMarketplace({ initialListings = [], initialCount = 0, initialPins = [], totalCount = 0, initialOp = 'all', initialQuery = '', initialType = 'all', zoningOn = false }) {
   const [lang, setLang] = useLang();
   const { openSell } = useSellFlow();
   const { isSaved, toggle } = useFavorites();
@@ -60,6 +62,8 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
   const [typeF, setTypeF] = useState(initialType || 'all');
   const [priceF, setPriceF] = useState('all');
   const [bedF, setBedF] = useState('all');
+  const [heightF, setHeightF] = useState('all');     // allowed building height (Asunción zoning)
+  const [showZoning, setShowZoning] = useState(false);
   const [barrioF, setBarrioF] = useState('all');
   const [sellerF, setSellerF] = useState('all');
   const [sort, setSort] = useState('relevancia');
@@ -104,7 +108,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
       : { p1: { priceMax: 80000 }, p2: { priceMin: 80000, priceMax: 200000 }, p3: { priceMin: 200000, priceMax: 400000 }, p4: { priceMin: 400000 } };
     return bands[priceF] || {};
   };
-  const searchBody = (pageN) => ({ op: mode, type: typeF === 'all' ? undefined : typeF, beds: bedF === 'all' ? undefined : bedF, q: q || undefined, barrio: barrioF === 'all' ? undefined : barrioF, seller: sellerF === 'all' ? undefined : sellerF, sort, page: pageN, pageSize: PER_PAGE, ...priceBoundsFor() });
+  const searchBody = (pageN) => ({ op: mode, type: typeF === 'all' ? undefined : typeF, beds: bedF === 'all' ? undefined : bedF, q: q || undefined, barrio: barrioF === 'all' ? undefined : barrioF, seller: sellerF === 'all' ? undefined : sellerF, height: heightF === 'all' ? undefined : heightF, sort, page: pageN, pageSize: PER_PAGE, ...priceBoundsFor() });
   const pinsUrl = () => {
     const p = new URLSearchParams(); p.set('op', mode);
     if (typeF !== 'all') p.set('type', typeF);
@@ -112,6 +116,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
     if (q) p.set('q', q);
     if (barrioF !== 'all') p.set('barrio', barrioF);
     if (sellerF !== 'all') p.set('seller', sellerF);
+    if (heightF !== 'all') p.set('height', heightF);
     const pb = priceBoundsFor();
     if (pb.priceMin != null) p.set('priceMin', pb.priceMin);
     if (pb.priceMax != null) p.set('priceMax', pb.priceMax);
@@ -136,7 +141,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
     }, doSearch ? 220 : 0);
     return () => clearTimeout(tmo);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, typeF, priceF, bedF, barrioF, sellerF, q, sort]);
+  }, [mode, typeF, priceF, bedF, barrioF, sellerF, heightF, q, sort]);
 
   const loadMore = async () => {
     const next = page + 1;
@@ -147,8 +152,8 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
     } catch { /* keep current */ }
   };
 
-  const activeCount = (typeF !== 'all' ? 1 : 0) + (priceF !== 'all' ? 1 : 0) + (bedF !== 'all' ? 1 : 0) + (barrioF !== 'all' ? 1 : 0) + (sellerF !== 'all' ? 1 : 0);
-  const clearAll = () => { setTypeF('all'); setPriceF('all'); setBedF('all'); setBarrioF('all'); setSellerF('all'); };
+  const activeCount = (typeF !== 'all' ? 1 : 0) + (priceF !== 'all' ? 1 : 0) + (bedF !== 'all' ? 1 : 0) + (barrioF !== 'all' ? 1 : 0) + (sellerF !== 'all' ? 1 : 0) + (heightF !== 'all' ? 1 : 0);
+  const clearAll = () => { setTypeF('all'); setPriceF('all'); setBedF('all'); setBarrioF('all'); setSellerF('all'); setHeightF('all'); };
   const nf = (x) => x.toLocaleString(loc(lang));
 
   // lazy feature images for visible cards
@@ -165,6 +170,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
   // ---- map (lazy: only init when the map tab is first opened) — Google Maps ----
   const mapEl = useRef(null);
   const mapRef = useRef(null);
+  useZoningOverlay(mapRef, zoningOn && showZoning && view === 'map');
   const clusterRef = useRef(null);
   const promotedMarkersRef = useRef([]);    // paid pins kept OUT of the clusterer (always visible)
   const infoRef = useRef(null);             // shared InfoWindow (tap-preview popup)
@@ -235,9 +241,9 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
     cluster.addMarkers(markers);
     // Don't refit while near-me is locked, nor on the toggle itself (so deselect
     // can restore the previous view instead of snapping to the filtered bounds).
-    if (n && !nearMe && !skipFitRef.current && (typeF !== 'all' || priceF !== 'all' || bedF !== 'all' || barrioF !== 'all' || q)) { try { map.fitBounds(bounds, 36); } catch {} }
+    if (n && !nearMe && !skipFitRef.current && (typeF !== 'all' || priceF !== 'all' || bedF !== 'all' || barrioF !== 'all' || heightF !== 'all' || q)) { try { map.fitBounds(bounds, 36); } catch {} }
     skipFitRef.current = false;
-  }, [displayPins, nearMe, typeF, priceF, bedF, barrioF, q]);
+  }, [displayPins, nearMe, typeF, priceF, bedF, barrioF, heightF, q]);
   useEffect(() => { if (view === 'map') drawMarkers(); }, [view, drawMarkers]);
 
   const priceMain = (l) => (fmtUsd(l.usd, lang) || '—') + (l.mode === 'alquiler' ? t.perMonth : '');
@@ -448,6 +454,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
               ? <span className="w-4 h-4 rounded-full border-2 border-current/20 border-t-current animate-spin" aria-hidden="true" />
               : <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor" style={{ transform: 'rotate(45deg)' }} aria-hidden="true"><path d="M12 2 4.5 20.3l.7.7L12 18l6.8 3 .7-.7z" /></svg>}
           </button>
+          {zoningOn && <ZoningMapToggle on={showZoning} onToggle={() => setShowZoning((v) => !v)} lang={lang} className="absolute top-3 right-3 z-[400]" />}
           <button onClick={() => setView('list')} className="absolute bottom-5 left-1/2 -translate-x-1/2 z-[400] flex items-center gap-2 bg-ink text-paper rounded-pill py-3 px-5 text-[15px] font-medium shadow-hard">☰ {X.list}</button>
         </div>
       ) : (
@@ -512,6 +519,12 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
               <Section>{X.bedrooms}</Section>
               <div className="flex flex-wrap gap-2.5">{['1', '2', '3', '4'].map((b) => <Pill key={b} label={`${b}+`} on={bedF === b} onClick={() => setBedF(bedF === b ? 'all' : b)} />)}</div>
               {barrios.length > 0 && (<><Section>{X.barrio}</Section><div className="flex flex-wrap gap-2.5">{barrios.map((nb) => <Pill key={nb} label={nb} on={barrioF === nb} onClick={() => setBarrioF(barrioF === nb ? 'all' : nb)} />)}</div></>)}
+              {zoningOn && (
+                <>
+                  <Section>{lang === 'en' ? 'Allowed height (Asunción)' : 'Altura permitida (Asunción)'}</Section>
+                  <div className="flex flex-wrap gap-2.5">{CATEGORIES.filter((c) => c.id !== 'otro').map((c) => <Pill key={c.id} label={lang === 'en' ? c.en : c.es} on={heightF === c.id} onClick={() => setHeightF(heightF === c.id ? 'all' : c.id)} />)}</div>
+                </>
+              )}
               <Section>{X.listedBy}</Section>
               <div className="flex flex-wrap gap-2.5">
                 <Pill label={X.ownerDirect} on={sellerF === 'owner'} onClick={() => setSellerF(sellerF === 'owner' ? 'all' : 'owner')} />

@@ -3,6 +3,7 @@ import { getActiveCountCached } from '@/lib/listings';
 import { searchListings } from '@/lib/marketplace';
 import { SITE } from '@/lib/site';
 import { COUNTRY } from '@/lib/country';
+import { zoningEnabled } from '@/lib/zoning/categories';
 import { collectionListingLd } from '@/lib/schema';
 import MarketplaceClient from '@/components/MarketplaceClient';
 import MobileMarketplace from '@/components/MobileMarketplace';
@@ -52,16 +53,17 @@ export default async function PropiedadesPage({ searchParams }) {
     listings: dRes.listings,
     site: SITE,
   });
+  const zoningOn = zoningEnabled();   // Asunción zoning filter + map layer (after migration 007)
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
       <h1 className="sr-only">{h1} — Casa Libre</h1>
       {/* Mobile: the app-style listing UI. Desktop: the existing marketplace (unchanged). */}
       <div className="md:hidden">
-        <MobileMarketplace initialListings={mRes.listings} initialCount={mRes.count} totalCount={totalCount} initialOp={initialOp} initialQuery={initialQuery} initialType={initialType} />
+        <MobileMarketplace initialListings={mRes.listings} initialCount={mRes.count} totalCount={totalCount} initialOp={initialOp} initialQuery={initialQuery} initialType={initialType} zoningOn={zoningOn} />
       </div>
       <div className="hidden md:block">
-        <MarketplaceClient initialListings={dRes.listings} initialCount={dRes.count} totalCount={totalCount} initialOp={initialOp} initialQuery={initialQuery} initialType={initialType} />
+        <MarketplaceClient initialListings={dRes.listings} initialCount={dRes.count} totalCount={totalCount} initialOp={initialOp} initialQuery={initialQuery} initialType={initialType} zoningOn={zoningOn} />
       </div>
     </>
   );

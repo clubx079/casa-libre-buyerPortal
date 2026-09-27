@@ -13,6 +13,8 @@ import { track } from '@/lib/analytics';
 import { loadGoogleMapsAPI, mapOptions, pinIcon, clusterIcon, inParaguay, youAreHereIcon } from '@/utils/gmap';
 import { distanceKm, getUserLocation, NEAR_RADIUS_KM } from '@/utils/geo';
 import { COUNTRY } from '@/lib/country';
+import { CATEGORIES } from '@/lib/zoning/categories';
+import ZoningMapToggle, { useZoningOverlay } from '@/components/ZoningMapToggle';
 
 // Marketplace-specific bilingual strings (search / filters / sort).
 const M = {
@@ -50,7 +52,7 @@ const PER_PAGE = 24;
 // accent- and case-insensitive text for search ("asuncion" should match "Asunción")
 const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
-export default function MarketplaceClient({ initialListings = [], initialCount = 0, initialPins = [], totalCount = 0, initialOp = 'all', initialQuery = '', initialType = 'all' }) {
+export default function MarketplaceClient({ initialListings = [], initialCount = 0, initialPins = [], totalCount = 0, initialOp = 'all', initialQuery = '', initialType = 'all', zoningOn = false }) {
   const [lang, setLang] = useLang();
   const { openSell } = useSellFlow();
   const [filter, setFilter] = useState(['all', 'venta', 'alquiler'].includes(initialOp) ? initialOp : 'all');
@@ -58,6 +60,8 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
   const [typeF, setTypeF] = useState(initialType || 'all');
   const [priceF, setPriceF] = useState('all');
   const [bedF, setBedF] = useState('all');
+  const [heightF, setHeightF] = useState('all');     // allowed building height (Asunción zoning)
+  const [showZoning, setShowZoning] = useState(false);
   const [sortBy, setSortBy] = useState('relevancia');
   const [sortOpen, setSortOpen] = useState(false);
   const [mobileView, setMobileView] = useState('list'); // mobile: 'list' | 'map'
@@ -84,6 +88,7 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
   const imgReq = useRef(new Set());         // ids already requested (dedupe)
   const mapEl = useRef(null);
   const mapRef = useRef(null);
+  useZoningOverlay(mapRef, zoningOn && showZoning);
   const clusterRef = useRef(null);
   const infoRef = useRef(null); // shared Google InfoWindow (hover popup)
   const markersRef = useRef({});
@@ -127,13 +132,14 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
     return priceF === 'p1' ? { priceMax: 100000 } : priceF === 'p2' ? { priceMin: 100000, priceMax: 200000 } : { priceMin: 200000 };
   };
   const bedsParam = bedF === 'all' ? undefined : bedF.replace(/\D/g, '');
-  const searchBody = (pageN) => ({ op: filter, type: typeF === 'all' ? undefined : typeF, beds: bedsParam, q: query || undefined, sort: sortBy, page: pageN, pageSize: PER_PAGE, ...priceBounds() });
+  const searchBody = (pageN) => ({ op: filter, type: typeF === 'all' ? undefined : typeF, beds: bedsParam, q: query || undefined, height: heightF === 'all' ? undefined : heightF, sort: sortBy, page: pageN, pageSize: PER_PAGE, ...priceBounds() });
   const pinsUrl = () => {
     const p = new URLSearchParams();
     if (filter !== 'all') p.set('op', filter);
     if (typeF !== 'all') p.set('type', typeF);
     if (bedsParam) p.set('beds', bedsParam);
     if (query) p.set('q', query);
+    if (heightF !== 'all') p.set('height', heightF);
     const pb = priceBounds();
     if (pb.priceMin != null) p.set('priceMin', pb.priceMin);
     if (pb.priceMax != null) p.set('priceMax', pb.priceMax);
@@ -158,7 +164,7 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
     }, doSearch ? 220 : 0);
     return () => clearTimeout(tmo);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter, typeF, priceF, bedF, query, sortBy]);
+  }, [filter, typeF, priceF, bedF, heightF, query, sortBy]);
 
   const loadMore = async () => {
     const next = page + 1;
@@ -206,13 +212,14 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
         property_type: typeF,
         price_range: priceF,
         bedrooms: bedF,
+        allowed_height: heightF,
         sort: sortBy,
         results_count: rows.length,
       });
     }, 600);
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter, typeF, priceF, bedF, query, sortBy]);
+  }, [filter, typeF, priceF, bedF, heightF, query, sortBy]);
 
   // ---- display helpers ----
   const title = (l) => {
@@ -426,7 +433,7 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
     cluster.addMarkers(markers);
     // Default view stays zoomed on Asunción; only auto-fit to the results once
     // the user actually filters/searches (Buy/Rent/All keep the default view).
-    const isFiltered = typeF !== 'all' || priceF !== 'all' || bedF !== 'all' || !!query;
+    const isFiltered = typeF !== 'all' || priceF !== 'all' || bedF !== 'all' || heightF !== 'all' || !!query;
     // Don't refit while near-me is locked, nor on the toggle itself (so deselect
     // can restore the previous view instead of snapping to the filtered bounds).
     if (n && !didFit.current && isFiltered && !nearMe && !skipFitRef.current) { didFit.current = true; try { map.fitBounds(bounds, 40); } catch {} }
@@ -552,6 +559,12 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
         <select value={bedF} onChange={(e) => setBedF(e.target.value)} className={selCls}>
           {Object.entries(m.beds).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
+        {zoningOn && (
+          <select value={heightF} onChange={(e) => setHeightF(e.target.value)} className={selCls} title={lang === 'en' ? 'What the city allows to be built (Asunción only)' : 'Lo que la ciudad permite construir (solo Asunción)'}>
+            <option value="all">{lang === 'en' ? 'Allowed height (Asunción)' : 'Altura permitida (Asunción)'}</option>
+            {CATEGORIES.filter((c) => c.id !== 'otro').map((c) => <option key={c.id} value={c.id}>{lang === 'en' ? c.en : c.es}</option>)}
+          </select>
+        )}
         {/* view toggle — mockup .view-toggle, right-aligned, mobile only */}
         <div className="ml-auto md:hidden inline-flex items-center border-[1.5px] border-ink rounded-pill p-[3px] bg-card">
           {[['list', m.listView], ['map', m.mapView]].map(([v, label]) => (
@@ -637,6 +650,7 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
               ? <span className="w-4 h-4 rounded-full border-2 border-current/20 border-t-current animate-spin" aria-hidden="true" />
               : <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style={{ transform: 'rotate(45deg)' }} aria-hidden="true"><path d="M12 2 4.5 20.3l.7.7L12 18l6.8 3 .7-.7z" /></svg>}
           </button>
+          {zoningOn && <ZoningMapToggle on={showZoning} onToggle={() => setShowZoning((v) => !v)} lang={lang} className="absolute top-3 right-3 z-[6]" />}
           {geoMsg && (
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[7] max-w-[90%] px-3.5 py-2 rounded-pill bg-ink text-paper text-[12px] font-medium shadow-hard-sm text-center">{geoMsg}</div>
           )}
