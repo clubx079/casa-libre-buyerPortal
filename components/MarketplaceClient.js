@@ -88,7 +88,7 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
   const imgReq = useRef(new Set());         // ids already requested (dedupe)
   const mapEl = useRef(null);
   const mapRef = useRef(null);
-  useZoningOverlay(mapRef, zoningOn && showZoning);
+  useZoningOverlay(mapRef, zoningOn && showZoning, heightF);
   const clusterRef = useRef(null);
   const infoRef = useRef(null); // shared Google InfoWindow (hover popup)
   const markersRef = useRef({});
@@ -650,7 +650,7 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
               ? <span className="w-4 h-4 rounded-full border-2 border-current/20 border-t-current animate-spin" aria-hidden="true" />
               : <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style={{ transform: 'rotate(45deg)' }} aria-hidden="true"><path d="M12 2 4.5 20.3l.7.7L12 18l6.8 3 .7-.7z" /></svg>}
           </button>
-          {zoningOn && <ZoningMapToggle on={showZoning} onToggle={() => setShowZoning((v) => !v)} lang={lang} className="absolute top-3 right-3 z-[6]" />}
+          {zoningOn && <ZoningMapToggle on={showZoning} onToggle={() => setShowZoning((v) => !v)} height={heightF} lang={lang} className="absolute top-3 right-3 z-[6]" />}
           {geoMsg && (
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[7] max-w-[90%] px-3.5 py-2 rounded-pill bg-ink text-paper text-[12px] font-medium shadow-hard-sm text-center">{geoMsg}</div>
           )}

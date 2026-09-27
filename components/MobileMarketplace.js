@@ -170,7 +170,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
   // ---- map (lazy: only init when the map tab is first opened) — Google Maps ----
   const mapEl = useRef(null);
   const mapRef = useRef(null);
-  useZoningOverlay(mapRef, zoningOn && showZoning && view === 'map');
+  useZoningOverlay(mapRef, zoningOn && showZoning && view === 'map', heightF);
   const clusterRef = useRef(null);
   const promotedMarkersRef = useRef([]);    // paid pins kept OUT of the clusterer (always visible)
   const infoRef = useRef(null);             // shared InfoWindow (tap-preview popup)
@@ -454,7 +454,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
               ? <span className="w-4 h-4 rounded-full border-2 border-current/20 border-t-current animate-spin" aria-hidden="true" />
               : <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor" style={{ transform: 'rotate(45deg)' }} aria-hidden="true"><path d="M12 2 4.5 20.3l.7.7L12 18l6.8 3 .7-.7z" /></svg>}
           </button>
-          {zoningOn && <ZoningMapToggle on={showZoning} onToggle={() => setShowZoning((v) => !v)} lang={lang} className="absolute top-3 right-3 z-[400]" />}
+          {zoningOn && <ZoningMapToggle on={showZoning} onToggle={() => setShowZoning((v) => !v)} height={heightF} lang={lang} className="absolute top-3 right-3 z-[400]" />}
           <button onClick={() => setView('list')} className="absolute bottom-5 left-1/2 -translate-x-1/2 z-[400] flex items-center gap-2 bg-ink text-paper rounded-pill py-3 px-5 text-[15px] font-medium shadow-hard">☰ {X.list}</button>
         </div>
       ) : (
