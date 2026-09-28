@@ -37,7 +37,11 @@ export function loadZoningIndex(base = ZONING_TILES) {
 export function addZoningOverlay(google, map, { categories = ZONE_CATEGORIES, onLoading, base = ZONING_TILES } = {}) {
   let set = tileSetFor(categories);
   let layer = null, index = null, pending = 0, dead = false;
-  const report = () => { if (!dead && onLoading) onLoading(!index || pending > 0); };
+  // 'waiting' = the layer is mounted but Google hasn't asked for / we haven't drawn the first
+  // tiles yet. Without it the spinner cleared the moment the index arrived — before any tile
+  // was even requested — so it only flickered.
+  let waiting = true, waitTimer = null;
+  const report = () => { if (!dead && onLoading) onLoading(!index || waiting || pending > 0); };
 
   const makeLayer = () => ({
     tileSize: new google.maps.Size(256, 256),
@@ -52,7 +56,7 @@ export function addZoningOverlay(google, map, { categories = ZONE_CATEGORIES, on
       const url = `${base}/${set}/${t.key}.png`;
       const img = new Image();
       pending++; report();
-      const done = () => { pending = Math.max(0, pending - 1); report(); };
+      const done = () => { pending = Math.max(0, pending - 1); if (!pending) { waiting = false; clearTimeout(waitTimer); } report(); };
       img.onload = () => {
         const layerEl = doc.createElement('div');
         layerEl.style.cssText = `position:absolute;left:0;top:0;width:256px;height:256px;opacity:${OPACITY};` +
@@ -73,6 +77,9 @@ export function addZoningOverlay(google, map, { categories = ZONE_CATEGORIES, on
     if (layer) { const i = map.overlayMapTypes.getArray().indexOf(layer); if (i >= 0) map.overlayMapTypes.removeAt(i); }
     layer = makeLayer();
     map.overlayMapTypes.push(layer);
+    waiting = true;
+    clearTimeout(waitTimer);
+    waitTimer = setTimeout(() => { if (!pending) { waiting = false; report(); } }, 1500);   // no zoning tiles in view
     report();
   };
 
@@ -82,6 +89,7 @@ export function addZoningOverlay(google, map, { categories = ZONE_CATEGORIES, on
   return {
     remove() {
       dead = true;
+      clearTimeout(waitTimer);
       if (layer) { const i = map.overlayMapTypes.getArray().indexOf(layer); if (i >= 0) map.overlayMapTypes.removeAt(i); }
       layer = null;
     },

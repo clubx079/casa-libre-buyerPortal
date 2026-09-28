@@ -10,7 +10,16 @@ import { addZoningOverlay, ZONE_COLORS, ZONE_CATEGORIES } from '@/utils/zoningOv
 // Returns true while zoning tiles are still loading.
 export function useZoningOverlay(mapRef, on, height = 'all') {
   const layer = useRef(null);   // { map, key, handle }
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoadingRaw] = useState(false);
+  // Keep the spinner up at least 700 ms so it's seen, even when tiles come from cache.
+  const shownAt = useRef(0), hideT = useRef(null);
+  const setLoading = (v) => {
+    clearTimeout(hideT.current);
+    if (v) { if (!shownAt.current) shownAt.current = Date.now(); setLoadingRaw(true); return; }
+    const left = 700 - (Date.now() - shownAt.current);
+    const off = () => { shownAt.current = 0; setLoadingRaw(false); };
+    if (left > 0) hideT.current = setTimeout(off, left); else off();
+  };
   const key = ZONE_CATEGORIES.includes(height) ? height : 'all';
   useEffect(() => {
     let timer;
@@ -43,7 +52,7 @@ const Layers = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true"><path d="M12 3 2 8.5 12 14l10-5.5L12 3Z" /><path d="m2 15.5 10 5.5 10-5.5" /></svg>
 );
 const Spinner = () => (
-  <span className="w-[13px] h-[13px] rounded-full border-2 border-current/30 border-t-current animate-spin" aria-hidden="true" data-testid="zoning-spinner" />
+  <span className="w-[13px] h-[13px] rounded-full border-2 border-paper/30 border-t-paper animate-spin" aria-hidden="true" data-testid="zoning-spinner" />
 );
 
 export default function ZoningMapToggle({ on, onToggle, height = 'all', loading = false, lang = 'es', className = '' }) {
