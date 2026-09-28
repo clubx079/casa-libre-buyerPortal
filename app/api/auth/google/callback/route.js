@@ -1,6 +1,7 @@
 // GET /api/auth/google/callback?code=... — exchanges the code, upserts the user
 // by email, sets the cl_session cookie, and redirects to the account dashboard.
 import { NextResponse } from 'next/server';
+import { safeReturnPath } from '@/lib/returnPath';
 import { findOrCreateGoogleUser } from '@/lib/users';
 import { makeToken, COOKIE_NAME } from '@/lib/auth';
 import { getClientIP } from '@/lib/ip';
@@ -23,7 +24,7 @@ export async function GET(req) {
   // Return path passed via OAuth `state` (e.g. /publicar to finish a listing). Only
   // safe relative paths are honored; anything else falls back to the dashboard.
   const state = searchParams.get('state');
-  const dest = (typeof state === 'string' && /^\/[A-Za-z0-9/_-]*$/.test(state)) ? state : '/cuenta';
+  const dest = safeReturnPath(state) || '/cuenta';
   if (searchParams.get('error') || !code) return NextResponse.redirect(`${base}/?auth_error=1`);
 
   try {

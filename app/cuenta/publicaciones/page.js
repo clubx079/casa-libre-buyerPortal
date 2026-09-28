@@ -6,6 +6,8 @@ import ListingCard from '@/components/account/ListingCard';
 import ConfirmModal from '@/components/ConfirmModal';
 import HighlightModal from '@/components/HighlightModal';
 import { CardGridSkeleton } from '@/components/account/Skeletons';
+import { useSellFlow } from '@/components/SellFlow';
+import { draftMissing } from '@/lib/drafts';
 
 const T = {
   es: { title: 'Mis publicaciones', sub: (n) => `${n} ${n === 1 ? 'propiedad publicada' : 'propiedades publicadas'}`, empty: 'Todavía no publicaste ninguna propiedad.', publish: 'Publicar propiedad', del: 'Eliminar', confirmT: 'Eliminar publicación', confirm: 'Esta acción no se puede deshacer. ¿Querés eliminar esta propiedad?', cancel: 'Cancelar', deleting: 'Eliminando…', view: 'Ver', loading: 'Cargando…', promoteVerify: 'Verificar · US$5', promoteHome: 'Portada · US$20', renew: 'Renovar', verifiedChip: 'Verificada', homeChip: 'En portada', upgradeHome: 'Subir a portada · US$20', paying: 'Procesando…', daysLeft: (n) => `faltan ${n} ${n === 1 ? 'día' : 'días'}` },
@@ -14,9 +16,67 @@ const T = {
 
 const daysLeft = (iso) => { try { return Math.max(1, Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000)); } catch { return 0; } };
 
+const D = {
+  es: {
+    tabActive: 'Publicadas', tabDrafts: 'Borradores', draftChip: 'Borrador', cont: 'Continuar', del: 'Eliminar',
+    emptyDrafts: 'No tenés borradores. Si empezás a publicar y no terminás, lo guardamos acá.',
+    saved: (s) => `Guardado ${s}`, missing: 'Falta', miss: { price: 'precio', area: 'superficie', phone: 'teléfono', photos: 'fotos' },
+    confirmT: 'Eliminar borrador', confirm: '¿Querés eliminar este borrador?',
+    types: { casa: 'Casa', departamento: 'Departamento', duplex: 'Dúplex', terreno: 'Terreno' }, sale: 'Venta', rent: 'Alquiler', property: 'Propiedad',
+  },
+  en: {
+    tabActive: 'Published', tabDrafts: 'Drafts', draftChip: 'Draft', cont: 'Continue', del: 'Delete',
+    emptyDrafts: "No drafts. If you start a listing and don't finish, we keep it here.",
+    saved: (s) => `Saved ${s}`, missing: 'Missing', miss: { price: 'price', area: 'area', phone: 'phone', photos: 'photos' },
+    confirmT: 'Delete draft', confirm: 'Delete this draft?',
+    types: { casa: 'House', departamento: 'Apartment', duplex: 'Duplex', terreno: 'Lot' }, sale: 'Sale', rent: 'Rent', property: 'Property',
+  },
+};
+
+function ago(iso, lang) {
+  const m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  const es = lang !== 'en';
+  if (m < 1) return es ? 'recién' : 'just now';
+  if (m < 60) return es ? `hace ${m} min` : `${m} min ago`;
+  const h = Math.round(m / 60);
+  if (h < 24) return es ? `hace ${h} h` : `${h} h ago`;
+  const d = Math.round(h / 24);
+  return es ? `hace ${d} ${d === 1 ? 'día' : 'días'}` : `${d} ${d === 1 ? 'day' : 'days'} ago`;
+}
+
+function DraftCard({ d, lang, onContinue, onDelete }) {
+  const x = D[lang] || D.es;
+  const data = d.data || {};
+  const title = `${x.types[data.ptype] || x.property}${data.neighborhood ? ` · ${data.neighborhood}` : ''}`;
+  const miss = draftMissing(data).map((k) => x.miss[k]);
+  return (
+    <div className="bg-card rounded-[18px] border border-dashed border-ink/35 p-4 flex flex-col gap-3" data-testid="draft-card">
+      <div className="flex items-center gap-2">
+        <span className="text-[10px] font-semibold bg-paper border border-ink/25 px-2.5 py-1 rounded-pill">{x.draftChip}</span>
+        {data.mode && <span className="text-[10px] font-semibold bg-ink text-paper px-2.5 py-1 rounded-pill">{data.mode === 'alquiler' ? x.rent : x.sale}</span>}
+        <span className="ml-auto font-mono text-[11px] text-ink/45">{x.saved(ago(d.updated_at, lang))}</span>
+      </div>
+      <div>
+        <div className="text-[16px] font-bold tracking-head line-clamp-1">{title}</div>
+        <div className="text-[12.5px] text-ink/55 line-clamp-1">{[data.addressText, data.city].filter(Boolean).join(' · ')}</div>
+        {miss.length > 0 && <div className="text-[12px] text-ink/60 mt-1.5">{x.missing}: {miss.join(', ')}</div>}
+      </div>
+      <div className="flex gap-2 mt-auto">
+        <button onClick={onContinue} className="flex-[2] py-2 rounded-pill bg-ink text-paper text-[13px] font-bold hover:bg-ink/90">{x.cont}</button>
+        <button onClick={onDelete} className="flex-1 py-2 rounded-pill border-[1.5px] border-red-300 text-red-700 text-[13px] font-semibold">{x.del}</button>
+      </div>
+    </div>
+  );
+}
+
 export default function MyListingsPage() {
   const [lang] = useLang();
   const t = T[lang];
+  const x = D[lang] || D.es;
+  const { openSell } = useSellFlow();
+  const [tab, setTab] = useState('active');           // 'active' | 'drafts'
+  const [drafts, setDrafts] = useState(null);
+  const [confirmDraft, setConfirmDraft] = useState(null);
   const [listings, setListings] = useState(null);
   const [confirmId, setConfirmId] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -24,9 +84,27 @@ export default function MyListingsPage() {
   const [payingId, setPayingId] = useState(null); // id being charged silently on a saved card
   const [autoPay, setAutoPay] = useState(false);  // one-shot: honor a ?pay=&plan= deep link once
 
-  useEffect(() => {
+  const load = () => {
     fetch('/api/account/listings').then((r) => r.json()).then((j) => setListings(j.listings || [])).catch(() => setListings([]));
+    fetch('/api/drafts').then((r) => r.json()).then((j) => setDrafts(j.drafts || [])).catch(() => setDrafts([]));
+  };
+  useEffect(() => {
+    load();
+    try { if (new URLSearchParams(window.location.search).get('tab') === 'borradores') setTab('drafts'); } catch {}
+    // The sell wizard publishes / starts drafts in place — refresh both tabs when it does.
+    window.addEventListener('cl:listings-changed', load);
+    return () => window.removeEventListener('cl:listings-changed', load);
   }, []);
+
+  const delDraft = async () => {
+    const id = confirmDraft;
+    if (!id) return;
+    setBusy(true);
+    try {
+      const r = await fetch(`/api/drafts/${id}`, { method: 'DELETE' });
+      if (r.ok) setDrafts((ds) => ds.filter((d) => d.id !== id));
+    } finally { setBusy(false); setConfirmDraft(null); }
+  };
 
   // Charge a saved card silently (renew / promote / upgrade) — NO modal flash. Only
   // open the modal when there's no saved card, or a 3DS/decline needs finishing.
@@ -82,14 +160,36 @@ export default function MyListingsPage() {
         )}
       </div>
 
-      {listings === null && <CardGridSkeleton n={3} />}
-      {listings !== null && listings.length === 0 && (
+      {/* Tabs: published listings / unfinished drafts */}
+      <div role="tablist" className="inline-flex items-center border-[1.5px] border-ink rounded-pill p-[3px] bg-card mb-6">
+        {[['active', x.tabActive, listings?.length], ['drafts', x.tabDrafts, drafts?.length]].map(([k, label, n]) => (
+          <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={`px-4 py-2 rounded-pill text-[13.5px] font-semibold inline-flex items-center gap-2 ${tab === k ? 'bg-ink text-paper' : 'text-ink/60'}`}>
+            {label}
+            {n != null && <span className={`min-w-[20px] h-5 px-1.5 rounded-pill text-[11px] font-bold inline-flex items-center justify-center ${tab === k ? 'bg-paper text-ink' : 'bg-ink/10 text-ink/70'}`}>{n}</span>}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'drafts' && (
+        drafts === null ? <CardGridSkeleton n={2} /> : drafts.length === 0 ? (
+          <div className="bg-card border border-ink/15 rounded-card p-10 text-center font-mono text-[12px] text-ink/45">{x.emptyDrafts}</div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {drafts.map((d) => (
+              <DraftCard key={d.id} d={d} lang={lang} onContinue={() => openSell({ draft: d })} onDelete={() => setConfirmDraft(d.id)} />
+            ))}
+          </div>
+        )
+      )}
+
+      {tab === 'active' && listings === null && <CardGridSkeleton n={3} />}
+      {tab === 'active' && listings !== null && listings.length === 0 && (
         <div className="bg-card border border-ink/15 rounded-card p-10 text-center">
           <div className="font-mono text-[12px] text-ink/45 mb-4">{t.empty}</div>
           <Link href="/publicar" className="inline-block px-6 py-3 rounded-pill bg-ink text-paper font-semibold text-[14px]">{t.publish}</Link>
         </div>
       )}
-      {listings && listings.length > 0 && (
+      {tab === 'active' && listings && listings.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {listings.map((l) => (
             <ListingCard key={l.id} l={l} action={
@@ -132,6 +232,17 @@ export default function MyListingsPage() {
         busy={busy}
         onConfirm={del}
         onCancel={() => setConfirmId(null)}
+      />
+      <ConfirmModal
+        open={!!confirmDraft}
+        title={x.confirmT}
+        message={x.confirm}
+        confirmLabel={busy ? t.deleting : x.del}
+        cancelLabel={t.cancel}
+        danger
+        busy={busy}
+        onConfirm={delDraft}
+        onCancel={() => setConfirmDraft(null)}
       />
 
       {promo && (

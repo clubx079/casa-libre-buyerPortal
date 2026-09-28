@@ -10,13 +10,16 @@ const T = {
   en: { login: 'Log in', logout: 'Log out', account: 'Dashboard', saved: 'Saved', mine: 'My listings', payments: 'Payments', settings: 'Settings', logoutT: 'Log out', logoutMsg: 'Are you sure you want to log out?', cancel: 'Cancel' },
 };
 
-export default function AuthButton({ variant = 'light' }) {
+// compact: just the round avatar (with the same menu), and nothing at all when signed
+// out — for the tight mobile headers, so a logged-in user always sees they're in.
+export default function AuthButton({ variant = 'light', compact = false }) {
   const { user, loading, openAuth, logout } = useAuth();
   const [lang] = useLang();
   const [menu, setMenu] = useState(false);
   const [showLogout, setShowLogout] = useState(false);
   const t = T[lang];
 
+  if (compact && (loading || !user)) return null;
   if (loading) return <span className="w-[80px] h-[40px] rounded-pill bg-ink/5 animate-pulse" />;
 
   if (!user) {
@@ -30,10 +33,16 @@ export default function AuthButton({ variant = 'light' }) {
   const initials = (user.full_name || user.email || '?').trim().charAt(0).toUpperCase();
   return (
     <div className="relative">
-      <button onClick={() => setMenu((m) => !m)} className="flex items-center h-[40px] gap-2 pl-1 pr-1 sm:pr-3 rounded-pill border border-ink/25 hover:border-ink">
-        <span className="w-7 h-7 rounded-pill bg-ink text-paper flex items-center justify-center text-[13px] font-bold">{initials}</span>
-        <span className="hidden sm:inline text-[13px] font-semibold max-w-[120px] truncate">{user.full_name || user.email}</span>
-      </button>
+      {compact ? (
+        <button onClick={() => setMenu((m) => !m)} aria-label={t.account} data-testid="nav-avatar" className="w-8 h-8 shrink-0 rounded-pill bg-ink text-paper flex items-center justify-center text-[13px] font-bold ring-1 ring-ink/10">
+          {initials}
+        </button>
+      ) : (
+        <button onClick={() => setMenu((m) => !m)} className="flex items-center h-[40px] gap-2 pl-1 pr-1 sm:pr-3 rounded-pill border border-ink/25 hover:border-ink">
+          <span className="w-7 h-7 rounded-pill bg-ink text-paper flex items-center justify-center text-[13px] font-bold">{initials}</span>
+          <span className="hidden sm:inline text-[13px] font-semibold max-w-[120px] truncate">{user.full_name || user.email}</span>
+        </button>
+      )}
       {menu && (
         <>
           <div className="fixed inset-0 z-[1190]" onClick={() => setMenu(false)} />

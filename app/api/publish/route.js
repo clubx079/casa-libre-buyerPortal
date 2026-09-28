@@ -5,6 +5,8 @@
 import { NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { insert, update } from '@/lib/db';
+import * as dbApi from '@/lib/db';
+import { deleteDraft } from '@/lib/drafts';
 import { zoneCanonical, dedupeKey } from '@/lib/dedupe';
 import { put } from '@/lib/b2';
 import { stampLogo } from '@/lib/stampLogo';
@@ -219,6 +221,10 @@ export async function POST(req) {
   }
 
   try { revalidateTag('listings'); } catch {}   // new listing shows on home/marketplace immediately
+
+  // Published from a draft ("Borradores") → the draft is done; remove it (owner-scoped).
+  const draftId = get('draft_id');
+  if (draftId && propertyId) { try { await deleteDraft(dbApi, session.uid, draftId); } catch {} }
 
   // Instant-index via IndexNow: ping Bing (+ participating engines) with the new
   // listing's canonical URL and the pages that list it, so it's crawled in minutes

@@ -6,6 +6,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { useLang } from '@/lib/useLang';
 import ConfirmModal from '@/components/ConfirmModal';
 import { COUNTRY } from '@/lib/country';
+import AuthButton from '@/components/AuthButton';
 
 const NAV = {
   es: [['/cuenta', 'Panel', 'dash'], ['/cuenta/guardadas', 'Guardadas', 'heart'], ['/cuenta/publicaciones', 'Mis publicaciones', 'home'], ['/cuenta/pagos', 'Pagos', 'card'], ['/cuenta/ajustes', 'Ajustes', 'gear']],
@@ -85,8 +86,11 @@ export default function AccountShell({ children }) {
             <span className="text-[18px] font-bold tracking-head">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></span>
           </span>
           <div className="hidden lg:block flex-1" />
-          <div className="flex items-center border border-ink/30 rounded-pill p-[3px] text-[12px] font-semibold">
-            {['es', 'en'].map((l) => <button key={l} onClick={() => setLang(l)} className={`px-3 py-1.5 rounded-pill ${lang === l ? 'bg-ink text-paper' : 'text-ink/55'}`}>{l.toUpperCase()}</button>)}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center border border-ink/30 rounded-pill p-[3px] text-[12px] font-semibold">
+              {['es', 'en'].map((l) => <button key={l} onClick={() => setLang(l)} className={`px-3 py-1.5 rounded-pill ${lang === l ? 'bg-ink text-paper' : 'text-ink/55'}`}>{l.toUpperCase()}</button>)}
+            </div>
+            <span className="lg:hidden"><AuthButton compact /></span>
           </div>
         </div>
         <main className="w-full px-5 md:px-8 py-8">{children}</main>

@@ -13,6 +13,7 @@ import { fmtUsd } from '@/lib/ui';
 import { COUNTRY } from '@/lib/country';
 import VerifiedTag from '@/components/VerifiedTag';
 import AppBadges from '@/components/AppBadges';
+import AuthButton from '@/components/AuthButton';
 
 const H = {
   es: {
@@ -79,15 +80,16 @@ export default function MobileHome({ featured = [], count = 0, tickerData = [] }
       </div>
 
       {/* HEADER */}
-      <div className="flex items-center justify-between px-4 py-3.5">
-        <span className="flex flex-col gap-0.5 leading-none">
-          <span className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></span>
+      <div className="flex items-center justify-between gap-2 px-4 py-3.5">
+        <span className="flex flex-col gap-0.5 leading-none min-w-0">
+          <span className="text-[20px] font-bold tracking-head whitespace-nowrap">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></span>
         </span>
-        <div className="flex items-center gap-2.5">
-          <div className="flex items-center border-[1.5px] border-ink rounded-pill overflow-hidden text-[12px] font-semibold">
-            {['es', 'en'].map((l) => <button key={l} onClick={() => setLang(l)} className={`px-3 py-1.5 ${lang === l ? 'bg-ink text-paper' : 'text-ink'}`}>{l.toUpperCase()}</button>)}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center border-[1.5px] border-ink rounded-pill overflow-hidden text-[11px] font-semibold">
+            {['es', 'en'].map((l) => <button key={l} onClick={() => setLang(l)} className={`px-2.5 py-1.5 ${lang === l ? 'bg-ink text-paper' : 'text-ink'}`}>{l.toUpperCase()}</button>)}
           </div>
-          <button onClick={openSell} className="bg-ink text-paper rounded-pill px-4 py-[9px] text-[13px] font-bold">{t.cta}</button>
+          <button onClick={openSell} className="bg-ink text-paper rounded-pill px-3 py-[8px] text-[12.5px] font-bold whitespace-nowrap">{t.cta}</button>
+          <AuthButton compact />
         </div>
       </div>
 

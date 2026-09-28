@@ -20,7 +20,8 @@ import HighlightModal from '@/components/HighlightModal';
 import RecommendedTag from '@/components/RecommendedTag';
 import PlanBox from '@/components/PlanBox';
 import { VerifiedIcon } from '@/components/VerifiedTag';
-import { savePendingSell } from '@/lib/pendingSell';
+import { savePendingSell, loadPendingSell, clearPendingSell } from '@/lib/pendingSell';
+import { cleanDraftData, draftReady } from '@/lib/drafts';
 import { COUNTRY } from '@/lib/country';
 
 const SellFlowContext = createContext({ openSell: () => {} });
@@ -140,17 +141,42 @@ export default function SellFlowProvider({ children }) {
   const openedLoggedInRef = useRef(false);        // wizard was opened by a signed-in user
   const [fromApp, setFromApp] = useState(false);  // arrived from the mobile app (?app=1)
   const [appReturn, setAppReturn] = useState('');  // the app's own deep-link URL (?ret=…)
-  const [f, setF] = useState({ mode: '', seller_type: '', neighborhood: '', city: '', addressText: '', contact_name: '', email: '', ptype: 'casa', price: '', currency: '', area: '', description: '', contact_phone: '' });
+  const BLANK = { mode: '', seller_type: '', neighborhood: '', city: '', addressText: '', contact_name: '', email: '', ptype: 'casa', price: '', currency: '', area: '', description: '', contact_phone: '' };
+  const [f, setF] = useState(BLANK);
+  // Draft ("Borrador"): created once a signed-in user has picked the address, then
+  // autosaved on every change until the listing is published (the server deletes it).
+  const [draftId, setDraftId] = useState(null);
+  const creatingDraftRef = useRef(false);
 
   const reset = () => {
     setStep(0); setPhase(''); setErr(''); setErrs({}); setBusy(false); setCode(''); setVerified(false); setEmailTaken(false); setLoginPw(''); setPhotos([]); setResult(null); setShowHi(false); setHighlighted(false); setPaying(false); setPlan(null);
-    setF({ mode: '', seller_type: '', neighborhood: '', city: '', addressText: '', contact_name: '', email: '', ptype: 'casa', price: '', currency: '', area: '', description: '', contact_phone: '' });
+    setF(BLANK); setDraftId(null); creatingDraftRef.current = false;
   };
   const close = () => { setOpen(false); reset(); };
 
+  // Straight to the last step with everything we already have — used when resuming
+  // a saved draft and when coming back from Google sign-in.
+  const openAtDetails = (fields, id = null) => {
+    reset();
+    openedLoggedInRef.current = true;
+    setVerified(true);
+    setF({ ...BLANK, ...fields, contact_name: fields.contact_name || user?.full_name || user?.name || '', email: user?.email || '' });
+    if (id) { setDraftId(id); creatingDraftRef.current = true; }
+    setStep(draftReady(fields) ? 3 : 0);
+    setOpen(true);
+  };
+
   // Logged in or not, everyone gets the wizard. When we already know the person we
   // prefill their name/email and skip the email-verification step.
-  const openSell = useCallback(() => {
+  // openSell({ draft }) resumes one of the user's drafts at the details step.
+  // (Also used directly as an onClick handler, so ignore anything that isn't options.)
+  const openSell = useCallback((opts) => {
+    const draft = opts && typeof opts === 'object' && opts.draft ? opts.draft : null;
+    if (draft && user) {
+      openAtDetails(draft.data || {}, draft.id);
+      track('sell_draft_resumed', {});
+      return;
+    }
     reset();
     openedLoggedInRef.current = !!user;
     if (user) {
@@ -164,21 +190,58 @@ export default function SellFlowProvider({ children }) {
 
   // The mobile app opens the site at /?sell=1&app=1 — open the wizard straight away
   // so the person never lands on a page that just talks about listing.
+  // ?sell=resume = back from Google sign-in mid-wizard: reopen it at the details
+  // step with what they had entered (stashed in IndexedDB before the redirect).
   const autoOpenedRef = useRef(false);
   useEffect(() => {
     if (typeof window === 'undefined' || autoOpenedRef.current || authLoading) return;
     const q = new URLSearchParams(window.location.search);
     if (q.get('app') === '1') setFromApp(true);
     if (q.get('ret')) setAppReturn(q.get('ret'));
-    if (q.get('sell') === '1' || q.get('publicar') === '1') {
+    const sell = q.get('sell');
+    if (sell === '1' || sell === 'resume' || q.get('publicar') === '1') {
       autoOpenedRef.current = true;
-      openSell();
       // drop the params so a refresh doesn't reopen the wizard over the listing
       const url = new URL(window.location.href);
       url.searchParams.delete('sell'); url.searchParams.delete('publicar');
       window.history.replaceState({}, '', url.toString());
+      if (sell !== 'resume') { openSell(); return; }
+      (async () => {
+        const pending = await loadPendingSell();
+        await clearPendingSell();
+        if (!user) return;                        // sign-in didn't complete
+        const x = pending?.fields || {};
+        if (pending?.fromApp) setFromApp(true);
+        if (pending?.appReturn) setAppReturn(pending.appReturn);
+        openAtDetails(x, pending?.draftId || null);
+        track('sell_google_resumed', {});
+      })();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openSell, authLoading]);
+
+  // Create the draft as soon as a signed-in user has chosen the address…
+  useEffect(() => {
+    if (!open || !user || result || draftId || creatingDraftRef.current || !draftReady(f)) return;
+    creatingDraftRef.current = true;
+    (async () => {
+      try {
+        const r = await fetch('/api/drafts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: cleanDraftData(f) }) });
+        const j = await r.json().catch(() => ({}));
+        if (j.draft?.id) { setDraftId(j.draft.id); window.dispatchEvent(new Event('cl:listings-changed')); } else creatingDraftRef.current = false;
+      } catch { creatingDraftRef.current = false; }
+    })();
+  }, [open, user, result, draftId, f]);
+
+  // …and keep it in sync while they fill the rest (debounced).
+  const draftJson = JSON.stringify(cleanDraftData(f));
+  useEffect(() => {
+    if (!open || !user || !draftId || result) return undefined;
+    const id = setTimeout(() => {
+      fetch(`/api/drafts/${draftId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: JSON.parse(draftJson) }) }).catch(() => {});
+    }, 700);
+    return () => clearTimeout(id);
+  }, [open, user, draftId, result, draftJson]);
 
   const set = (k, v) => setF((s) => ({ ...s, [k]: v }));
   const setField = (k) => (e) => { const v = e.target.value; setF((s) => ({ ...s, [k]: v })); setErrs((er) => (er[k] ? { ...er, [k]: undefined } : er)); };
@@ -246,10 +309,11 @@ export default function SellFlowProvider({ children }) {
   const googleSignIn = async () => {
     setErr('');
     try {
-      // Stash what the guest collected so /publicar resumes (prefilled) after the
-      // OAuth full-page redirect — instead of dropping the user on the dashboard.
-      await savePendingSell({ fields: { mode: f.mode, seller_type: f.seller_type, contact_name: f.contact_name, email: f.email, neighborhood: f.neighborhood, city: f.city, addressText: f.addressText } });
-      const r = await fetch('/api/auth/google', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ next: '/publicar' }) });
+      // Stash what the guest entered, then come back to THIS page with ?sell=resume:
+      // the wizard reopens at the details step, signed in — same as the password path.
+      await savePendingSell({ fields: { mode: f.mode, seller_type: f.seller_type, contact_name: f.contact_name, neighborhood: f.neighborhood, city: f.city, addressText: f.addressText }, fromApp, appReturn });
+      const here = /^\/[A-Za-z0-9/_-]*$/.test(window.location.pathname) ? window.location.pathname : '/';
+      const r = await fetch('/api/auth/google', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ next: `${here}?sell=resume` }) });
       const j = await r.json().catch(() => ({}));
       if (j.url) window.location.href = j.url; else setErr(t.errGeneric);
     } catch { setErr(t.errGeneric); }
@@ -314,9 +378,12 @@ export default function SellFlowProvider({ children }) {
       fd.set('price', f.price); fd.set('currency', priceCurrency); fd.set('area', f.area); fd.set('description', f.description);
       fd.set('contact_name', f.contact_name); fd.set('contact_phone', f.contact_phone); fd.set('seller_type', f.seller_type);
       photos.forEach((p) => fd.append('photos', p.file));
+      if (draftId) fd.set('draft_id', draftId);   // the server removes the draft once published
       const res = await fetch('/api/publish', { method: 'POST', body: fd });
       const j = await res.json().catch(() => ({}));
       if (!res.ok || !j.ok) throw new Error(j.error || 'failed');
+      setDraftId(null);
+      window.dispatchEvent(new Event('cl:listings-changed'));   // My listings refreshes its tabs
       track('listing_created', { property_id: j.id, slug: j.slug, ref: j.ref, operation: f.mode, property_type: f.ptype, city: f.city, neighborhood: f.neighborhood, price: f.price ? Number(f.price) : null, currency: priceCurrency, photos: photos.length });
       setResult({ id: j.id, ref: j.ref });
       if (openHighlightAfter) await payWithPlan(openHighlightAfter, j.id);

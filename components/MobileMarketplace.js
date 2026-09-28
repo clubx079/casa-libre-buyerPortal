@@ -17,6 +17,7 @@ import { CATEGORIES } from '@/lib/zoning/categories';
 import ZoningMapToggle, { useZoningOverlay } from '@/components/ZoningMapToggle';
 import VerifiedTag from '@/components/VerifiedTag';
 import AppBadges from '@/components/AppBadges';
+import AuthButton from '@/components/AuthButton';
 
 const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const PER_PAGE = 24;
@@ -376,15 +377,16 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[600] max-w-[90%] px-4 py-2.5 rounded-pill bg-ink text-paper text-[13px] font-medium shadow-hard text-center">{geoMsg}</div>
       )}
       {/* HEADER */}
-      <div className="flex items-center justify-between px-4 py-2.5">
-        <div className="flex flex-col gap-0.5 leading-none">
-          <Link href="/" className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></Link>
+      <div className="flex items-center justify-between gap-2 px-4 py-2.5">
+        <div className="flex flex-col gap-0.5 leading-none min-w-0">
+          <Link href="/" className="text-[20px] font-bold tracking-head whitespace-nowrap">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></Link>
         </div>
-        <div className="flex items-center gap-2.5">
-          <div className="flex items-center border-[1.5px] border-ink rounded-pill overflow-hidden text-[12px] font-semibold">
-            {['es', 'en'].map((l) => <button key={l} onClick={() => setLang(l)} className={`px-3 py-1.5 ${lang === l ? 'bg-ink text-paper' : 'text-ink'}`}>{l.toUpperCase()}</button>)}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center border-[1.5px] border-ink rounded-pill overflow-hidden text-[11px] font-semibold">
+            {['es', 'en'].map((l) => <button key={l} onClick={() => setLang(l)} className={`px-2.5 py-1.5 ${lang === l ? 'bg-ink text-paper' : 'text-ink'}`}>{l.toUpperCase()}</button>)}
           </div>
-          <button onClick={openSell} className="bg-ink text-paper rounded-pill px-4 py-[9px] text-[13px] font-bold">{X.cta}</button>
+          <button onClick={openSell} className="bg-ink text-paper rounded-pill px-3 py-[8px] text-[12.5px] font-bold whitespace-nowrap">{X.cta}</button>
+          <AuthButton compact />
         </div>
       </div>
 

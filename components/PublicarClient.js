@@ -126,6 +126,8 @@ export default function PublicarClient() {
   useEffect(() => {
     if (!user || prefilled.current) return;
     prefilled.current = true;
+    // Back from Google mid-wizard: the sell wizard itself resumes (SellFlow) — leave the stash to it.
+    if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('sell') === 'resume') return;
     (async () => {
       const payload = await loadPendingSell();
       const x = payload?.fields;

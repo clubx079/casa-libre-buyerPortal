@@ -1,6 +1,7 @@
 // POST /api/auth/google -> returns the Google OAuth consent URL to redirect to.
 // Mirrors the DeelMap buyer portal flow. Requires GOOGLE_CLIENT_ID.
 import { NextResponse } from 'next/server';
+import { safeReturnPath } from '@/lib/returnPath';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -30,8 +31,8 @@ export async function POST(req) {
   // /publicar to finish a listing), not /cuenta.
   if (typeof mobileRedirect === 'string' && /^(casalibre:\/\/|exp(\+[a-z0-9-]+)?:\/\/)/i.test(mobileRedirect)) {
     url.searchParams.set('state', 'm|' + encodeURIComponent(mobileRedirect));
-  } else if (typeof next === 'string' && /^\/[A-Za-z0-9/_-]*$/.test(next)) {
-    url.searchParams.set('state', next);
+  } else if (safeReturnPath(next)) {
+    url.searchParams.set('state', safeReturnPath(next));
   }
   return NextResponse.json({ url: url.toString() });
 }

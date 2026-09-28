@@ -8,6 +8,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
 import { COUNTRY } from '@/lib/country';
+import AuthButton from '@/components/AuthButton';
 
 // Placeholder test number until the real business WhatsApp line is set — the
 // previous placeholder (595981000000) was a real person's number, so this is a
@@ -184,22 +185,23 @@ export default function EmpresasClient() {
   return (
     <div className="bg-paper text-ink min-h-screen">
       {/* NAV */}
-      <nav className="flex items-center justify-between flex-wrap gap-3 px-5 md:px-9 py-4 border-b border-ink/12">
-        <div className="flex flex-col gap-0.5 leading-none">
-          <Link href="/" className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></Link>
+      <nav className="flex items-center justify-between flex-nowrap md:flex-wrap gap-2 md:gap-3 px-4 md:px-9 py-4 border-b border-ink/12">
+        <div className="flex flex-col gap-0.5 leading-none min-w-0">
+          <Link href="/" className="text-[20px] md:text-[22px] font-bold tracking-head whitespace-nowrap">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></Link>
         </div>
         <div className="hidden md:flex gap-2">
           {t.tabs.map(([label, href]) => (
             <Link key={label} href={href} className="inline-flex items-center h-[40px] px-[18px] rounded-pill text-[14px] font-medium border border-ink">{label}</Link>
           ))}
         </div>
-        <div className="flex items-center gap-3.5">
-          <div className="flex items-center h-[40px] border border-ink/30 rounded-pill p-[3px] text-[12px] font-semibold">
+        <div className="flex items-center gap-1.5 md:gap-3.5 shrink-0">
+          <div className="flex items-center h-9 md:h-[40px] border border-ink/30 rounded-pill p-[3px] text-[11px] md:text-[12px] font-semibold">
             {['es', 'en'].map((x) => (
-              <button key={x} onClick={() => setLang(x)} className={`h-full flex items-center px-3 rounded-pill ${lang === x ? 'bg-ink text-paper' : 'text-ink/55'}`}>{x.toUpperCase()}</button>
+              <button key={x} onClick={() => setLang(x)} className={`h-full flex items-center px-2.5 md:px-3 rounded-pill ${lang === x ? 'bg-ink text-paper' : 'text-ink/55'}`}>{x.toUpperCase()}</button>
             ))}
           </div>
-          <Link href="/publicar" className="inline-flex items-center h-[40px] px-[22px] rounded-pill text-[14px] font-medium bg-ink text-paper">{t.cta}</Link>
+          <Link href="/publicar" className="inline-flex items-center h-9 md:h-[40px] px-3 md:px-[22px] rounded-pill text-[12.5px] md:text-[14px] font-medium bg-ink text-paper whitespace-nowrap">{t.cta}</Link>
+          <AuthButton compact />
         </div>
       </nav>
 
