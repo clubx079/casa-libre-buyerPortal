@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
 import ListingCard from '@/components/account/ListingCard';
@@ -95,6 +95,19 @@ export default function MyListingsPage() {
     window.addEventListener('cl:listings-changed', load);
     return () => window.removeEventListener('cl:listings-changed', load);
   }, []);
+
+  // Deep link from the mobile app's "Continuar": /cuenta/publicaciones?tab=borradores&draft=<id>
+  // → open that draft in the sell wizard as soon as the drafts have loaded (once).
+  const draftOpened = useRef(false);
+  useEffect(() => {
+    if (draftOpened.current || !drafts) return;
+    let id = null;
+    try { id = new URLSearchParams(window.location.search).get('draft'); } catch {}
+    const d = id && drafts.find((x) => x.id === id);
+    if (!d) return;
+    draftOpened.current = true;
+    openSell({ draft: d });
+  }, [drafts, openSell]);
 
   const delDraft = async () => {
     const id = confirmDraft;
