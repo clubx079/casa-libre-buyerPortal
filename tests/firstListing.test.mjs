@@ -174,3 +174,43 @@ test('emailOverride redirects every automated email', async () => {
   await s.run(T0 + 3 * DAY, { emailOverride: 'omar@airosofts.com' });
   assert.equal(s.sent[0].to, 'omar@airosofts.com');
 });
+
+// ── Roland's tiers (migration 009): first N sellers ever get free_days, later ones later_free_days ──
+test('tiers: the first N sellers get 30 days, the next one gets 7', async () => {
+  const { db, run, grants, sent } = setup();
+  await db.update('automations', `id=eq.${AUTOMATION_ID}`, { first_tier_count: 2, later_free_days: 7, remind_days_before: 1 });
+  db.seed('users', [{ id: 'u3', email: 'cy@x.com', full_name: 'Cy' }]);
+  // an early seller from before the switch-on still counts as place #1
+  db.seed('properties', [
+    listing('p0', 'early', T0 - 20 * DAY),
+    listing('p1', 'u1', T0 + 1 * DAY),
+    listing('p2', 'u2', T0 + 2 * DAY),
+  ]);
+  await run(T0 + 6 * DAY);
+  assert.deepEqual(grants, [['p1', 30], ['p2', 7]]);          // u1 = #2 (≤2) → 30, u2 = #3 → 7
+  assert.equal(sent.length, 2);
+});
+
+test('tiers: the reminder goes 1 day before a 7-day gift ends (day 6), once', async () => {
+  const { db, run, sent } = setup();
+  await db.update('automations', `id=eq.${AUTOMATION_ID}`, { first_tier_count: 0, later_free_days: 7, remind_days_before: 1 });
+  db.seed('properties', [listing('p1', 'u1', T0 + DAY)]);
+  await run(T0 + 3 * DAY);                                    // gift (wait 2 days) → 7 days, until T0+10d
+  assert.equal(sent.length, 1);
+  assert.match(sent[0].html, /Regalo|regalo/);
+  await run(T0 + 8 * DAY);                                    // 2 days left: no reminder yet
+  assert.equal(sent.length, 1);
+  await run(T0 + 9 * DAY + 3600000);                          // last day → reminder
+  assert.equal(sent.length, 2);
+  assert.match(sent[1].subject, /Termina/);
+  await run(T0 + 9 * DAY + 7200000);                          // later ticks: never again
+  await run(T0 + 9 * DAY + 10800000);
+  assert.equal(sent.length, 2);
+});
+
+test('tiers: without the 009 columns everyone keeps free_days (unchanged behaviour)', async () => {
+  const { db, run, grants } = setup();
+  db.seed('properties', [listing('p1', 'u1', T0 + DAY), listing('p2', 'u2', T0 + DAY + 1000)]);
+  await run(T0 + 4 * DAY);
+  assert.deepEqual(grants, [['p1', 30], ['p2', 30]]);
+});
