@@ -80,15 +80,15 @@ export default function MobileHome({ featured = [], count = 0, tickerData = [] }
       </div>
 
       {/* HEADER */}
-      <div className="flex items-center justify-between gap-2 px-4 py-3.5">
-        <span className="flex flex-col gap-0.5 leading-none min-w-0">
-          <span className="text-[20px] font-bold tracking-head whitespace-nowrap">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></span>
+      <div className="flex items-center justify-between gap-2 px-3 min-[400px]:px-4 py-3.5">
+        <span className="flex flex-col gap-0.5 leading-none shrink-0">
+          <span className="text-[17px] min-[400px]:text-[20px] font-bold tracking-head whitespace-nowrap">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></span>
         </span>
-        <div className="flex items-center gap-1.5 shrink-0">
-          <div className="flex items-center border-[1.5px] border-ink rounded-pill overflow-hidden text-[11px] font-semibold">
-            {['es', 'en'].map((l) => <button key={l} onClick={() => setLang(l)} className={`px-2.5 py-1.5 ${lang === l ? 'bg-ink text-paper' : 'text-ink'}`}>{l.toUpperCase()}</button>)}
+        <div className="flex items-center gap-1 min-[400px]:gap-1.5 shrink-0">
+          <div className="flex items-center border-[1.5px] border-ink rounded-pill overflow-hidden text-[10px] min-[400px]:text-[11px] font-semibold">
+            {['es', 'en'].map((l) => <button key={l} onClick={() => setLang(l)} className={`px-2 min-[400px]:px-2.5 py-1.5 ${lang === l ? 'bg-ink text-paper' : 'text-ink'}`}>{l.toUpperCase()}</button>)}
           </div>
-          <button onClick={openSell} className="bg-ink text-paper rounded-pill px-3 py-[8px] text-[12.5px] font-bold whitespace-nowrap"><span className="hidden min-[360px]:inline">{t.cta}</span><span className="min-[360px]:hidden">{lang === 'en' ? 'List' : 'Publicar'}</span></button>
+          <button onClick={openSell} className="bg-ink text-paper rounded-pill px-2.5 min-[400px]:px-3 py-[8px] text-[11.5px] min-[400px]:text-[12.5px] font-bold whitespace-nowrap">{t.cta}</button>
           <AuthButton compact />
         </div>
       </div>

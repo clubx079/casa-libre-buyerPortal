@@ -11,12 +11,8 @@ const T = {
 };
 
 // compact: for the tight mobile headers. Signed in → the round avatar (same menu).
-// Signed out → a login button the same size (person icon), which grows into an
-// "Ingresar" pill once there's room (≥420px). A same-size placeholder holds the
-// slot while the session loads, so the header never jumps.
-const PersonIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" /></svg>
-);
+// Signed out → a small "Ingresar" / "Log in" pill. A placeholder holds the slot
+// while the session loads, so the header never jumps.
 
 export default function AuthButton({ variant = 'light', compact = false }) {
   const { user, loading, openAuth, logout } = useAuth();
@@ -28,9 +24,9 @@ export default function AuthButton({ variant = 'light', compact = false }) {
   if (compact && loading) return <span className="w-8 h-8 shrink-0 rounded-pill bg-ink/5" aria-hidden="true" />;
   if (compact && !user) {
     return (
-      <button onClick={() => openAuth()} aria-label={t.login} data-testid="nav-login"
-        className="h-8 w-8 min-[420px]:w-auto min-[420px]:px-3 shrink-0 rounded-pill border-[1.5px] border-ink text-ink flex items-center justify-center gap-1.5 text-[12.5px] font-semibold">
-        <PersonIcon /><span className="hidden min-[420px]:inline">{t.login}</span>
+      <button onClick={() => openAuth()} data-testid="nav-login"
+        className="h-8 px-2.5 min-[400px]:px-3 shrink-0 rounded-pill border-[1.5px] border-ink text-ink flex items-center justify-center text-[11.5px] min-[400px]:text-[12.5px] font-semibold whitespace-nowrap">
+        {t.login}
       </button>
     );
   }

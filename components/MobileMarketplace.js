@@ -377,15 +377,15 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[600] max-w-[90%] px-4 py-2.5 rounded-pill bg-ink text-paper text-[13px] font-medium shadow-hard text-center">{geoMsg}</div>
       )}
       {/* HEADER */}
-      <div className="flex items-center justify-between gap-2 px-4 py-2.5">
-        <div className="flex flex-col gap-0.5 leading-none min-w-0">
-          <Link href="/" className="text-[20px] font-bold tracking-head whitespace-nowrap">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></Link>
+      <div className="flex items-center justify-between gap-2 px-3 min-[400px]:px-4 py-2.5">
+        <div className="flex flex-col gap-0.5 leading-none shrink-0">
+          <Link href="/" className="text-[17px] min-[400px]:text-[20px] font-bold tracking-head whitespace-nowrap">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></Link>
         </div>
-        <div className="flex items-center gap-1.5 shrink-0">
-          <div className="flex items-center border-[1.5px] border-ink rounded-pill overflow-hidden text-[11px] font-semibold">
-            {['es', 'en'].map((l) => <button key={l} onClick={() => setLang(l)} className={`px-2.5 py-1.5 ${lang === l ? 'bg-ink text-paper' : 'text-ink'}`}>{l.toUpperCase()}</button>)}
+        <div className="flex items-center gap-1 min-[400px]:gap-1.5 shrink-0">
+          <div className="flex items-center border-[1.5px] border-ink rounded-pill overflow-hidden text-[10px] min-[400px]:text-[11px] font-semibold">
+            {['es', 'en'].map((l) => <button key={l} onClick={() => setLang(l)} className={`px-2 min-[400px]:px-2.5 py-1.5 ${lang === l ? 'bg-ink text-paper' : 'text-ink'}`}>{l.toUpperCase()}</button>)}
           </div>
-          <button onClick={openSell} className="bg-ink text-paper rounded-pill px-3 py-[8px] text-[12.5px] font-bold whitespace-nowrap"><span className="hidden min-[360px]:inline">{X.cta}</span><span className="min-[360px]:hidden">{lang === 'en' ? 'List' : 'Publicar'}</span></button>
+          <button onClick={openSell} className="bg-ink text-paper rounded-pill px-2.5 min-[400px]:px-3 py-[8px] text-[11.5px] min-[400px]:text-[12.5px] font-bold whitespace-nowrap">{X.cta}</button>
           <AuthButton compact />
         </div>
       </div>

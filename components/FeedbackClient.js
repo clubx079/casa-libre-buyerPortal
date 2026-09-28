@@ -96,17 +96,17 @@ export default function FeedbackClient() {
 
   return (
     <div className="bg-paper text-ink min-h-screen">
-      <nav className="flex items-center justify-between flex-nowrap gap-2 md:gap-3 px-4 md:px-9 py-4 border-b border-ink/12">
-        <div className="flex flex-col gap-0.5 leading-none min-w-0">
-          <Link href="/" className="text-[20px] md:text-[22px] font-bold tracking-head whitespace-nowrap">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></Link>
+      <nav className="flex items-center justify-between flex-nowrap gap-2 md:gap-3 px-3 min-[400px]:px-4 md:px-9 py-4 border-b border-ink/12">
+        <div className="flex flex-col gap-0.5 leading-none shrink-0">
+          <Link href="/" className="text-[17px] min-[400px]:text-[20px] md:text-[22px] font-bold tracking-head whitespace-nowrap">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></Link>
         </div>
-        <div className="flex items-center gap-1.5 md:gap-3.5 shrink-0">
-          <div className="flex items-center h-9 md:h-[40px] border border-ink/30 rounded-pill p-[3px] text-[11px] md:text-[12px] font-semibold">
+        <div className="flex items-center gap-1 min-[400px]:gap-1.5 md:gap-3.5 shrink-0">
+          <div className="flex items-center h-8 min-[400px]:h-9 md:h-[40px] border border-ink/30 rounded-pill p-[2px] min-[400px]:p-[3px] text-[10px] min-[400px]:text-[11px] md:text-[12px] font-semibold">
             {['es', 'en'].map((x) => (
-              <button key={x} onClick={() => setLang(x)} className={`h-full flex items-center px-2.5 md:px-3 rounded-pill ${lang === x ? 'bg-ink text-paper' : 'text-ink/55'}`}>{x.toUpperCase()}</button>
+              <button key={x} onClick={() => setLang(x)} className={`h-full flex items-center px-2 min-[400px]:px-2.5 md:px-3 rounded-pill ${lang === x ? 'bg-ink text-paper' : 'text-ink/55'}`}>{x.toUpperCase()}</button>
             ))}
           </div>
-          <Link href="/publicar" className="inline-flex items-center h-9 md:h-[40px] px-3 md:px-[22px] rounded-pill text-[12.5px] md:text-[14px] font-medium bg-ink text-paper whitespace-nowrap"><span className="hidden min-[360px]:inline">{t.cta}</span><span className="min-[360px]:hidden">{lang === 'en' ? 'List' : 'Publicar'}</span></Link>
+          <Link href="/publicar" className="inline-flex items-center h-8 min-[400px]:h-9 md:h-[40px] px-2.5 min-[400px]:px-3 md:px-[22px] rounded-pill text-[11.5px] min-[400px]:text-[12.5px] md:text-[14px] font-medium bg-ink text-paper whitespace-nowrap">{t.cta}</Link>
           <AuthButton compact />
         </div>
       </nav>
