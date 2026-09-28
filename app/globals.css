@@ -15,6 +15,10 @@ a { color: inherit; text-decoration: none; }
 
 /* landing ticker marquee */
 @keyframes cl-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+/* Zoning layer loading: an indeterminate stripe sliding across the legend's top edge */
+@keyframes cl-zload { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+.cl-zload { animation: cl-zload 1.1s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .cl-zload { animation: none; transform: none; width: 100% !important; opacity: .5; } }
 .cl-marquee { display: inline-flex; animation: cl-marquee 45s linear infinite; }
 
 /* map marker pill (Google Advanced Markers anchor bottom-center → translateY(50%) centres it on the point) */
