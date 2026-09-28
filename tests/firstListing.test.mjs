@@ -214,3 +214,28 @@ test('tiers: without the 009 columns everyone keeps free_days (unchanged behavio
   await run(T0 + 4 * DAY);
   assert.deepEqual(grants, [['p1', 30], ['p2', 30]]);
 });
+
+// ── Tier LIST (migration 010): any number of tiers, then later_free_days ──
+import { freeDaysFor, tiersOf } from '../lib/automations/firstListing.js';
+
+test('tier list: #1–30 → 30, next 20 → 20, next 10 → 10, then 7', () => {
+  const a = { free_days: 30, later_free_days: 7, free_tiers: [{ sellers: 30, days: 30 }, { sellers: 20, days: 20 }, { sellers: 10, days: 10 }] };
+  assert.deepEqual([1, 30, 31, 50, 51, 60, 61, 500].map((p) => freeDaysFor(a, p)), [30, 30, 20, 20, 10, 10, 7, 7]);
+});
+
+test('tier list falls back to the single 009 tier, then to no tiers', () => {
+  assert.deepEqual(tiersOf({ first_tier_count: 25, free_days: 30 }), [{ sellers: 25, days: 30 }]);
+  assert.equal(freeDaysFor({ first_tier_count: 25, free_days: 30, later_free_days: 7 }, 26), 7);
+  assert.equal(freeDaysFor({ free_days: 30 }, 999), 30);
+  assert.equal(freeDaysFor({ free_days: 30, later_free_days: 7, free_tiers: [] , first_tier_count: 2 }, 3), 7);
+  assert.deepEqual(tiersOf({ free_tiers: [{ sellers: 'x', days: 5 }, { sellers: 5, days: 9 }] }), [{ sellers: 5, days: 9 }]);   // junk rows ignored
+});
+
+test('tier list end to end: 3rd seller lands in the 2nd tier', async () => {
+  const { db, run, grants } = setup();
+  await db.update('automations', `id=eq.${AUTOMATION_ID}`, { later_free_days: 3, free_tiers: [{ sellers: 1, days: 30 }, { sellers: 1, days: 20 }] });
+  db.seed('users', [{ id: 'u3', email: 'cy@x.com', full_name: 'Cy' }]);
+  db.seed('properties', [listing('p1', 'u1', T0 + DAY), listing('p2', 'u2', T0 + DAY + 1000), listing('p3', 'u3', T0 + DAY + 2000)]);
+  await run(T0 + 4 * DAY);
+  assert.deepEqual(grants, [['p1', 30], ['p2', 20], ['p3', 3]]);
+});
