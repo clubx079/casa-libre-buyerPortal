@@ -10,8 +10,14 @@ const T = {
   en: { login: 'Log in', logout: 'Log out', account: 'Dashboard', saved: 'Saved', mine: 'My listings', payments: 'Payments', settings: 'Settings', logoutT: 'Log out', logoutMsg: 'Are you sure you want to log out?', cancel: 'Cancel' },
 };
 
-// compact: just the round avatar (with the same menu), and nothing at all when signed
-// out — for the tight mobile headers, so a logged-in user always sees they're in.
+// compact: for the tight mobile headers. Signed in → the round avatar (same menu).
+// Signed out → a login button the same size (person icon), which grows into an
+// "Ingresar" pill once there's room (≥420px). A same-size placeholder holds the
+// slot while the session loads, so the header never jumps.
+const PersonIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" /></svg>
+);
+
 export default function AuthButton({ variant = 'light', compact = false }) {
   const { user, loading, openAuth, logout } = useAuth();
   const [lang] = useLang();
@@ -19,7 +25,15 @@ export default function AuthButton({ variant = 'light', compact = false }) {
   const [showLogout, setShowLogout] = useState(false);
   const t = T[lang];
 
-  if (compact && (loading || !user)) return null;
+  if (compact && loading) return <span className="w-8 h-8 shrink-0 rounded-pill bg-ink/5" aria-hidden="true" />;
+  if (compact && !user) {
+    return (
+      <button onClick={() => openAuth()} aria-label={t.login} data-testid="nav-login"
+        className="h-8 w-8 min-[420px]:w-auto min-[420px]:px-3 shrink-0 rounded-pill border-[1.5px] border-ink text-ink flex items-center justify-center gap-1.5 text-[12.5px] font-semibold">
+        <PersonIcon /><span className="hidden min-[420px]:inline">{t.login}</span>
+      </button>
+    );
+  }
   if (loading) return <span className="w-[80px] h-[40px] rounded-pill bg-ink/5 animate-pulse" />;
 
   if (!user) {

@@ -106,7 +106,7 @@ export default function FeedbackClient() {
               <button key={x} onClick={() => setLang(x)} className={`h-full flex items-center px-2.5 md:px-3 rounded-pill ${lang === x ? 'bg-ink text-paper' : 'text-ink/55'}`}>{x.toUpperCase()}</button>
             ))}
           </div>
-          <Link href="/publicar" className="inline-flex items-center h-9 md:h-[40px] px-3 md:px-[22px] rounded-pill text-[12.5px] md:text-[14px] font-medium bg-ink text-paper whitespace-nowrap">{t.cta}</Link>
+          <Link href="/publicar" className="inline-flex items-center h-9 md:h-[40px] px-3 md:px-[22px] rounded-pill text-[12.5px] md:text-[14px] font-medium bg-ink text-paper whitespace-nowrap"><span className="hidden min-[360px]:inline">{t.cta}</span><span className="min-[360px]:hidden">{lang === 'en' ? 'List' : 'Publicar'}</span></Link>
           <AuthButton compact />
         </div>
       </nav>

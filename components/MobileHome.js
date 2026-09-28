@@ -88,7 +88,7 @@ export default function MobileHome({ featured = [], count = 0, tickerData = [] }
           <div className="flex items-center border-[1.5px] border-ink rounded-pill overflow-hidden text-[11px] font-semibold">
             {['es', 'en'].map((l) => <button key={l} onClick={() => setLang(l)} className={`px-2.5 py-1.5 ${lang === l ? 'bg-ink text-paper' : 'text-ink'}`}>{l.toUpperCase()}</button>)}
           </div>
-          <button onClick={openSell} className="bg-ink text-paper rounded-pill px-3 py-[8px] text-[12.5px] font-bold whitespace-nowrap">{t.cta}</button>
+          <button onClick={openSell} className="bg-ink text-paper rounded-pill px-3 py-[8px] text-[12.5px] font-bold whitespace-nowrap"><span className="hidden min-[360px]:inline">{t.cta}</span><span className="min-[360px]:hidden">{lang === 'en' ? 'List' : 'Publicar'}</span></button>
           <AuthButton compact />
         </div>
       </div>
