@@ -32,8 +32,8 @@ export function useZoningOverlay(mapRef, on, height = 'all') {
 }
 
 const TXT = {
-  es: { btn: 'Zonificación', loading: 'Cargando zonificación…', title: 'Altura permitida · Asunción', rows: { baja: 'Baja · hasta 4 pisos', media: 'Media · 5–6 pisos', alta: 'Alta · 7+ pisos' } },
-  en: { btn: 'Zoning', loading: 'Loading zoning…', title: 'Allowed height · Asunción', rows: { baja: 'Low · up to 4 floors', media: 'Mid · 5–6 floors', alta: 'High · 7+ floors' } },
+  es: { btn: 'Zonificación', title: 'Altura permitida · Asunción', rows: { baja: 'Baja · hasta 4 pisos', media: 'Media · 5–6 pisos', alta: 'Alta · 7+ pisos' } },
+  en: { btn: 'Zoning', title: 'Allowed height · Asunción', rows: { baja: 'Low · up to 4 floors', media: 'Mid · 5–6 floors', alta: 'High · 7+ floors' } },
 };
 
 const Check = () => (
@@ -43,7 +43,7 @@ const Layers = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true"><path d="M12 3 2 8.5 12 14l10-5.5L12 3Z" /><path d="m2 15.5 10 5.5 10-5.5" /></svg>
 );
 const Spinner = () => (
-  <span className="w-[15px] h-[15px] rounded-full border-[2.5px] border-current/30 border-t-current animate-spin" aria-hidden="true" data-testid="zoning-spinner" />
+  <span className="w-[13px] h-[13px] rounded-full border-2 border-current/30 border-t-current animate-spin" aria-hidden="true" data-testid="zoning-spinner" />
 );
 
 export default function ZoningMapToggle({ on, onToggle, height = 'all', loading = false, lang = 'es', className = '' }) {
@@ -55,17 +55,12 @@ export default function ZoningMapToggle({ on, onToggle, height = 'all', loading 
         type="button" onClick={onToggle} aria-pressed={on} aria-busy={on && loading}
         className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-pill text-[12.5px] font-semibold shadow-[0_1px_4px_rgba(0,0,0,0.3)] active:translate-y-px transition-colors ${on ? 'bg-ink text-paper ring-2 ring-paper' : 'bg-white text-ink'}`}
       >
-        {on ? (loading ? <Spinner /> : <Check />) : <Layers />}{on && loading ? t.loading : t.btn}
+        {on ? (loading ? <Spinner /> : <Check />) : <Layers />}{t.btn}
       </button>
       {on && (
-        <div className="relative overflow-hidden w-[176px] md:w-[210px] bg-paper/95 rounded-[12px] border border-ink/15 shadow-[0_2px_10px_rgba(0,0,0,0.15)] px-2.5 py-2 md:p-3" aria-busy={loading}>
-          {loading && (
-            <div className="absolute left-0 right-0 top-0 h-[3px] bg-ink/10" aria-hidden="true">
-              <div className="cl-zload h-full w-2/5 bg-ink rounded-full" />
-            </div>
-          )}
+        <div className="w-[176px] md:w-[210px] bg-paper/95 rounded-[12px] border border-ink/15 shadow-[0_2px_10px_rgba(0,0,0,0.15)] px-2.5 py-2 md:p-3">
           <div className="text-[10.5px] md:text-[12px] font-bold text-ink mb-1">{t.title}</div>
-          <ul className={`flex flex-col gap-0.5 md:gap-1 transition-opacity ${loading ? 'opacity-50' : 'opacity-100'}`}>
+          <ul className="flex flex-col gap-0.5 md:gap-1">
             {shown.map((c) => (
               <li key={c} className="flex items-center gap-1.5 md:gap-2 text-[10.5px] md:text-[11.5px] text-ink/80">
                 <span className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-[3px] flex-none" style={{ background: ZONE_COLORS[c], opacity: 0.85 }} />{t.rows[c]}
