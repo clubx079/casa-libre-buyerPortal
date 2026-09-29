@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 process.env.NEXT_PUBLIC_GTM_ID = 'GTM-TEST123';
-const { normalizeMode, dataLayerEvent, pushDataLayer, DATALAYER_PARAMS } = await import('../lib/dataLayer.js');
+const { normalizeMode, dataLayerEvent, pushDataLayer, isOwnerEvent, DATALAYER_PARAMS } = await import('../lib/dataLayer.js');
 const { consumeSignupSignal, SIGNUP_COOKIE } = await import('../lib/signupSignal.js');
 
 test('mode maps venta/alquiler to sale/rent', () => {
@@ -15,25 +15,34 @@ test('mode maps venta/alquiler to sale/rent', () => {
   assert.equal(normalizeMode(undefined), undefined);
 });
 
-test('property_viewed keeps allowed params and drops address / lat / lng', () => {
+test('property_viewed matches the agency table and drops address / lat / lng', () => {
   const e = dataLayerEvent('property_viewed', {
     property_id: 'abc', slug: 'abc', address: 'Av. España 1234', city: 'Asunción',
     neighborhood: 'Villa Morra', state: 'Central', price: 150000, currency: 'USD',
     mode: 'venta', type: 'casa', lat: -25.28, lng: -57.6,
-  });
+  }, 'py');
   assert.equal(e.event, 'property_viewed');
   assert.equal(e.mode, 'sale');
   assert.equal(e.property_id, 'abc');
+  assert.equal(e.property_type, 'casa');
   assert.equal(e.city, 'Asunción');
   assert.equal(e.price, 150000);
-  for (const k of ['address', 'lat', 'lng', 'slug']) assert.equal(k in e, false, k);
+  assert.equal(e.site_country, 'py');
+  for (const k of ['address', 'lat', 'lng', 'slug', 'state', 'type']) assert.equal(k in e, false, k);
+});
+
+test('contact events carry listing_ref (from ref)', () => {
+  const e = dataLayerEvent('contact_call_click', { ref: 'CL-123', property_id: 'p', mode: 'alquiler' }, 'py');
+  assert.equal(e.listing_ref, 'CL-123');
+  assert.equal(e.mode, 'rent');
+  assert.equal('ref' in e, false);
 });
 
 test('personal data never reaches the dataLayer', () => {
   const e = dataLayerEvent('contact_whatsapp_click', {
     property_id: 'p1', mode: 'alquiler', email: 'a@b.com', phone: '+595981000000', name: 'Ana',
     full_name: 'Ana Pérez', seller_name: 'Juan', seller_phone: '595981', query: 'mi tel 0981', location_name: 'Calle 1',
-  });
+  }, 'py');
   assert.equal(e.mode, 'rent');
   assert.equal(e.property_id, 'p1');
   const json = JSON.stringify(e);
@@ -42,8 +51,9 @@ test('personal data never reaches the dataLayer', () => {
 });
 
 test('every allowed key is present so values from earlier events do not linger', () => {
-  const e = dataLayerEvent('user_signed_up', { method: 'google' });
+  const e = dataLayerEvent('user_signed_up', { method: 'google' }, 'py');
   assert.equal(e.method, 'google');
+  assert.equal(e.site_country, 'py');
   assert.ok('property_id' in e && e.property_id === undefined);
   assert.ok('mode' in e && e.mode === undefined);
 });
@@ -53,12 +63,19 @@ test('search_applied derives mode from the operation filter', () => {
   assert.equal(dataLayerEvent('search_applied', { operation: 'all' }).mode, undefined);
 });
 
-test('pushDataLayer appends to window.dataLayer', () => {
-  globalThis.window = {};
+test('owner-side events are not pushed', () => {
+  for (const ev of ['listing_created', 'sell_wizard_opened', 'sell_otp_sent', 'sell_otp_verified']) assert.equal(isOwnerEvent(ev), true, ev);
+  for (const ev of ['property_viewed', 'contact_call_click', 'user_signed_up', 'search_applied']) assert.equal(isOwnerEvent(ev), false, ev);
+});
+
+test('pushDataLayer appends buyer events with site_country, skips owner events', () => {
+  globalThis.window = { __CL_COUNTRY__: 'bo' };
   pushDataLayer('property_saved', { property_id: 'x', mode: 'venta' });
+  pushDataLayer('listing_created', { property_id: 'y', operation: 'venta' });
   assert.equal(window.dataLayer.length, 1);
   assert.equal(window.dataLayer[0].event, 'property_saved');
   assert.equal(window.dataLayer[0].mode, 'sale');
+  assert.equal(window.dataLayer[0].site_country, 'bo');
   delete globalThis.window;
 });
 

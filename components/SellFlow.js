@@ -297,7 +297,6 @@ export default function SellFlowProvider({ children }) {
       const j = await res.json().catch(() => ({}));
       if (!res.ok || !j.ok) { setErr(t.errCode); return; }
       track('sell_otp_verified', {});
-      track('user_signed_up', { method: 'email_otp' });   // the wizard's OTP step creates the account
       setVerified(true); setPhase(''); setStep(3);   // account created + logged in → go to details (step 4)
       refreshUser?.();                                // reflect the new session in the header/app immediately (was showing "not logged in")
     } catch { setErr(t.errCode); } finally { setBusy(false); }
