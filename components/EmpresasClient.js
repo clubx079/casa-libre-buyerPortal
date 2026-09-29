@@ -26,7 +26,7 @@ const T = {
     mQuote: '“Traé tu cartera. Nosotros traemos los compradores.”', mWho: 'Cuate, tu guía',
     aud: ['Inmobiliarias', 'Corredores', 'Desarrolladores', 'Agentes independientes', 'Administradores de alquileres'],
     props: [
-      ['01', 'Leads directos, sin comisiones', 'Cada aviso muestra tu contacto. Los interesados te escriben por WhatsApp o te llaman a vos — nunca vendemos tus leads ni nos metemos en el medio.'],
+      ['01', 'Leads directos, sin comisiones', 'Cada aviso muestra tu contacto. Los interesados te escriben por WhatsApp o te llaman a vos, directo y sin comisiones.'],
       ['02', 'Publicación instantánea', 'Cargás la propiedad y queda visible al instante. Sin esperas ni trámites: tu cartera completa, en línea hoy.'],
       ['03', 'Gratis durante el lanzamiento', 'Publicar no cuesta nada durante el lanzamiento. Sin comisiones sobre tus operaciones — tus negocios son tuyos.'],
       ['04', 'Visibilidad donde importa', `Trabajamos para que quien busque propiedades en ${COUNTRY.name} nos encuentre primero en Google. Tu cartera crece con ese tráfico.`],
@@ -75,7 +75,7 @@ const T = {
     mQuote: '“Bring your portfolio. We bring the buyers.”', mWho: 'Cuate, your guide',
     aud: ['Agencies', 'Brokers', 'Developers', 'Independent agents', 'Rental managers'],
     props: [
-      ['01', 'Direct leads, no middlemen', 'Every listing shows your contact. Interested buyers message you on WhatsApp or call you — we never sell your leads or sit in the middle.'],
+      ['01', 'Direct leads, no middlemen', 'Every listing shows your contact. Interested buyers message you on WhatsApp or call you, directly and with no commission.'],
       ['02', 'Instant publishing', 'Upload a property and it goes live instantly. No waiting, no red tape: your full portfolio, online today.'],
       ['03', 'Free during launch', 'Listing costs nothing during launch. No commission on your deals — your business stays yours.'],
       ['04', 'Visibility where it counts', `We work to be the first result when people search for property in ${COUNTRY.name} on Google. Your portfolio grows with that traffic.`],
