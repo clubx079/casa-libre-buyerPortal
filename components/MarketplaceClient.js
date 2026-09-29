@@ -15,7 +15,6 @@ import { distanceKm, getUserLocation, NEAR_RADIUS_KM } from '@/utils/geo';
 import { COUNTRY } from '@/lib/country';
 import { CATEGORIES } from '@/lib/zoning/categories';
 import ZoningMapToggle, { useZoningOverlay } from '@/components/ZoningMapToggle';
-import BetaTag from '@/components/BetaTag';
 
 // Marketplace-specific bilingual strings (search / filters / sort).
 const M = {
@@ -561,13 +560,10 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
           {Object.entries(m.beds).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
         {zoningOn && (
-          <span className="relative inline-flex">
           <select value={heightF} onChange={(e) => setHeightF(e.target.value)} className={selCls} title={lang === 'en' ? 'Zoning: how high the city allows building (Asunción only)' : 'Zonificación: cuántos pisos permite construir la ciudad (solo Asunción)'}>
             <option value="all">{lang === 'en' ? 'Zoning · Asunción' : 'Zonificación · Asunción'}</option>
             {CATEGORIES.filter((c) => c.id !== 'otro').map((c) => <option key={c.id} value={c.id}>{lang === 'en' ? c.en : c.es}</option>)}
           </select>
-          <BetaTag className="absolute -top-2 -right-2 pointer-events-none" />
-          </span>
         )}
         {/* view toggle — mockup .view-toggle, right-aligned, mobile only */}
         <div className="ml-auto md:hidden inline-flex items-center border-[1.5px] border-ink rounded-pill p-[3px] bg-card">

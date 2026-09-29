@@ -63,10 +63,10 @@ export default function ZoningMapToggle({ on, onToggle, height = 'all', loading 
     <div className={`flex flex-col items-end gap-2 ${className}`}>
       <button
         type="button" onClick={onToggle} aria-pressed={on} aria-busy={on && loading}
-        className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-pill text-[12.5px] font-semibold shadow-[0_1px_4px_rgba(0,0,0,0.3)] active:translate-y-px transition-colors ${on ? 'bg-ink text-paper ring-2 ring-paper' : 'bg-white text-ink'}`}
+        className={`relative inline-flex items-center gap-1.5 px-3.5 py-2 rounded-pill text-[12.5px] font-semibold shadow-[0_1px_4px_rgba(0,0,0,0.3)] active:translate-y-px transition-colors ${on ? 'bg-ink text-paper ring-2 ring-paper' : 'bg-white text-ink'}`}
       >
         {on ? (loading ? <Spinner /> : <Check />) : <Layers />}{t.btn}
-        <BetaTag tone={on ? 'paper' : 'ink'} className="ml-0.5" />
+        <BetaTag className="absolute -top-2 -right-2 pointer-events-none ring-1 ring-paper" />
       </button>
       {on && (
         <div className="bg-paper/95 rounded-[10px] border border-ink/15 shadow-[0_2px_8px_rgba(0,0,0,0.14)] px-2.5 py-2">
