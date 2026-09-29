@@ -87,6 +87,15 @@ test('neighborhood / city with a number (street address fallback) are dropped', 
   assert.equal(dataLayerEvent('x', { city: 'Calle 25 de Mayo 300' }).city, undefined);
 });
 
+test('priceBand turns filter bounds into a readable US$ band', async () => {
+  const { priceBand } = await import('../lib/dataLayer.js');
+  assert.equal(priceBand({}), 'all');
+  assert.equal(priceBand({ priceMax: 100000 }), '0-100000');
+  assert.equal(priceBand({ priceMin: 100000, priceMax: 200000 }), '100000-200000');
+  assert.equal(priceBand({ priceMin: 200000 }), '200000+');
+  assert.equal(dataLayerEvent('search_applied', { price_range: priceBand({}) }).price_range, undefined);
+});
+
 test("filter value 'all' is sent as undefined", () => {
   const e = dataLayerEvent('search_applied', { operation: 'all', property_type: 'all', price_range: 'all', bedrooms: 'all', results_count: 12 });
   assert.equal(e.property_type, undefined);

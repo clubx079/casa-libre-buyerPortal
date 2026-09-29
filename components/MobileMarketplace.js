@@ -19,6 +19,7 @@ import VerifiedTag from '@/components/VerifiedTag';
 import AppBadges from '@/components/AppBadges';
 import AuthButton from '@/components/AuthButton';
 import { track } from '@/lib/analytics';
+import { priceBand } from '@/lib/dataLayer';
 
 const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const PER_PAGE = 24;
@@ -157,7 +158,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
         operation: mode,
         query: q || null,
         property_type: typeF,
-        price_range: priceF,
+        price_range: priceBand(priceBoundsFor()),
         bedrooms: bedF,
         allowed_height: heightF,
         sort,

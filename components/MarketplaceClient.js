@@ -10,6 +10,7 @@ import VerifiedTag from '@/components/VerifiedTag';
 import AppBadges from '@/components/AppBadges';
 import { useSellFlow } from '@/components/SellFlow';
 import { track } from '@/lib/analytics';
+import { priceBand } from '@/lib/dataLayer';
 import { loadGoogleMapsAPI, mapOptions, pinIcon, clusterIcon, inParaguay, youAreHereIcon } from '@/utils/gmap';
 import { distanceKm, getUserLocation, NEAR_RADIUS_KM } from '@/utils/geo';
 import { COUNTRY } from '@/lib/country';
@@ -215,7 +216,7 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
         operation: filter,
         query: query || null,
         property_type: typeF,
-        price_range: priceF,
+        price_range: priceBand(priceBounds()),
         bedrooms: bedF,
         allowed_height: heightF,
         sort: sortBy,
