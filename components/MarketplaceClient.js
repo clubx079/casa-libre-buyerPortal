@@ -206,6 +206,9 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
   // doesn't fire an event per keystroke. Captures the initial view too.
   useEffect(() => {
     const id = setTimeout(() => {
+      // Desktop layout only — on phones MobileMarketplace reports the search (this
+      // component is still mounted there, hidden by CSS).
+      if (!window.matchMedia('(min-width: 768px)').matches) return;
       track('search_applied', {
         operation: filter,
         query: query || null,
