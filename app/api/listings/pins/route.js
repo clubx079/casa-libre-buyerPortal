@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 const cachedPins = unstable_cache(
   async (key, p) => getPins(p),
   ['cl-listing-pins-v3'],
-  { revalidate: 120 },
+  { revalidate: 120, tags: ['listings'] },
 );
 
 export async function GET(req) {

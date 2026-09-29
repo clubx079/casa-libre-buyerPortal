@@ -16,6 +16,7 @@ const DICT = {
     code: 'Código', verify: 'Verificar y crear cuenta', resend: 'Reenviar código', resent: 'Código reenviado ✓',
     changeEmail: '← Cambiar email', back: '← Atrás', close: 'Cerrar',
     errEmail: 'Ingresá un email válido', errPw: 'La contraseña debe tener al menos 6 caracteres',
+    googleTerms: 'Al continuar con Google aceptás los ', termsPre: 'Acepto los ', termsLink: 'Términos y Condiciones', termsMid: ' y la ', privacyLink: 'Política de Privacidad', errTerms: 'Para continuar, aceptá los Términos y Condiciones.',
     errCreds: 'Email o contraseña incorrectos', errCode: 'Código incorrecto o vencido',
     errTaken: 'Ese email ya tiene una cuenta. Ingresá con tu contraseña.',
     errSend: 'No se pudo enviar el código. Intentá de nuevo.', errGeneric: 'Algo salió mal. Intentá de nuevo.',
@@ -40,6 +41,7 @@ const DICT = {
     code: 'Code', verify: 'Verify & create account', resend: 'Resend code', resent: 'Code resent ✓',
     changeEmail: '← Change email', back: '← Back', close: 'Close',
     errEmail: 'Enter a valid email', errPw: 'Password must be at least 6 characters',
+    googleTerms: 'By continuing with Google you agree to the ', termsPre: 'I agree to the ', termsLink: 'Terms of Service', termsMid: ' and the ', privacyLink: 'Privacy Policy', errTerms: 'To continue, please accept the Terms of Service.',
     errCreds: 'Wrong email or password', errCode: 'Wrong or expired code',
     errTaken: 'That email already has an account. Log in with your password.',
     errSend: 'Could not send the code. Try again.', errGeneric: 'Something went wrong. Try again.',
@@ -67,6 +69,7 @@ export default function AuthModal({ onAuthed, onClose }) {
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [termsOk, setTermsOk] = useState(false);   // Terms of Service opt-in (sign-up)
   const [confirmPassword, setConfirmPassword] = useState('');
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
@@ -100,6 +103,7 @@ export default function AuthModal({ onAuthed, onClose }) {
         <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.4 30.2 0 24 0 14.6 0 6.4 5.4 2.5 13.2l7.9 6.1C12.2 13.2 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.5 3-2.2 5.5-4.7 7.2l7.3 5.7c4.3-4 6.9-9.9 6.9-17.4z"/><path fill="#FBBC05" d="M10.4 28.3c-.5-1.4-.8-2.9-.8-4.3s.3-3 .8-4.3l-7.9-6.1C.9 16.6 0 20.2 0 24s.9 7.4 2.5 10.6l7.9-6.3z"/><path fill="#34A853" d="M24 48c6.2 0 11.5-2 15.3-5.6l-7.3-5.7c-2 1.4-4.6 2.3-8 2.3-6.4 0-11.8-3.7-13.6-9.1l-7.9 6.3C6.4 42.6 14.6 48 24 48z"/></svg>
         {t.googleBtn}
       </button>
+      <p className="mt-2 text-center text-[11.5px] leading-snug text-ink/50">{t.googleTerms}<a href="/terminos" target="_blank" rel="noopener" className="underline">{t.termsLink}</a>{t.termsMid}<a href="/privacidad" target="_blank" rel="noopener" className="underline">{t.privacyLink}</a>.</p>
       <div className="flex items-center gap-3 my-4">
         <span className="flex-1 h-px bg-ink/12" /><span className="text-[12px] text-ink/40 font-mono">{t.orText}</span><span className="flex-1 h-px bg-ink/12" />
       </div>
@@ -132,6 +136,7 @@ export default function AuthModal({ onAuthed, onClose }) {
   const submitSignup = async (e) => {
     e.preventDefault(); setErr('');
     if (!password || password.length < 6) { setErr(t.errPw); return; }
+    if (!termsOk) { setErr(t.errTerms); return; }
     setBusy(true);
     try {
       const r = await post('/api/auth/send-otp', { email, fullName, phone });
@@ -302,6 +307,10 @@ export default function AuthModal({ onAuthed, onClose }) {
                 <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t.newPasswordPh} className={inputCls} autoComplete="new-password" />
               </div>
             </div>
+            <label className="mt-4 flex items-start gap-2.5 text-[13px] leading-snug text-ink/75 cursor-pointer select-none">
+              <input type="checkbox" checked={termsOk} onChange={(e) => { setTermsOk(e.target.checked); if (e.target.checked && err === t.errTerms) setErr(''); }} className="mt-[2px] w-4 h-4 accent-ink shrink-0 cursor-pointer" data-testid="signup-terms" />
+              <span>{t.termsPre}<a href="/terminos" target="_blank" rel="noopener" className="underline font-semibold text-ink">{t.termsLink}</a>{t.termsMid}<a href="/privacidad" target="_blank" rel="noopener" className="underline font-semibold text-ink">{t.privacyLink}</a></span>
+            </label>
             <button type="submit" disabled={busy} className={`${btnCls} mt-5`}>{busy ? t.sending : t.sendCode}</button>
             <button type="button" onClick={() => { setStep('email'); setErr(''); }} className="block mx-auto mt-4 text-[13px] font-medium text-ink/55 hover:text-ink">{t.changeEmail}</button>
           </form>

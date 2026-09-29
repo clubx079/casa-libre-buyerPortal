@@ -33,6 +33,7 @@ const DICT = {
     q1: '¿Qué querés hacer?', sell: 'Vender', rent: 'Alquilar',
     q2: '¿Sos el propietario o un agente?', owner: 'Propietario', agent: 'Agente',
     name: 'Tu nombre', namePh: 'Ana Giménez', email: 'Tu correo electrónico', emailPh: 'ana@correo.com',
+    termsPre: 'Acepto los ', termsLink: 'Términos y Condiciones', termsMid: ' y la ', privacyLink: 'Política de Privacidad', errTerms: 'Para continuar, aceptá los Términos y Condiciones.',
     q3: '¿Dónde está la propiedad?', addrPh: 'Escribí la dirección…', addrHint: 'Elegí una dirección de la lista para estandarizarla.',
     barrio: 'Barrio', ciudad: 'Ciudad',
     otpTitle: 'Código de confirmación enviado', otpSub: (e) => `Ingresá el código que enviamos a ${e} para verificar tu correo.`,
@@ -68,6 +69,7 @@ const DICT = {
     q1: 'What do you want to do?', sell: 'Sell', rent: 'Rent out',
     q2: 'Are you the owner or an agent?', owner: 'Owner', agent: 'Agent',
     name: 'Your name', namePh: 'Ana Giménez', email: 'Your email', emailPh: 'ana@email.com',
+    termsPre: 'I agree to the ', termsLink: 'Terms of Service', termsMid: ' and the ', privacyLink: 'Privacy Policy', errTerms: 'To continue, please accept the Terms of Service.',
     q3: 'Where is the property?', addrPh: 'Type the address…', addrHint: 'Pick an address from the list to standardize it.',
     barrio: 'Neighborhood', ciudad: 'City',
     otpTitle: 'Confirmation code sent', otpSub: (e) => `Enter the code we emailed to ${e} to verify your email.`,
@@ -102,7 +104,7 @@ const DICT = {
 
 const inputCls = 'w-full px-4 py-[13px] border-[1.5px] border-ink/30 rounded-input bg-card font-medium text-[15px] outline-none focus:border-ink';
 const labelCls = 'block text-[13px] font-semibold mb-1.5';
-const pickCls = (on) => `flex-1 px-5 py-4 rounded-[14px] border-[1.5px] text-[15px] font-semibold ${on ? 'bg-ink text-paper border-ink' : 'bg-card border-ink/30'}`;
+const pickCls = (on) => `flex-1 px-5 py-3.5 rounded-pill border-[1.5px] text-[15px] font-semibold transition-colors ${on ? 'bg-ink text-paper border-ink' : 'bg-card border-ink hover:bg-hatch2'}`;   // round pills — same shape as the Buy / Sell / Rent CTAs
 const emailOk = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || ''));
 const APPROX_RATE = 7300;
 const numOf = (v) => Number(String(v).replace(/[^\d.]/g, ''));
@@ -126,6 +128,7 @@ export default function SellFlowProvider({ children }) {
   const [phase, setPhase] = useState('');        // '' | 'otp' — code-verify overlay between step 2 and 3
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [termsOk, setTermsOk] = useState(false);   // Terms of Service opt-in (step 1)
   const [errs, setErrs] = useState({});
   const [code, setCode] = useState('');
   const [verified, setVerified] = useState(false);
@@ -262,11 +265,13 @@ export default function SellFlowProvider({ children }) {
 
   // ---- step navigation (collection steps 0..2) ----
   const collectValid = () => {
-    if (step === 1) return !!f.seller_type && (!!user || (f.contact_name.trim() && emailOk(f.email)));
+    if (step === 1) return !!f.seller_type && (!!user || (f.contact_name.trim() && emailOk(f.email))) && termsOk;
     if (step === 2) return !!f.neighborhood;
     return true;
   };
-  const collectErr = () => (step === 1 ? (!f.seller_type ? t.errSeller : !f.contact_name.trim() ? t.errName : t.errEmail) : t.errAddr);
+  const collectErr = () => (step === 1
+    ? (!f.seller_type ? t.errSeller : !user && !f.contact_name.trim() ? t.errName : !user && !emailOk(f.email) ? t.errEmail : t.errTerms)
+    : t.errAddr);
   // A signed-in visitor never sees the code step: their email is already verified.
   const next = async () => {
     if (!collectValid()) { setErr(collectErr()); return; }
@@ -509,6 +514,13 @@ export default function SellFlowProvider({ children }) {
                         <label className={labelCls}>{t.email}</label>
                         <input value={f.email} onChange={(e) => set('email', e.target.value)} placeholder={t.emailPh} className={inputCls} autoComplete="email" inputMode="email" type="email" />
                       </div>
+                    )}
+                    {/* Terms of Service opt-in — required to continue (consent before we store anything). */}
+                    {f.seller_type && (
+                      <label className="mt-4 flex items-start gap-2.5 text-[13px] leading-snug text-ink/75 cursor-pointer select-none">
+                        <input type="checkbox" checked={termsOk} onChange={(e) => { setTermsOk(e.target.checked); if (e.target.checked && err === t.errTerms) setErr(''); }} className="mt-[2px] w-4 h-4 accent-ink shrink-0 cursor-pointer" data-testid="sell-terms" />
+                        <span>{t.termsPre}<a href="/terminos" target="_blank" rel="noopener" className="underline font-semibold text-ink">{t.termsLink}</a>{t.termsMid}<a href="/privacidad" target="_blank" rel="noopener" className="underline font-semibold text-ink">{t.privacyLink}</a></span>
+                      </label>
                     )}
                   </div>
                 )}

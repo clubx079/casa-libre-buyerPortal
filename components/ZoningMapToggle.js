@@ -5,6 +5,7 @@
 // marketplace. The button shows a spinner while tiles download, a check when drawn.
 import { useEffect, useRef, useState } from 'react';
 import { addZoningOverlay, ZONE_COLORS, ZONE_CATEGORIES } from '@/utils/zoningOverlay';
+import BetaTag from '@/components/BetaTag';
 
 // height: the filter's pick ('all' | 'baja' | 'media' | 'alta') — when set, only that group is drawn.
 // Returns true while zoning tiles are still loading.
@@ -41,8 +42,8 @@ export function useZoningOverlay(mapRef, on, height = 'all') {
 }
 
 const TXT = {
-  es: { btn: 'Zonificación', title: 'Altura permitida · Asunción', rows: { baja: 'Baja · hasta 4 pisos', media: 'Media · 5–6 pisos', alta: 'Alta · 7+ pisos' } },
-  en: { btn: 'Zoning', title: 'Allowed height · Asunción', rows: { baja: 'Low · up to 4 floors', media: 'Mid · 5–6 floors', alta: 'High · 7+ floors' } },
+  es: { btn: 'Zonificación', title: 'Pisos permitidos · Asunción', rows: { baja: 'Baja · hasta 4', media: 'Media · 5–6', alta: 'Alta · 7+' } },
+  en: { btn: 'Zoning', title: 'Floors allowed · Asunción', rows: { baja: 'Low · up to 4', media: 'Mid · 5–6', alta: 'High · 7+' } },
 };
 
 const Check = () => (
@@ -65,14 +66,15 @@ export default function ZoningMapToggle({ on, onToggle, height = 'all', loading 
         className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-pill text-[12.5px] font-semibold shadow-[0_1px_4px_rgba(0,0,0,0.3)] active:translate-y-px transition-colors ${on ? 'bg-ink text-paper ring-2 ring-paper' : 'bg-white text-ink'}`}
       >
         {on ? (loading ? <Spinner /> : <Check />) : <Layers />}{t.btn}
+        <BetaTag tone={on ? 'paper' : 'ink'} className="ml-0.5" />
       </button>
       {on && (
-        <div className="w-[176px] md:w-[210px] bg-paper/95 rounded-[12px] border border-ink/15 shadow-[0_2px_10px_rgba(0,0,0,0.15)] px-2.5 py-2 md:p-3">
-          <div className="text-[10.5px] md:text-[12px] font-bold text-ink mb-1">{t.title}</div>
-          <ul className="flex flex-col gap-0.5 md:gap-1">
+        <div className="bg-paper/95 rounded-[10px] border border-ink/15 shadow-[0_2px_8px_rgba(0,0,0,0.14)] px-2.5 py-2">
+          <div className="text-[10.5px] md:text-[11px] font-bold text-ink mb-1 whitespace-nowrap">{t.title}</div>
+          <ul className="flex flex-col gap-[3px]">
             {shown.map((c) => (
-              <li key={c} className="flex items-center gap-1.5 md:gap-2 text-[10.5px] md:text-[11.5px] text-ink/80">
-                <span className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-[3px] flex-none" style={{ background: ZONE_COLORS[c], opacity: 0.85 }} />{t.rows[c]}
+              <li key={c} className="flex items-center gap-1.5 text-[10.5px] md:text-[11px] leading-tight text-ink/80 whitespace-nowrap">
+                <span className="w-2.5 h-2.5 rounded-[3px] flex-none" style={{ background: ZONE_COLORS[c], opacity: 0.85 }} />{t.rows[c]}
               </li>
             ))}
           </ul>

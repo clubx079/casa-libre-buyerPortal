@@ -18,6 +18,7 @@ import ZoningMapToggle, { useZoningOverlay } from '@/components/ZoningMapToggle'
 import VerifiedTag from '@/components/VerifiedTag';
 import AppBadges from '@/components/AppBadges';
 import AuthButton from '@/components/AuthButton';
+import BetaTag from '@/components/BetaTag';
 
 const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const PER_PAGE = 24;
@@ -523,7 +524,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
               {barrios.length > 0 && (<><Section>{X.barrio}</Section><div className="flex flex-wrap gap-2.5">{barrios.map((nb) => <Pill key={nb} label={nb} on={barrioF === nb} onClick={() => setBarrioF(barrioF === nb ? 'all' : nb)} />)}</div></>)}
               {zoningOn && (
                 <>
-                  <Section>{lang === 'en' ? 'Allowed height (Asunción)' : 'Altura permitida (Asunción)'}</Section>
+                  <Section><span className="inline-flex items-center gap-2">{lang === 'en' ? 'Zoning · Asunción' : 'Zonificación · Asunción'}<BetaTag /></span></Section>
                   <div className="flex flex-wrap gap-2.5">{CATEGORIES.filter((c) => c.id !== 'otro').map((c) => <Pill key={c.id} label={lang === 'en' ? c.en : c.es} on={heightF === c.id} onClick={() => setHeightF(heightF === c.id ? 'all' : c.id)} />)}</div>
                 </>
               )}
