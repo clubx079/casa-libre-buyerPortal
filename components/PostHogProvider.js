@@ -4,7 +4,8 @@
 import { useEffect, Suspense } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import posthog from 'posthog-js';
-import { POSTHOG_KEY, POSTHOG_HOST } from '@/lib/analytics';
+import { POSTHOG_KEY, POSTHOG_HOST, track } from '@/lib/analytics';
+import { consumeSignupSignal } from '@/lib/signupSignal';
 import { COUNTRY } from '@/lib/country';
 
 function PageviewTracker() {
@@ -22,7 +23,13 @@ function PageviewTracker() {
 
 export default function PostHogProvider({ children }) {
   useEffect(() => {
-    if (!POSTHOG_KEY || posthog.__loaded) return;
+    // Runs after PostHog init below (same effect), so the event reaches both PostHog
+    // and the dataLayer. Google sign-ups complete server-side — see lib/signupSignal.js.
+    const reportSignup = () => {
+      const method = consumeSignupSignal();
+      if (method) track('user_signed_up', { method });
+    };
+    if (!POSTHOG_KEY || posthog.__loaded) { reportSignup(); return; }
     posthog.init(POSTHOG_KEY, {
       api_host: POSTHOG_HOST,
       capture_pageview: false,   // we send $pageview manually on route change
@@ -41,6 +48,7 @@ export default function PostHogProvider({ children }) {
     try {
       posthog.register({ site_country: COUNTRY.code, site_host: typeof window !== 'undefined' ? window.location.host : undefined });
     } catch { /* analytics must never break the page */ }
+    reportSignup();
   }, []);
 
   return (

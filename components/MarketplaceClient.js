@@ -413,6 +413,7 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
         const full = rowsById.get(l.id) || l;
         track('map_pin_clicked', {
           property_id: l.id,
+          mode: full.mode || l.mode,
           location_name: full.neighborhood || full.city || full.address || null,
           neighborhood: full.neighborhood || null,
           city: full.city || null,

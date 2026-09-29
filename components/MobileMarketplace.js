@@ -468,7 +468,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
                 {imgMap[l.id] && /* eslint-disable-next-line @next/next/no-img-element */ <img src={imgMap[l.id]} alt="" loading="lazy" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
                 <span className="absolute top-3 left-3 text-[12px] font-semibold bg-ink text-paper px-3 py-1.5 rounded-pill">{l.mode === 'alquiler' ? X.forRent : X.forSale}</span>
                 <button
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggle(l.id); }}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggle(l.id, { mode: l.mode }); }}
                   aria-label="save"
                   className="absolute top-3 right-3 w-9 h-9 rounded-full bg-paper/90 flex items-center justify-center text-[16px]"
                 >{isSaved(l.id) ? '♥' : '♡'}</button>

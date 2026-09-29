@@ -12,12 +12,12 @@ const T = {
 //   variant 'detail' — labeled pill (Guardar / Guardada)
 // Saved state stays readable: a filled ink heart on a light surface (never an
 // all-black button, which hides the heart).
-export default function SaveButton({ id, variant = 'card', className = '' }) {
+export default function SaveButton({ id, mode, variant = 'card', className = '' }) {
   const { isSaved, toggle } = useFavorites();
   const [lang] = useLang();
   const t = T[lang];
   const saved = isSaved(id);
-  const onClick = (e) => { e.preventDefault(); e.stopPropagation(); toggle(id); };
+  const onClick = (e) => { e.preventDefault(); e.stopPropagation(); toggle(id, { mode }); };
 
   const heart = (
     <svg viewBox="0 0 24 24" width="18" height="18" fill={saved ? '#111111' : 'none'} stroke="#111111" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

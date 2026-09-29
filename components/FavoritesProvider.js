@@ -21,10 +21,11 @@ export default function FavoritesProvider({ children }) {
 
   const isSaved = useCallback((id) => ids.has(id), [ids]);
 
-  const toggle = useCallback(async (id) => {
+  // meta.mode (venta / alquiler) rides along on the analytics event only.
+  const toggle = useCallback(async (id, meta = {}) => {
     if (!user) { openAuth(); return; }
     const wasSaved = ids.has(id);
-    track(wasSaved ? 'property_unsaved' : 'property_saved', { property_id: id });
+    track(wasSaved ? 'property_unsaved' : 'property_saved', { property_id: id, mode: meta.mode });
     setIds((prev) => { const n = new Set(prev); wasSaved ? n.delete(id) : n.add(id); return n; });
     try {
       await fetch('/api/favorites', { method: wasSaved ? 'DELETE' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ property_id: id }) });
