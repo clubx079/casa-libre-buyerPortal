@@ -79,6 +79,32 @@ test('pushDataLayer appends buyer events with site_country, skips owner events',
   delete globalThis.window;
 });
 
+test('neighborhood / city with a number (street address fallback) are dropped', () => {
+  const e = dataLayerEvent('property_viewed', { neighborhood: 'Av. España 1234', city: 'Asunción', mode: 'venta' });
+  assert.equal(e.neighborhood, undefined);
+  assert.equal(e.city, 'Asunción');
+  assert.equal(dataLayerEvent('x', { neighborhood: 'Villa Morra' }).neighborhood, 'Villa Morra');
+  assert.equal(dataLayerEvent('x', { city: 'Calle 25 de Mayo 300' }).city, undefined);
+});
+
+test("filter value 'all' is sent as undefined", () => {
+  const e = dataLayerEvent('search_applied', { operation: 'all', property_type: 'all', price_range: 'all', bedrooms: 'all', results_count: 12 });
+  assert.equal(e.property_type, undefined);
+  assert.equal(e.price_range, undefined);
+  assert.equal(e.bedrooms, undefined);
+  assert.equal(e.results_count, 12);
+});
+
+test('GTM id must be a well-formed container id', async () => {
+  process.env.NEXT_PUBLIC_GTM_ID = 'GTM-TJZM7Z9C';
+  assert.equal((await import('../lib/dataLayer.js?ok')).GTM_ID, 'GTM-TJZM7Z9C');
+  process.env.NEXT_PUBLIC_GTM_ID = 'GTM-X</script><script>alert(1)';
+  assert.equal((await import('../lib/dataLayer.js?bad')).GTM_ID, '');
+  process.env.NEXT_PUBLIC_GTM_ID = '';
+  assert.equal((await import('../lib/dataLayer.js?empty')).GTM_ID, '');
+  process.env.NEXT_PUBLIC_GTM_ID = 'GTM-TEST123';
+});
+
 test('signup signal is read once, then cleared', () => {
   let cookie = `foo=1; ${SIGNUP_COOKIE}=google; bar=2`;
   const doc = {

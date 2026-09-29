@@ -203,8 +203,10 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
   useEffect(() => { ensureImages(rows.map((l) => l.id)); }, [rows, ensureImages]);
 
   // Report the active filter set to analytics, debounced so free-text typing
-  // doesn't fire an event per keystroke. Captures the initial view too.
+  // doesn't fire an event per keystroke. Captures the initial view too. Waits for the
+  // search fetch to settle so results_count is the new total, not the old page.
   useEffect(() => {
+    if (loadingList) return;
     const id = setTimeout(() => {
       // Desktop layout only — on phones MobileMarketplace reports the search (this
       // component is still mounted there, hidden by CSS).
@@ -217,12 +219,12 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
         bedrooms: bedF,
         allowed_height: heightF,
         sort: sortBy,
-        results_count: rows.length,
+        results_count: count,
       });
     }, 600);
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter, typeF, priceF, bedF, heightF, query, sortBy]);
+  }, [filter, typeF, priceF, bedF, heightF, query, sortBy, loadingList]);
 
   // ---- display helpers ----
   const title = (l) => {

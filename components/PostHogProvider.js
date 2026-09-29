@@ -30,7 +30,8 @@ export default function PostHogProvider({ children }) {
       if (method) track('user_signed_up', { method });
     };
     if (!POSTHOG_KEY || posthog.__loaded) { reportSignup(); return; }
-    posthog.init(POSTHOG_KEY, {
+    // A PostHog init failure must not swallow the sign-up event (still reaches GTM).
+    try { posthog.init(POSTHOG_KEY, {
       api_host: POSTHOG_HOST,
       capture_pageview: false,   // we send $pageview manually on route change
       capture_pageleave: true,
@@ -40,7 +41,7 @@ export default function PostHogProvider({ children }) {
       // visitors by IP), but a person row is only created once a user logs in
       // and we posthog.identify() them — keeps the Persons list clean.
       person_profiles: 'identified_only',
-    });
+    }); } catch { /* analytics must never break the page */ }
     // Stamp every event with the country site it came from. One PostHog project
     // serves .com.py / .com.bo / uy / .com.ve, and until now they were only
     // distinguishable by $host — which breaks the moment a domain changes. The
