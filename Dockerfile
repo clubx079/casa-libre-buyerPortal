@@ -55,7 +55,15 @@ ENV NEXT_PUBLIC_COUNTRY=$NEXT_PUBLIC_COUNTRY \
     APP_PUBLIC_URL=$APP_PUBLIC_URL \
     SITE_INDEXABLE=$SITE_INDEXABLE \
     NEXT_TELEMETRY_DISABLED=1
-RUN npm run build
+# A build arg the platform did NOT pass arrives here as an EMPTY string (via the ENV
+# above), and Next.js never lets a .env file override a variable that is already
+# set — not even "". Our platform delivers the values in .env.production.local, so
+# drop the empty ones before building; real build args (non-empty) are kept.
+RUN for v in NEXT_PUBLIC_COUNTRY COUNTRY NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY \
+             NEXT_PUBLIC_POSTHOG_KEY NEXT_PUBLIC_POSTHOG_HOST NEXT_PUBLIC_GTM_ID \
+             APP_PUBLIC_URL SITE_INDEXABLE; do \
+      eval "[ -n \"\$$v\" ] || unset $v"; \
+    done && npm run build
 
 FROM node:20-alpine AS runner
 WORKDIR /app
