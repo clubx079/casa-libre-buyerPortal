@@ -18,6 +18,8 @@ import ZoningMapToggle, { useZoningOverlay } from '@/components/ZoningMapToggle'
 import VerifiedTag from '@/components/VerifiedTag';
 import AppBadges from '@/components/AppBadges';
 import AuthButton from '@/components/AuthButton';
+import { track } from '@/lib/analytics';
+import { priceBand } from '@/lib/dataLayer';
 
 const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const PER_PAGE = 24;
@@ -143,6 +145,29 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
     return () => clearTimeout(tmo);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, typeF, priceF, bedF, barrioF, sellerF, heightF, q, sort]);
+
+  // Report the active search to analytics once the results have settled (after the
+  // fetch above), debounced so typing doesn't fire per keystroke. Only while this
+  // phone layout is the visible one — the desktop MarketplaceClient is also mounted
+  // (hidden by CSS) and reports for md+ widths itself.
+  useEffect(() => {
+    if (loadingList) return;
+    const tmo = setTimeout(() => {
+      if (typeof window === 'undefined' || !window.matchMedia('(max-width: 767px)').matches) return;
+      track('search_applied', {
+        operation: mode,
+        query: q || null,
+        property_type: typeF,
+        price_range: priceBand(priceBoundsFor()),
+        bedrooms: bedF,
+        allowed_height: heightF,
+        sort,
+        results_count: count,
+      });
+    }, 600);
+    return () => clearTimeout(tmo);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, typeF, priceF, bedF, barrioF, sellerF, heightF, q, sort, loadingList]);
 
   const loadMore = async () => {
     const next = page + 1;
@@ -468,7 +493,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
                 {imgMap[l.id] && /* eslint-disable-next-line @next/next/no-img-element */ <img src={imgMap[l.id]} alt="" loading="lazy" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
                 <span className="absolute top-3 left-3 text-[12px] font-semibold bg-ink text-paper px-3 py-1.5 rounded-pill">{l.mode === 'alquiler' ? X.forRent : X.forSale}</span>
                 <button
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggle(l.id); }}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggle(l.id, { mode: l.mode }); }}
                   aria-label="save"
                   className="absolute top-3 right-3 w-9 h-9 rounded-full bg-paper/90 flex items-center justify-center text-[16px]"
                 >{isSaved(l.id) ? '♥' : '♡'}</button>

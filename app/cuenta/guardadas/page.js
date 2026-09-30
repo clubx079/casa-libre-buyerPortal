@@ -37,7 +37,7 @@ export default function SavedPage() {
       )}
       {listings && listings.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {listings.map((l) => <ListingCard key={l.id} l={l} action={<SaveButton id={l.id} variant="detail" className="!py-2 !px-4 w-full justify-center" />} />)}
+          {listings.map((l) => <ListingCard key={l.id} l={l} action={<SaveButton id={l.id} mode={l.mode} variant="detail" className="!py-2 !px-4 w-full justify-center" />} />)}
         </div>
       )}
     </div>

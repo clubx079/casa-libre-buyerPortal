@@ -186,7 +186,7 @@ export default function PropertyDetailView({ l, url }) {
       {main && (
         <div className="absolute top-2.5 right-2.5 z-10 flex items-center gap-1.5">
           <ShareButton url={url} title={title} />
-          <SaveButton id={l.id} />
+          <SaveButton id={l.id} mode={l.mode} />
         </div>
       )}
       {main && imgs.length > 0 && (

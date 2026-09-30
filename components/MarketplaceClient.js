@@ -10,6 +10,7 @@ import VerifiedTag from '@/components/VerifiedTag';
 import AppBadges from '@/components/AppBadges';
 import { useSellFlow } from '@/components/SellFlow';
 import { track } from '@/lib/analytics';
+import { priceBand } from '@/lib/dataLayer';
 import { loadGoogleMapsAPI, mapOptions, pinIcon, clusterIcon, inParaguay, youAreHereIcon } from '@/utils/gmap';
 import { distanceKm, getUserLocation, NEAR_RADIUS_KM } from '@/utils/geo';
 import { COUNTRY } from '@/lib/country';
@@ -203,23 +204,28 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
   useEffect(() => { ensureImages(rows.map((l) => l.id)); }, [rows, ensureImages]);
 
   // Report the active filter set to analytics, debounced so free-text typing
-  // doesn't fire an event per keystroke. Captures the initial view too.
+  // doesn't fire an event per keystroke. Captures the initial view too. Waits for the
+  // search fetch to settle so results_count is the new total, not the old page.
   useEffect(() => {
+    if (loadingList) return;
     const id = setTimeout(() => {
+      // Desktop layout only — on phones MobileMarketplace reports the search (this
+      // component is still mounted there, hidden by CSS).
+      if (!window.matchMedia('(min-width: 768px)').matches) return;
       track('search_applied', {
         operation: filter,
         query: query || null,
         property_type: typeF,
-        price_range: priceF,
+        price_range: priceBand(priceBounds()),
         bedrooms: bedF,
         allowed_height: heightF,
         sort: sortBy,
-        results_count: rows.length,
+        results_count: count,
       });
     }, 600);
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter, typeF, priceF, bedF, heightF, query, sortBy]);
+  }, [filter, typeF, priceF, bedF, heightF, query, sortBy, loadingList]);
 
   // ---- display helpers ----
   const title = (l) => {
@@ -413,6 +419,7 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
         const full = rowsById.get(l.id) || l;
         track('map_pin_clicked', {
           property_id: l.id,
+          mode: full.mode || l.mode,
           location_name: full.neighborhood || full.city || full.address || null,
           neighborhood: full.neighborhood || null,
           city: full.city || null,

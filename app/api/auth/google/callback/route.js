@@ -6,6 +6,7 @@ import { findOrCreateGoogleUser } from '@/lib/users';
 import { makeToken, COOKIE_NAME } from '@/lib/auth';
 import { getClientIP } from '@/lib/ip';
 import { sendWelcomeEmail } from '@/lib/email';
+import { SIGNUP_COOKIE } from '@/lib/signupSignal';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -74,6 +75,16 @@ export async function GET(req) {
     res.cookies.set(COOKIE_NAME, makeToken(user), {
       httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: 60 * 60 * 24 * 7,
     });
+    // Brand-new account → a short-lived, readable flag so the page we land on fires
+    // user_signed_up { method: 'google' } once (components/PostHogProvider.js).
+    // Not for sellers signing up from the sell flow — owner-side, not a buyer/renter
+    // conversion (casa-libre-tracking-instructions.md).
+    const sellerSignup = dest.startsWith('/publicar') || dest.includes('sell=resume');
+    if (user._isNew && !sellerSignup) {
+      res.cookies.set(SIGNUP_COOKIE, 'google', {
+        httpOnly: false, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: 60 * 10,
+      });
+    }
     return res;
   } catch (e) {
     return NextResponse.redirect(`${base}/?auth_error=1`);
