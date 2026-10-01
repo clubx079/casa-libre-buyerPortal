@@ -6,12 +6,17 @@
 // Contacts analytics page. Buyer identity comes from the session (optional).
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
+import * as db from '@/lib/db';
 import { insert, update } from '@/lib/db';
+import { sendPush } from '@/lib/push';
+import { pushContactToOwner } from '@/lib/ownerPushes';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const clean = (v, n) => (v == null ? null : String(v).slice(0, n).trim() || null);
+// Owner pushes can be switched off without a deploy: PUSH_AUTOMATIONS=off.
+const PUSH_ON = process.env.PUSH_AUTOMATIONS !== 'off';
 
 export async function POST(req) {
   const b = await req.json().catch(() => ({}));
@@ -45,6 +50,12 @@ export async function POST(req) {
     await insert('contact_link_clicks', [row], { upsert: true, onConflict: 'token', returning: 'minimal' });
   } catch (e) {
     return NextResponse.json({ error: 'failed', detail: e?.message }, { status: 500 });
+  }
+  // The listing's owner gets "someone wants to contact you" on their phone (once per
+  // listing per day; lib/ownerPushes.js). Never fails the tracking call.
+  if (PUSH_ON) {
+    await pushContactToOwner(db, (o) => sendPush(db, o), { propertyId: row.property_id, buyerUserId: row.buyer_user_id })
+      .catch((e) => console.error('[contact-track] owner push', e?.message || e));
   }
   return NextResponse.json({ ok: true });
 }

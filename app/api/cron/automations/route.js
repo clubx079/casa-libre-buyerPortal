@@ -14,6 +14,8 @@ import { COUNTRY } from '@/lib/country';
 import { runFirstListing, AUTOMATION_ID } from '@/lib/automations/firstListing';
 import { runViewsMilestone, VIEWS_AUTOMATION_ID } from '@/lib/automations/viewsMilestone';
 import { fetchListingViews, viewsConfigured } from '@/lib/posthogViews';
+import { sendPush } from '@/lib/push';
+import { runOwnerPushes } from '@/lib/ownerPushes';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -27,6 +29,12 @@ async function handle(req) {
     if (auth !== `Bearer ${secret}` && qs !== secret) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
 
+  // Owner push notifications (views milestones, highlight ending, unfinished drafts) —
+  // daytime only, independent of the email automations below. lib/ownerPushes.js
+  const pushes = process.env.PUSH_AUTOMATIONS === 'off'
+    ? { skipped: 'off' }
+    : await runOwnerPushes(db, (o) => sendPush(db, o), { now: new Date(), countryCode: COUNTRY.code }).catch((e) => ({ error: e?.message || 'push_failed' }));
+
   let automation, viewsAutomation, templates;
   try {
     [automation] = await db.select('automations', `id=eq.${AUTOMATION_ID}&limit=1`);
@@ -34,7 +42,7 @@ async function handle(req) {
     templates = await db.select('email_templates', 'select=*');
   } catch (e) {
     // Migration 005 not applied on this country's DB yet.
-    return NextResponse.json({ ok: true, pending: true, detail: e?.message });
+    return NextResponse.json({ ok: true, pending: true, pushes, detail: e?.message });
   }
 
   const site = siteUrl();
@@ -66,7 +74,7 @@ async function handle(req) {
           emailOverride: process.env.AUTOMATION_EMAIL_OVERRIDE || '',
         }).catch((e) => ({ error: e?.message || 'views_failed' }));
     }
-    return NextResponse.json({ ok: true, ...result, views, at: new Date().toISOString() });
+    return NextResponse.json({ ok: true, ...result, views, pushes, at: new Date().toISOString() });
   } catch (e) {
     return NextResponse.json({ error: 'automation_failed', detail: e?.message }, { status: 500 });
   }
