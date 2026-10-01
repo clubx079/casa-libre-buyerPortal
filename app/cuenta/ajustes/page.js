@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
 
 const T = {
@@ -8,12 +9,14 @@ const T = {
     emailSec: 'Cambiar email', currentEmail: 'Email actual', newEmail: 'Nuevo email', sendCode: 'Enviar código', code: 'Código', verify: 'Verificar y cambiar', codeSent: 'Enviamos un código al nuevo email.', emailChanged: 'Email actualizado ✓',
     pwSec: 'Cambiar contraseña', current: 'Contraseña actual', next: 'Nueva contraseña', change: 'Cambiar contraseña', pwChanged: 'Contraseña actualizada ✓', pwSet: 'Definí una contraseña para tu cuenta.',
     err: 'Algo salió mal. Intentá de nuevo.', errEmail: 'Ingresá un email válido', errTaken: 'Ese email ya está en uso.', errCode: 'Código incorrecto o vencido.', errCurrent: 'Contraseña actual incorrecta.', errWeak: 'Mínimo 6 caracteres.',
+    delSec: 'Eliminar cuenta', delText: 'Elimina tu cuenta y tus datos personales. No se puede deshacer.', delBtn: 'Eliminar mi cuenta',
   },
   en: {
     title: 'Settings', profile: 'Profile', name: 'Full name', phone: 'WhatsApp / phone', save: 'Save', saved: 'Saved ✓', saving: 'Saving…',
     emailSec: 'Change email', currentEmail: 'Current email', newEmail: 'New email', sendCode: 'Send code', code: 'Code', verify: 'Verify & change', codeSent: 'We sent a code to the new email.', emailChanged: 'Email updated ✓',
     pwSec: 'Change password', current: 'Current password', next: 'New password', change: 'Change password', pwChanged: 'Password updated ✓', pwSet: 'Set a password for your account.',
     err: 'Something went wrong. Try again.', errEmail: 'Enter a valid email', errTaken: 'That email is already in use.', errCode: 'Wrong or expired code.', errCurrent: 'Wrong current password.', errWeak: 'At least 6 characters.',
+    delSec: 'Delete account', delText: 'Deletes your account and your personal data. This cannot be undone.', delBtn: 'Delete my account',
   },
 };
 
@@ -114,6 +117,11 @@ export default function SettingsPage() {
           <div><button type="submit" disabled={pwBusy} className={btn}>{t.change}</button></div>
           <Msg {...(pwMsg || {})} text={pwMsg?.text} />
         </form>
+      </Card>
+
+      <Card title={t.delSec}>
+        <p className="text-[14px] text-ink/70 mb-4">{t.delText}</p>
+        <Link href="/eliminar-cuenta" className="inline-block px-6 py-3 rounded-pill border-[1.5px] border-red-700 text-red-700 font-bold text-[14px] hover:bg-red-50">{t.delBtn}</Link>
       </Card>
     </div>
   );
