@@ -6,6 +6,7 @@ import { getSession, clearSessionCookie } from '@/lib/auth';
 import * as db from '@/lib/db';
 import { deleteAccount } from '@/lib/accountDeletion';
 import { stripe } from '@/lib/stripe';
+import { deletePosthogPerson } from '@/lib/posthogPerson';
 
 // Remove the saved card(s) from Stripe too, so nothing can be charged again.
 // Best-effort: a Stripe hiccup never blocks deleting the account (we also clear
@@ -37,6 +38,10 @@ export async function POST(req) {
     console.error('[account/delete] failed', s.uid, r.failed);
     return NextResponse.json({ error: 'delete_failed' }, { status: 500 });
   }
+  // Analytics profile (email, name, phone), events and recordings — best-effort,
+  // the account itself is already deleted.
+  const ph = await deletePosthogPerson(s.uid);
+  if (!ph.ok) console.error('[account/delete] PostHog person not deleted', s.uid, ph.error);
   try { clearSessionCookie(); } catch {}
   return NextResponse.json({ ok: true });
 }
