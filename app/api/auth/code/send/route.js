@@ -10,6 +10,7 @@ import { NextResponse } from 'next/server';
 import { findUserByEmail, upsertUnverifiedUser } from '@/lib/users';
 import { saveOtp } from '@/lib/otp';
 import { sendOtpEmail } from '@/lib/email';
+import { isReviewEmail } from '@/lib/reviewLogin';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -23,6 +24,15 @@ export async function POST(req) {
 
   const existing = await findUserByEmail(email).catch(() => null);
   const mode = existing && existing.verified ? 'login' : 'signup';
+
+  // App-store review account (lib/reviewLogin.js): nothing to email — its code is fixed.
+  if (isReviewEmail(email)) {
+    if (mode === 'signup') {
+      const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null;
+      await upsertUnverifiedUser({ email, fullName, phone: null, ip }).catch(() => {});
+    }
+    return NextResponse.json({ ok: true, mode });
+  }
 
   const saved = await saveOtp(email, mode === 'login' ? 'login' : 'signup', 10, { fullName: fullName || null })
     .catch((e) => ({ ok: false, error: 'otp_store_error', detail: e?.message }));

@@ -9,6 +9,7 @@ import { NextResponse } from 'next/server';
 import { verifyOtp } from '@/lib/otp';
 import { findUserByEmail, createUser, verifyExistingUser, touchLogin, publicUser } from '@/lib/users';
 import { setSessionCookie } from '@/lib/auth';
+import { reviewCodeMatches } from '@/lib/reviewLogin';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -22,7 +23,10 @@ export async function POST(req) {
   const existing = await findUserByEmail(email).catch(() => null);
   const isLogin = !!(existing && existing.verified);
 
-  const result = await verifyOtp(email, isLogin ? 'login' : 'signup', String(code));
+  // App-store review account: its fixed code (lib/reviewLogin.js); everyone else: the emailed one.
+  const result = reviewCodeMatches(email, code)
+    ? { valid: true }
+    : await verifyOtp(email, isLogin ? 'login' : 'signup', String(code));
   if (!result.valid) {
     return NextResponse.json({ error: result.error, attemptsLeft: result.attemptsLeft }, { status: 400 });
   }
