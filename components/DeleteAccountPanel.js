@@ -7,6 +7,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
 import { useAuth } from '@/components/AuthProvider';
+import { DELETE_WORD, deleteWordOk } from '@/lib/deleteConfirm';
 
 const T = {
   es: {
@@ -21,7 +22,8 @@ const T = {
     kept: 'Conservamos solo el registro de los pagos que hayas hecho (importe y fecha), porque la ley nos obliga a guardarlo para la contabilidad.',
     final: 'No se puede deshacer. Si querés volver, podés crear una cuenta nueva con el mismo email.',
     signedAs: 'Sesión iniciada como',
-    confirm: 'Entiendo que mi cuenta se elimina para siempre.',
+    danger: 'Zona de peligro',
+    typeLabel: `Para confirmar, escribí ${DELETE_WORD.es}`,
     button: 'Eliminar mi cuenta',
     working: 'Eliminando…',
     signIn: 'Iniciar sesión para eliminar mi cuenta',
@@ -44,7 +46,8 @@ const T = {
     kept: 'We keep only the record of payments you made (amount and date), because the law requires it for accounting.',
     final: 'This cannot be undone. If you come back, you can create a new account with the same email.',
     signedAs: 'Signed in as',
-    confirm: 'I understand my account is deleted for good.',
+    danger: 'Danger zone',
+    typeLabel: `To confirm, type ${DELETE_WORD.en}`,
     button: 'Delete my account',
     working: 'Deleting…',
     signIn: 'Sign in to delete my account',
@@ -61,7 +64,7 @@ export default function DeleteAccountPanel() {
   const [lang] = useLang();
   const t = T[lang] || T.es;
   const { user, loading, openAuth, logout } = useAuth() || {};
-  const [sure, setSure] = useState(false);
+  const [word, setWord] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [done, setDone] = useState(false);
@@ -102,7 +105,8 @@ export default function DeleteAccountPanel() {
         </div>
       </section>
 
-      <section className="mt-8 bg-card border border-ink/15 rounded-card p-6">
+      <section className={`mt-8 bg-card border rounded-card p-6 ${user && !done ? 'border-red-700/40' : 'border-ink/15'}`}>
+        {user && !done && !loading ? <p className="font-mono text-[11.5px] tracking-[0.12em] uppercase text-red-700 mb-3">{t.danger}</p> : null}
         {done ? (
           <div>
             <p className="text-[18px] font-bold">{t.done}</p>
@@ -118,13 +122,21 @@ export default function DeleteAccountPanel() {
         ) : (
           <div>
             <p className="text-[14px] text-ink/70">{t.signedAs} <span className="font-semibold text-ink">{user.email}</span></p>
-            <label htmlFor="delete-confirm" className="mt-4 flex items-start gap-3 text-[14px] leading-snug cursor-pointer">
-              <input id="delete-confirm" type="checkbox" checked={sure} onChange={(e) => setSure(e.target.checked)} className="mt-[2px] w-4 h-4 accent-red-700" />
-              <span>{t.confirm}</span>
-            </label>
+            <label htmlFor="delete-confirm" className="mt-4 block text-[14px] font-semibold">{t.typeLabel}</label>
+            <input
+              id="delete-confirm"
+              type="text"
+              value={word}
+              onChange={(e) => setWord(e.target.value)}
+              placeholder={DELETE_WORD[lang] || DELETE_WORD.es}
+              autoComplete="off"
+              autoCapitalize="characters"
+              spellCheck={false}
+              className="mt-2 w-full max-w-[320px] px-4 py-3 border-[1.5px] border-ink/30 rounded-input bg-paper font-medium text-[15px] outline-none focus:border-red-700"
+            />
             <button
               type="button"
-              disabled={!sure || busy}
+              disabled={!deleteWordOk(word) || busy}
               onClick={onDelete}
               className="mt-5 px-6 py-3 rounded-pill bg-red-700 text-white font-bold text-[14px] disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700"
             >

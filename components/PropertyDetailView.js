@@ -15,6 +15,7 @@ import PropertyContactCard from '@/components/PropertyContactCard';
 import NoResponseReport from '@/components/NoResponseReport';
 import { useSellFlow } from '@/components/SellFlow';
 import SaveButton from '@/components/SaveButton';
+import ListingDescription from '@/components/ListingDescription';
 import ShareButton from '@/components/ShareButton';
 import { genToken, shortUrl, trackContact, markOpened } from '@/lib/contactTrack';
 import { COUNTRY } from '@/lib/country';
@@ -297,7 +298,7 @@ export default function PropertyDetailView({ l, url }) {
           {paras.length > 0 && (
             <>
               <h2 className="text-[18px] font-bold tracking-head mt-6 mb-2.5">{t.descH}</h2>
-              <div>{paras.map((p, i) => <p key={i} className="text-[14.5px] leading-[1.6] text-ink/80 mb-3 max-w-[62ch]">{p}</p>)}</div>
+              <ListingDescription id={l.id} text={paras.join('\n')} lang={lang} pClass="text-[14.5px] leading-[1.6] text-ink/80 mb-3 max-w-[62ch]" />
             </>
           )}
 
