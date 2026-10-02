@@ -9,8 +9,8 @@ export const metadata = {
 };
 
 // Keep in sync with section 6 of /terminos.
-const UPDATED_ES = '1 de octubre de 2026';
-const UPDATED_EN = 'October 1, 2026';
+const UPDATED_ES = '2 de octubre de 2026';
+const UPDATED_EN = 'October 2, 2026';
 const C = COUNTRY.name;
 
 const content = {
@@ -25,13 +25,13 @@ const content = {
         ['h2', 'Para qué los usamos'],
         ['p', 'Operar la Plataforma y mostrar tus publicaciones; permitir que te contacten; verificar cuentas y prevenir fraude; enviarte mensajes sobre tu cuenta; enviarte novedades y ofertas por email, WhatsApp, SMS o notificaciones; personalizar tu experiencia; medir y mejorar nuestros servicios y campañas con herramientas de analítica y publicidad (por ejemplo PostHog, Google Analytics, Google Tag Manager y Google Ads); y elaborar estadísticas e informes del mercado inmobiliario.'],
         ['h2', 'Con quién los compartimos'],
-        ['p', 'Con proveedores que nos prestan servicios (alojamiento en la nube, email, pagos, analítica, mapas, publicidad). Con otros usuarios, cuando los contactás o te contactan. Y, según lo aceptado en los Términos, podemos <strong>compartir, ceder, licenciar o vender</strong> datos personales y de publicaciones a terceros como inmobiliarias, agentes, desarrolladoras, entidades financieras, aseguradoras, socios comerciales y de marketing, y empresas de datos o investigación de mercado. También compartimos información agregada o anonimizada, y los datos pueden transferirse en caso de fusión, venta o reorganización de Casa Libre, o cuando lo exija la ley o una autoridad.'],
+        ['p', 'Con proveedores que nos prestan servicios (alojamiento en la nube, email, pagos, analítica, mapas, publicidad). Estos proveedores solo usan los datos para prestarnos ese servicio. Con otros usuarios, cuando los contactás o te contactan (por ejemplo, la inmobiliaria o el dueño de una propiedad recibe tu mensaje). También compartimos información agregada o anonimizada, que no te identifica, y los datos pueden transferirse en caso de fusión, venta o reorganización de Casa Libre, o cuando lo exija la ley o una autoridad.'],
         ['h2', 'Dónde y cuánto tiempo'],
         ['p', `Tus datos pueden almacenarse en servidores fuera de ${C} con medidas de seguridad razonables. Los conservamos mientras tengas una cuenta. Si la eliminás, borramos tus datos personales y solo conservamos el registro de tus pagos, porque la ley nos obliga a guardarlo, y estadísticas anónimas que no te identifican.`],
         ['h2', 'Eliminar tu cuenta'],
         ['p', 'Podés eliminar tu cuenta en cualquier momento desde la app (Cuenta → Eliminar cuenta) o en <a href="/eliminar-cuenta">esta página</a>. Se eliminan tu nombre, email, teléfono, contraseña e inicio de sesión con Google, tu tarjeta guardada, tus propiedades guardadas y borradores, las notificaciones de tus dispositivos y tus datos de analítica. A tus publicaciones les quitamos tu nombre y tu teléfono y dejan de mostrarse. Solo conservamos el registro de tus pagos, como exige la ley. No se puede deshacer, y no afecta los datos que ya se hubieran compartido con terceros antes de tu solicitud.'],
         ['h2', 'Tus derechos y opciones'],
-        ['p', 'Podés editar tu perfil y eliminar tus publicaciones desde tu panel. Podés pedir acceso, rectificación o eliminación de tus datos, darte de baja de los mensajes de marketing (con el enlace del email o escribiéndonos) y retirar tu consentimiento para nuevas cesiones a terceros, escribiéndonos desde nuestra <a href="/contacto">página de contacto</a>. El retiro no afecta lo realizado antes de tu solicitud. Podés bloquear cookies desde tu navegador, aunque algunas funciones pueden dejar de funcionar.'],
+        ['p', 'Podés editar tu perfil y eliminar tus publicaciones desde tu panel. Para pedir acceso, rectificación o eliminación de tus datos, escribinos desde nuestra <a href="/contacto">página de contacto</a>. Podés darte de baja de los mensajes de marketing con el enlace del email o escribiéndonos. Podés bloquear cookies desde tu navegador, aunque algunas funciones pueden dejar de funcionar.'],
         ['h2', 'Menores'],
         ['p', 'La Plataforma no está dirigida a menores de 18 años y no recopilamos sus datos a sabiendas.'],
         ['h2', 'Cambios'],
@@ -50,13 +50,13 @@ const content = {
         ['h2', 'What we use it for'],
         ['p', 'Running the Platform and showing your listings; letting people contact you; verifying accounts and preventing fraud; messages about your account; news and offers by email, WhatsApp, SMS or notifications; personalising your experience; measuring and improving our services and campaigns with analytics and advertising tools (e.g. PostHog, Google Analytics, Google Tag Manager and Google Ads); and producing real-estate market statistics and reports.'],
         ['h2', 'Who we share it with'],
-        ['p', 'Service providers working for us (cloud hosting, email, payments, analytics, maps, advertising). Other users, when you contact them or they contact you. And, as accepted in the Terms, we may <strong>share, assign, license or sell</strong> personal and listing data to third parties such as real-estate agencies, agents, developers, financial institutions, insurers, commercial and marketing partners, and data or market-research companies. We also share aggregated or anonymised information, and data may be transferred in a merger, sale or reorganisation of Casa Libre, or when required by law or an authority.'],
+        ['p', 'Service providers working for us (cloud hosting, email, payments, analytics, maps, advertising). These providers only use the data to provide that service to us. Other users, when you contact them or they contact you (for example, the agency or owner of a property receives your message). We also share aggregated or anonymised information, which does not identify you, and data may be transferred in a merger, sale or reorganisation of Casa Libre, or when required by law or an authority.'],
         ['h2', 'Where and for how long'],
         ['p', `Your data may be stored on servers outside ${C} with reasonable security measures. We keep it while you have an account. If you delete it, we erase your personal data and keep only the record of your payments, because the law requires it, and anonymous statistics that do not identify you.`],
         ['h2', 'Deleting your account'],
         ['p', 'You can delete your account at any time in the app (Account → Delete account) or on <a href="/eliminar-cuenta">this page</a>. Your name, email, phone, password and Google sign-in, your saved card, saved properties and drafts, your devices’ notifications and your analytics data are deleted. Your listings lose your name and phone and stop showing. We keep only the record of your payments, as the law requires. It cannot be undone, and it does not affect data already shared with third parties before your request.'],
         ['h2', 'Your rights and choices'],
-        ['p', 'You can edit your profile and delete your listings from your dashboard. You can request access to, correction or deletion of your data, unsubscribe from marketing messages (via the email link or by writing to us) and withdraw consent to new transfers to third parties, by writing to us via our <a href="/contacto">contact page</a>. Withdrawal does not affect what was done before your request. You can block cookies in your browser, though some features may stop working.'],
+        ['p', 'You can edit your profile and delete your listings from your dashboard. To request access to, correction or deletion of your data, write to us via our <a href="/contacto">contact page</a>. You can unsubscribe from marketing messages via the email link or by writing to us. You can block cookies in your browser, though some features may stop working.'],
         ['h2', 'Minors'],
         ['p', 'The Platform is not aimed at people under 18 and we do not knowingly collect their data.'],
         ['h2', 'Changes'],
