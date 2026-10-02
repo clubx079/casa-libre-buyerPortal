@@ -22,6 +22,7 @@ import PlanBox from '@/components/PlanBox';
 import { VerifiedIcon } from '@/components/VerifiedTag';
 import { savePendingSell, loadPendingSell, clearPendingSell } from '@/lib/pendingSell';
 import { cleanDraftData, draftReady } from '@/lib/drafts';
+import { isSellLinkClick } from '@/lib/sellLink';
 import { COUNTRY } from '@/lib/country';
 
 const SellFlowContext = createContext({ openSell: () => {} });
@@ -222,6 +223,26 @@ export default function SellFlowProvider({ children }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openSell, authLoading]);
+
+  // A signed-out visitor who clicks any "List for free" / "Sell" link (they all point
+  // at /publicar) gets the wizard right here, over the page they're on — not the
+  // "You need an account to post" screen. Capture phase on window runs before Next's
+  // <Link>, which skips navigating once the click is defaultPrevented.
+  useEffect(() => {
+    if (authLoading || user) return undefined;
+    const onClick = (e) => {
+      const a = e.target?.closest?.('a[href]');
+      if (!a || !isSellLinkClick({
+        href: a.href, origin: window.location.origin, button: e.button,
+        metaKey: e.metaKey, ctrlKey: e.ctrlKey, shiftKey: e.shiftKey, altKey: e.altKey,
+        target: a.getAttribute('target'), download: a.hasAttribute('download'), defaultPrevented: e.defaultPrevented,
+      })) return;
+      e.preventDefault();
+      openSell();
+    };
+    window.addEventListener('click', onClick, true);
+    return () => window.removeEventListener('click', onClick, true);
+  }, [authLoading, user, openSell]);
 
   // Create the draft as soon as a signed-in user has chosen the address…
   useEffect(() => {
