@@ -350,7 +350,7 @@ export default function PropertyDetailView({ l, url }) {
           <small className="block font-mono text-[10px] text-ink/50 truncate">{zone} · {t.ref} {listingRef}</small>
         </div>
         {mbarWa && (
-          <a href={mbarWa} target="_blank" rel="noopener noreferrer" onClick={() => { track('contact_whatsapp_click', { ref: listingRef, ...(trackProps || {}) }); recordMbarContact(); }} className="flex-1 flex items-center justify-center gap-2 px-3.5 py-3 rounded-pill text-[14px] font-semibold text-white" style={{ background: '#25D366', border: '1.5px solid #111' }}>
+          <a href={mbarWa} target="_blank" rel="noopener noreferrer" onClick={() => { track('contact_whatsapp_click', { ref: listingRef, ...(trackProps || {}), contact_token: mbarToken }); recordMbarContact(); }} className="flex-1 flex items-center justify-center gap-2 px-3.5 py-3 rounded-pill text-[14px] font-semibold text-white" style={{ background: '#25D366', border: '1.5px solid #111' }}>
             <WaGlyph /> WhatsApp
           </a>
         )}

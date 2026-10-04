@@ -1,19 +1,15 @@
-// /r/<slug> — the short link we hand out anywhere off-site.
+// /r/<slug> — a channel's UTM link (lib/campaigns.js: one per channel).
 //
-// Redirects to the real page with utm parameters attached, so the visit shows up
-// in analytics with a source instead of landing in "direct". Reddit comments,
-// Instagram bios, Meta ads and printed cards all use this; whatever arrives with
-// no utm is organic (Google) or truly direct.
+// Redirects to the home page with the channel's utm tags, so the visit shows up in
+// analytics with a source instead of landing in "direct". Older links (/r/rda,
+// /r/igs…) resolve to their channel; any ?t=… on them is ignored.
 //
-// ?t=<tag> becomes utm_content, so one slug can distinguish individual threads
-// or posts without inventing a slug for each: /r/rda?t=askpy_sep26
-//
-// It also records the CLICK itself, server-side, as a `link_click` event. That is
-// a different number from the pageview that follows: a click is counted even when
-// the person leaves before the page loads, when JavaScript is blocked, or when an
-// in-app browser drops the referrer. Clicks minus landings is the leak.
+// It also records the CLICK itself, server-side, as a `link_click` event under the
+// channel's slug — the admin's "UTM Links" page counts these as "opened". That is a
+// different number from the page view that follows ("landed"): a click is counted
+// even when the person leaves before the page loads or JavaScript is blocked.
 import { NextResponse } from 'next/server';
-import { campaignUrl, CAMPAIGNS } from '@/lib/campaigns';
+import { campaignUrl, resolveSlug, CAMPAIGNS } from '@/lib/campaigns';
 import { SITE } from '@/lib/site';
 import { COUNTRY_CODE } from '@/lib/country';
 
@@ -24,7 +20,9 @@ const PH_KEY = process.env.NEXT_PUBLIC_POSTHOG_KEY;
 const PH_HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
 
 // Fire-and-forget: analytics must never delay or break the redirect.
-function recordClick(req, slug, campaign, content) {
+// slug = the channel's slug (an old alias like 'rda' is recorded as 'rd');
+// via = the slug actually in the link, kept for reference.
+function recordClick(req, slug, campaign, via) {
   if (!PH_KEY) return;
   const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || undefined;
   const ua = req.headers.get('user-agent') || '';
@@ -49,7 +47,7 @@ function recordClick(req, slug, campaign, content) {
           utm_source: campaign?.source,
           utm_medium: campaign?.medium,
           utm_campaign: campaign?.name,
-          utm_content: content || undefined,
+          via: via !== slug ? via : undefined,
           $ip: ip,
           $useragent: ua.slice(0, 200),
         },
@@ -60,12 +58,11 @@ function recordClick(req, slug, campaign, content) {
 
 export function GET(req, { params }) {
   const base = SITE.replace(/\/$/, '');
-  const { searchParams } = new URL(req.url);
-  const slug = String(params?.slug || '').toLowerCase();
-  const content = searchParams.get('t') || undefined;
-  const url = campaignUrl(base, slug, { content, campaign: searchParams.get('c') || undefined });
+  const asked = String(params?.slug || '').toLowerCase();
+  const slug = resolveSlug(asked); // 'rda' → 'rd'; unknown → null
+  const url = slug ? campaignUrl(base, slug) : null;
 
-  if (url) recordClick(req, slug, CAMPAIGNS[slug], content);
+  if (url) recordClick(req, slug, CAMPAIGNS[slug], asked);
 
   // Unknown slug → the site, rather than a 404 on a link already in the wild.
   return NextResponse.redirect(url || `${base}/`, 302);

@@ -10,6 +10,7 @@ import * as db from '@/lib/db';
 import { insert, update } from '@/lib/db';
 import { sendPush } from '@/lib/push';
 import { pushContactToOwner } from '@/lib/ownerPushes';
+import { contactGeo } from '@/lib/contactGeo';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -46,8 +47,16 @@ export async function POST(req) {
     channel: ['whatsapp', 'call', 'copy'].includes(b.channel) ? b.channel : 'whatsapp',
     status: 'sent',
   };
+  // Where the buyer was (IP + country/city from Cloudflare) — needs migration 012.
+  // Until that is applied the columns don't exist: save the contact without them.
+  const geo = contactGeo(req.headers);
   try {
-    await insert('contact_link_clicks', [row], { upsert: true, onConflict: 'token', returning: 'minimal' });
+    try {
+      await insert('contact_link_clicks', [{ ...row, ...geo }], { upsert: true, onConflict: 'token', returning: 'minimal' });
+    } catch (e) {
+      if (!/buyer_(ip|country|city)|column|schema cache|PGRST204/i.test(String(e?.message || e))) throw e;
+      await insert('contact_link_clicks', [row], { upsert: true, onConflict: 'token', returning: 'minimal' });
+    }
   } catch (e) {
     return NextResponse.json({ error: 'failed', detail: e?.message }, { status: 500 });
   }

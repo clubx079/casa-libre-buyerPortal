@@ -55,7 +55,7 @@ export default function PropertyContactCard({ sellerName, waDigits, url, listing
 
   const copyNumber = async () => {
     try { await navigator.clipboard.writeText(`+${waDigits}`); } catch { /* ignore */ }
-    track('contact_copy_click', { ref: listingRef, ...(trackProps || {}) });
+    track('contact_copy_click', { ref: listingRef, ...(trackProps || {}), contact_token: token });
     setCopied(true);
     setTimeout(() => setCopied(false), 1800);
   };
@@ -72,7 +72,7 @@ export default function PropertyContactCard({ sellerName, waDigits, url, listing
                 href={waUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                onClick={() => { track('contact_whatsapp_click', { ref: listingRef, ...(trackProps || {}) }); recordContact('whatsapp'); }}
+                onClick={() => { track('contact_whatsapp_click', { ref: listingRef, ...(trackProps || {}), contact_token: token }); recordContact('whatsapp'); }}
                 className="max-[920px]:hidden w-full flex items-center justify-center gap-2.5 px-[18px] py-[13px] rounded-pill text-[15px] font-semibold text-white transition-transform active:translate-x-[2px] active:translate-y-[2px]"
                 style={{ background: '#25D366', border: '1.5px solid #111', boxShadow: '4px 4px 0 #111' }}
               >
@@ -80,7 +80,7 @@ export default function PropertyContactCard({ sellerName, waDigits, url, listing
               </a>
 
               <div className="flex gap-2.5 mt-3.5 max-[920px]:mt-0">
-                <a href={`tel:+${waDigits}`} onClick={() => track('contact_call_click', { ref: listingRef, ...(trackProps || {}) })} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 max-[920px]:py-2 rounded-pill border border-ink bg-card text-[13.5px] max-[920px]:text-[12.5px] font-medium hover:bg-paper transition-colors">
+                <a href={`tel:+${waDigits}`} onClick={() => track('contact_call_click', { ref: listingRef, ...(trackProps || {}), contact_token: token })} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 max-[920px]:py-2 rounded-pill border border-ink bg-card text-[13.5px] max-[920px]:text-[12.5px] font-medium hover:bg-paper transition-colors">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.13.96.36 1.9.7 2.8a2 2 0 0 1-.45 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.45c.9.34 1.84.57 2.8.7A2 2 0 0 1 22 16.9Z" /></svg>
                   {t.call}
                 </a>
