@@ -1,4 +1,6 @@
 'use client';
+import { roundArea } from '@/lib/mapArea';
+import { typeOptions } from '@/lib/propertyTypeOptions';
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { typeLabel, typeKey } from '@/lib/propertyType';
@@ -22,7 +24,7 @@ const M = {
   es: {
     searchPh: 'Buscar por barrio o tipo…',
     empty: 'Sin resultados — probá con otro barrio',
-    types: { all: 'Tipo: todos', casa: 'Casa', depto: 'Departamento', duplex: 'Dúplex', terreno: 'Terreno', comercial: 'Local comercial', oficina: 'Oficina', deposito: 'Depósito', edificio: 'Edificio', condominio: 'Condominio', campo: 'Campo', otro: 'Otro' },
+    types: { all: 'Tipo: todos', ...Object.fromEntries(typeOptions('es')) },
     pricesUsd: { all: 'Precio: todos', p1: 'Hasta US$ 100k', p2: 'US$ 100k – 200k', p3: 'Más de US$ 200k' },
     pricesPyg: { all: 'Precio: todos', p1: 'Hasta US$ 500/mes', p2: 'US$ 500 – 1.000/mes', p3: 'Más de US$ 1.000/mes' },
     beds: { all: 'Dormitorios: todos', b1: '1+', b2: '2+', b3: '3+' },
@@ -30,12 +32,13 @@ const M = {
     listView: 'Lista', mapView: 'Mapa',
     nearMe: 'Cerca de mí', myLocation: 'Mi ubicación',
     geoDenied: 'No pudimos acceder a tu ubicación',
+    inArea: 'Propiedades en el área del mapa', showAll: 'Ver todas', emptyArea: 'No hay propiedades en esta zona. Alejá o mové el mapa.',
     loadMore: 'Ver más propiedades', showing: (n, total) => `Mostrando ${n} de ${total}`,
   },
   en: {
     searchPh: 'Search by neighborhood or type…',
     empty: 'No results — try another neighborhood',
-    types: { all: 'Type: all', casa: 'House', depto: 'Apartment', duplex: 'Duplex', terreno: 'Lot', comercial: 'Commercial', oficina: 'Office', deposito: 'Warehouse', edificio: 'Building', condominio: 'Condo', campo: 'Rural land', otro: 'Other' },
+    types: { all: 'Type: all', ...Object.fromEntries(typeOptions('en')) },
     pricesUsd: { all: 'Price: any', p1: 'Under US$ 100k', p2: 'US$ 100k – 200k', p3: 'Over US$ 200k' },
     pricesPyg: { all: 'Price: any', p1: 'Under US$ 500/mo', p2: 'US$ 500 – 1,000/mo', p3: 'Over US$ 1,000/mo' },
     beds: { all: 'Bedrooms: any', b1: '1+', b2: '2+', b3: '3+' },
@@ -43,6 +46,7 @@ const M = {
     listView: 'List', mapView: 'Map',
     nearMe: 'Near me', myLocation: 'My location',
     geoDenied: "We couldn't access your location",
+    inArea: 'Properties in the map area', showAll: 'Show all', emptyArea: 'No properties in this area. Zoom out or move the map.',
     loadMore: 'Load more properties', showing: (n, total) => `Showing ${n} of ${total}`,
   },
 };
@@ -123,7 +127,16 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
   const [pins, setPins] = useState(initialPins);
   const [loadingList, setLoadingList] = useState(false);
   const [page, setPage] = useState(1);
-  const reqRef = useRef(0);
+  const reqRef = useRef(0);       // pins requests
+  const listReqRef = useRef(0);   // list requests (filters and map area)
+  // Listings follow the map: after the visitor drags or zooms, the list shows only
+  // the listings inside the visible area (lib/mapArea.js). null = everything.
+  const [area, setArea] = useState(null);
+  const areaRef = useRef(null);
+  areaRef.current = area;
+  const userMovedRef = useRef(false);
+  const camMoveUntil = useRef(0);  // our own camera moves (auto-fit, near me) aren't the visitor's
+  const moveCamera = (fn) => { camMoveUntil.current = Date.now() + 1500; try { fn(); } catch {} };
   const firstRun = useRef(true); // initial page is SSR'd → don't refetch on mount
 
   // Desktop price bands (M.pricesUsd / pricesPyg) → USD min/max for the API.
@@ -133,7 +146,7 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
     return priceF === 'p1' ? { priceMax: 100000 } : priceF === 'p2' ? { priceMin: 100000, priceMax: 200000 } : { priceMin: 200000 };
   };
   const bedsParam = bedF === 'all' ? undefined : bedF.replace(/\D/g, '');
-  const searchBody = (pageN) => ({ op: filter, type: typeF === 'all' ? undefined : typeF, beds: bedsParam, q: query || undefined, height: heightF === 'all' ? undefined : heightF, sort: sortBy, page: pageN, pageSize: PER_PAGE, ...priceBounds() });
+  const searchBody = (pageN) => ({ op: filter, type: typeF === 'all' ? undefined : typeF, beds: bedsParam, q: query || undefined, height: heightF === 'all' ? undefined : heightF, sort: sortBy, page: pageN, pageSize: PER_PAGE, ...priceBounds(), ...(area || {}) });
   const pinsUrl = () => {
     const p = new URLSearchParams();
     if (filter !== 'all') p.set('op', filter);
@@ -149,6 +162,7 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
 
   useEffect(() => {
     const id = ++reqRef.current;
+    const lid = ++listReqRef.current;
     const doSearch = !firstRun.current; // mount: list is SSR'd, only load the pins
     firstRun.current = false;
     if (doSearch) setLoadingList(true);
@@ -157,15 +171,33 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
         try {
           const res = await fetch('/api/listings/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(searchBody(1)) });
           const j = await res.json();
-          if (id === reqRef.current) { setRows(j.listings || []); setCount(j.count || 0); setPage(1); }
-        } catch { if (id === reqRef.current) { setRows([]); setCount(0); } }
-        finally { if (id === reqRef.current) setLoadingList(false); }
+          if (lid === listReqRef.current) { setRows(j.listings || []); setCount(j.count || 0); setPage(1); }
+        } catch { if (lid === listReqRef.current) { setRows([]); setCount(0); } }
+        finally { if (lid === listReqRef.current) setLoadingList(false); }
       }
       try { const pr = await fetch(pinsUrl()); const pj = await pr.json(); if (id === reqRef.current) { didFit.current = false; setPins(pj.pins || []); } } catch {}
     }, doSearch ? 220 : 0);
     return () => clearTimeout(tmo);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter, typeF, priceF, bedF, heightF, query, sortBy]);
+
+  // The visitor moved the map (or chose "Show all") → reload the list only; the pins
+  // on the map stay as they are.
+  const areaFirstRun = useRef(true);
+  useEffect(() => {
+    if (areaFirstRun.current) { areaFirstRun.current = false; return; }
+    const lid = ++listReqRef.current;
+    setLoadingList(true);
+    (async () => {
+      try {
+        const res = await fetch('/api/listings/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(searchBody(1)) });
+        const j = await res.json();
+        if (lid === listReqRef.current) { setRows(j.listings || []); setCount(j.count || 0); setPage(1); }
+      } catch { if (lid === listReqRef.current) { setRows([]); setCount(0); } }
+      finally { if (lid === listReqRef.current) setLoadingList(false); }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [area]);
 
   const loadMore = async () => {
     const next = page + 1;
@@ -283,7 +315,7 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
     setNearMe(false);
     setNearListings(null);
     if (youMarkerRef.current) { try { youMarkerRef.current.setMap(null); } catch {} youMarkerRef.current = null; }
-    if (ref && prevViewRef.current) { try { ref.map.setZoom(prevViewRef.current.zoom); ref.map.panTo(prevViewRef.current.center); } catch {} }
+    if (ref && prevViewRef.current) { const v = prevViewRef.current; moveCamera(() => { ref.map.setZoom(v.zoom); ref.map.panTo(v.center); }); }
     prevViewRef.current = null;
   };
   nearMeRef.current = nearMe;
@@ -301,9 +333,10 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
     skipFitRef.current = true;
     setUserLoc(loc);
     setNearMe(true);
+    setArea(null);           // near me shows its own list
     loadNearListings(loc);   // hydrate the real nearby list + count
     if (ref) {
-      try { ref.map.panTo(loc); ref.map.setZoom(15); } catch {}   // no lock — user can pan/zoom freely
+      moveCamera(() => { ref.map.panTo(loc); ref.map.setZoom(15); });   // no lock — user can pan/zoom freely
       dropYouMarker(loc);
     }
   };
@@ -354,6 +387,7 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
       await loadGoogleMapsAPI();
       if (cancelled || !mapEl.current || mapRef.current || !window.google?.maps) return;
       const google = window.google;
+      camMoveUntil.current = Date.now() + 2500;   // the map's own first render isn't a visitor move
       const map = new google.maps.Map(mapEl.current, mapOptions(google, { center: COUNTRY.mapCenter, zoom: COUNTRY.mapZoom, gestureHandling: 'greedy' }));
       const info = new google.maps.InfoWindow({ disableAutoPan: true });
       // Cluster bubble → brand-coloured SVG pill (matches `.cluster-pill`).
@@ -368,6 +402,19 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
       infoRef.current = info;
       // A click on the map (not a pin) exits near-me and returns to the prior view.
       map.addListener('click', () => { if (nearMeRef.current && deactivateNearRef.current) deactivateNearRef.current(); });
+      // Listings follow the map: when the visitor drags or zooms, the list switches to
+      // the listings inside the visible area once the map settles.
+      map.addListener('dragstart', () => { userMovedRef.current = true; });
+      map.addListener('zoom_changed', () => { if (Date.now() > camMoveUntil.current) userMovedRef.current = true; });
+      map.addListener('idle', () => {
+        if (!userMovedRef.current) return;
+        userMovedRef.current = false;
+        if (nearMeRef.current) return;
+        const b = map.getBounds();
+        if (!b) return;
+        const ne = b.getNorthEast(); const sw = b.getSouthWest();
+        setArea(roundArea({ n: ne.lat(), s: sw.lat(), e: ne.lng(), w: sw.lng() }));
+      });
       google.maps.event.addListenerOnce(map, 'tilesloaded', () => { if (!cancelled) setMapReady(true); });
       setTimeout(() => { if (!cancelled) setMapReady(true); }, 1500);
       drawMarkers();
@@ -443,15 +490,13 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
     const isFiltered = typeF !== 'all' || priceF !== 'all' || bedF !== 'all' || heightF !== 'all' || !!query;
     // Don't refit while near-me is locked, nor on the toggle itself (so deselect
     // can restore the previous view instead of snapping to the filtered bounds).
-    if (n && !didFit.current && isFiltered && !nearMe && !skipFitRef.current) { didFit.current = true; try { map.fitBounds(bounds, 40); } catch {} }
+    if (n && !didFit.current && isFiltered && !nearMe && !skipFitRef.current && !areaRef.current) { didFit.current = true; moveCamera(() => map.fitBounds(bounds, 40)); }
     skipFitRef.current = false;
   }
 
-  // Highlight the hovered card's pin on the map WITHOUT changing zoom: pan the
-  // map (keeping the current zoom) only if the pin sits outside the current
-  // viewport, then light up either the pin itself — or, if it's still grouped in
-  // a cluster at this zoom, the cluster bubble that contains it. Never zooms,
-  // never navigates.
+  // Highlight the hovered card's pin on the map — the pin itself, or the cluster
+  // bubble that contains it at this zoom. The map never moves on hover (moving the
+  // map is what filters the list, see the 'idle' listener).
   const hotMarkerRef = useRef(null); // { marker, icon } — restore its normal icon on clear
 
   const clearHover = () => {
@@ -475,12 +520,6 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
 
     const mk = markersRef.current[hot];
     if (!mk) return;
-
-    // Pan when the pin is off-screen; ALWAYS pan for a promoted (verified/home) pin so
-    // hovering a paid listing visibly moves the map straight to its star pin.
-    const p = mk.getPosition?.();
-    const b = map.getBounds();
-    if (p && (mk.__promoted || (b && !b.contains(p)))) map.panTo(p);
 
     // Is this marker currently rolled up inside a multi-marker cluster bubble?
     const parent = (cluster.clusters || []).find((c) => (c.markers?.length > 1) && c.markers.includes(mk));
@@ -585,7 +624,10 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
         <div className={`min-h-0 flex-col md:flex md:w-[44%] md:min-w-[400px] md:flex-none ${mobileView === 'map' ? 'hidden' : 'flex flex-1'}`}>
           {/* list head: count + sort */}
           <div className="flex items-center justify-between gap-2.5 px-4 md:px-7 pt-3.5">
-            <span className="font-mono text-[12px] text-ink/50">{t.results(headerCount)}</span>
+            <span className="font-mono text-[12px] text-ink/50">
+              {t.results(headerCount)}
+              {area && !nearMe && <> · {m.inArea} · <button type="button" onClick={() => setArea(null)} className="underline font-semibold text-ink" data-testid="area-show-all">{m.showAll}</button></>}
+            </span>
             <div className="relative">
               <button onClick={(e) => { e.stopPropagation(); setSortOpen((o) => !o); }} className="flex items-center gap-2 border border-ink/30 bg-card rounded-pill px-3.5 py-2 text-[13px] font-medium">
                 {m.sort[sortBy]}<span className="text-[12px] font-bold tracking-[-2px]">↑↓</span>
@@ -605,7 +647,7 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
 
           {/* list */}
           <div className="flex-1 min-h-0 overflow-y-auto px-4 md:px-7 py-5 flex flex-col gap-4">
-            {displayRows.length === 0 && !loadingList && <div className="py-10 text-center font-mono text-[12px] text-ink/45">{m.empty}</div>}
+            {displayRows.length === 0 && !loadingList && <div className="py-10 text-center font-mono text-[12px] text-ink/45">{area && !nearMe ? m.emptyArea : m.empty}</div>}
             {displayRows.map((l) => (
               <Link
                 key={l.id} href={`/propiedad/${l.id}`} target="_blank" rel="noopener noreferrer"

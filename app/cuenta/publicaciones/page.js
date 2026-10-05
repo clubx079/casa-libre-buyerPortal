@@ -1,4 +1,5 @@
 'use client';
+import { typeLabel } from '@/lib/propertyTypeOptions';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
@@ -47,7 +48,7 @@ function ago(iso, lang) {
 function DraftCard({ d, lang, onContinue, onDelete }) {
   const x = D[lang] || D.es;
   const data = d.data || {};
-  const title = `${x.types[data.ptype] || x.property}${data.neighborhood ? ` · ${data.neighborhood}` : ''}`;
+  const title = `${typeLabel(data.ptype, lang) || x.property}${data.neighborhood ? ` · ${data.neighborhood}` : ''}`;
   const miss = draftMissing(data).map((k) => x.miss[k]);
   return (
     <div className="bg-card rounded-[18px] border border-dashed border-ink/35 p-4 flex flex-col gap-3" data-testid="draft-card">

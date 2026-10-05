@@ -1,4 +1,9 @@
 'use client';
+// Sign in / sign up with an emailed 6-digit code — no passwords (same as the mobile
+// app). /api/auth/code/send emails the code and says whether it will sign in an
+// existing account ('login') or create one ('signup'); /api/auth/code/verify checks
+// it and starts the session. New people also give their name (+ optional phone) and
+// accept the Terms. Google sign-in stays.
 import { useEffect, useRef, useState } from 'react';
 import { useLang } from '@/lib/useLang';
 import { track } from '@/lib/analytics';
@@ -6,71 +11,52 @@ import { COUNTRY } from '@/lib/country';
 
 const DICT = {
   es: {
-    emailTitle: 'Ingresá o creá tu cuenta', emailSub: 'Publicá y gestioná tus propiedades con Casa Libre.',
+    emailTitle: 'Ingresá o creá tu cuenta', emailSub: 'Te enviamos un código a tu email. Sin contraseñas.',
     email: 'Email', emailPh: 'tu@email.com', continue: 'Continuar', googleBtn: 'Continuar con Google', orText: 'o',
-    loginTitle: 'Bienvenido de nuevo', password: 'Contraseña', passwordPh: '••••••••', login: 'Ingresar',
-    signupTitle: 'Creá tu cuenta', signupSub: 'Un paso más para empezar a publicar.',
-    name: 'Nombre completo', namePh: 'Ana Giménez', phone: 'WhatsApp / teléfono', phonePh: '0981 123 456',
-    newPassword: 'Contraseña', newPasswordPh: 'mínimo 6 caracteres', sendCode: 'Enviar código',
-    otpTitle: 'Verificá tu email', otpSub: (e) => `Enviamos un código de 6 dígitos a ${e}.`,
-    code: 'Código', verify: 'Verificar y crear cuenta', resend: 'Reenviar código', resent: 'Código reenviado ✓',
-    changeEmail: '← Cambiar email', back: '← Atrás', close: 'Cerrar',
-    errEmail: 'Ingresá un email válido', errPw: 'La contraseña debe tener al menos 6 caracteres',
+    loginTitle: 'Ingresá el código', signupTitle: 'Creá tu cuenta',
+    codeSub: (e) => `Enviamos un código de 6 dígitos a ${e}.`, spamHint: '¿No llegó? Revisá la carpeta de spam.',
+    name: 'Nombre completo', namePh: 'Ana Giménez', phone: 'WhatsApp / teléfono (opcional)', phonePh: '0981 123 456',
+    code: 'Código', login: 'Ingresar', create: 'Crear cuenta', resend: 'Reenviar código', resent: 'Código reenviado ✓',
+    changeEmail: '← Cambiar email', close: 'Cerrar',
+    errEmail: 'Ingresá un email válido', errName: 'Ingresá tu nombre',
     googleTerms: 'Al continuar con Google aceptás los ', termsPre: 'Acepto los ', termsLink: 'Términos y Condiciones', termsMid: ' y la ', privacyLink: 'Política de Privacidad', errTerms: 'Para continuar, aceptá los Términos y Condiciones.',
-    errCreds: 'Email o contraseña incorrectos', errCode: 'Código incorrecto o vencido',
-    errTaken: 'Ese email ya tiene una cuenta. Ingresá con tu contraseña.',
-    errSend: 'No se pudo enviar el código. Intentá de nuevo.', errGeneric: 'Algo salió mal. Intentá de nuevo.',
-    sending: 'Enviando…', verifying: 'Verificando…', checking: 'Verificando…',
-    forgot: '¿Olvidaste tu contraseña?',
-    resetEmailTitle: 'Restablecer contraseña', resetEmailSub: 'Te enviamos un código para crear una contraseña nueva.',
-    sendResetCode: 'Enviar código',
-    resetOtpTitle: 'Ingresá el código', resetOtpSub: (e) => `Enviamos un código de 6 dígitos a ${e}.`, verifyCode: 'Verificar código',
-    resetNewTitle: 'Nueva contraseña', resetNewSub: 'Elegí una contraseña nueva para tu cuenta.',
-    confirmPassword: 'Confirmá la contraseña', confirmPasswordPh: 'repetí la contraseña', resetSave: 'Guardar e ingresar',
-    errMismatch: 'Las contraseñas no coinciden', errRate: 'Demasiados intentos. Esperá un momento e intentá de nuevo.',
-    backToLogin: '← Volver a ingresar',
+    errCode: 'Código incorrecto o vencido', errSend: 'No se pudo enviar el código. Intentá de nuevo.',
+    errRate: 'Demasiados intentos. Esperá un momento e intentá de nuevo.',
+    errBlocked: 'Esta cuenta no está disponible. Escribinos desde la página de contacto.',
+    errGeneric: 'Algo salió mal. Intentá de nuevo.',
+    sending: 'Enviando…', verifying: 'Verificando…',
   },
   en: {
-    emailTitle: 'Log in or sign up', emailSub: 'Post and manage your properties with Casa Libre.',
+    emailTitle: 'Log in or sign up', emailSub: "We'll email you a code. No passwords.",
     email: 'Email', emailPh: 'you@email.com', continue: 'Continue', googleBtn: 'Continue with Google', orText: 'or',
-    loginTitle: 'Welcome back', password: 'Password', passwordPh: '••••••••', login: 'Log in',
-    signupTitle: 'Create your account', signupSub: 'One more step to start posting.',
-    name: 'Full name', namePh: 'Ana Giménez', phone: 'WhatsApp / phone', phonePh: '0981 123 456',
-    newPassword: 'Password', newPasswordPh: 'at least 6 characters', sendCode: 'Send code',
-    otpTitle: 'Verify your email', otpSub: (e) => `We sent a 6-digit code to ${e}.`,
-    code: 'Code', verify: 'Verify & create account', resend: 'Resend code', resent: 'Code resent ✓',
-    changeEmail: '← Change email', back: '← Back', close: 'Close',
-    errEmail: 'Enter a valid email', errPw: 'Password must be at least 6 characters',
+    loginTitle: 'Enter the code', signupTitle: 'Create your account',
+    codeSub: (e) => `We sent a 6-digit code to ${e}.`, spamHint: "Didn't get it? Check your spam folder.",
+    name: 'Full name', namePh: 'Ana Giménez', phone: 'WhatsApp / phone (optional)', phonePh: '0981 123 456',
+    code: 'Code', login: 'Log in', create: 'Create account', resend: 'Resend code', resent: 'Code resent ✓',
+    changeEmail: '← Change email', close: 'Close',
+    errEmail: 'Enter a valid email', errName: 'Enter your name',
     googleTerms: 'By continuing with Google you agree to the ', termsPre: 'I agree to the ', termsLink: 'Terms of Service', termsMid: ' and the ', privacyLink: 'Privacy Policy', errTerms: 'To continue, please accept the Terms of Service.',
-    errCreds: 'Wrong email or password', errCode: 'Wrong or expired code',
-    errTaken: 'That email already has an account. Log in with your password.',
-    errSend: 'Could not send the code. Try again.', errGeneric: 'Something went wrong. Try again.',
-    sending: 'Sending…', verifying: 'Verifying…', checking: 'Checking…',
-    forgot: 'Forgot your password?',
-    resetEmailTitle: 'Reset password', resetEmailSub: "We'll send you a code to create a new password.",
-    sendResetCode: 'Send code',
-    resetOtpTitle: 'Enter the code', resetOtpSub: (e) => `We sent a 6-digit code to ${e}.`, verifyCode: 'Verify code',
-    resetNewTitle: 'New password', resetNewSub: 'Choose a new password for your account.',
-    confirmPassword: 'Confirm password', confirmPasswordPh: 'repeat the password', resetSave: 'Save & log in',
-    errMismatch: 'Passwords do not match', errRate: 'Too many attempts. Please wait a moment and try again.',
-    backToLogin: '← Back to log in',
+    errCode: 'Wrong or expired code', errSend: 'Could not send the code. Try again.',
+    errRate: 'Too many attempts. Please wait a moment and try again.',
+    errBlocked: 'This account is unavailable. Write to us from the contact page.',
+    errGeneric: 'Something went wrong. Try again.',
+    sending: 'Sending…', verifying: 'Verifying…',
   },
 };
 
-const emailOk = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || ''));
+const emailOk = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || '').trim());
 const inputCls = 'w-full px-4 py-[13px] border-[1.5px] border-ink/30 rounded-input bg-card font-medium text-[15px] outline-none focus:border-ink';
 const btnCls = 'w-full py-3.5 bg-ink text-paper rounded-pill font-bold text-[15px] shadow-hard-soft disabled:opacity-60';
 
 export default function AuthModal({ onAuthed, onClose }) {
   const [lang] = useLang();
   const t = DICT[lang];
-  const [step, setStep] = useState('email'); // email | login-password | signup | otp | reset-email | reset-otp | reset-new
+  const [step, setStep] = useState('email'); // email | code
+  const [mode, setMode] = useState('login'); // what the code will do: login | signup
   const [email, setEmail] = useState('');
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('');
   const [termsOk, setTermsOk] = useState(false);   // Terms of Service opt-in (sign-up)
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -82,7 +68,7 @@ export default function AuthModal({ onAuthed, onClose }) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
-  useEffect(() => { firstField.current?.focus(); }, [step]);
+  useEffect(() => { firstField.current?.focus(); }, [step, mode]);
 
   const post = (url, body) => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
@@ -110,51 +96,44 @@ export default function AuthModal({ onAuthed, onClose }) {
     </>
   );
 
+  // Email the code. The reply says whether it signs in or creates the account.
+  const sendCode = async () => {
+    const r = await post('/api/auth/code/send', { email: email.trim() });
+    const j = await r.json().catch(() => ({}));
+    if (r.status === 429 || j.error === 'rate_limited' || j.error === 'cooldown') return { error: t.errRate };
+    if (!r.ok || !j.ok) return { error: t.errSend };
+    return { mode: j.mode === 'signup' ? 'signup' : 'login' };
+  };
+
   const submitEmail = async (e) => {
     e.preventDefault(); setErr('');
     if (!emailOk(email)) { setErr(t.errEmail); return; }
     setBusy(true);
     try {
-      const r = await post('/api/auth/check-email', { email });
-      const j = await r.json();
-      setStep(j.exists ? 'login-password' : 'signup');
-    } catch { setErr(t.errGeneric); } finally { setBusy(false); }
-  };
-
-  const submitLogin = async (e) => {
-    e.preventDefault(); setErr('');
-    setBusy(true);
-    try {
-      const r = await post('/api/auth/login', { email, password });
-      const j = await r.json();
-      if (!r.ok || !j.ok) { setErr(t.errCreds); return; }
-      track('user_logged_in', { method: 'password' });
-      onAuthed(j.user);
-    } catch { setErr(t.errGeneric); } finally { setBusy(false); }
-  };
-
-  const submitSignup = async (e) => {
-    e.preventDefault(); setErr('');
-    if (!password || password.length < 6) { setErr(t.errPw); return; }
-    if (!termsOk) { setErr(t.errTerms); return; }
-    setBusy(true);
-    try {
-      const r = await post('/api/auth/send-otp', { email, fullName, phone });
-      const j = await r.json();
-      if (r.status === 409) { setErr(t.errTaken); setStep('login-password'); return; }
-      if (!r.ok || !j.ok) { setErr(t.errSend); return; }
-      setStep('otp');
+      const res = await sendCode();
+      if (res.error) { setErr(res.error); return; }
+      setMode(res.mode); setCode(''); setStep('code');
+      track(res.mode === 'signup' ? 'sign_up_code_sent' : 'login_code_sent', {});
     } catch { setErr(t.errSend); } finally { setBusy(false); }
   };
 
-  const submitOtp = async (e) => {
+  const submitCode = async (e) => {
     e.preventDefault(); setErr('');
+    if (mode === 'signup') {
+      if (!fullName.trim()) { setErr(t.errName); return; }
+      if (!termsOk) { setErr(t.errTerms); return; }
+    }
     setBusy(true);
     try {
-      const r = await post('/api/auth/verify-otp', { email, code, password, fullName, phone });
-      const j = await r.json();
-      if (!r.ok || !j.ok) { setErr(t.errCode); return; }
-      track('user_signed_up', { method: 'email_otp' });
+      const r = await post('/api/auth/code/verify', {
+        email: email.trim(), code,
+        ...(mode === 'signup' ? { fullName: fullName.trim(), phone: phone.trim() || undefined } : {}),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (r.status === 403) { setErr(t.errBlocked); return; }
+      if (!r.ok || !j.ok) { setErr(j.error === 'too_many_attempts' ? t.errRate : t.errCode); return; }
+      if (j.mode === 'signup') track('user_signed_up', { method: 'email_code' });
+      else track('user_logged_in', { method: 'email_code' });
       onAuthed(j.user);
     } catch { setErr(t.errGeneric); } finally { setBusy(false); }
   };
@@ -162,61 +141,16 @@ export default function AuthModal({ onAuthed, onClose }) {
   const resend = async () => {
     setErr(''); setResent(false);
     try {
-      const r = await post('/api/auth/send-otp', { email, fullName, phone });
-      if (r.ok) { setResent(true); setTimeout(() => setResent(false), 3000); }
-    } catch {}
-  };
-
-  // --- Forgot / reset password flow ---
-  const submitForgot = async (e) => {
-    e.preventDefault(); setErr('');
-    if (!emailOk(email)) { setErr(t.errEmail); return; }
-    setBusy(true);
-    try {
-      const r = await post('/api/auth/forgot-password', { email });
-      if (r.status === 429) { setErr(t.errRate); return; }
-      if (!r.ok) { setErr(t.errSend); return; }
-      track('password_reset_requested', {});
-      setCode(''); setStep('reset-otp');
-    } catch { setErr(t.errSend); } finally { setBusy(false); }
-  };
-
-  const submitResetOtp = async (e) => {
-    e.preventDefault(); setErr('');
-    setBusy(true);
-    try {
-      const r = await post('/api/auth/verify-reset-otp', { email, code });
-      if (!r.ok) { setErr(t.errCode); return; }
-      setPassword(''); setConfirmPassword(''); setStep('reset-new');
-    } catch { setErr(t.errGeneric); } finally { setBusy(false); }
-  };
-
-  const submitResetNew = async (e) => {
-    e.preventDefault(); setErr('');
-    if (!password || password.length < 6) { setErr(t.errPw); return; }
-    if (password !== confirmPassword) { setErr(t.errMismatch); return; }
-    setBusy(true);
-    try {
-      const r = await post('/api/auth/reset-password', { email, code, password });
-      const j = await r.json();
-      if (!r.ok || !j.ok) { setErr(j.error === 'weak_password' ? t.errPw : t.errCode); return; }
-      track('password_reset', { method: 'email_otp' });
-      onAuthed(j.user);
-    } catch { setErr(t.errGeneric); } finally { setBusy(false); }
-  };
-
-  const resendReset = async () => {
-    setErr(''); setResent(false);
-    try {
-      const r = await post('/api/auth/forgot-password', { email });
-      if (r.ok) { setResent(true); setTimeout(() => setResent(false), 3000); }
+      const res = await sendCode();
+      if (res.error) { setErr(res.error); return; }
+      setResent(true); setTimeout(() => setResent(false), 3000);
     } catch {}
   };
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-ink/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-[420px] bg-paper border-[1.5px] border-ink rounded-[24px] shadow-hard p-7 md:p-8">
+      <div className="relative w-full max-w-[420px] max-h-[92vh] overflow-y-auto bg-paper border-[1.5px] border-ink rounded-[24px] shadow-hard p-7 md:p-8">
         <button onClick={onClose} aria-label={t.close} className="absolute top-4 right-4 w-8 h-8 rounded-pill border border-ink/25 flex items-center justify-center text-ink/60 hover:border-ink hover:text-ink">×</button>
         <div className="text-[22px] font-bold tracking-head mb-5">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></div>
 
@@ -227,104 +161,38 @@ export default function AuthModal({ onAuthed, onClose }) {
             {googleBtn}
             <label className="block text-[13px] font-semibold mb-1.5">{t.email}</label>
             <input ref={firstField} type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t.emailPh} className={inputCls} autoComplete="email" />
-            <button type="submit" disabled={busy} className={`${btnCls} mt-5`}>{busy ? t.checking : t.continue}</button>
+            <button type="submit" disabled={busy} className={`${btnCls} mt-5`}>{busy ? t.sending : t.continue}</button>
           </form>
         )}
 
-        {step === 'login-password' && (
-          <form onSubmit={submitLogin}>
-            <h2 className="text-[24px] font-bold tracking-head leading-tight">{t.loginTitle}</h2>
-            <p className="text-[14px] text-ink/55 mt-1 mb-5">{email}</p>
-            <label className="block text-[13px] font-semibold mb-1.5">{t.password}</label>
-            <input ref={firstField} type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t.passwordPh} className={inputCls} autoComplete="current-password" />
-            <button type="submit" disabled={busy} className={`${btnCls} mt-5`}>{busy ? t.verifying : t.login}</button>
-            <div className="flex items-center justify-between mt-4">
-              <button type="button" onClick={() => { setStep('email'); setErr(''); }} className="text-[13px] font-medium text-ink/55 hover:text-ink">{t.changeEmail}</button>
-              <button type="button" onClick={() => { setStep('reset-email'); setErr(''); }} className="text-[13px] font-medium text-ink/55 hover:text-ink">{t.forgot}</button>
-            </div>
-          </form>
-        )}
-
-        {step === 'reset-email' && (
-          <form onSubmit={submitForgot}>
-            <h2 className="text-[24px] font-bold tracking-head leading-tight">{t.resetEmailTitle}</h2>
-            <p className="text-[14px] text-ink/55 mt-1 mb-5">{t.resetEmailSub}</p>
-            <label className="block text-[13px] font-semibold mb-1.5">{t.email}</label>
-            <input ref={firstField} type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t.emailPh} className={inputCls} autoComplete="email" />
-            <button type="submit" disabled={busy} className={`${btnCls} mt-5`}>{busy ? t.sending : t.sendResetCode}</button>
-            <button type="button" onClick={() => { setStep('login-password'); setErr(''); }} className="block mx-auto mt-4 text-[13px] font-medium text-ink/55 hover:text-ink">{t.backToLogin}</button>
-          </form>
-        )}
-
-        {step === 'reset-otp' && (
-          <form onSubmit={submitResetOtp}>
-            <h2 className="text-[24px] font-bold tracking-head leading-tight">{t.resetOtpTitle}</h2>
-            <p className="text-[14px] text-ink/55 mt-1 mb-5">{t.resetOtpSub(email)}</p>
+        {step === 'code' && (
+          <form onSubmit={submitCode}>
+            <h2 className="text-[24px] font-bold tracking-head leading-tight">{mode === 'signup' ? t.signupTitle : t.loginTitle}</h2>
+            <p className="text-[14px] text-ink/55 mt-1 mb-5">{t.codeSub(email.trim())}</p>
+            {mode === 'signup' && (
+              <div className="flex flex-col gap-3 mb-3">
+                <div>
+                  <label className="block text-[13px] font-semibold mb-1.5">{t.name}</label>
+                  <input ref={firstField} value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder={t.namePh} className={inputCls} autoComplete="name" />
+                </div>
+                <div>
+                  <label className="block text-[13px] font-semibold mb-1.5">{t.phone}</label>
+                  <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t.phonePh} className={inputCls} autoComplete="tel" />
+                </div>
+              </div>
+            )}
             <label className="block text-[13px] font-semibold mb-1.5">{t.code}</label>
-            <input ref={firstField} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" placeholder="000000" className={`${inputCls} tracking-[8px] text-center font-mono text-[20px]`} />
-            <button type="submit" disabled={busy || code.length !== 6} className={`${btnCls} mt-5`}>{busy ? t.verifying : t.verifyCode}</button>
+            <input ref={mode === 'signup' ? undefined : firstField} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" placeholder="000000" className={`${inputCls} tracking-[8px] text-center font-mono text-[20px]`} data-testid="auth-code" />
+            <p className="mt-1.5 text-[12px] text-ink/45">{t.spamHint}</p>
+            {mode === 'signup' && (
+              <label className="mt-4 flex items-start gap-2.5 text-[13px] leading-snug text-ink/75 cursor-pointer select-none">
+                <input type="checkbox" checked={termsOk} onChange={(e) => { setTermsOk(e.target.checked); if (e.target.checked && err === t.errTerms) setErr(''); }} className="mt-[2px] w-4 h-4 accent-ink shrink-0 cursor-pointer" data-testid="signup-terms" />
+                <span>{t.termsPre}<a href="/terminos" target="_blank" rel="noopener" className="underline font-semibold text-ink">{t.termsLink}</a>{t.termsMid}<a href="/privacidad" target="_blank" rel="noopener" className="underline font-semibold text-ink">{t.privacyLink}</a></span>
+              </label>
+            )}
+            <button type="submit" disabled={busy || code.length !== 6} className={`${btnCls} mt-5`}>{busy ? t.verifying : (mode === 'signup' ? t.create : t.login)}</button>
             <div className="flex items-center justify-between mt-4">
-              <button type="button" onClick={() => { setStep('reset-email'); setErr(''); }} className="text-[13px] font-medium text-ink/55 hover:text-ink">{t.back}</button>
-              <button type="button" onClick={resendReset} className="text-[13px] font-medium text-ink/55 hover:text-ink">{resent ? t.resent : t.resend}</button>
-            </div>
-          </form>
-        )}
-
-        {step === 'reset-new' && (
-          <form onSubmit={submitResetNew}>
-            <h2 className="text-[24px] font-bold tracking-head leading-tight">{t.resetNewTitle}</h2>
-            <p className="text-[14px] text-ink/55 mt-1 mb-5">{t.resetNewSub}</p>
-            <div className="flex flex-col gap-3">
-              <div>
-                <label className="block text-[13px] font-semibold mb-1.5">{t.newPassword}</label>
-                <input ref={firstField} type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t.newPasswordPh} className={inputCls} autoComplete="new-password" />
-              </div>
-              <div>
-                <label className="block text-[13px] font-semibold mb-1.5">{t.confirmPassword}</label>
-                <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder={t.confirmPasswordPh} className={inputCls} autoComplete="new-password" />
-              </div>
-            </div>
-            <button type="submit" disabled={busy} className={`${btnCls} mt-5`}>{busy ? t.verifying : t.resetSave}</button>
-            <button type="button" onClick={() => { setStep('reset-otp'); setErr(''); }} className="block mx-auto mt-4 text-[13px] font-medium text-ink/55 hover:text-ink">{t.back}</button>
-          </form>
-        )}
-
-        {step === 'signup' && (
-          <form onSubmit={submitSignup}>
-            <h2 className="text-[24px] font-bold tracking-head leading-tight">{t.signupTitle}</h2>
-            <p className="text-[14px] text-ink/55 mt-1 mb-5">{t.signupSub}</p>
-            <div className="flex flex-col gap-3">
-              <div>
-                <label className="block text-[13px] font-semibold mb-1.5">{t.name}</label>
-                <input ref={firstField} value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder={t.namePh} className={inputCls} autoComplete="name" />
-              </div>
-              <div>
-                <label className="block text-[13px] font-semibold mb-1.5">{t.phone}</label>
-                <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t.phonePh} className={inputCls} autoComplete="tel" />
-              </div>
-              <div>
-                <label className="block text-[13px] font-semibold mb-1.5">{t.newPassword}</label>
-                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t.newPasswordPh} className={inputCls} autoComplete="new-password" />
-              </div>
-            </div>
-            <label className="mt-4 flex items-start gap-2.5 text-[13px] leading-snug text-ink/75 cursor-pointer select-none">
-              <input type="checkbox" checked={termsOk} onChange={(e) => { setTermsOk(e.target.checked); if (e.target.checked && err === t.errTerms) setErr(''); }} className="mt-[2px] w-4 h-4 accent-ink shrink-0 cursor-pointer" data-testid="signup-terms" />
-              <span>{t.termsPre}<a href="/terminos" target="_blank" rel="noopener" className="underline font-semibold text-ink">{t.termsLink}</a>{t.termsMid}<a href="/privacidad" target="_blank" rel="noopener" className="underline font-semibold text-ink">{t.privacyLink}</a></span>
-            </label>
-            <button type="submit" disabled={busy} className={`${btnCls} mt-5`}>{busy ? t.sending : t.sendCode}</button>
-            <button type="button" onClick={() => { setStep('email'); setErr(''); }} className="block mx-auto mt-4 text-[13px] font-medium text-ink/55 hover:text-ink">{t.changeEmail}</button>
-          </form>
-        )}
-
-        {step === 'otp' && (
-          <form onSubmit={submitOtp}>
-            <h2 className="text-[24px] font-bold tracking-head leading-tight">{t.otpTitle}</h2>
-            <p className="text-[14px] text-ink/55 mt-1 mb-5">{t.otpSub(email)}</p>
-            <label className="block text-[13px] font-semibold mb-1.5">{t.code}</label>
-            <input ref={firstField} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" placeholder="000000" className={`${inputCls} tracking-[8px] text-center font-mono text-[20px]`} />
-            <button type="submit" disabled={busy || code.length !== 6} className={`${btnCls} mt-5`}>{busy ? t.verifying : t.verify}</button>
-            <div className="flex items-center justify-between mt-4">
-              <button type="button" onClick={() => { setStep('signup'); setErr(''); }} className="text-[13px] font-medium text-ink/55 hover:text-ink">{t.back}</button>
+              <button type="button" onClick={() => { setStep('email'); setErr(''); setCode(''); }} className="text-[13px] font-medium text-ink/55 hover:text-ink">{t.changeEmail}</button>
               <button type="button" onClick={resend} className="text-[13px] font-medium text-ink/55 hover:text-ink">{resent ? t.resent : t.resend}</button>
             </div>
           </form>

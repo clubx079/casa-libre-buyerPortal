@@ -7,15 +7,15 @@ const T = {
   es: {
     title: 'Ajustes', profile: 'Perfil', name: 'Nombre completo', phone: 'WhatsApp / teléfono', save: 'Guardar', saved: 'Guardado ✓', saving: 'Guardando…',
     emailSec: 'Cambiar email', currentEmail: 'Email actual', newEmail: 'Nuevo email', sendCode: 'Enviar código', code: 'Código', verify: 'Verificar y cambiar', codeSent: 'Enviamos un código al nuevo email.', emailChanged: 'Email actualizado ✓',
-    pwSec: 'Cambiar contraseña', current: 'Contraseña actual', next: 'Nueva contraseña', change: 'Cambiar contraseña', pwChanged: 'Contraseña actualizada ✓', pwSet: 'Definí una contraseña para tu cuenta.',
-    err: 'Algo salió mal. Intentá de nuevo.', errEmail: 'Ingresá un email válido', errTaken: 'Ese email ya está en uso.', errCode: 'Código incorrecto o vencido.', errCurrent: 'Contraseña actual incorrecta.', errWeak: 'Mínimo 6 caracteres.',
+    signSec: 'Cómo ingresás', signText: 'Ingresás con un código que te enviamos por email, o con Google. No necesitás contraseña.',
+    err: 'Algo salió mal. Intentá de nuevo.', errEmail: 'Ingresá un email válido', errTaken: 'Ese email ya está en uso.', errCode: 'Código incorrecto o vencido.',
     delSec: 'Eliminar cuenta', delText: 'Elimina tu cuenta y tus datos personales. No se puede deshacer.', delBtn: 'Eliminar mi cuenta',
   },
   en: {
     title: 'Settings', profile: 'Profile', name: 'Full name', phone: 'WhatsApp / phone', save: 'Save', saved: 'Saved ✓', saving: 'Saving…',
     emailSec: 'Change email', currentEmail: 'Current email', newEmail: 'New email', sendCode: 'Send code', code: 'Code', verify: 'Verify & change', codeSent: 'We sent a code to the new email.', emailChanged: 'Email updated ✓',
-    pwSec: 'Change password', current: 'Current password', next: 'New password', change: 'Change password', pwChanged: 'Password updated ✓', pwSet: 'Set a password for your account.',
-    err: 'Something went wrong. Try again.', errEmail: 'Enter a valid email', errTaken: 'That email is already in use.', errCode: 'Wrong or expired code.', errCurrent: 'Wrong current password.', errWeak: 'At least 6 characters.',
+    signSec: 'How you sign in', signText: 'You sign in with a code we email you, or with Google. No password needed.',
+    err: 'Something went wrong. Try again.', errEmail: 'Enter a valid email', errTaken: 'That email is already in use.', errCode: 'Wrong or expired code.',
     delSec: 'Delete account', delText: 'Deletes your account and your personal data. This cannot be undone.', delBtn: 'Delete my account',
   },
 };
@@ -44,7 +44,6 @@ export default function SettingsPage() {
   const [prof, setProf] = useState({ full_name: '', phone: '', email: '', has_password: true, auth_provider: 'email' });
   const [pBusy, setPBusy] = useState(false); const [pMsg, setPMsg] = useState(null);
   const [newEmail, setNewEmail] = useState(''); const [emCode, setEmCode] = useState(''); const [emStage, setEmStage] = useState('idle'); const [emBusy, setEmBusy] = useState(false); const [emMsg, setEmMsg] = useState(null);
-  const [cur, setCur] = useState(''); const [nxt, setNxt] = useState(''); const [pwBusy, setPwBusy] = useState(false); const [pwMsg, setPwMsg] = useState(null);
 
   useEffect(() => { fetch('/api/account/profile').then((r) => r.json()).then((j) => { if (!j.error) setProf(j); }).catch(() => {}); }, []);
   const post = (url, body, method = 'POST') => fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -75,17 +74,6 @@ export default function SettingsPage() {
     } catch { setEmMsg({ text: t.err }); } finally { setEmBusy(false); }
   };
 
-  const changePw = async (e) => {
-    e.preventDefault(); setPwBusy(true); setPwMsg(null);
-    if (!nxt || nxt.length < 6) { setPwMsg({ text: t.errWeak }); setPwBusy(false); return; }
-    try {
-      const r = await post('/api/account/change-password', { current: cur, next: nxt });
-      const j = await r.json();
-      if (!r.ok) { setPwMsg({ text: j.error === 'wrong_current' ? t.errCurrent : j.error === 'weak_password' ? t.errWeak : t.err }); return; }
-      setCur(''); setNxt(''); setProf((p) => ({ ...p, has_password: true })); setPwMsg({ text: t.pwChanged, ok: true });
-    } catch { setPwMsg({ text: t.err }); } finally { setPwBusy(false); }
-  };
-
   return (
     <div className="max-w-[560px]">
       <h1 className="text-[clamp(26px,4vw,36px)] font-bold tracking-display leading-tight mb-6">{t.title}</h1>
@@ -109,14 +97,8 @@ export default function SettingsPage() {
         </form>
       </Card>
 
-      <Card title={t.pwSec}>
-        <form onSubmit={changePw} className="flex flex-col gap-3.5">
-          {!prof.has_password && <div className="text-[13px] text-ink/55">{t.pwSet}</div>}
-          {prof.has_password && <div><label className={labelCls}>{t.current}</label><input type="password" value={cur} onChange={(e) => setCur(e.target.value)} className={inputCls} autoComplete="current-password" /></div>}
-          <div><label className={labelCls}>{t.next}</label><input type="password" value={nxt} onChange={(e) => setNxt(e.target.value)} className={inputCls} autoComplete="new-password" /></div>
-          <div><button type="submit" disabled={pwBusy} className={btn}>{t.change}</button></div>
-          <Msg {...(pwMsg || {})} text={pwMsg?.text} />
-        </form>
+      <Card title={t.signSec}>
+        <p className="text-[14px] text-ink/70">{t.signText}</p>
       </Card>
 
       <Card title={t.delSec}>

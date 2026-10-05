@@ -1,4 +1,5 @@
 'use client';
+import { typeOptions, areaRange } from '@/lib/propertyTypeOptions';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
@@ -22,7 +23,7 @@ const DICT = {
     resumeBanner: 'Ya guardamos tus datos. Completá los últimos detalles — precio, superficie y fotos — para publicar tu propiedad.',
     opVenta: 'Vender', opAlquiler: 'Alquilar',
     roleQ: '¿Sos el propietario o un agente?', roleOwner: 'Propietario', roleAgent: 'Agente',
-    fType: 'Tipo de propiedad', types: [['casa', 'Casa'], ['departamento', 'Departamento'], ['duplex', 'Dúplex'], ['terreno', 'Terreno']],
+    fType: 'Tipo de propiedad', typePh: 'Seleccioná el tipo', types: typeOptions('es'),
     fHood: 'Barrio', fHoodPh: 'Villa Morra, Recoleta…', fCity: 'Ciudad', fCityPh: COUNTRY.capital,
     fPrice: (m) => (m === 'venta' ? 'Precio' : 'Alquiler mensual'), fPricePh: (m) => (m === 'venta' ? '145.000' : '4.500.000'),
     fArea: 'Superficie (m²)', fDesc: 'Descripción', fDescPh: 'Depto luminoso con balcón, a 2 cuadras del Shopping del Sol…',
@@ -40,9 +41,9 @@ const DICT = {
     usTitle: 'Sumá visibilidad a tu propiedad', usSub: 'Elegí un plan y destacá tu aviso por 30 días.', usVerify: 'Verificar · US$5', usHome: 'En la portada · US$20', payingMsg: 'Procesando pago…',
     hiDoneVerified: '¡Tu propiedad está verificada por 30 días!', hiDoneHome: '¡Tu propiedad está en la portada por 30 días!',
     backLabel: '← Atrás',
-    errType: 'Elegí un tipo de propiedad', errHood: 'Ingresá el barrio', errCity: 'Ingresá la ciudad', errPrice: 'Ingresá un precio válido',
+    errType: 'Seleccioná el tipo de propiedad', errHood: 'Ingresá el barrio', errCity: 'Ingresá la ciudad', errPrice: 'Ingresá un precio válido',
     errPriceFloorSale: 'El precio de venta debe ser de al menos US$ 5.000', errPriceFloorRent: 'El alquiler mensual debe ser de al menos ₲ 300.000',
-    errArea: 'Ingresá la superficie (m²)', errAreaRange: 'La superficie debe estar entre 5 y 2.000 m²',
+    errArea: 'Ingresá la superficie (m²)', errAreaRange: (max) => `La superficie debe estar entre 5 y ${max.toLocaleString('es-PY')} m²`,
     errName: 'Ingresá tu nombre', errPhone: 'Ingresá un WhatsApp / teléfono válido (mín. 6 dígitos)', errPhotos: 'Agregá al menos una foto',
     errFix: 'Faltan algunos datos. Revisá los campos marcados para publicar.',
     errSubmit: 'No se pudo publicar. Intentá de nuevo.',
@@ -55,7 +56,7 @@ const DICT = {
     resumeBanner: 'We saved your details. Add the last bits — price, area and photos — to publish your listing.',
     opVenta: 'Sell', opAlquiler: 'Rent out',
     roleQ: 'Are you the owner or an agent?', roleOwner: 'Owner', roleAgent: 'Agent',
-    fType: 'Property type', types: [['casa', 'House'], ['departamento', 'Apartment'], ['duplex', 'Duplex'], ['terreno', 'Lot']],
+    fType: 'Property type', typePh: 'Select the type', types: typeOptions('en'),
     fHood: 'Neighborhood', fHoodPh: 'Villa Morra, Recoleta…', fCity: 'City', fCityPh: COUNTRY.capital,
     fPrice: (m) => (m === 'venta' ? 'Price' : 'Monthly rent'), fPricePh: (m) => (m === 'venta' ? '145,000' : '4,500,000'),
     fArea: 'Area (m²)', fDesc: 'Description', fDescPh: 'Bright apartment with balcony, 2 blocks from Shopping del Sol…',
@@ -73,9 +74,9 @@ const DICT = {
     usTitle: 'Add visibility to your listing', usSub: 'Pick a plan to feature your listing for 30 days.', usVerify: 'Verify · US$5', usHome: 'On the home page · US$20', payingMsg: 'Processing payment…',
     hiDoneVerified: 'Your listing is verified for 30 days!', hiDoneHome: 'Your listing is on the home page for 30 days!',
     backLabel: '← Back',
-    errType: 'Choose a property type', errHood: 'Enter the neighborhood', errCity: 'Enter the city', errPrice: 'Enter a valid price',
+    errType: 'Select the property type', errHood: 'Enter the neighborhood', errCity: 'Enter the city', errPrice: 'Enter a valid price',
     errPriceFloorSale: 'Sale price must be at least US$ 5,000', errPriceFloorRent: 'Monthly rent must be at least ₲ 300,000',
-    errArea: 'Enter the area (m²)', errAreaRange: 'Area must be between 5 and 2,000 m²',
+    errArea: 'Enter the area (m²)', errAreaRange: (max) => `Area must be between 5 and ${max.toLocaleString('en-US')} m²`,
     errName: 'Enter your name', errPhone: 'Enter a valid WhatsApp / phone number (min. 6 digits)', errPhotos: 'Add at least one photo',
     errFix: 'Some details are missing. Please fix the highlighted fields to publish.',
     errSubmit: 'Could not publish. Please try again.',
@@ -93,7 +94,7 @@ export default function PublicarClient() {
   const [addrText, setAddrText] = useState('');
   const [step, setStep] = useState(1);
   const [mode, setMode] = useState('venta');
-  const [f, setF] = useState({ ptype: 'casa', neighborhood: '', city: '', price: '', currency: '', area: '', description: '', contact_name: '', contact_phone: '', seller_type: 'owner' });
+  const [f, setF] = useState({ ptype: '', neighborhood: '', city: '', price: '', currency: '', area: '', description: '', contact_name: '', contact_phone: '', seller_type: 'owner' });
   const [photos, setPhotos] = useState([]); // {file, url}
   const [err, setErr] = useState('');
   const [errs, setErrs] = useState({}); // per-field errors { field: message }
@@ -189,10 +190,10 @@ export default function PublicarClient() {
       if (pyg < COUNTRY.rentFloorLocal) e.price = t.errPriceFloorRent;
     }
 
-    const isLand = f.ptype === 'terreno';
+    const range = areaRange(f.ptype); // land: any size
     const a = numOf(f.area);
     if (!Number.isFinite(a) || a <= 0) e.area = t.errArea;
-    else if (!isLand && (a < 5 || a > 2000)) e.area = t.errAreaRange;
+    else if (range && (a < range[0] || a > range[1])) e.area = t.errAreaRange(range[1]);
 
     if (!f.contact_name.trim()) e.contact_name = t.errName;
     if (String(f.contact_phone).replace(/\D/g, '').length < 6) e.contact_phone = t.errPhone;
@@ -275,7 +276,7 @@ export default function PublicarClient() {
 
   const restart = () => {
     setStep(1); setMode('venta'); setResult(null); setErr(''); setErrs({}); setShowHi(false); setHighlighted(false); setPaying(false); setPlan(null);
-    setF({ ptype: 'casa', neighborhood: '', city: '', price: '', currency: '', area: '', description: '', contact_name: '', contact_phone: '', seller_type: 'owner' });
+    setF({ ptype: '', neighborhood: '', city: '', price: '', currency: '', area: '', description: '', contact_name: '', contact_phone: '', seller_type: 'owner' });
     setPhotos([]);
   };
 
@@ -378,9 +379,11 @@ export default function PublicarClient() {
                   placeholder={lang === 'en' ? 'Search the address…' : 'Buscá la dirección…'} className={inputCls} />
               </label>
               <label className={labelCls}>{t.fType}
-                <select value={f.ptype} onChange={set('ptype')} className={`${inputCls} cursor-pointer`}>
-                  {t.types.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                <select value={f.ptype} onChange={set('ptype')} className={`${fieldCls('ptype')} w-full cursor-pointer ${f.ptype ? '' : 'text-ink/45'}`} data-testid="publicar-ptype">
+                  <option value="" disabled>{t.typePh}</option>
+                  {t.types.map(([v, l]) => <option key={v} value={v} className="text-ink">{l}</option>)}
                 </select>
+                <FErr k="ptype" />
               </label>
               <label className={labelCls}>{t.fHood}
                 <input value={f.neighborhood} onChange={set('neighborhood')} placeholder={t.fHoodPh} className={fieldCls('neighborhood')} />

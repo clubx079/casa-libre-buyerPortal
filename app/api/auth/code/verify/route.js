@@ -10,6 +10,7 @@ import { verifyOtp } from '@/lib/otp';
 import { findUserByEmail, createUser, verifyExistingUser, touchLogin, publicUser } from '@/lib/users';
 import { setSessionCookie } from '@/lib/auth';
 import { reviewCodeMatches } from '@/lib/reviewLogin';
+import { sendWelcomeEmail } from '@/lib/email';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -17,6 +18,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(req) {
   const body = await req.json().catch(() => ({}));
   const { email, code, fullName } = body;
+  const phone = String(body.phone || '').trim() || null;
   if (!email || !code) return NextResponse.json({ error: 'missing_fields' }, { status: 400 });
 
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null;
@@ -40,12 +42,15 @@ export async function POST(req) {
     await touchLogin(user.id, ip).catch(() => {});
   } else if (existing) {
     // placeholder row from the send step (or an abandoned signup) → confirm it
-    user = await verifyExistingUser(existing.id, { fullName: fullName || existing.full_name || null });
+    user = await verifyExistingUser(existing.id, { fullName: fullName || existing.full_name || null, phone });
   } else {
-    user = await createUser({ email, password: null, fullName: fullName || null, phone: null, ip });
+    user = await createUser({ email, password: null, fullName: fullName || null, phone, ip });
   }
 
   if (!user) return NextResponse.json({ error: 'create_failed' }, { status: 500 });
+  // New account: welcome email, as the old password sign-up sent. Awaited (the
+  // function is frozen after the response) and never blocks the sign-in.
+  if (!isLogin) await sendWelcomeEmail(email, user.full_name || fullName || null).catch(() => {});
 
   setSessionCookie(user);
   return NextResponse.json({ ok: true, mode: isLogin ? 'login' : 'signup', user: publicUser(user) });

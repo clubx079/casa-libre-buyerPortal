@@ -3,6 +3,8 @@
 // (search, En venta/En alquiler segmented, Filtros/Tipo/Precio/Dorm. row,
 // Lista/Mapa toggle, sort, filters bottom sheet, property cards). Rendered only
 // below `md`; the desktop MarketplaceClient is untouched.
+import { roundArea } from '@/lib/mapArea';
+import { PROPERTY_TYPES } from '@/lib/propertyTypeOptions';
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
@@ -25,15 +27,12 @@ const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toL
 const PER_PAGE = 24;
 
 const TXT = {
-  es: { forSale: 'En venta', forRent: 'En alquiler', filters: 'Filtros', type: 'Tipo', price: 'Precio', beds: 'Dorm.', list: 'Lista', map: 'Mapa', cta: 'Publicá gratis', searchPh: 'Barrio, ciudad o edificio…', propType: 'Tipo de propiedad', priceUsd: 'Precio · US$', bedrooms: 'Dormitorios', barrio: 'Barrio', listedBy: 'Publicado por', ownerDirect: 'Dueño directo', agent: 'Inmobiliaria', clearAll: 'Borrar todo', show: 'Ver', close: 'Cerrar', sortBy: 'Ordenar por', noResults: 'Sin resultados', loadMore: 'Ver más', propsWord: 'propiedades', nearMe: 'Cerca de mí', myLocation: 'Mi ubicación', geoDenied: 'No pudimos acceder a tu ubicación' },
-  en: { forSale: 'For sale', forRent: 'For rent', filters: 'Filters', type: 'Type', price: 'Price', beds: 'Beds', list: 'List', map: 'Map', cta: 'List for free', searchPh: 'Neighborhood, city or building…', propType: 'Property type', priceUsd: 'Price · US$', bedrooms: 'Bedrooms', barrio: 'Barrio', listedBy: 'Listed by', ownerDirect: 'Owner direct', agent: 'Agent', clearAll: 'Clear all', show: 'Show', close: 'Close', sortBy: 'Sort by', noResults: 'No results', loadMore: 'Load more', propsWord: 'listings', nearMe: 'Near me', myLocation: 'My location', geoDenied: "We couldn't access your location" },
+  es: { forSale: 'En venta', forRent: 'En alquiler', filters: 'Filtros', type: 'Tipo', price: 'Precio', beds: 'Dorm.', list: 'Lista', map: 'Mapa', cta: 'Publicá gratis', searchPh: 'Barrio, ciudad o edificio…', propType: 'Tipo de propiedad', priceUsd: 'Precio · US$', bedrooms: 'Dormitorios', barrio: 'Barrio', listedBy: 'Publicado por', ownerDirect: 'Dueño directo', agent: 'Inmobiliaria', clearAll: 'Borrar todo', show: 'Ver', close: 'Cerrar', sortBy: 'Ordenar por', noResults: 'Sin resultados', inArea: 'Propiedades en el área del mapa', showAll: 'Ver todas', emptyArea: 'No hay propiedades en esta zona. Alejá o mové el mapa.', loadMore: 'Ver más', propsWord: 'propiedades', nearMe: 'Cerca de mí', myLocation: 'Mi ubicación', geoDenied: 'No pudimos acceder a tu ubicación' },
+  en: { forSale: 'For sale', forRent: 'For rent', filters: 'Filters', type: 'Type', price: 'Price', beds: 'Beds', list: 'List', map: 'Map', cta: 'List for free', searchPh: 'Neighborhood, city or building…', propType: 'Property type', priceUsd: 'Price · US$', bedrooms: 'Bedrooms', barrio: 'Barrio', listedBy: 'Listed by', ownerDirect: 'Owner direct', agent: 'Agent', clearAll: 'Clear all', show: 'Show', close: 'Close', sortBy: 'Sort by', noResults: 'No results', inArea: 'Properties in the map area', showAll: 'Show all', emptyArea: 'No properties in this area. Zoom out or move the map.', loadMore: 'Load more', propsWord: 'listings', nearMe: 'Near me', myLocation: 'My location', geoDenied: "We couldn't access your location" },
 };
 
-const TYPE_PILLS = [
-  { k: 'depto', es: 'Departamento', en: 'Apartment' }, { k: 'casa', es: 'Casa', en: 'House' },
-  { k: 'duplex', es: 'Dúplex', en: 'Duplex' }, { k: 'terreno', es: 'Terreno', en: 'Land' },
-  { k: 'oficina', es: 'Oficina', en: 'Office' }, { k: 'deposito', es: 'Depósito', en: 'Warehouse' },
-];
+// Same types as the desktop filter and the List-a-property form (lib/propertyTypeOptions.js).
+const TYPE_PILLS = PROPERTY_TYPES.map((t) => ({ k: t.key, es: t.es, en: t.en }));
 const typePillLabel = (k, lang) => { const o = TYPE_PILLS.find((x) => x.k === k); return o ? o[lang === 'en' ? 'en' : 'es'] : ''; };
 
 const priceBuckets = (mode, lang) => mode === 'alquiler'
@@ -84,6 +83,15 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
   const nearMeRef = useRef(false);    // latest nearMe, for the map-click listener closure
   const deactivateNearRef = useRef(null);
   const [page, setPage] = useState(1);
+  // Listings follow the map (lib/mapArea.js): after the visitor drags/zooms the map,
+  // the list shows only listings inside the visible area. null = everything.
+  const [area, setArea] = useState(null);
+  const areaRef = useRef(null);
+  areaRef.current = area;
+  const listReqRef = useRef(0);
+  const userMovedRef = useRef(false);
+  const camMoveUntil = useRef(0);  // our own camera moves (auto-fit, near me) aren't the visitor's
+  const moveCamera = (fn) => { camMoveUntil.current = Date.now() + 1500; try { fn(); } catch {} };
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
   const [imgMap, setImgMap] = useState({});
@@ -111,7 +119,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
       : { p1: { priceMax: 80000 }, p2: { priceMin: 80000, priceMax: 200000 }, p3: { priceMin: 200000, priceMax: 400000 }, p4: { priceMin: 400000 } };
     return bands[priceF] || {};
   };
-  const searchBody = (pageN) => ({ op: mode, type: typeF === 'all' ? undefined : typeF, beds: bedF === 'all' ? undefined : bedF, q: q || undefined, barrio: barrioF === 'all' ? undefined : barrioF, seller: sellerF === 'all' ? undefined : sellerF, height: heightF === 'all' ? undefined : heightF, sort, page: pageN, pageSize: PER_PAGE, ...priceBoundsFor() });
+  const searchBody = (pageN) => ({ op: mode, type: typeF === 'all' ? undefined : typeF, beds: bedF === 'all' ? undefined : bedF, q: q || undefined, barrio: barrioF === 'all' ? undefined : barrioF, seller: sellerF === 'all' ? undefined : sellerF, height: heightF === 'all' ? undefined : heightF, sort, page: pageN, pageSize: PER_PAGE, ...priceBoundsFor(), ...(area || {}) });
   const pinsUrl = () => {
     const p = new URLSearchParams(); p.set('op', mode);
     if (typeF !== 'all') p.set('type', typeF);
@@ -128,6 +136,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
 
   useEffect(() => {
     const id = ++reqRef.current;
+    const lid = ++listReqRef.current;
     const doSearch = !firstRun.current; // mount: list is SSR'd, only load the pins
     firstRun.current = false;
     if (doSearch) setLoadingList(true);
@@ -136,15 +145,32 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
         try {
           const res = await fetch('/api/listings/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(searchBody(1)) });
           const j = await res.json();
-          if (id === reqRef.current) { setRows(j.listings || []); setCount(j.count || 0); setPage(1); }
-        } catch { if (id === reqRef.current) { setRows([]); setCount(0); } }
-        finally { if (id === reqRef.current) setLoadingList(false); }
+          if (lid === listReqRef.current) { setRows(j.listings || []); setCount(j.count || 0); setPage(1); }
+        } catch { if (lid === listReqRef.current) { setRows([]); setCount(0); } }
+        finally { if (lid === listReqRef.current) setLoadingList(false); }
       }
       try { const pr = await fetch(pinsUrl()); const pj = await pr.json(); if (id === reqRef.current) setPins(pj.pins || []); } catch {}
     }, doSearch ? 220 : 0);
     return () => clearTimeout(tmo);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, typeF, priceF, bedF, barrioF, sellerF, heightF, q, sort]);
+
+  // The visitor moved the map (or chose "Show all") → reload the list only.
+  const areaFirstRun = useRef(true);
+  useEffect(() => {
+    if (areaFirstRun.current) { areaFirstRun.current = false; return; }
+    const lid = ++listReqRef.current;
+    setLoadingList(true);
+    (async () => {
+      try {
+        const res = await fetch('/api/listings/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(searchBody(1)) });
+        const j = await res.json();
+        if (lid === listReqRef.current) { setRows(j.listings || []); setCount(j.count || 0); setPage(1); }
+      } catch { if (lid === listReqRef.current) { setRows([]); setCount(0); } }
+      finally { if (lid === listReqRef.current) setLoadingList(false); }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [area]);
 
   // Report the active search to analytics once the results have settled (after the
   // fetch above), debounced so typing doesn't fire per keystroke. Only while this
@@ -210,6 +236,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
       await loadGoogleMapsAPI();
       if (cancelled || !mapEl.current || mapRef.current || !window.google?.maps) return;
       const google = window.google;
+      camMoveUntil.current = Date.now() + 2500;   // the map's own first render isn't a visitor move
       const map = new google.maps.Map(mapEl.current, mapOptions(google, { center: COUNTRY.mapCenter, zoom: COUNTRY.mapZoomMobile, gestureHandling: 'greedy' }));
       const renderer = { render: ({ count, position }) => new google.maps.Marker({ position, zIndex: 1000 + count, icon: clusterIcon(google, count, false) }) };
       // Bigger radius → fewer, larger clusters so the streets stay readable when
@@ -222,6 +249,18 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
         info.close(); previewRef.current = null;
         // A click on the map (not a pin) exits near-me and returns to the prior view.
         if (nearMeRef.current && deactivateNearRef.current) deactivateNearRef.current();
+      });
+      // Listings follow the map: after a drag or zoom the list switches to the visible area.
+      map.addListener('dragstart', () => { userMovedRef.current = true; });
+      map.addListener('zoom_changed', () => { if (Date.now() > camMoveUntil.current) userMovedRef.current = true; });
+      map.addListener('idle', () => {
+        if (!userMovedRef.current) return;
+        userMovedRef.current = false;
+        if (nearMeRef.current) return;
+        const b = map.getBounds();
+        if (!b) return;
+        const ne = b.getNorthEast(); const sw = b.getSouthWest();
+        setArea(roundArea({ n: ne.lat(), s: sw.lat(), e: ne.lng(), w: sw.lng() }));
       });
       drawMarkers();
     })();
@@ -267,7 +306,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
     cluster.addMarkers(markers);
     // Don't refit while near-me is locked, nor on the toggle itself (so deselect
     // can restore the previous view instead of snapping to the filtered bounds).
-    if (n && !nearMe && !skipFitRef.current && (typeF !== 'all' || priceF !== 'all' || bedF !== 'all' || barrioF !== 'all' || heightF !== 'all' || q)) { try { map.fitBounds(bounds, 36); } catch {} }
+    if (n && !nearMe && !skipFitRef.current && !areaRef.current && (typeF !== 'all' || priceF !== 'all' || bedF !== 'all' || barrioF !== 'all' || heightF !== 'all' || q)) { moveCamera(() => map.fitBounds(bounds, 36)); }
     skipFitRef.current = false;
   }, [displayPins, nearMe, typeF, priceF, bedF, barrioF, heightF, q]);
   useEffect(() => { if (view === 'map') drawMarkers(); }, [view, drawMarkers]);
@@ -312,7 +351,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
     setNearMe(false);
     setNearListings(null);
     if (youMarkerRef.current) { try { youMarkerRef.current.setMap(null); } catch {} youMarkerRef.current = null; }
-    if (ref && prevViewRef.current) { try { ref.map.setZoom(prevViewRef.current.zoom); ref.map.panTo(prevViewRef.current.center); } catch {} }
+    if (ref && prevViewRef.current) { const v = prevViewRef.current; moveCamera(() => { ref.map.setZoom(v.zoom); ref.map.panTo(v.center); }); }
     prevViewRef.current = null;
   };
   nearMeRef.current = nearMe;
@@ -330,9 +369,10 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
     skipFitRef.current = true;
     setUserLoc(loc);
     setNearMe(true);
+    setArea(null);           // near me shows its own list
     loadNearListings(loc);   // hydrate the real nearby list + count
     if (ref) {
-      try { ref.map.panTo(loc); ref.map.setZoom(15); } catch {}   // no lock — user can pan/zoom freely
+      moveCamera(() => { ref.map.panTo(loc); ref.map.setZoom(15); });   // no lock — user can pan/zoom freely
       dropYouMarker(loc);
     }
   };
@@ -486,7 +526,13 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
         </div>
       ) : (
         <div className="px-4 pb-8 flex flex-col gap-4">
-          {displayRows.length === 0 && !loadingList && <div className="py-14 text-center font-mono text-[13px] text-ink/45">{X.noResults}</div>}
+          {area && !nearMe && (
+            <div className="flex items-center justify-between gap-3 rounded-[12px] border border-ink/15 bg-card px-3.5 py-2.5 text-[13px]">
+              <span className="font-medium text-ink/70">{X.inArea}</span>
+              <button type="button" onClick={() => setArea(null)} className="font-semibold underline text-ink" data-testid="m-area-show-all">{X.showAll}</button>
+            </div>
+          )}
+          {displayRows.length === 0 && !loadingList && <div className="py-14 text-center font-mono text-[13px] text-ink/45">{area && !nearMe ? X.emptyArea : X.noResults}</div>}
           {displayRows.map((l) => (
             <Link key={l.id} href={`/propiedad/${l.id}`} target="_blank" rel="noopener noreferrer" className={`block bg-card rounded-[18px] overflow-hidden ${l.verified ? 'border border-ink ring-[1.5px] ring-ink shadow-hard-sm' : 'border border-ink/12'}`}>
               <div className="relative h-[220px] cl-hatch">

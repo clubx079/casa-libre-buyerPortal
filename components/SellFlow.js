@@ -10,6 +10,7 @@
 // The listing is posted from step 4; we never route to /publicar. A LOGGED-IN user
 // gets the same wizard, minus the parts we already know: their name and email are
 // taken from the session and the confirmation code is skipped entirely.
+import { typeOptions, normalizeTypeKey, areaRange } from '@/lib/propertyTypeOptions';
 import { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLang } from '@/lib/useLang';
@@ -39,9 +40,9 @@ const DICT = {
     barrio: 'Barrio', ciudad: 'Ciudad',
     otpTitle: 'Código de confirmación enviado', otpSub: (e) => `Ingresá el código que enviamos a ${e} para verificar tu correo.`,
     codePh: 'Código de 6 dígitos', verify: 'Verificar', verifying: 'Verificando…', resend: 'Reenviar código', resent: 'Código reenviado',
-    haveAccount: 'Ya tenés una cuenta', haveAccountSub: (e) => `Ingresá tu contraseña para continuar como ${e}.`, googleBtn: 'Continuar con Google', orText: 'o', password: 'Contraseña', passwordPh: '••••••••', login: 'Ingresar', forgot: '¿Olvidaste tu contraseña?', errCreds: 'Contraseña incorrecta', errGeneric: 'Algo salió mal. Intentá de nuevo.', doneDash: 'Ir a mi panel',
+    haveAccount: 'Ya tenés una cuenta', haveAccountSub: (e) => `Te enviamos un código a ${e}. Ingresalo para continuar.`, googleBtn: 'Continuar con Google', orText: 'o', login: 'Ingresar', errGeneric: 'Algo salió mal. Intentá de nuevo.', doneDash: 'Ir a mi panel',
     d4Title: 'Últimos detalles', d4Sub: 'Completá los datos de tu propiedad y publicá — se publica al instante.',
-    fType: 'Tipo de propiedad', types: [['casa', 'Casa'], ['departamento', 'Departamento'], ['duplex', 'Dúplex'], ['terreno', 'Terreno']],
+    fType: 'Tipo de propiedad', typePh: 'Seleccioná el tipo', types: typeOptions('es'),
     fPrice: (m) => (m === 'venta' ? 'Precio' : 'Alquiler mensual'), fPricePh: (m) => (m === 'venta' ? '145.000' : '4.500.000'),
     fArea: 'Superficie (m²)', fDesc: 'Descripción', fDescPh: 'Depto luminoso con balcón, a 2 cuadras del Shopping del Sol…',
     fPhone: 'WhatsApp / teléfono (para compradores)', fPhonePh: '0981 123 456',
@@ -60,9 +61,9 @@ const DICT = {
     next: 'Siguiente', back: '← Atrás', close: 'Cerrar', sending: 'Enviando…',
     errSeller: 'Elegí propietario o agente', errName: 'Ingresá tu nombre', errEmail: 'Ingresá un correo válido', errAddr: 'Elegí una dirección',
     errSendOtp: 'No se pudo enviar el código. Intentá de nuevo.', emailTaken: 'Este correo ya tiene una cuenta.', loginInstead: 'Iniciar sesión para continuar',
-    errCode: 'Código inválido o vencido', errType: 'Elegí un tipo', errPrice: 'Ingresá un precio válido',
+    errCode: 'Código inválido o vencido', errType: 'Seleccioná el tipo de propiedad', errPrice: 'Ingresá un precio válido',
     errPriceFloorSale: 'El precio de venta debe ser de al menos US$ 5.000', errPriceFloorRent: `El alquiler mensual debe ser de al menos ${COUNTRY.currencySymbol} 300.000`,
-    errArea: 'Ingresá la superficie', errAreaRange: 'La superficie debe estar entre 5 y 2.000 m²', errPhone: 'Ingresá un teléfono válido', errPhotos: 'Agregá al menos una foto',
+    errArea: 'Ingresá la superficie', errAreaRange: (max) => `La superficie debe estar entre 5 y ${max.toLocaleString('es-PY')} m²`, errPhone: 'Ingresá un teléfono válido', errPhotos: 'Agregá al menos una foto',
     errSubmit: 'No se pudo publicar. Intentá de nuevo.',
   },
   en: {
@@ -75,9 +76,9 @@ const DICT = {
     barrio: 'Neighborhood', ciudad: 'City',
     otpTitle: 'Confirmation code sent', otpSub: (e) => `Enter the code we emailed to ${e} to verify your email.`,
     codePh: '6-digit code', verify: 'Verify', verifying: 'Verifying…', resend: 'Resend code', resent: 'Code resent',
-    haveAccount: 'You already have an account', haveAccountSub: (e) => `Enter your password to continue as ${e}.`, googleBtn: 'Continue with Google', orText: 'or', password: 'Password', passwordPh: '••••••••', login: 'Log in', forgot: 'Forgot your password?', errCreds: 'Wrong password', errGeneric: 'Something went wrong. Try again.', doneDash: 'Go to my dashboard',
+    haveAccount: 'You already have an account', haveAccountSub: (e) => `We sent a code to ${e}. Enter it to continue.`, googleBtn: 'Continue with Google', orText: 'or', login: 'Log in', errGeneric: 'Something went wrong. Try again.', doneDash: 'Go to my dashboard',
     d4Title: 'Last details', d4Sub: 'Fill in your property and publish — it goes live instantly.',
-    fType: 'Property type', types: [['casa', 'House'], ['departamento', 'Apartment'], ['duplex', 'Duplex'], ['terreno', 'Lot']],
+    fType: 'Property type', typePh: 'Select the type', types: typeOptions('en'),
     fPrice: (m) => (m === 'venta' ? 'Price' : 'Monthly rent'), fPricePh: (m) => (m === 'venta' ? '145,000' : '4,500,000'),
     fArea: 'Area (m²)', fDesc: 'Description', fDescPh: 'Bright apartment with balcony, 2 blocks from Shopping del Sol…',
     fPhone: 'WhatsApp / phone (for buyers)', fPhonePh: '0981 123 456',
@@ -96,9 +97,9 @@ const DICT = {
     next: 'Next', back: '← Back', close: 'Close', sending: 'Sending…',
     errSeller: 'Choose owner or agent', errName: 'Enter your name', errEmail: 'Enter a valid email', errAddr: 'Choose an address',
     errSendOtp: 'Could not send the code. Please try again.', emailTaken: 'This email already has an account.', loginInstead: 'Log in to continue',
-    errCode: 'Invalid or expired code', errType: 'Choose a type', errPrice: 'Enter a valid price',
+    errCode: 'Invalid or expired code', errType: 'Select the property type', errPrice: 'Enter a valid price',
     errPriceFloorSale: 'Sale price must be at least US$ 5,000', errPriceFloorRent: `Monthly rent must be at least ${COUNTRY.currencySymbol} 300,000`,
-    errArea: 'Enter the area', errAreaRange: 'Area must be between 5 and 2,000 m²', errPhone: 'Enter a valid phone', errPhotos: 'Add at least one photo',
+    errArea: 'Enter the area', errAreaRange: (max) => `Area must be between 5 and ${max.toLocaleString('en-US')} m²`, errPhone: 'Enter a valid phone', errPhotos: 'Add at least one photo',
     errSubmit: 'Could not publish. Please try again.',
   },
 };
@@ -109,7 +110,6 @@ const pickCls = (on) => `flex-1 px-5 py-3.5 rounded-pill border-[1.5px] text-[15
 const emailOk = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || ''));
 const APPROX_RATE = 7300;
 const numOf = (v) => Number(String(v).replace(/[^\d.]/g, ''));
-const randomPw = () => 'Cl' + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2).toUpperCase() + '!' + Math.floor(Math.random() * 90 + 10);
 
 // Inline loading spinner — used on the Next / Log in buttons instead of a text label.
 const Spinner = () => (
@@ -134,7 +134,7 @@ export default function SellFlowProvider({ children }) {
   const [code, setCode] = useState('');
   const [verified, setVerified] = useState(false);
   const [emailTaken, setEmailTaken] = useState(false);
-  const [loginPw, setLoginPw] = useState('');
+  const [loginCode, setLoginCode] = useState('');   // sign-in code for an email that already has an account
   const [photos, setPhotos] = useState([]);      // {file,url}
   const [result, setResult] = useState(null);    // {id, ref}
   const [showHi, setShowHi] = useState(false);    // promotion payment modal (only when a card must be entered / 3DS)
@@ -145,7 +145,7 @@ export default function SellFlowProvider({ children }) {
   const openedLoggedInRef = useRef(false);        // wizard was opened by a signed-in user
   const [fromApp, setFromApp] = useState(false);  // arrived from the mobile app (?app=1)
   const [appReturn, setAppReturn] = useState('');  // the app's own deep-link URL (?ret=…)
-  const BLANK = { mode: '', seller_type: '', neighborhood: '', city: '', addressText: '', contact_name: '', email: '', ptype: 'casa', price: '', currency: '', area: '', description: '', contact_phone: '' };
+  const BLANK = { mode: '', seller_type: '', neighborhood: '', city: '', addressText: '', contact_name: '', email: '', ptype: '', price: '', currency: '', area: '', description: '', contact_phone: '' };
   const [f, setF] = useState(BLANK);
   // Draft ("Borrador"): created once a signed-in user has picked the address, then
   // autosaved on every change until the listing is published (the server deletes it).
@@ -153,7 +153,7 @@ export default function SellFlowProvider({ children }) {
   const creatingDraftRef = useRef(false);
 
   const reset = () => {
-    setStep(0); setPhase(''); setErr(''); setErrs({}); setBusy(false); setCode(''); setVerified(false); setEmailTaken(false); setLoginPw(''); setPhotos([]); setResult(null); setShowHi(false); setHighlighted(false); setPaying(false); setPlan(null);
+    setStep(0); setPhase(''); setErr(''); setErrs({}); setBusy(false); setCode(''); setVerified(false); setEmailTaken(false); setLoginCode(''); setPhotos([]); setResult(null); setShowHi(false); setHighlighted(false); setPaying(false); setPlan(null);
     setF(BLANK); setDraftId(null); creatingDraftRef.current = false;
   };
   const close = () => { setOpen(false); reset(); };
@@ -164,7 +164,7 @@ export default function SellFlowProvider({ children }) {
     reset();
     openedLoggedInRef.current = true;
     setVerified(true);
-    setF({ ...BLANK, ...fields, contact_name: fields.contact_name || user?.full_name || user?.name || '', email: user?.email || '' });
+    setF({ ...BLANK, ...fields, ptype: normalizeTypeKey(fields.ptype), contact_name: fields.contact_name || user?.full_name || user?.name || '', email: user?.email || '' });
     if (id) { setDraftId(id); creatingDraftRef.current = true; }
     setStep(draftReady(fields) ? 3 : 0);
     setOpen(true);
@@ -309,7 +309,7 @@ export default function SellFlowProvider({ children }) {
     try {
       const res = await fetch('/api/auth/send-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: f.email, fullName: f.contact_name, mode: f.mode, seller_type: f.seller_type, neighborhood: f.neighborhood, city: f.city, address: f.addressText }) });
       const j = await res.json().catch(() => ({}));
-      if (res.status === 409 || j.error === 'email_taken') { setEmailTaken(true); setPhase('otp'); return; }
+      if (res.status === 409 || j.error === 'email_taken') { setEmailTaken(true); setLoginCode(''); setPhase('otp'); await sendLoginCode(); return; }
       if (!res.ok || !j.ok) { setErr(t.errSendOtp); return; }
       setPhase('otp'); setCode('');
       track('sell_otp_sent', {});
@@ -319,7 +319,7 @@ export default function SellFlowProvider({ children }) {
     if (String(code).replace(/\D/g, '').length < 4) { setErr(t.errCode); return; }
     setBusy(true); setErr('');
     try {
-      const res = await fetch('/api/auth/verify-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: f.email, code: String(code).trim(), password: randomPw(), fullName: f.contact_name }) });
+      const res = await fetch('/api/auth/verify-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: f.email, code: String(code).trim(), fullName: f.contact_name }) });
       const j = await res.json().catch(() => ({}));
       if (!res.ok || !j.ok) { setErr(t.errCode); return; }
       track('sell_otp_verified', {});
@@ -328,15 +328,15 @@ export default function SellFlowProvider({ children }) {
     } catch { setErr(t.errCode); } finally { setBusy(false); }
   };
 
-  // ---- returning user (email already registered): inline Google / password login ----
+  // ---- returning user (email already registered): inline Google / code login ----
   // Instead of showing "email taken" and opening the full auth modal, we keep the
-  // user in the wizard: offer Google, or just a password field (their email is
-  // already known from step 2). On success we jump straight to details (step 3).
+  // user in the wizard: we email them a sign-in code (their email is known from
+  // step 2) or they use Google. On success we jump straight to details (step 3).
   const googleSignIn = async () => {
     setErr('');
     try {
       // Stash what the guest entered, then come back to THIS page with ?sell=resume:
-      // the wizard reopens at the details step, signed in — same as the password path.
+      // the wizard reopens at the details step, signed in — same as the code path.
       await savePendingSell({ fields: { mode: f.mode, seller_type: f.seller_type, contact_name: f.contact_name, neighborhood: f.neighborhood, city: f.city, addressText: f.addressText }, fromApp, appReturn });
       const here = /^\/[A-Za-z0-9/_-]*$/.test(window.location.pathname) ? window.location.pathname : '/';
       const r = await fetch('/api/auth/google', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ next: `${here}?sell=resume` }) });
@@ -344,17 +344,26 @@ export default function SellFlowProvider({ children }) {
       if (j.url) window.location.href = j.url; else setErr(t.errGeneric);
     } catch { setErr(t.errGeneric); }
   };
+  // Email a sign-in code to the registered address (same endpoint as the app).
+  const sendLoginCode = async () => {
+    setErr('');
+    try {
+      const res = await fetch('/api/auth/code/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: f.email }) });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j.ok) setErr(t.errSendOtp);
+    } catch { setErr(t.errSendOtp); }
+  };
   const doLogin = async () => {
-    if (!loginPw) { setErr(t.errCreds); return; }
+    if (String(loginCode).length !== 6) { setErr(t.errCode); return; }
     setBusy(true); setErr('');
     try {
-      const res = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: f.email, password: loginPw }) });
+      const res = await fetch('/api/auth/code/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: f.email, code: loginCode }) });
       const j = await res.json().catch(() => ({}));
-      if (!res.ok || !j.ok) { setErr(t.errCreds); return; }
-      track('user_logged_in', { method: 'password' });
+      if (!res.ok || !j.ok) { setErr(t.errCode); return; }
+      track('user_logged_in', { method: 'email_code' });
       setVerified(true); setEmailTaken(false); setPhase(''); setStep(3);   // logged in → straight to details
       refreshUser?.();                                                      // update header/user app-wide
-    } catch { setErr(t.errCreds); } finally { setBusy(false); }
+    } catch { setErr(t.errCode); } finally { setBusy(false); }
   };
 
   // ---- details + publish (step 3) ----
@@ -371,8 +380,8 @@ export default function SellFlowProvider({ children }) {
     if (!Number.isFinite(p) || p <= 0) e.price = t.errPrice;
     else if (f.mode === 'venta') { const usd = priceCurrency === 'USD' ? p : p / APPROX_RATE; if (usd < 5000) e.price = t.errPriceFloorSale; }
     else { const pyg = priceCurrency === 'PYG' ? p : p * APPROX_RATE; if (pyg < COUNTRY.rentFloorLocal) e.price = t.errPriceFloorRent; }
-    const a = numOf(f.area); const isLand = f.ptype === 'terreno';
-    if (!Number.isFinite(a) || a <= 0) e.area = t.errArea; else if (!isLand && (a < 5 || a > 2000)) e.area = t.errAreaRange;
+    const a = numOf(f.area); const range = areaRange(f.ptype);   // land: any size
+    if (!Number.isFinite(a) || a <= 0) e.area = t.errArea; else if (range && (a < range[0] || a > range[1])) e.area = t.errAreaRange(range[1]);
     if (String(f.contact_phone).replace(/\D/g, '').length < 6) e.contact_phone = t.errPhone;
     if (photos.length < 1) e.photos = t.errPhotos;
     return e;
@@ -491,10 +500,9 @@ export default function SellFlowProvider({ children }) {
                     <div className="flex items-center gap-3 my-4">
                       <span className="flex-1 h-px bg-ink/12" /><span className="text-[12px] text-ink/40 font-mono">{t.orText}</span><span className="flex-1 h-px bg-ink/12" />
                     </div>
-                    <label className={labelCls}>{t.password}</label>
-                    <input type="password" value={loginPw} onChange={(e) => setLoginPw(e.target.value)} placeholder={t.passwordPh} className={inputCls} autoComplete="current-password" onKeyDown={(e) => { if (e.key === 'Enter') doLogin(); }} />
+                    <input value={loginCode} onChange={(e) => setLoginCode(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder={t.codePh} inputMode="numeric" autoComplete="one-time-code" className={`${inputCls} text-center tracking-[0.3em] text-[18px] font-semibold`} onKeyDown={(e) => { if (e.key === 'Enter') doLogin(); }} data-testid="sell-login-code" />
                     <button onClick={doLogin} disabled={busy} className="w-full mt-4 px-7 py-3.5 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60 inline-flex items-center justify-center min-h-[48px]">{busy ? <Spinner /> : t.login}</button>
-                    <button type="button" onClick={() => openAuth()} className="w-full mt-2 text-[13px] font-medium text-ink/55 hover:text-ink">{t.forgot}</button>
+                    <button type="button" onClick={sendLoginCode} disabled={busy} className="w-full mt-2 text-[13px] font-medium text-ink/55 hover:text-ink">{t.resend}</button>
                     {err && <div className="mt-4 text-[13px] font-medium text-red-700 bg-red-50 border border-red-200 rounded-[12px] px-3.5 py-2.5">{err}</div>}
                   </>
                 ) : (
@@ -568,9 +576,11 @@ export default function SellFlowProvider({ children }) {
                     <p className="text-[13px] text-ink/50 mb-4">{t.d4Sub}</p>
                     <div className="grid grid-cols-1 gap-3">
                       <label className="sm:col-span-2"><span className={labelCls}>{t.fType}</span>
-                        <select value={f.ptype} onChange={setField('ptype')} className={`${inputCls} cursor-pointer`}>
-                          {t.types.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                        <select value={f.ptype} onChange={setField('ptype')} className={`${fieldCls('ptype')} cursor-pointer ${f.ptype ? '' : 'text-ink/45'}`} data-testid="sell-ptype">
+                          <option value="" disabled>{t.typePh}</option>
+                          {t.types.map(([v, l]) => <option key={v} value={v} className="text-ink">{l}</option>)}
                         </select>
+                        <FErr k="ptype" />
                       </label>
                       {/* price (long) + area (small) on one row — price is fluid so it
                           gets the width; area + currency stay compact. Fits down to ~360px. */}

@@ -13,15 +13,15 @@ export const dynamic = 'force-dynamic';
 // Cache the SSR first page per op/query (a small, high-hit set) so repeat loads
 // skip the count=exact — the page paints its initial listings near-instantly.
 const getInitialPage = unstable_cache(
-  async (op, q) => {
+  async (op, q, type) => {
     const mobileOp = op === 'alquiler' ? 'alquiler' : 'venta';
     const [dRes, mRes] = await Promise.all([
-      searchListings({ op, q, page: 1, pageSize: 24, sort: 'relevancia' }),
-      searchListings({ op: mobileOp, q, page: 1, pageSize: 24, sort: 'relevancia' }),
+      searchListings({ op, q, type, page: 1, pageSize: 24, sort: 'relevancia' }),
+      searchListings({ op: mobileOp, q, type, page: 1, pageSize: 24, sort: 'relevancia' }),
     ]);
     return { dRes, mRes };
   },
-  ['cl-initial-marketplace-v1'],
+  ['cl-initial-marketplace-v2'],
   { revalidate: 120, tags: ['listings'] },
 );
 
@@ -39,7 +39,8 @@ export default async function PropiedadesPage({ searchParams }) {
   // SSR only the first LIST page (cached, indexed) — the map pins load client-side
   // right after mount (cached endpoint), so the visible content is instant.
   const [{ dRes, mRes }, totalCount] = await Promise.all([
-    getInitialPage(initialOp, initialQuery), getActiveCountCached(),
+    // ?type= (SEO pages link here) filters the first page too, not just the pins.
+    getInitialPage(initialOp, initialQuery, initialType === 'all' ? undefined : initialType), getActiveCountCached(),
   ]);
   // SEO: a keyword H1 (sr-only, so the search-first UI is unchanged) + CollectionPage
   // /ItemList schema for the listings this page SSRs. Invisible to users; gives the

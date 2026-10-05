@@ -2,6 +2,7 @@
 // marketplace. Inserts a `properties` row (admin_status=active, status=published,
 // origin=user) so getListings() picks it up, uploads any photos to B2 and links
 // them via property_images. Multipart/form-data.
+import { normalizeTypeKey, dbType, isLandType, areaRange } from '@/lib/propertyTypeOptions';
 import { NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { insert, update } from '@/lib/db';
@@ -20,8 +21,8 @@ import { submitToIndexNow } from '@/lib/indexnow';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-// mockup Step-1 property types -> canonical property_type stored in the DB
-const TYPE_MAP = { casa: 'Casa', departamento: 'Departamento', duplex: 'Dúplex', terreno: 'Terreno' };
+// Property types: lib/propertyTypeOptions.js (same list as the marketplace filter;
+// older forms and the app send 'departamento' for an apartment).
 
 const slugify = (s) =>
   String(s || '')
@@ -63,7 +64,7 @@ export async function POST(req) {
 
   const get = (k) => { const v = form.get(k); return v == null ? '' : String(v).trim(); };
   const mode = get('mode') === 'alquiler' ? 'alquiler' : 'venta';
-  const ptype = get('ptype').toLowerCase();
+  const ptype = normalizeTypeKey(get('ptype'));
   const neighborhood = get('neighborhood');
   const city = get('city') || 'Asunción';
   const priceRaw = get('price').replace(/[^\d.]/g, '');
@@ -86,7 +87,7 @@ export async function POST(req) {
   // Completeness validation — a published listing must clear the same bar the
   // marketplace gate uses to SHOW it, so a user's listing is never created
   // "incomplete" and then hidden / 404'd on its own detail page.
-  if (!TYPE_MAP[ptype]) return NextResponse.json({ error: 'missing_type' }, { status: 400 });
+  if (!ptype) return NextResponse.json({ error: 'missing_type' }, { status: 400 });
   if (!neighborhood) return NextResponse.json({ error: 'missing_neighborhood' }, { status: 400 });
   if (!city) return NextResponse.json({ error: 'missing_city' }, { status: 400 });
   if (!Number.isFinite(price) || price <= 0) return NextResponse.json({ error: 'missing_price' }, { status: 400 });
@@ -95,16 +96,17 @@ export async function POST(req) {
   // Listings are FREE — no payment required. Login (above) is the only gate, so
   // every published deal is tied to a known user.
 
-  const property_type = TYPE_MAP[ptype];
-  const isLand = ptype === 'terreno';
+  const property_type = dbType(ptype);
+  const isLand = isLandType(ptype);
   const rate = await getUsdToPyg().catch(() => Number(process.env[`${COUNTRY.fxTarget}_PER_USD`]) || COUNTRY.fxFallback);
   const price_usd = currency === 'USD' ? Math.round(price) : rate ? Math.round(price / rate) : null;
 
   // Area required + plausible for buildings (land has no upper cap); price floors
   // match the gate (sale ≥ US$5.000, rent ≥ ₲300.000/mes).
-  if (!isLand) {
+  const range = areaRange(ptype); // null for land (any size)
+  if (range) {
     if (!(Number(area) > 0)) return NextResponse.json({ error: 'missing_area' }, { status: 400 });
-    if (Number(area) < 5 || Number(area) > 2000) return NextResponse.json({ error: 'bad_area' }, { status: 400 });
+    if (Number(area) < range[0] || Number(area) > range[1]) return NextResponse.json({ error: 'bad_area' }, { status: 400 });
   }
   if (mode === 'venta') {
     if (!(Number(price_usd) >= 5000)) return NextResponse.json({ error: 'price_too_low' }, { status: 400 });

@@ -20,6 +20,7 @@ const emailOk = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || ''));
 export async function POST(req) {
   const body = await req.json().catch(() => ({}));
   const { email, fullName } = body;
+  const phone = String(body.phone || '').trim() || null;
   if (!emailOk(email)) return NextResponse.json({ error: 'invalid_email' }, { status: 400 });
 
   const existing = await findUserByEmail(email).catch(() => null);
@@ -29,15 +30,15 @@ export async function POST(req) {
   if (isReviewEmail(email)) {
     if (mode === 'signup') {
       const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null;
-      await upsertUnverifiedUser({ email, fullName, phone: null, ip }).catch(() => {});
+      await upsertUnverifiedUser({ email, fullName, phone, ip }).catch(() => {});
     }
     return NextResponse.json({ ok: true, mode });
   }
 
-  const saved = await saveOtp(email, mode === 'login' ? 'login' : 'signup', 10, { fullName: fullName || null })
+  const saved = await saveOtp(email, mode === 'login' ? 'login' : 'signup', 10, { fullName: fullName || null, phone })
     .catch((e) => ({ ok: false, error: 'otp_store_error', detail: e?.message }));
   if (!saved?.ok) {
-    const status = saved?.error === 'rate_limited' ? 429 : 500;
+    const status = saved?.error === 'rate_limited' || saved?.error === 'cooldown' ? 429 : 500;
     return NextResponse.json({ error: saved?.error || 'otp_store_error', retryInMs: saved?.retryInMs }, { status });
   }
 
@@ -45,7 +46,7 @@ export async function POST(req) {
   // code is confirmed (same as the website's wizard).
   if (mode === 'signup') {
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null;
-    await upsertUnverifiedUser({ email, fullName, phone: null, ip }).catch(() => {});
+    await upsertUnverifiedUser({ email, fullName, phone, ip }).catch(() => {});
   }
 
   const sent = await sendOtpEmail(email, saved.code);

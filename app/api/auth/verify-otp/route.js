@@ -1,4 +1,6 @@
 // Verifies the signup OTP, then creates the account and logs the user in.
+// No password: the website signs in with emailed codes (and Google). A password is
+// still accepted from older callers but never required.
 import { NextResponse } from 'next/server';
 import { verifyOtp } from '@/lib/otp';
 import { findUserByEmail, createUser, verifyExistingUser, publicUser } from '@/lib/users';
@@ -13,7 +15,7 @@ export async function POST(req) {
   const body = await req.json().catch(() => ({}));
   const { email, code, password } = body;
   if (!email || !code) return NextResponse.json({ error: 'missing_fields' }, { status: 400 });
-  if (!password || String(password).length < 6) return NextResponse.json({ error: 'weak_password' }, { status: 400 });
+  if (password && String(password).length < 6) return NextResponse.json({ error: 'weak_password' }, { status: 400 });
 
   const result = await verifyOtp(email, 'signup', code);
   if (!result.valid) return NextResponse.json({ error: result.error, attemptsLeft: result.attemptsLeft }, { status: 400 });
@@ -30,8 +32,8 @@ export async function POST(req) {
   let user;
   try {
     user = already && !already.verified
-      ? await verifyExistingUser(already.id, { password, fullName, phone })
-      : await createUser({ email, password, fullName, phone, ip: getClientIP(req) });
+      ? await verifyExistingUser(already.id, { password: password || null, fullName, phone })
+      : await createUser({ email, password: password || null, fullName, phone, ip: getClientIP(req) });
   } catch (e) {
     return NextResponse.json({ error: 'create_failed', detail: e?.message || String(e) }, { status: 500 });
   }
