@@ -12,7 +12,7 @@ import { COUNTRY } from '@/lib/country';
 const DICT = {
   es: {
     emailTitle: 'Ingresá o creá tu cuenta', emailSub: 'Te enviamos un código a tu email. Sin contraseñas.',
-    email: 'Email', emailPh: 'tu@email.com', continue: 'Continuar', googleBtn: 'Continuar con Google', orText: 'o',
+    email: 'Email', emailPh: 'tu@email.com', continue: 'Enviar código', googleBtn: 'Continuar con Google', orText: 'o',
     loginTitle: 'Ingresá el código', signupTitle: 'Creá tu cuenta',
     codeSub: (e) => `Enviamos un código de 6 dígitos a ${e}.`, spamHint: '¿No llegó? Revisá la carpeta de spam.',
     name: 'Nombre completo', namePh: 'Ana Giménez', phone: 'WhatsApp / teléfono (opcional)', phonePh: '0981 123 456',
@@ -28,7 +28,7 @@ const DICT = {
   },
   en: {
     emailTitle: 'Log in or sign up', emailSub: "We'll email you a code. No passwords.",
-    email: 'Email', emailPh: 'you@email.com', continue: 'Continue', googleBtn: 'Continue with Google', orText: 'or',
+    email: 'Email', emailPh: 'you@email.com', continue: 'Send code', googleBtn: 'Continue with Google', orText: 'or',
     loginTitle: 'Enter the code', signupTitle: 'Create your account',
     codeSub: (e) => `We sent a 6-digit code to ${e}.`, spamHint: "Didn't get it? Check your spam folder.",
     name: 'Full name', namePh: 'Ana Giménez', phone: 'WhatsApp / phone (optional)', phonePh: '0981 123 456',
