@@ -1,8 +1,9 @@
 // Google Maps helpers shared by the property maps.
 //
-// The basemap uses Google's own default colours; markers are brand-coloured SVG
-// pills. (The cream brand style CL_MAP_STYLE below is kept but no longer applied —
-// add `styles: CL_MAP_STYLE` back in mapOptions to bring it back.)
+// The basemap is Google's normal map with a very light Casa Libre tint
+// (CL_MAP_TINT: warm land, softer water and parks — labels, roads and places stay
+// Google's own). Markers are brand-coloured SVG pills. The old, much stronger cream
+// style CL_MAP_STYLE is kept below but not applied.
 import { loadGoogleMapsAPI } from './googleMapsLoader';
 import { COUNTRY } from '@/lib/country';
 export { loadGoogleMapsAPI };
@@ -14,6 +15,15 @@ const INK = '#111111';
 // ink labels so roads and place names read clearly (the old cream was too
 // washed-out/light). Still the brand cream family — one step bolder, NOT a
 // dark theme.
+// A very light Casa Libre tint over Google's default map — only the base colours
+// move a little towards the brand cream/sage; everything else is Google's default.
+export const CL_MAP_TINT = [
+  { featureType: 'landscape', elementType: 'geometry', stylers: [{ color: '#F5F1E9' }] },            // warm off-white land
+  { featureType: 'landscape.man_made', elementType: 'geometry', stylers: [{ color: '#F0EBE1' }] },   // built-up areas, a touch deeper
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#D9E6C8' }] },             // softer park green
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#B8D5DC' }] },                // softer, slightly sage water
+];
+
 export const CL_MAP_STYLE = [
   { elementType: 'geometry', stylers: [{ color: '#D8CBB2' }] },                 // deeper sand land (matches the app)
   { elementType: 'labels.text.fill', stylers: [{ color: '#403E37' }] },         // darker ink labels
@@ -98,10 +108,11 @@ export function clusterIcon(google, count, hot) {
   return { url: uri(svg), scaledSize: new google.maps.Size(s, s), anchor: new google.maps.Point(s / 2, s / 2) };
 }
 
-// Shared map options — Google's default map colours, no default UI (removes Google's controls;
+// Shared map options — Google's map with a light Casa Libre tint, no default UI (removes Google's controls;
 // the logo/attribution are hidden via CSS in globals.css).
 export function mapOptions(google, extra = {}) {
   return {
+    styles: CL_MAP_TINT,
     disableDefaultUI: true,
     zoomControl: true,
     clickableIcons: false,
