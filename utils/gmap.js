@@ -18,10 +18,10 @@ const INK = '#111111';
 // A very light Casa Libre tint over Google's default map — only the base colours
 // move a little towards the brand cream/sage; everything else is Google's default.
 export const CL_MAP_TINT = [
-  { featureType: 'landscape', elementType: 'geometry', stylers: [{ color: '#F5F1E9' }] },            // warm off-white land
-  { featureType: 'landscape.man_made', elementType: 'geometry', stylers: [{ color: '#F0EBE1' }] },   // built-up areas, a touch deeper
-  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#D9E6C8' }] },             // softer park green
-  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#B8D5DC' }] },                // softer, slightly sage water
+  { featureType: 'landscape', elementType: 'geometry', stylers: [{ color: '#F3EBDC' }] },            // warm cream land
+  { featureType: 'landscape.man_made', elementType: 'geometry', stylers: [{ color: '#EEE4D2' }] },   // built-up areas, a touch deeper
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#D6E2BD' }] },             // warm sage park green
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#B6D0CF' }] },                // soft sage water
 ];
 
 export const CL_MAP_STYLE = [
