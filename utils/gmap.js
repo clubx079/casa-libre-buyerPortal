@@ -1,10 +1,8 @@
 // Google Maps helpers shared by the property maps.
 //
-// We style the basemap with an inline `styles` array to match the Casa Libre
-// brand (muted cream), and render markers as brand-coloured SVG pills. Inline
-// styles require NO mapId — and classic markers work without one — so the two
-// play together (Advanced Markers would have forced a Cloud mapId and dropped
-// inline styling).
+// The basemap uses Google's own default colours; markers are brand-coloured SVG
+// pills. (The cream brand style CL_MAP_STYLE below is kept but no longer applied —
+// add `styles: CL_MAP_STYLE` back in mapOptions to bring it back.)
 import { loadGoogleMapsAPI } from './googleMapsLoader';
 import { COUNTRY } from '@/lib/country';
 export { loadGoogleMapsAPI };
@@ -100,11 +98,10 @@ export function clusterIcon(google, count, hot) {
   return { url: uri(svg), scaledSize: new google.maps.Size(s, s), anchor: new google.maps.Point(s / 2, s / 2) };
 }
 
-// Shared map options — brand style, no default UI (removes Google's controls;
+// Shared map options — Google's default map colours, no default UI (removes Google's controls;
 // the logo/attribution are hidden via CSS in globals.css).
 export function mapOptions(google, extra = {}) {
   return {
-    styles: CL_MAP_STYLE,
     disableDefaultUI: true,
     zoomControl: true,
     clickableIcons: false,
