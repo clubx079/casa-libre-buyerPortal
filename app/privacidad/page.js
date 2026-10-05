@@ -9,8 +9,8 @@ export const metadata = {
 };
 
 // Keep in sync with section 6 of /terminos.
-const UPDATED_ES = '2 de octubre de 2026';
-const UPDATED_EN = 'October 2, 2026';
+const UPDATED_ES = '6 de octubre de 2026';
+const UPDATED_EN = 'October 6, 2026';
 const C = COUNTRY.name;
 
 const content = {
@@ -19,13 +19,14 @@ const content = {
     blocks: [
       { type: 'prose', nodes: [
         ['p', `<em>Última actualización: ${UPDATED_ES}</em>`],
-        ['p', 'Esta política explica qué datos recopila Casa Libre, para qué los usa y con quién los comparte. Forma parte de los <a href="/terminos">Términos y Condiciones</a>; al aceptarlos das tu consentimiento a lo que se describe aquí.'],
+        ['p', 'Esta política explica qué datos recopila Casa Libre, para qué los usa y con quién los comparte. Forma parte de los <a href="/terminos">Términos y Condiciones</a>; al aceptarlos das tu consentimiento a lo que se describe aquí. <strong>Casa Libre no vende tus datos personales.</strong>'],
         ['h2', 'Qué datos recopilamos'],
         ['p', '<strong>Los que nos das:</strong> nombre, email, teléfono / WhatsApp, contraseña (cifrada), tipo de usuario (propietario o agente) y los datos, fotos y ubicación de tus publicaciones.<br/><strong>Los que se generan al usar la Plataforma:</strong> búsquedas, filtros, propiedades vistas y guardadas, contactos con publicadores, pagos (procesados por terceros), ubicación si la autorizás, datos del dispositivo y navegador, dirección IP, cookies y tecnologías similares.<br/><strong>Los de terceros:</strong> datos que recibimos al iniciar sesión con Google y datos de fuentes públicas.'],
         ['h2', 'Para qué los usamos'],
-        ['p', 'Operar la Plataforma y mostrar tus publicaciones; permitir que te contacten; verificar cuentas y prevenir fraude; enviarte mensajes sobre tu cuenta; enviarte novedades y ofertas por email, WhatsApp, SMS o notificaciones; personalizar tu experiencia; medir y mejorar nuestros servicios y campañas con herramientas de analítica y publicidad (por ejemplo PostHog, Google Analytics, Google Tag Manager y Google Ads); y elaborar estadísticas e informes del mercado inmobiliario.'],
+        ['p', 'Operar la Plataforma y mostrar tus publicaciones; permitir que te contacten; verificar cuentas y prevenir fraude; enviarte mensajes sobre tu cuenta; enviarte novedades y ofertas por email, WhatsApp, SMS o notificaciones; personalizar tu experiencia; medir y mejorar nuestros servicios y campañas con herramientas de analítica y publicidad (por ejemplo PostHog, Google Analytics, Google Tag Manager y Google Ads); y elaborar estadísticas e informes del mercado inmobiliario con datos agregados que no identifican a nadie.'],
         ['h2', 'Con quién los compartimos'],
-        ['p', 'Con proveedores que nos prestan servicios (alojamiento en la nube, email, pagos, analítica, mapas, publicidad). Estos proveedores solo usan los datos para prestarnos ese servicio. Con otros usuarios, cuando los contactás o te contactan (por ejemplo, la inmobiliaria o el dueño de una propiedad recibe tu mensaje). También compartimos información agregada o anonimizada, que no te identifica, y los datos pueden transferirse en caso de fusión, venta o reorganización de Casa Libre, o cuando lo exija la ley o una autoridad.'],
+        ['p', '<strong>No vendemos ni alquilamos tus datos personales, ni los entregamos a terceros a cambio de dinero o de cualquier otra contraprestación.</strong> Solo los compartimos en estos casos:'],
+        ['p', 'Con proveedores que nos prestan servicios (alojamiento en la nube, email, pagos, analítica, mapas, publicidad). Estos proveedores solo usan los datos para prestarnos ese servicio. Con otros usuarios, cuando los contactás o te contactan (por ejemplo, la inmobiliaria o el dueño de una propiedad recibe tu mensaje). También compartimos información agregada o anonimizada, que no te identifica, y compartimos datos cuando lo exija la ley o una autoridad. Si Casa Libre se fusiona, se reorganiza o es adquirida, tus datos pasarán a la nueva empresa, que deberá respetar esta política, incluido el compromiso de no venderlos.'],
         ['h2', 'Dónde y cuánto tiempo'],
         ['p', `Tus datos pueden almacenarse en servidores fuera de ${C} con medidas de seguridad razonables. Los conservamos mientras tengas una cuenta. Si la eliminás, borramos tus datos personales y solo conservamos el registro de tus pagos, porque la ley nos obliga a guardarlo, y estadísticas anónimas que no te identifican.`],
         ['h2', 'Eliminar tu cuenta'],
@@ -44,13 +45,14 @@ const content = {
     blocks: [
       { type: 'prose', nodes: [
         ['p', `<em>Last updated: ${UPDATED_EN}</em>`],
-        ['p', 'This policy explains what data Casa Libre collects, what we use it for and who we share it with. It forms part of the <a href="/terminos">Terms of Service</a>; by accepting them you consent to what is described here.'],
+        ['p', 'This policy explains what data Casa Libre collects, what we use it for and who we share it with. It forms part of the <a href="/terminos">Terms of Service</a>; by accepting them you consent to what is described here. <strong>Casa Libre does not sell your personal data.</strong>'],
         ['h2', 'What we collect'],
         ['p', '<strong>What you give us:</strong> name, email, phone / WhatsApp, password (encrypted), user type (owner or agent) and the details, photos and location of your listings.<br/><strong>What is generated when you use the Platform:</strong> searches, filters, properties viewed and saved, contacts with listers, payments (processed by third parties), location if you allow it, device and browser data, IP address, cookies and similar technologies.<br/><strong>From third parties:</strong> data we receive when you sign in with Google, and data from public sources.'],
         ['h2', 'What we use it for'],
-        ['p', 'Running the Platform and showing your listings; letting people contact you; verifying accounts and preventing fraud; messages about your account; news and offers by email, WhatsApp, SMS or notifications; personalising your experience; measuring and improving our services and campaigns with analytics and advertising tools (e.g. PostHog, Google Analytics, Google Tag Manager and Google Ads); and producing real-estate market statistics and reports.'],
+        ['p', 'Running the Platform and showing your listings; letting people contact you; verifying accounts and preventing fraud; messages about your account; news and offers by email, WhatsApp, SMS or notifications; personalising your experience; measuring and improving our services and campaigns with analytics and advertising tools (e.g. PostHog, Google Analytics, Google Tag Manager and Google Ads); and producing real-estate market statistics and reports from aggregated data that does not identify anyone.'],
         ['h2', 'Who we share it with'],
-        ['p', 'Service providers working for us (cloud hosting, email, payments, analytics, maps, advertising). These providers only use the data to provide that service to us. Other users, when you contact them or they contact you (for example, the agency or owner of a property receives your message). We also share aggregated or anonymised information, which does not identify you, and data may be transferred in a merger, sale or reorganisation of Casa Libre, or when required by law or an authority.'],
+        ['p', '<strong>We do not sell or rent your personal data, or give it to anyone in exchange for money or anything else of value.</strong> We only share it in these cases:'],
+        ['p', 'Service providers working for us (cloud hosting, email, payments, analytics, maps, advertising). These providers only use the data to provide that service to us. Other users, when you contact them or they contact you (for example, the agency or owner of a property receives your message). We also share aggregated or anonymised information, which does not identify you, and we share data when required by law or an authority. If Casa Libre merges, reorganises or is acquired, your data will pass to the new company, which must follow this policy, including the commitment not to sell it.'],
         ['h2', 'Where and for how long'],
         ['p', `Your data may be stored on servers outside ${C} with reasonable security measures. We keep it while you have an account. If you delete it, we erase your personal data and keep only the record of your payments, because the law requires it, and anonymous statistics that do not identify you.`],
         ['h2', 'Deleting your account'],
