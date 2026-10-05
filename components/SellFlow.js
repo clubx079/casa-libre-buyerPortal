@@ -41,7 +41,7 @@ const DICT = {
     verifyTitle: 'Confirmá tu email', verifySub: (e) => `Para publicar, continuá con Google o te enviamos un código de 6 dígitos a ${e}.`, sendCode: 'Enviar código',
     otpTitle: 'Código de confirmación enviado', otpSub: (e) => `Ingresá el código que enviamos a ${e} para verificar tu correo.`,
     codePh: 'Código de 6 dígitos', verify: 'Verificar', verifying: 'Verificando…', resend: 'Reenviar código', resent: 'Código reenviado',
-    haveAccount: 'Ya tenés una cuenta', haveAccountSub: (e) => `Te enviamos un código a ${e}. Ingresalo para continuar.`, googleBtn: 'Continuar con Google', orText: 'o', login: 'Ingresar', errGeneric: 'Algo salió mal. Intentá de nuevo.', doneDash: 'Ir a mi panel',
+    haveAccount: 'Ya existe una cuenta', existsSub: (e) => `${e} ya tiene una cuenta en Casa Libre. Ingresá con Google o te enviamos un código de 6 dígitos.`, haveAccountSub: (e) => `Te enviamos un código a ${e}. Ingresalo para continuar.`, googleBtn: 'Continuar con Google', orText: 'o', login: 'Ingresar', errGeneric: 'Algo salió mal. Intentá de nuevo.', doneDash: 'Ir a mi panel',
     d4Title: 'Últimos detalles', d4Sub: 'Completá los datos de tu propiedad y publicá — se publica al instante.',
     fType: 'Tipo de propiedad', typePh: 'Seleccioná el tipo', types: typeOptions('es'),
     fPrice: (m) => (m === 'venta' ? 'Precio' : 'Alquiler mensual'), fPricePh: (m) => (m === 'venta' ? '145.000' : '4.500.000'),
@@ -78,7 +78,7 @@ const DICT = {
     verifyTitle: 'Confirm your email', verifySub: (e) => `To publish, continue with Google or we'll email a 6-digit code to ${e}.`, sendCode: 'Send code',
     otpTitle: 'Confirmation code sent', otpSub: (e) => `Enter the code we emailed to ${e} to verify your email.`,
     codePh: '6-digit code', verify: 'Verify', verifying: 'Verifying…', resend: 'Resend code', resent: 'Code resent',
-    haveAccount: 'You already have an account', haveAccountSub: (e) => `We sent a code to ${e}. Enter it to continue.`, googleBtn: 'Continue with Google', orText: 'or', login: 'Log in', errGeneric: 'Something went wrong. Try again.', doneDash: 'Go to my dashboard',
+    haveAccount: 'Account already exists', existsSub: (e) => `${e} already has a Casa Libre account. Log in with Google or we'll email you a 6-digit code.`, haveAccountSub: (e) => `We sent a code to ${e}. Enter it to continue.`, googleBtn: 'Continue with Google', orText: 'or', login: 'Log in', errGeneric: 'Something went wrong. Try again.', doneDash: 'Go to my dashboard',
     d4Title: 'Last details', d4Sub: 'Fill in your property and publish — it goes live instantly.',
     fType: 'Property type', typePh: 'Select the type', types: typeOptions('en'),
     fPrice: (m) => (m === 'venta' ? 'Price' : 'Monthly rent'), fPricePh: (m) => (m === 'venta' ? '145,000' : '4,500,000'),
@@ -301,10 +301,31 @@ export default function SellFlowProvider({ children }) {
     if (!collectValid()) { setErr(collectErr()); return; }
     setErr('');
     // after address → email the code + open verify overlay (skip if already verified this session)
-    if (step === 2) { if (verified) { setStep(3); return; } setEmailTaken(false); setCodeSent(false); setCode(''); setLoginCode(''); setPhase('otp'); return; }
+    if (step === 2) {
+      if (verified) { setStep(3); return; }
+      setCodeSent(false); setCode(''); setLoginCode('');
+      setBusy(true); const exists = await emailExists(); setBusy(false);
+      setEmailTaken(exists); setPhase('otp'); return;
+    }
     setStep((s) => s + 1);
   };
   const back = () => { setErr(''); setEmailTaken(false); setCodeSent(false); if (phase === 'otp') { setPhase(''); return; } setStep((s) => Math.max(s - 1, 0)); };
+
+  // Does the email already have an account? Only decides what the confirm screen says
+  // (nothing is sent). Unknown / slow → treated as new; Send code still finds out.
+  const emailExists = async () => {
+    const ctrl = new AbortController(); const tm = setTimeout(() => ctrl.abort(), 4000);
+    try {
+      const res = await fetch('/api/auth/email-status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: f.email }), signal: ctrl.signal });
+      const j = await res.json().catch(() => ({}));
+      return !!j.exists;
+    } catch { return false; } finally { clearTimeout(tm); }
+  };
+  // "Send code" for an email we already know has an account → the login code.
+  const sendExistingCode = async () => {
+    setBusy(true);
+    try { if (await sendLoginCode()) { setLoginCode(''); setCodeSent(true); } } finally { setBusy(false); }
+  };
 
   // ---- email OTP (inline, no password screen) ----
   // Runs only when the visitor clicks "Send code" (or "Resend code").
@@ -498,8 +519,8 @@ export default function SellFlowProvider({ children }) {
               <div>
                 {!codeSent ? (
                   <>
-                    <h2 className="text-[22px] font-bold tracking-head mb-1">{t.verifyTitle}</h2>
-                    <p className="text-[14px] text-ink/55 mb-4">{t.verifySub(f.email)}</p>
+                    <h2 className="text-[22px] font-bold tracking-head mb-1" data-testid="sell-verify-title">{emailTaken ? t.haveAccount : t.verifyTitle}</h2>
+                    <p className="text-[14px] text-ink/55 mb-4">{emailTaken ? t.existsSub(f.email) : t.verifySub(f.email)}</p>
                     <button type="button" onClick={googleSignIn} className="w-full flex items-center justify-center gap-2.5 py-3 border-[1.5px] border-ink/25 rounded-pill font-semibold text-[14px] bg-card hover:border-ink transition-colors">
                       <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.4 30.2 0 24 0 14.6 0 6.4 5.4 2.5 13.2l7.9 6.1C12.2 13.2 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.5 3-2.2 5.5-4.7 7.2l7.3 5.7c4.3-4 6.9-9.9 6.9-17.4z"/><path fill="#FBBC05" d="M10.4 28.3c-.5-1.4-.8-2.9-.8-4.3s.3-3 .8-4.3l-7.9-6.1C.9 16.6 0 20.2 0 24s.9 7.4 2.5 10.6l7.9-6.3z"/><path fill="#34A853" d="M24 48c6.2 0 11.5-2 15.3-5.6l-7.3-5.7c-2 1.4-4.6 2.3-8 2.3-6.4 0-11.8-3.7-13.6-9.1l-7.9 6.3C6.4 42.6 14.6 48 24 48z"/></svg>
                       {t.googleBtn}
@@ -507,7 +528,7 @@ export default function SellFlowProvider({ children }) {
                     <div className="flex items-center gap-3 my-4">
                       <span className="flex-1 h-px bg-ink/12" /><span className="text-[12px] text-ink/40 font-mono">{t.orText}</span><span className="flex-1 h-px bg-ink/12" />
                     </div>
-                    <button onClick={sendOtp} disabled={busy} className="w-full px-7 py-3.5 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60 inline-flex items-center justify-center min-h-[48px]" data-testid="sell-send-code">{busy ? <Spinner /> : t.sendCode}</button>
+                    <button onClick={emailTaken ? sendExistingCode : sendOtp} disabled={busy} className="w-full px-7 py-3.5 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60 inline-flex items-center justify-center min-h-[48px]" data-testid="sell-send-code">{busy ? <Spinner /> : t.sendCode}</button>
                     {err && <div className="mt-4 text-[13px] font-medium text-red-700 bg-red-50 border border-red-200 rounded-[12px] px-3.5 py-2.5">{err}</div>}
                   </>
                 ) : emailTaken ? (
