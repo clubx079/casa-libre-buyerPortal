@@ -173,6 +173,20 @@ export default function SellFlowProvider({ children }) {
     setOpen(true);
   };
 
+  // Back from Google WITHOUT signing in: same wizard, on the confirm-email screen
+  // (Google / Send code), with what they had entered. Terms were accepted in step 1.
+  const reopenAtConfirm = async (fields) => {
+    reset();
+    openedLoggedInRef.current = false;
+    setF({ ...BLANK, ...fields });
+    setTermsOk(true);
+    if (!fields.email || !fields.neighborhood) { setStep(fields.seller_type ? 1 : 0); setOpen(true); return; }
+    setStep(2);
+    setOpen(true);
+    setEmailTaken(await emailExists(fields.email));
+    setPhase('otp');
+  };
+
   // Logged in or not, everyone gets the wizard. When we already know the person we
   // prefill their name/email and skip the email-verification step.
   // openSell({ draft }) resumes one of the user's drafts at the details step.
@@ -199,6 +213,8 @@ export default function SellFlowProvider({ children }) {
   // so the person never lands on a page that just talks about listing.
   // ?sell=resume = back from Google sign-in mid-wizard: reopen it at the details
   // step with what they had entered (stashed in IndexedDB before the redirect).
+  // ?sell=back (browser Back from Google's page) or ?auth_error (Cancel on Google's
+  // page) while not signed in: reopen it on the confirm-email screen instead.
   const autoOpenedRef = useRef(false);
   useEffect(() => {
     if (typeof window === 'undefined' || autoOpenedRef.current || authLoading) return;
@@ -206,17 +222,24 @@ export default function SellFlowProvider({ children }) {
     if (q.get('app') === '1') setFromApp(true);
     if (q.get('ret')) setAppReturn(q.get('ret'));
     const sell = q.get('sell');
-    if (sell === '1' || sell === 'resume' || q.get('publicar') === '1') {
+    const authErr = q.get('auth_error');
+    if (sell === '1' || sell === 'resume' || sell === 'back' || authErr || q.get('publicar') === '1') {
       autoOpenedRef.current = true;
       // drop the params so a refresh doesn't reopen the wizard over the listing
       const url = new URL(window.location.href);
-      url.searchParams.delete('sell'); url.searchParams.delete('publicar');
-      window.history.replaceState({}, '', url.toString());
-      if (sell !== 'resume') { openSell(); return; }
+      url.searchParams.delete('sell'); url.searchParams.delete('publicar'); url.searchParams.delete('auth_error');
+      window.history.replaceState(window.history.state, '', url.toString());
+      if (sell === '1' || q.get('publicar') === '1') { openSell(); return; }
       (async () => {
         const pending = await loadPendingSell();
+        // Cancel on Google lands on /?auth_error — only ours if the stash is recent.
+        if (authErr && !(pending?.savedAt && Date.now() - pending.savedAt < 60 * 60 * 1000)) return;
         await clearPendingSell();
-        if (!user) return;                        // sign-in didn't complete
+        if (!user) {                              // sign-in didn't complete → back to the confirm screen
+          if (pending?.fields) { if (pending.fromApp) setFromApp(true); if (pending.appReturn) setAppReturn(pending.appReturn); reopenAtConfirm(pending.fields); track('sell_google_abandoned', {}); }
+          return;
+        }
+        if (!pending && sell !== 'resume') return;   // signed in and nothing stashed: leave the page as is
         const x = pending?.fields || {};
         if (pending?.fromApp) setFromApp(true);
         if (pending?.appReturn) setAppReturn(pending.appReturn);
@@ -226,6 +249,20 @@ export default function SellFlowProvider({ children }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openSell, authLoading]);
+
+  // Restored from the back/forward cache (Back from Google's page): the wizard is
+  // still open as it was, so just drop the ?sell=back marker.
+  useEffect(() => {
+    const onShow = (e) => {
+      if (!e.persisted) return;
+      const u = new URL(window.location.href);
+      if (u.searchParams.get('sell') !== 'back') return;
+      u.searchParams.delete('sell');
+      window.history.replaceState(window.history.state, '', u.toString());
+    };
+    window.addEventListener('pageshow', onShow);
+    return () => window.removeEventListener('pageshow', onShow);
+  }, []);
 
   // A signed-out visitor who clicks any "List for free" / "Sell" link (they all point
   // at /publicar) gets the wizard right here, over the page they're on — not the
@@ -313,10 +350,10 @@ export default function SellFlowProvider({ children }) {
 
   // Does the email already have an account? Only decides what the confirm screen says
   // (nothing is sent). Unknown / slow → treated as new; Send code still finds out.
-  const emailExists = async () => {
+  const emailExists = async (email = f.email) => {
     const ctrl = new AbortController(); const tm = setTimeout(() => ctrl.abort(), 4000);
     try {
-      const res = await fetch('/api/auth/email-status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: f.email }), signal: ctrl.signal });
+      const res = await fetch('/api/auth/email-status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }), signal: ctrl.signal });
       const j = await res.json().catch(() => ({}));
       return !!j.exists;
     } catch { return false; } finally { clearTimeout(tm); }
@@ -362,11 +399,15 @@ export default function SellFlowProvider({ children }) {
     try {
       // Stash what the guest entered, then come back to THIS page with ?sell=resume:
       // the wizard reopens at the details step, signed in — same as the code path.
-      await savePendingSell({ fields: { mode: f.mode, seller_type: f.seller_type, contact_name: f.contact_name, neighborhood: f.neighborhood, city: f.city, addressText: f.addressText }, fromApp, appReturn });
+      await savePendingSell({ fields: { mode: f.mode, seller_type: f.seller_type, contact_name: f.contact_name, email: f.email, neighborhood: f.neighborhood, city: f.city, addressText: f.addressText }, fromApp, appReturn, savedAt: Date.now() });
       const here = /^\/[A-Za-z0-9/_-]*$/.test(window.location.pathname) ? window.location.pathname : '/';
       const r = await fetch('/api/auth/google', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ next: `${here}?sell=resume` }) });
       const j = await r.json().catch(() => ({}));
-      if (j.url) window.location.href = j.url; else setErr(t.errGeneric);
+      if (!j.url) { setErr(t.errGeneric); return; }
+      // If they press Back on Google's page, this page reloads with ?sell=back and the
+      // wizard reopens where they were.
+      try { const back = new URL(window.location.href); back.searchParams.set('sell', 'back'); window.history.replaceState(window.history.state, '', back.toString()); } catch {}
+      window.location.href = j.url;
     } catch { setErr(t.errGeneric); }
   };
   // Email a sign-in code to the registered address (same endpoint as the app).
