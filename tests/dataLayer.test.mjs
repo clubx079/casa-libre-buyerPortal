@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 process.env.NEXT_PUBLIC_GTM_ID = 'GTM-TEST123';
-const { normalizeMode, dataLayerEvent, pushDataLayer, isOwnerEvent, DATALAYER_PARAMS, typeSlug, PROPERTY_TYPE_VALUES } = await import('../lib/dataLayer.js');
+const { normalizeMode, dataLayerEvent, pushDataLayer, isOwnerEvent, DATALAYER_PARAMS, typeSlug, PROPERTY_TYPE_VALUES, bedsValue } = await import('../lib/dataLayer.js');
 const { consumeSignupSignal, SIGNUP_COOKIE } = await import('../lib/signupSignal.js');
 
 test('mode maps venta/alquiler to sale/rent', () => {
@@ -146,4 +146,12 @@ test('property_type is the same value from the filter, a published listing or a 
   const view = dataLayerEvent('property_viewed', { property_id: 'x', mode: 'venta', type: 'Departamento' }, 'py');
   assert.equal(search.property_type, view.property_type);
   assert.ok(PROPERTY_TYPE_VALUES.includes(view.property_type));
+});
+
+test('bedrooms is the same value from the desktop and the phone filter', () => {
+  assert.equal(bedsValue('b2'), '2+');
+  assert.equal(bedsValue('2'), '2+');
+  assert.equal(bedsValue('4'), '4+');
+  assert.equal(bedsValue('all'), undefined);
+  assert.equal(dataLayerEvent('search_applied', { bedrooms: 'b3' }, 'py').bedrooms, '3+');
 });
