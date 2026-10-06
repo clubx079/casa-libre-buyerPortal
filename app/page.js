@@ -28,7 +28,8 @@ export default async function Landing() {
   const ventas = shuffle(withImg.filter((l) => l.mode === 'venta'));
   const alquileres = shuffle(withImg.filter((l) => l.mode === 'alquiler'));
   const blend = shuffle([...ventas.slice(0, 4), ...alquileres.slice(0, 3)]);
-  const others = [...blend, ...shuffle(withImg)].filter((l) => !promoted.has(String(l.id)));
+  // Regular fill: only listings whose data all checked out (no "Contact seller for …").
+  const others = [...blend, ...shuffle(withImg)].filter((l) => !promoted.has(String(l.id)) && !l.unverified);
   const featured = fillHomeFeatured({ onHome, freeIds: new Set(freeIds), verified: verifiedOnly, others, slots: 6, seed: Math.floor(Date.now() / 3600000) });
   const ticker = listings
     .filter((l) => l.usd)

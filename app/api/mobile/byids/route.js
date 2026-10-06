@@ -20,7 +20,9 @@ export async function POST(req) {
     const body = await req.json().catch(() => ({}));
     const ids = Array.isArray(body.ids) ? body.ids.slice(0, 200) : [];
     const { rate, listings } = await getListingsByIds(ids);
-    return NextResponse.json({ rate, listings }, { headers: CORS });
+    // The app doesn't show "Contact seller for …" yet (lib/unverified.js): listings with a
+    // field we couldn't verify stay website-only for now.
+    return NextResponse.json({ rate, listings: listings.filter((l) => !l.unverified) }, { headers: CORS });
   } catch (e) {
     return NextResponse.json({ error: 'failed', detail: String(e?.message || e) }, { status: 500, headers: CORS });
   }

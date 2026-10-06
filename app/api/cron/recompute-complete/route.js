@@ -8,6 +8,13 @@ import { select, update } from '@/lib/db';
 import { buildingsParts } from '@/lib/land';
 import { getUsdToPyg } from '@/lib/fx';
 import { isCompleteListing, shapeForGate } from '@/lib/completeness';
+import { COUNTRY } from '@/lib/country';
+import { looseFor, unverifiedFields } from '@/lib/unverified';
+
+// Paraguay (lib/unverified.js): listings with a field we couldn't verify are shown,
+// and a price we couldn't verify gets no price_usd (price filters skip it, price
+// sorts put it last).
+const LOOSE = looseFor(COUNTRY.code);
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
@@ -32,8 +39,8 @@ async function handle(req) {
     scanned += rows.length;
     for (const r of rows) {
       const shaped = shapeForGate(r, rate);
-      const ok = isCompleteListing(shaped);
-      const priceUsd = shaped.usd ?? null;
+      const ok = isCompleteListing(shaped, { loose: LOOSE });
+      const priceUsd = LOOSE && unverifiedFields(shaped).includes('price') ? null : (shaped.usd ?? null);
       const priceChanged = (r.price_usd == null ? null : Number(r.price_usd)) !== (priceUsd == null ? null : Number(priceUsd));
       if (ok || priceChanged) {
         try { await update('properties', `id=eq.${r.id}`, { is_complete: ok, price_usd: priceUsd }, { returning: 'minimal' }); if (ok) promoted++; else if (priceChanged) priceFixed++; } catch {}

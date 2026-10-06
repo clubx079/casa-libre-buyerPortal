@@ -17,6 +17,10 @@ for (const line of fs.readFileSync('.env.local', 'utf8').split('\n')) {
 const URL = process.env.AIROBASE_URL, KEY = process.env.AIROBASE_SECRET_KEY;
 const H = { apikey: KEY, Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json' };
 const { isCompleteListing, shapeForGate } = await import(pathToFileURL(path.resolve('lib/completeness.js')).href);
+// Paraguay (lib/unverified.js): listings with a field we couldn't verify are shown,
+// and a price we couldn't verify gets no price_usd.
+const { looseFor, unverifiedFields } = await import(pathToFileURL(path.resolve('lib/unverified.js')).href);
+const LOOSE = looseFor(process.env.NEXT_PUBLIC_COUNTRY || 'py');
 
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i >= 0 ? process.argv[i + 1] : d; };
 const COMMIT = process.argv.includes('--commit');
@@ -29,7 +33,7 @@ const GATE = 'id,price,currency,listing_type,contact_phone,city,neighborhood,bed
 const COLS = GATE + (COMMIT ? ',is_complete,price_usd' : '');
 const CONC = 16;
 
-console.log(`[recompute] ${COMMIT ? 'COMMIT' : 'DRY-RUN'} | rate=${RATE}`);
+console.log(`[recompute] ${COMMIT ? 'COMMIT' : 'DRY-RUN'} | rate=${RATE} | loose=${LOOSE}`);
 
 // 1) page all active building rows
 const all = [];
@@ -50,10 +54,10 @@ const updates = []; // { id, is_complete, price_usd }
 const numOrNull = (v) => (v == null ? null : Number(v));
 for (const row of all) {
   const shaped = shapeForGate(row, RATE);
-  const ok = isCompleteListing(shaped);
+  const ok = isCompleteListing(shaped, { loose: LOOSE });
   if (ok) complete++; else incomplete++;
   if (COMMIT) {
-    const priceUsd = shaped.usd ?? null;
+    const priceUsd = LOOSE && unverifiedFields(shaped).includes('price') ? null : (shaped.usd ?? null);
     const changed = row.is_complete !== ok || numOrNull(row.price_usd) !== numOrNull(priceUsd);
     if (changed) updates.push({ id: row.id, is_complete: ok, price_usd: priceUsd });
   }

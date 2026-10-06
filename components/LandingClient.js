@@ -8,7 +8,7 @@ import VerifiedTag from '@/components/VerifiedTag';
 import AppBadges from '@/components/AppBadges';
 import { useRouter } from 'next/navigation';
 import { typeLabel } from '@/lib/propertyType';
-import { fmtUsd, fmtPyg, bathWord } from '@/lib/ui';
+import { fmtUsd, fmtPyg, bathWord, isUnverified, contactSellerFor } from '@/lib/ui';
 import { COUNTRY } from '@/lib/country';
 
 const DICT = {
@@ -70,7 +70,7 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
   const [q, setQ] = useState('');
   const goSearch = () => { const query = q.trim(); router.push(query ? `/propiedades?q=${encodeURIComponent(query)}` : '/propiedades'); };
 
-  const price = (l) => (fmtUsd(l.usd, lang) || '—') + (l.mode === 'alquiler' ? t.perMonth : '');
+  const price = (l) => (isUnverified(l, 'price') ? contactSellerFor('price', lang) : (fmtUsd(l.usd, lang) || '—') + (l.mode === 'alquiler' ? t.perMonth : ''));
   const title = (l) => `${typeLabel(l.type, lang) || (lang === 'es' ? 'Propiedad' : 'Property')}${l.beds ? ` · ${l.beds} ${t.beds}` : ''}`;
   const place = (l) => [l.neighborhood, l.city].filter(Boolean).join(', ');
   const meta = (l) => [l.area && `${l.area} m²`, l.baths && `${l.baths} ${bathWord(l.baths, lang)}`].filter(Boolean).join(' · ');

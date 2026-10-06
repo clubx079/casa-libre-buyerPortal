@@ -39,7 +39,10 @@ export async function GET(req) {
     const { rate, listings, totalCount } = await getListings({ limit, mode });
     // `total` = the real active-inventory total for this view (uncapped, count=exact);
     // the app shows it as the "N results" count instead of the load cap (600).
-    return NextResponse.json({ rate, count: listings.length, total: totalCount, listings }, { headers: CORS });
+    // The app doesn't show "Contact seller for …" yet (lib/unverified.js): listings with a
+    // field we couldn't verify stay website-only for now.
+    const shown = listings.filter((l) => !l.unverified);
+    return NextResponse.json({ rate, count: shown.length, total: totalCount, listings: shown }, { headers: CORS });
   } catch (e) {
     return NextResponse.json({ error: 'failed', detail: String(e?.message || e) }, { status: 500, headers: CORS });
   }

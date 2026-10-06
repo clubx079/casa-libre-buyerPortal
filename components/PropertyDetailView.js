@@ -10,7 +10,7 @@ import { useLang } from '@/lib/useLang';
 import ZoningBadge from '@/components/ZoningBadge';
 import { typeLabel } from '@/lib/propertyType';
 import { track } from '@/lib/analytics';
-import { fmtUsd, fmtPyg, normalizePy, clRef } from '@/lib/ui';
+import { fmtUsd, fmtPyg, normalizePy, clRef, isUnverified, contactSellerFor, contactShort, unverifiedNote } from '@/lib/ui';
 import PropertyContactCard from '@/components/PropertyContactCard';
 import NoResponseReport from '@/components/NoResponseReport';
 import { useSellFlow } from '@/components/SellFlow';
@@ -100,16 +100,22 @@ export default function PropertyDetailView({ l, url }) {
   }, [l.lat, l.lng]);
 
   // Standardized: USD is always the main price; local ₲ is the "≈ …" sub.
-  const bigPrice = (fmtUsd(l.usd, lang) || '—');
-  const altVal = fmtPyg(l.pyg, lang);
+  // Fields we couldn't verify (lib/unverified.js) read "Contact seller for …", and one
+  // fine-print note under the price names them all.
+  const noPrice = isUnverified(l, 'price');
+  const bigPrice = noPrice ? contactSellerFor('price', lang) : (fmtUsd(l.usd, lang) || '—');
+  const priceSfx = noPrice ? '' : sfx;
+  const altVal = noPrice ? null : fmtPyg(l.pyg, lang);
   const altPrice = altVal ? `≈ ${altVal}${sfx}` : '';
+  const unverifiedText = unverifiedNote(l.unverified, lang);
+  const ask = contactShort(lang);
 
   const specs = [
-    l.beds != null && [l.beds, t.specBeds],
-    l.baths != null && [l.baths, t.specBaths],
-    l.covered != null && [`${l.covered}`, t.specBuilt],
+    l.beds != null ? [l.beds, t.specBeds] : isUnverified(l, 'bedrooms') && [ask, t.specBeds, contactSellerFor('bedrooms', lang)],
+    l.baths != null ? [l.baths, t.specBaths] : isUnverified(l, 'bathrooms') && [ask, t.specBaths, contactSellerFor('bathrooms', lang)],
+    l.covered != null ? [`${l.covered}`, t.specBuilt] : isUnverified(l, 'area') && [ask, t.specBuilt, contactSellerFor('area', lang)],
     l.lot != null && [`${l.lot}`, t.specLot],
-    l.parking != null && [l.parking, t.specPark],
+    l.parking != null ? [l.parking, t.specPark] : isUnverified(l, 'parking') && [ask, t.specPark, contactSellerFor('parking', lang)],
   ].filter(Boolean);
 
   const paras = (l.description || '').split(/\n{2,}|\r?\n/).map((s) => s.trim()).filter(Boolean);
@@ -269,9 +275,10 @@ export default function PropertyDetailView({ l, url }) {
           <h1 className="text-[clamp(24px,3.4vw,34px)] font-bold tracking-head leading-[1.15] mt-1.5 mb-1">{title}</h1>
           <div className="text-[14px] text-ink/55 mb-4">{zone}</div>
           <div className="flex items-baseline gap-3.5 flex-wrap mb-1.5">
-            <span className="text-[clamp(22px,3vw,28px)] font-bold tracking-head">{bigPrice}{sfx}</span>
+            <span className="text-[clamp(22px,3vw,28px)] font-bold tracking-head">{bigPrice}{priceSfx}</span>
             {altPrice && <span className="font-mono text-[13px] text-ink/50">{altPrice}</span>}
           </div>
+          {unverifiedText && <p className="text-[12px] leading-snug text-ink/55 mb-2 max-w-[60ch]" data-testid="unverified-note">{unverifiedText}</p>}
 
           {listedLabel && (
             <div className="mb-1.5">
@@ -284,10 +291,16 @@ export default function PropertyDetailView({ l, url }) {
 
           {specs.length > 0 && (
             <div className="flex flex-wrap border-y border-ink/12 mt-[18px] mb-6">
-              {specs.map(([v, k], i) => (
+              {specs.map(([v, k, contactLine], i) => (
                 <div key={i} className="py-3.5 pr-6 mr-6 border-r border-ink/12 last:border-r-0 last:mr-0">
-                  <b className="block text-[17px] font-bold">{v}</b>
-                  <span className="font-mono text-[10px] tracking-[.08em] uppercase text-ink/50">{k}</span>
+                  {contactLine ? (
+                    <b className="block text-[13px] font-semibold leading-snug max-w-[18ch]" data-testid="unverified-spec">{contactLine}</b>
+                  ) : (
+                    <>
+                      <b className="block text-[17px] font-bold">{v}</b>
+                      <span className="font-mono text-[10px] tracking-[.08em] uppercase text-ink/50">{k}</span>
+                    </>
+                  )}
                 </div>
               ))}
             </div>
@@ -346,7 +359,7 @@ export default function PropertyDetailView({ l, url }) {
       {/* ── MOBILE STICKY BAR ── */}
       <div className="hidden max-[920px]:flex fixed left-0 right-0 bottom-0 z-[400] bg-card border-t-[1.5px] border-ink px-3.5 py-2.5 items-center gap-3" style={{ paddingBottom: 'calc(10px + env(safe-area-inset-bottom))' }}>
         <div className="min-w-0">
-          <span className="block font-bold text-[15px] leading-tight">{bigPrice}{sfx}</span>
+          <span className="block font-bold text-[15px] leading-tight">{bigPrice}{priceSfx}</span>
           <small className="block font-mono text-[10px] text-ink/50 truncate">{zone} · {t.ref} {listingRef}</small>
         </div>
         {mbarWa && (

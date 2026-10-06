@@ -19,7 +19,9 @@ export async function OPTIONS() {
 export async function GET(req, { params }) {
   try {
     const l = await getListing(params.id);
-    if (!l) return NextResponse.json({ error: 'not_found' }, { status: 404, headers: CORS });
+    // The app doesn't show "Contact seller for …" yet (lib/unverified.js): listings with a
+    // field we couldn't verify stay website-only for now.
+    if (!l || l.unverified) return NextResponse.json({ error: 'not_found' }, { status: 404, headers: CORS });
     return NextResponse.json({ listing: l }, { headers: CORS });
   } catch (e) {
     return NextResponse.json({ error: 'failed', detail: String(e?.message || e) }, { status: 500, headers: CORS });

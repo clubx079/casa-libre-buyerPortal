@@ -14,7 +14,8 @@ const listingTitle = (l) => `${typeLabel(l.type, 'es') || 'Propiedad'}${l.beds ?
 export async function generateMetadata({ params }) {
   const l = await getListing(params.slug);
   if (!l) return { title: 'Propiedad no encontrada' };
-  const title = `${listingTitle(l)} — ${fmtUsd(l.usd, 'es') || ''}${l.mode === 'alquiler' ? '/mes' : ''}`;
+  // No price in the title when it's one we couldn't verify (lib/unverified.js).
+  const title = l.usd != null ? `${listingTitle(l)} — ${fmtUsd(l.usd, 'es')}${l.mode === 'alquiler' ? '/mes' : ''}` : listingTitle(l);
   const description = (l.description || `${listingTitle(l)}. ${[l.area && `${l.area} m²`, l.baths && `${l.baths} baños`, l.parking && `${l.parking} cocheras`].filter(Boolean).join(', ')}. Ver en Casa Libre.`).slice(0, 160);
   const url = `${SITE}/propiedad/${l.id}`;
   return {

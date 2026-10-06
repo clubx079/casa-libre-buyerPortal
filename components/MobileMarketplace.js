@@ -11,7 +11,7 @@ import { useLang } from '@/lib/useLang';
 import { useSellFlow } from '@/components/SellFlow';
 import { useFavorites } from '@/components/FavoritesProvider';
 import { typeLabel, typeKey } from '@/lib/propertyType';
-import { T, fmtUsd, fmtPyg, shortUsd, titleCaseZone, bedAbbr, bathWord, parkWord, loc } from '@/lib/ui';
+import { T, fmtUsd, fmtPyg, shortUsd, titleCaseZone, bedAbbr, bathWord, parkWord, loc, isUnverified, contactSellerFor, contactShort } from '@/lib/ui';
 import { loadGoogleMapsAPI, mapOptions, pinIcon, clusterIcon, inParaguay, youAreHereIcon } from '@/utils/gmap';
 import { distanceKm, getUserLocation, NEAR_RADIUS_KM } from '@/utils/geo';
 import { COUNTRY } from '@/lib/country';
@@ -288,7 +288,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
     displayPins.forEach((l) => {
       if (!inParaguay(l.lat, l.lng)) return; // never plot mis-geocoded listings outside PY
       const promoted = !!(l.hl || l.verified);
-      const mk = new google.maps.Marker({ position: { lat: l.lat, lng: l.lng }, icon: pinIcon(google, shortUsd(l.usd), false, { promoted }), zIndex: promoted ? 10000 : undefined });
+      const mk = new google.maps.Marker({ position: { lat: l.lat, lng: l.lng }, icon: pinIcon(google, (l.nv || isUnverified(l, 'price')) ? contactShort(lang) : shortUsd(l.usd), false, { promoted }), zIndex: promoted ? 10000 : undefined });
       // Tap a pin → show a preview card (image + price + details); tapping the card
       // opens the listing in a NEW TAB. (Was: navigate directly in the same tab.)
       mk.addListener('click', () => {
@@ -311,8 +311,10 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
   }, [displayPins, nearMe, typeF, priceF, bedF, barrioF, heightF, q]);
   useEffect(() => { if (view === 'map') drawMarkers(); }, [view, drawMarkers]);
 
-  const priceMain = (l) => (fmtUsd(l.usd, lang) || '—') + (l.mode === 'alquiler' ? t.perMonth : '');
-  const priceSub = (l) => (fmtPyg(l.pyg, lang) ? fmtPyg(l.pyg, lang) + (l.mode === 'alquiler' ? t.perMonth : '') : '');
+  // A price we couldn't verify (lib/unverified.js; pins carry nv) reads "Contact seller for price".
+  const noPrice = (l) => !!l.nv || isUnverified(l, 'price');
+  const priceMain = (l) => (noPrice(l) ? contactSellerFor('price', lang) : (fmtUsd(l.usd, lang) || '—') + (l.mode === 'alquiler' ? t.perMonth : ''));
+  const priceSub = (l) => (!noPrice(l) && fmtPyg(l.pyg, lang) ? fmtPyg(l.pyg, lang) + (l.mode === 'alquiler' ? t.perMonth : '') : '');
   const title = (l) => { let tp = typeLabel(l.type, lang) || (lang === 'es' ? 'Inmueble' : 'Property'); const zone = titleCaseZone(l.neighborhood || l.city || ''); const base = l.beds ? `${tp} · ${l.beds} ${bedAbbr(lang)}` : tp; return zone ? `${base} · ${zone}` : base; };
   const meta = (l) => [l.area && `${l.area} m²`, l.baths && `${l.baths} ${bathWord(l.baths, lang)}`, l.parking && `${l.parking} ${parkWord(l.parking, lang)}`].filter(Boolean).join(' · ');
 

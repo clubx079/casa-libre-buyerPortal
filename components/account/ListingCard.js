@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { fmtUsd, fmtPyg } from '@/lib/ui';
+import { fmtUsd, fmtPyg, isUnverified, contactSellerFor } from '@/lib/ui';
 import { typeLabel } from '@/lib/propertyType';
 import { useLang } from '@/lib/useLang';
 import VerifiedTag from '@/components/VerifiedTag';
@@ -10,8 +10,9 @@ export default function ListingCard({ l, action }) {
   const [lang] = useLang();
   // Standardized: USD main, local ₲ sub (rent adds /mes|/mo).
   const per = l.mode === 'alquiler' ? (lang === 'es' ? '/mes' : '/mo') : '';
-  const price = (fmtUsd(l.usd, lang) || '—') + per;
-  const priceSub = fmtPyg(l.pyg, lang) ? fmtPyg(l.pyg, lang) + per : '';
+  const noPrice = isUnverified(l, 'price');   // lib/unverified.js
+  const price = noPrice ? contactSellerFor('price', lang) : (fmtUsd(l.usd, lang) || '—') + per;
+  const priceSub = !noPrice && fmtPyg(l.pyg, lang) ? fmtPyg(l.pyg, lang) + per : '';
   const title = `${typeLabel(l.type, lang) || (lang === 'es' ? 'Propiedad' : 'Property')}${l.beds ? ` · ${l.beds} ${lang === 'es' ? 'dorm' : 'bd'}` : ''}`;
   const place = [l.neighborhood, l.city].filter(Boolean).join(', ');
   const meta = [l.area && `${l.area} m²`, l.baths && `${l.baths} ${lang === 'es' ? 'baños' : 'ba'}`].filter(Boolean).join(' · ');
