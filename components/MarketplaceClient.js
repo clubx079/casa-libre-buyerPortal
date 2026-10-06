@@ -1,5 +1,6 @@
 'use client';
 import { roundArea } from '@/lib/mapArea';
+import { gatedFetch } from '@/lib/gatedFetch';
 import { typeOptions } from '@/lib/propertyTypeOptions';
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import Link from 'next/link';
@@ -72,6 +73,10 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
   const [mobileView, setMobileView] = useState('list'); // mobile: 'list' | 'map'
   const [hot, setHot] = useState(null);
   const [mapReady, setMapReady] = useState(false); // show a branded loader until tiles paint
+  // Bumped once the Google map exists, so the pins effect redraws with the CURRENT
+  // pins: they often arrive before the Maps script has loaded, and the init code only
+  // sees the first render's (empty) list — that left the map without pins.
+  const [mapOn, setMapOn] = useState(0);
   // "My location" / "Near me" — the user's real coords (country-agnostic; falls
   // back to COUNTRY.mapCenter on denial), a near-me radius toggle, and a small
   // non-blocking toast when geolocation is unavailable.
@@ -169,13 +174,14 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
     const tmo = setTimeout(async () => {
       if (doSearch) {
         try {
-          const res = await fetch('/api/listings/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(searchBody(1)) });
+          const res = await gatedFetch('/api/listings/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(searchBody(1)) });
           const j = await res.json();
           if (lid === listReqRef.current) { setRows(j.listings || []); setCount(j.count || 0); setPage(1); }
         } catch { if (lid === listReqRef.current) { setRows([]); setCount(0); } }
         finally { if (lid === listReqRef.current) setLoadingList(false); }
       }
-      try { const pr = await fetch(pinsUrl()); const pj = await pr.json(); if (id === reqRef.current) { didFit.current = false; setPins(pj.pins || []); } } catch {}
+      // A failed request keeps the pins already on the map instead of emptying it.
+      try { const pr = await gatedFetch(pinsUrl()); const pj = pr.ok ? await pr.json() : null; if (id === reqRef.current && Array.isArray(pj?.pins)) { didFit.current = false; setPins(pj.pins); } } catch {}
     }, doSearch ? 220 : 0);
     return () => clearTimeout(tmo);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -190,7 +196,7 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
     setLoadingList(true);
     (async () => {
       try {
-        const res = await fetch('/api/listings/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(searchBody(1)) });
+        const res = await gatedFetch('/api/listings/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(searchBody(1)) });
         const j = await res.json();
         if (lid === listReqRef.current) { setRows(j.listings || []); setCount(j.count || 0); setPage(1); }
       } catch { if (lid === listReqRef.current) { setRows([]); setCount(0); } }
@@ -202,7 +208,7 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
   const loadMore = async () => {
     const next = page + 1;
     try {
-      const res = await fetch('/api/listings/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(searchBody(next)) });
+      const res = await gatedFetch('/api/listings/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(searchBody(next)) });
       const j = await res.json();
       setRows((prev) => [...prev, ...(j.listings || [])]); setPage(next);
     } catch { /* keep current */ }
@@ -221,7 +227,7 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
     need.forEach((id) => imgReq.current.add(id));
     let got = {};
     try {
-      const res = await fetch('/api/listings/images', {
+      const res = await gatedFetch('/api/listings/images', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: need }),
       });
       got = (await res.json()).images || {};
@@ -419,13 +425,13 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
       });
       google.maps.event.addListenerOnce(map, 'tilesloaded', () => { if (!cancelled) setMapReady(true); });
       setTimeout(() => { if (!cancelled) setMapReady(true); }, 1500);
-      drawMarkers();
+      setMapOn((n) => n + 1);   // → the pins effect draws the current pins
     })();
     return () => { cancelled = true; mapRef.current = null; clusterRef.current = null; infoRef.current = null; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => { didFit.current = false; drawMarkers(); /* eslint-disable-next-line */ }, [pins, lang, nearMe, userLoc]);
+  useEffect(() => { didFit.current = false; drawMarkers(); /* eslint-disable-next-line */ }, [pins, lang, nearMe, userLoc, mapOn]);
 
   function popupHtml(l, imgUrl) {
     const img = imgUrl

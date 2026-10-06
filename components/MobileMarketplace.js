@@ -4,6 +4,7 @@
 // Lista/Mapa toggle, sort, filters bottom sheet, property cards). Rendered only
 // below `md`; the desktop MarketplaceClient is untouched.
 import { roundArea } from '@/lib/mapArea';
+import { gatedFetch } from '@/lib/gatedFetch';
 import { PROPERTY_TYPES } from '@/lib/propertyTypeOptions';
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import Link from 'next/link';
@@ -108,6 +109,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
   const [rows, setRows] = useState(initialListings);
   const [count, setCount] = useState(initialCount || 0);
   const [pins, setPins] = useState(initialPins);
+  const [mapOn, setMapOn] = useState(0);   // bumped once the Google map exists (see the redraw effect)
   const [loadingList, setLoadingList] = useState(false);
   const reqRef = useRef(0);
   const firstRun = useRef(true); // initial page is SSR'd → don't refetch on mount
@@ -143,13 +145,14 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
     const tmo = setTimeout(async () => {
       if (doSearch) {
         try {
-          const res = await fetch('/api/listings/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(searchBody(1)) });
+          const res = await gatedFetch('/api/listings/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(searchBody(1)) });
           const j = await res.json();
           if (lid === listReqRef.current) { setRows(j.listings || []); setCount(j.count || 0); setPage(1); }
         } catch { if (lid === listReqRef.current) { setRows([]); setCount(0); } }
         finally { if (lid === listReqRef.current) setLoadingList(false); }
       }
-      try { const pr = await fetch(pinsUrl()); const pj = await pr.json(); if (id === reqRef.current) setPins(pj.pins || []); } catch {}
+      // A failed request keeps the pins already on the map instead of emptying it.
+      try { const pr = await gatedFetch(pinsUrl()); const pj = pr.ok ? await pr.json() : null; if (id === reqRef.current && Array.isArray(pj?.pins)) setPins(pj.pins); } catch {}
     }, doSearch ? 220 : 0);
     return () => clearTimeout(tmo);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -163,7 +166,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
     setLoadingList(true);
     (async () => {
       try {
-        const res = await fetch('/api/listings/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(searchBody(1)) });
+        const res = await gatedFetch('/api/listings/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(searchBody(1)) });
         const j = await res.json();
         if (lid === listReqRef.current) { setRows(j.listings || []); setCount(j.count || 0); setPage(1); }
       } catch { if (lid === listReqRef.current) { setRows([]); setCount(0); } }
@@ -198,7 +201,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
   const loadMore = async () => {
     const next = page + 1;
     try {
-      const res = await fetch('/api/listings/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(searchBody(next)) });
+      const res = await gatedFetch('/api/listings/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(searchBody(next)) });
       const j = await res.json();
       setRows((prev) => [...prev, ...(j.listings || [])]); setPage(next);
     } catch { /* keep current */ }
@@ -214,7 +217,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
     if (!need.length) return;
     need.forEach((id) => imgReq.current.add(id));
     let got = {};
-    try { const res = await fetch('/api/listings/images', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: need }) }); got = (await res.json()).images || {}; } catch { got = {}; }
+    try { const res = await gatedFetch('/api/listings/images', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: need }) }); got = (await res.json()).images || {}; } catch { got = {}; }
     setImgMap((prev) => { const m = { ...prev }; need.forEach((id) => { m[id] = got[id] || null; }); return m; });
   }, []);
   useEffect(() => { ensureImages(rows.map((l) => l.id)); }, [rows, ensureImages]);
@@ -262,7 +265,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
         const ne = b.getNorthEast(); const sw = b.getSouthWest();
         setArea(roundArea({ n: ne.lat(), s: sw.lat(), e: ne.lng(), w: sw.lng() }));
       });
-      drawMarkers();
+      setMapOn((n) => n + 1);   // → the redraw effect draws the CURRENT pins (they can arrive before the map exists)
     })();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -309,7 +312,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
     if (n && !nearMe && !skipFitRef.current && !areaRef.current && (typeF !== 'all' || priceF !== 'all' || bedF !== 'all' || barrioF !== 'all' || heightF !== 'all' || q)) { moveCamera(() => map.fitBounds(bounds, 36)); }
     skipFitRef.current = false;
   }, [displayPins, nearMe, typeF, priceF, bedF, barrioF, heightF, q]);
-  useEffect(() => { if (view === 'map') drawMarkers(); }, [view, drawMarkers]);
+  useEffect(() => { if (view === 'map') drawMarkers(); }, [view, drawMarkers, mapOn]);
 
   // A price we couldn't verify (lib/unverified.js; pins carry nv) reads "Contact seller for price".
   const noPrice = (l) => !!l.nv || isUnverified(l, 'price');

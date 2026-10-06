@@ -52,7 +52,7 @@ const DICT = {
     backToApp: 'Volver a la app',
     doneTitle: '¡Tu propiedad está publicada!', doneSub: 'Ya aparece en el marketplace de Casa Libre.', doneView: 'Ver mi propiedad', doneBrowse: 'Ver propiedades',
     // Promotion plans (optional paid visibility at publish) — two boxes, pick one.
-    planTitle: 'Sumá visibilidad (opcional)',
+    planTitle: 'Sumá visibilidad',
     v5Title: 'Insignia Verificada en el marketplace', v5Price: 'US$5 · 30 días',
     v20Title: 'Mostrá tu propiedad en la portada con la insignia Verificada', v20Price: 'US$20 · 30 días',
     publishVerified: 'Publicar por US$5', publishHome: 'Publicar por US$20',
@@ -89,7 +89,7 @@ const DICT = {
     backToApp: 'Back to the app',
     doneTitle: 'Your listing is live!', doneSub: 'It already shows in the Casa Libre marketplace.', doneView: 'View my listing', doneBrowse: 'Browse listings',
     // Promotion plans (optional paid visibility at publish) — two boxes, pick one.
-    planTitle: 'Add visibility (optional)',
+    planTitle: 'Add visibility',
     v5Title: 'Verified badge on marketplace', v5Price: 'US$5 · 30 days',
     v20Title: 'Display your property on the Home page with the Verified badge', v20Price: 'US$20 · 30 days',
     publishVerified: 'Publish for US$5', publishHome: 'Publish for US$20',
