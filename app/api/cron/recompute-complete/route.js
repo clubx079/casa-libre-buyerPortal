@@ -11,7 +11,7 @@ import { isCompleteListing, shapeForGate } from '@/lib/completeness';
 import { COUNTRY } from '@/lib/country';
 import { looseFor, unverifiedFields } from '@/lib/unverified';
 
-// Paraguay (lib/unverified.js): listings with a field we couldn't verify are shown,
+// Looser rule (lib/unverified.js): listings with a field we couldn't verify are shown,
 // and a price we couldn't verify gets no price_usd (price filters skip it, price
 // sorts put it last).
 const LOOSE = looseFor(COUNTRY.code);

@@ -6,10 +6,11 @@ import { isCompleteListing } from '../lib/completeness.js';
 const sale = (o = {}) => ({ mode: 'venta', usd: 150000, pyg: 150000 * 7300, beds: 3, baths: 2, parking: 1, covered: 180, lot: 360, area: 180, type: 'Casa', contact_phone: '595981000000', city: 'Asunción', neighborhood: 'Villa Morra', ...o });
 const rent = (o = {}) => sale({ mode: 'alquiler', usd: 800, pyg: 800 * 7300, ...o });
 
-test('only Paraguay uses the looser rule for now', () => {
+test('every Casa Libre country uses the looser rule; unknown ones stay strict', () => {
   assert.equal(looseFor('py'), true);
   assert.equal(looseFor('PY'), true);
-  for (const cc of ['bo', 'uy', 've', '', undefined]) assert.equal(looseFor(cc), false);
+  for (const cc of ['bo', 'uy', 've', 'BO']) assert.equal(looseFor(cc), true);
+  for (const cc of ['ar', '', undefined]) assert.equal(looseFor(cc), false);
 });
 
 test('a listing whose data all checks out has nothing unverified', () => {
