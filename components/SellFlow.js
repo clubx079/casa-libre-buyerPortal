@@ -429,7 +429,7 @@ export default function SellFlowProvider({ children }) {
       const res = await fetch('/api/auth/code/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: f.email, code: loginCode }) });
       const j = await res.json().catch(() => ({}));
       if (!res.ok || !j.ok) { setErr(t.errCode); return; }
-      track('user_logged_in', { method: 'email_code' });
+      track('user_logged_in', { method: 'email_otp' });
       setVerified(true); setEmailTaken(false); setPhase(''); setStep(3);   // logged in → straight to details
       refreshUser?.();                                                      // update header/user app-wide
     } catch { setErr(t.errCode); } finally { setBusy(false); }

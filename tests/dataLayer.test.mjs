@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 process.env.NEXT_PUBLIC_GTM_ID = 'GTM-TEST123';
-const { normalizeMode, dataLayerEvent, pushDataLayer, isOwnerEvent, DATALAYER_PARAMS } = await import('../lib/dataLayer.js');
+const { normalizeMode, dataLayerEvent, pushDataLayer, isOwnerEvent, DATALAYER_PARAMS, typeSlug, PROPERTY_TYPE_VALUES } = await import('../lib/dataLayer.js');
 const { consumeSignupSignal, SIGNUP_COOKIE } = await import('../lib/signupSignal.js');
 
 test('mode maps venta/alquiler to sale/rent', () => {
@@ -24,7 +24,7 @@ test('property_viewed matches the agency table and drops address / lat / lng', (
   assert.equal(e.event, 'property_viewed');
   assert.equal(e.mode, 'sale');
   assert.equal(e.property_id, 'abc');
-  assert.equal(e.property_type, 'casa');
+  assert.equal(e.property_type, 'house');
   assert.equal(e.city, 'Asunción');
   assert.equal(e.price, 150000);
   assert.equal(e.site_country, 'py');
@@ -123,4 +123,27 @@ test('signup signal is read once, then cleared', () => {
   assert.equal(consumeSignupSignal(doc), 'google');
   assert.equal(consumeSignupSignal(doc), null);
   assert.equal(consumeSignupSignal({ cookie: `${SIGNUP_COOKIE}=<script>`, set cookie(v) {} }), null);
+});
+
+test('property_type is the same value from the filter, a published listing or a scraped one', () => {
+  assert.equal(typeSlug('depto'), 'apartment');          // Type filter key
+  assert.equal(typeSlug('Departamento'), 'apartment');   // published listing
+  assert.equal(typeSlug('Monoambiente'), 'apartment');   // scraped
+  assert.equal(typeSlug('casa'), 'house');
+  assert.equal(typeSlug('Casa en condominio'), 'house');
+  assert.equal(typeSlug('comercial'), 'commercial');
+  assert.equal(typeSlug('Local comercial'), 'commercial');
+  assert.equal(typeSlug('Dúplex'), 'duplex');
+  assert.equal(typeSlug('terreno'), 'land');
+  assert.equal(typeSlug('Loteamiento'), 'land');
+  assert.equal(typeSlug('Depósito'), 'warehouse');
+  assert.equal(typeSlug('campo'), 'rural_land');
+  assert.equal(typeSlug('Hotel'), 'other');
+  assert.equal(typeSlug('all'), undefined);
+  assert.equal(typeSlug(''), undefined);
+  assert.equal(typeSlug(null), undefined);
+  const search = dataLayerEvent('search_applied', { operation: 'venta', property_type: 'depto' }, 'py');
+  const view = dataLayerEvent('property_viewed', { property_id: 'x', mode: 'venta', type: 'Departamento' }, 'py');
+  assert.equal(search.property_type, view.property_type);
+  assert.ok(PROPERTY_TYPE_VALUES.includes(view.property_type));
 });

@@ -132,8 +132,8 @@ export default function AuthModal({ onAuthed, onClose }) {
       const j = await r.json().catch(() => ({}));
       if (r.status === 403) { setErr(t.errBlocked); return; }
       if (!r.ok || !j.ok) { setErr(j.error === 'too_many_attempts' ? t.errRate : t.errCode); return; }
-      if (j.mode === 'signup') track('user_signed_up', { method: 'email_code' });
-      else track('user_logged_in', { method: 'email_code' });
+      if (j.mode === 'signup') track('user_signed_up', { method: 'email_otp' });   // value agreed with the ads agency
+      else track('user_logged_in', { method: 'email_otp' });
       onAuthed(j.user);
     } catch { setErr(t.errGeneric); } finally { setBusy(false); }
   };
