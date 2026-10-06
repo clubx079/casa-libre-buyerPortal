@@ -71,6 +71,10 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
   const [sortOpen, setSortOpen] = useState(false);
   const [mobileView, setMobileView] = useState('list'); // mobile: 'list' | 'map'
   const [hot, setHot] = useState(null);
+  // Hovering a pin highlights its card; if the card is out of view in the list, the list
+  // scrolls smoothly to it. Only for hovers that start on the map, never for the list's own.
+  const hotFromMapRef = useRef(false);
+  const listScrollRef = useRef(null);
   const [mapReady, setMapReady] = useState(false); // show a branded loader until tiles paint
   // "My location" / "Near me" — the user's real coords (country-agnostic; falls
   // back to COUNTRY.mapCenter on denial), a near-me radius toggle, and a small
@@ -462,7 +466,7 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
       const marker = new google.maps.Marker({ position: { lat: l.lat, lng: l.lng }, icon: pinIcon(google, label, false, { promoted }), zIndex: promoted ? 10000 : undefined });
       marker.__label = label;
       marker.__promoted = promoted;
-      marker.addListener('mouseover', () => setHot(l.id));
+      marker.addListener('mouseover', () => { hotFromMapRef.current = true; setHot(l.id); });
       marker.addListener('mouseout', () => setHot(null));
       marker.addListener('click', () => {
         const full = rowsById.get(l.id) || l;
@@ -506,6 +510,26 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
     if (infoRef.current) infoRef.current.close();
     hoverRevealRef.current = null;
   };
+
+  // A pin hovered on the map whose card is outside the list's visible area: once the
+  // pointer settles (so sweeping across pins doesn't jerk the list), scroll the list —
+  // only the list, never the page — to bring the card to the middle.
+  useEffect(() => {
+    if (hot == null || !hotFromMapRef.current) return undefined;
+    const t = setTimeout(() => {
+      const box = listScrollRef.current;
+      if (!box) return;
+      const card = box.querySelector(`[data-listing-id="${CSS.escape(String(hot))}"]`);
+      if (!card) return;   // listing not in the list being shown
+      const b = box.getBoundingClientRect();
+      const c = card.getBoundingClientRect();
+      const margin = 12;
+      if (c.top >= b.top + margin && c.bottom <= b.bottom - margin) return;   // already in view
+      const reduce = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      box.scrollBy({ top: c.top - b.top - (b.height - c.height) / 2, behavior: reduce ? 'auto' : 'smooth' });
+    }, 180);
+    return () => clearTimeout(t);
+  }, [hot]);
 
   useEffect(() => {
     const ref = mapRef.current;
@@ -648,12 +672,13 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
           </div>
 
           {/* list */}
-          <div className="flex-1 min-h-0 overflow-y-auto px-4 md:px-7 py-5 flex flex-col gap-4">
+          <div ref={listScrollRef} className="flex-1 min-h-0 overflow-y-auto px-4 md:px-7 py-5 flex flex-col gap-4" data-testid="listing-scroll">
             {displayRows.length === 0 && !loadingList && <div className="py-10 text-center font-mono text-[12px] text-ink/45">{area && !nearMe ? m.emptyArea : m.empty}</div>}
             {displayRows.map((l) => (
               <Link
                 key={l.id} href={`/propiedad/${l.id}`} target="_blank" rel="noopener noreferrer"
-                onMouseEnter={() => setHot(l.id)} onMouseLeave={() => setHot(null)}
+                data-listing-id={l.id}
+                onMouseEnter={() => { hotFromMapRef.current = false; setHot(l.id); }} onMouseLeave={() => setHot(null)}
                 className={`relative flex items-stretch shrink-0 min-h-[120px] bg-card border rounded-[18px] overflow-hidden transition-all ${l.verified ? 'border-ink ring-[1.5px] ring-ink shadow-hard-sm' : hot === l.id ? 'border-ink -translate-y-0.5 shadow-hard-sm' : 'border-ink/15'}`}
               >
                 {l.verified && <VerifiedTag lang={lang} className="absolute top-2 right-2 z-20 text-[9px] px-2 py-0.5" />}
