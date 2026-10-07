@@ -223,7 +223,7 @@ export default function SellFlowProvider({ children }) {
   const [emailTaken, setEmailTaken] = useState(false);
   const [loginCode, setLoginCode] = useState('');   // sign-in code for an email that already has an account
   const [codeSent, setCodeSent] = useState(false);  // the visitor clicked "Send code" on the confirm-email screen
-  const [photos, setPhotos] = useState([]);      // {file,url}
+  const [photos, setPhotos] = useState([]);      // { file?, url (shown), key? + remote? once uploaded to the draft, failed? }
   const [result, setResult] = useState(null);    // {id, ref}
   const [showHi, setShowHi] = useState(false);    // promotion payment modal (only when a card must be entered / 3DS)
   const [highlighted, setHighlighted] = useState(false);
@@ -247,7 +247,19 @@ export default function SellFlowProvider({ children }) {
   const close = () => { setOpen(false); reset(); };
 
   // Photos stashed before the Google redirect come back as File objects.
-  const restorePhotos = (files) => setPhotos((files || []).filter(Boolean).map((file) => ({ file, url: URL.createObjectURL(file) })));
+  // Photos back from a stash or a saved draft: Files, or { file?, key?, remote? | url? }
+  // (an uploaded photo keeps its storage key; a file not uploaded yet is sent once the
+  // draft exists, or with the publish).
+  const toPhoto = (x) => {
+    if (!x) return null;
+    if (typeof Blob !== 'undefined' && x instanceof Blob) return { file: x, url: URL.createObjectURL(x) };
+    if (x.key) return { key: x.key, remote: x.remote || x.url || '', url: x.remote || x.url || (x.file ? URL.createObjectURL(x.file) : ''), ...(x.file ? { file: x.file } : {}) };
+    if (x.file) return { file: x.file, url: URL.createObjectURL(x.file) };
+    return null;
+  };
+  const restorePhotos = (list) => setPhotos((list || []).map(toPhoto).filter(Boolean).slice(0, 20));
+  // What to keep of the photos across a reload / the Google redirect (no blob: URLs).
+  const photoStash = () => photos.map((p) => ({ file: p.file || null, key: p.key || null, remote: p.remote || null }));
 
   // Resume with everything we already have — a saved draft (details step; the type
   // is asked with the address, so a draft without it opens there) or the way back
@@ -258,6 +270,7 @@ export default function SellFlowProvider({ children }) {
     setVerified(true);
     setF({ ...BLANK, ...fields, ptype: normalizeTypeKey(fields.ptype), contact_name: fields.contact_name || user?.full_name || user?.name || '', email: user?.email || '' });
     if (files) restorePhotos(files);
+    else if (Array.isArray(fields.photos)) restorePhotos(fields.photos);   // a saved draft's uploaded photos
     if (id) { setDraftId(id); creatingDraftRef.current = true; }
     setStep(!draftReady(fields) ? 0 : !fields.ptype ? 2 : toConfirm ? 4 : 3);
     setOpen(true);
@@ -364,8 +377,37 @@ export default function SellFlowProvider({ children }) {
   // …and its photos (IndexedDB — files don't fit in localStorage).
   useEffect(() => {
     if (!open || result) return;
-    saveProgressPhotos({ owner: me, files: photos.map((p) => p.file) });
+    saveProgressPhotos({ owner: me, files: photoStash() });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, result, photos, me]);
+
+  // Upload each new photo to the draft as soon as the draft exists, ONE AT A TIME (the
+  // server's photo list never gets two writes at once). The draft then shows them on
+  // any device, and publishing reuses them. One that fails stays a file and is sent
+  // with the publish instead.
+  const uploadingRef = useRef(false);
+  useEffect(() => {
+    if (!open || result || !draftId || uploadingRef.current) return;
+    const nextUp = photos.find((p) => p.file && !p.key && !p.failed);
+    if (!nextUp) return;
+    const key = user ? null : guestKey();
+    if (!user && !(emailOk(f.email) && key)) return;
+    uploadingRef.current = true;
+    (async () => {
+      let patch = { failed: true };
+      try {
+        const fd = new FormData();
+        fd.set('photo', nextUp.file); fd.set('draft_id', draftId);
+        if (!user) { fd.set('email', f.email); fd.set('key', key); }
+        const r = await fetch('/api/drafts/photos', { method: 'POST', body: fd });
+        const j = await r.json().catch(() => ({}));
+        if (r.ok && j.photo?.key) patch = { key: j.photo.key, remote: j.photo.url };
+      } catch { /* offline: sent with the publish */ }
+      uploadingRef.current = false;
+      setPhotos((list) => list.map((p) => (p === nextUp ? { ...p, ...patch } : p)));
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, result, draftId, photos, user, f.email]);
 
   // The mobile app opens the site at /?sell=1&app=1 — open the wizard straight away
   // so the person never lands on a page that just talks about listing.
@@ -593,7 +635,7 @@ export default function SellFlowProvider({ children }) {
       // Stash what the guest entered (details + photo files), then come back to THIS
       // page with ?sell=resume: the wizard reopens at confirm, signed in — same as the
       // code path.
-      await savePendingSell({ fields: { mode: f.mode, seller_type: f.seller_type, contact_name: f.contact_name, email: f.email, neighborhood: f.neighborhood, city: f.city, addressText: f.addressText, ptype: f.ptype, price: f.price, currency: f.currency, area: f.area, description: f.description, contact_phone: f.contact_phone }, photos: photos.map((p) => p.file), fromApp, appReturn, savedAt: Date.now() });
+      await savePendingSell({ fields: { mode: f.mode, seller_type: f.seller_type, contact_name: f.contact_name, email: f.email, neighborhood: f.neighborhood, city: f.city, addressText: f.addressText, ptype: f.ptype, price: f.price, currency: f.currency, area: f.area, description: f.description, contact_phone: f.contact_phone }, photos: photoStash(), fromApp, appReturn, savedAt: Date.now() });
       const here = /^\/[A-Za-z0-9/_-]*$/.test(window.location.pathname) ? window.location.pathname : '/';
       const r = await fetch('/api/auth/google', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ next: `${here}?sell=resume` }) });
       const j = await r.json().catch(() => ({}));
@@ -635,7 +677,14 @@ export default function SellFlowProvider({ children }) {
     setPhotos((p) => [...p, ...files.map((file) => ({ file, url: URL.createObjectURL(file) }))].slice(0, 20));
     setErrs((er) => (er.photos ? { ...er, photos: undefined } : er));
   };
-  const removePhoto = (i) => setPhotos((p) => p.filter((_, idx) => idx !== i));
+  const removePhoto = (i) => {
+    const gone = photos[i];
+    setPhotos((p) => p.filter((_, idx) => idx !== i));
+    if (gone?.key && draftId) {   // already in the draft → take it out there too (the file is deleted)
+      const q = new URLSearchParams({ draft_id: draftId, photo: gone.key, ...(user ? {} : { email: f.email, key: guestKey() || '' }) });
+      fetch(`/api/drafts/photos?${q}`, { method: 'DELETE' }).catch(() => {});
+    }
+  };
   const validateDetails = () => {
     const e = {};
     if (!f.ptype) e.ptype = t.errType;
@@ -678,7 +727,11 @@ export default function SellFlowProvider({ children }) {
       fd.set('mode', f.mode); fd.set('ptype', f.ptype); fd.set('neighborhood', f.neighborhood); fd.set('city', f.city);
       fd.set('price', f.price); fd.set('currency', priceCurrency); fd.set('area', f.area); fd.set('description', f.description);
       fd.set('contact_name', f.contact_name); fd.set('contact_phone', f.contact_phone); fd.set('seller_type', f.seller_type);
-      photos.forEach((p) => fd.append('photos', p.file));
+      // In order: photos already in the draft by their key (reused, not sent again),
+      // the rest as files.
+      const order = []; let nFiles = 0;
+      photos.forEach((p) => { if (p.key) order.push({ k: p.key }); else if (p.file) { order.push({ f: nFiles++ }); fd.append('photos', p.file); } });
+      fd.set('photo_order', JSON.stringify(order));
       if (draftId) fd.set('draft_id', draftId);   // the server removes the draft once published
       const res = await fetch('/api/publish', { method: 'POST', body: fd });
       const j = await res.json().catch(() => ({}));

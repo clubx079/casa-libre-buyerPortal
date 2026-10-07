@@ -7,7 +7,8 @@ import { NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { insert, update } from '@/lib/db';
 import * as dbApi from '@/lib/db';
-import { deleteDraft } from '@/lib/drafts';
+import { deleteDraft, getDraft, draftPhotoKeys, orderedPhotoSources } from '@/lib/drafts';
+import { ownerFolders, draftPhotoBytes, removeDraftPhotos } from '@/lib/draftPhotos';
 import { claimGuestDrafts } from '@/lib/guestDrafts';
 import { zoneCanonical, dedupeKey } from '@/lib/dedupe';
 import { put } from '@/lib/b2';
@@ -187,13 +188,21 @@ export async function POST(req) {
 
   // Upload photos to B2 and link them — CONCURRENTLY (was one-at-a-time, the main
   // cause of slow publishes). Non-fatal: a listing publishes even if a photo fails.
+  // In the seller's order (photo_order): photos already uploaded to their draft —
+  // reused from storage, never sent again — and/or new files. Clients without
+  // photo_order (the app, older pages) send files only.
   const files = form.getAll('photos').filter((f) => f && typeof f.arrayBuffer === 'function' && f.size > 0).slice(0, 20);
-  const processed = await Promise.all(files.map(async (f, i) => {
+  let order = null;
+  try { order = JSON.parse(get('photo_order') || 'null'); } catch { order = null; }
+  const sources = Array.isArray(order) ? orderedPhotoSources(order, files.length, ownerFolders(session)) : files.map((_, i) => ({ file: i }));
+  const processed = await Promise.all(sources.map(async (src, i) => {
     try {
-      const raw = Buffer.from(await f.arrayBuffer());
+      const f = src.file != null ? files[src.file] : null;
+      const raw = f ? Buffer.from(await f.arrayBuffer()) : await draftPhotoBytes(src.key);
       // Brand every user photo with the Casa Libre mascot — best-effort: if stamping
       // fails (e.g. sharp unavailable), fall back to the original bytes.
-      let buf = raw, ext = (f.name?.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg', ct = f.type || 'image/jpeg';
+      const name = f ? f.name : src.key;
+      let buf = raw, ext = (String(name || '').split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg', ct = f?.type || (ext === 'webp' ? 'image/webp' : ext === 'png' ? 'image/png' : 'image/jpeg');
       try { buf = await stampLogo(raw); ext = 'webp'; ct = 'image/webp'; } catch {}
       const stored = await put(`user-uploads/${slug}/${i}.${ext}`, buf, ct);
       return {
@@ -241,7 +250,14 @@ export async function POST(req) {
 
   // Published from a draft ("Borradores") → the draft is done; remove it (owner-scoped).
   const draftId = get('draft_id');
-  if (draftId && propertyId) { try { await claimGuestDrafts(dbApi, session.email, session.uid); await deleteDraft(dbApi, session.uid, draftId); } catch {} }
+  if (draftId && propertyId) {
+    try {
+      await claimGuestDrafts(dbApi, session.email, session.uid);
+      const d = await getDraft(dbApi, session.uid, draftId);
+      await deleteDraft(dbApi, session.uid, draftId);
+      await removeDraftPhotos(draftPhotoKeys(d?.data));   // copied into the listing above
+    } catch {}
+  }
 
   // Instant-index via IndexNow: ping Bing (+ participating engines) with the new
   // listing's canonical URL and the pages that list it, so it's crawled in minutes

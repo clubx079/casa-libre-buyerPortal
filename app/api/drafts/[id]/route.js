@@ -7,7 +7,8 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import * as db from '@/lib/db';
-import { getDraft, updateDraft, deleteDraft } from '@/lib/drafts';
+import { getDraft, updateDraft, deleteDraft, draftPhotoKeys } from '@/lib/drafts';
+import { removeDraftPhotos } from '@/lib/draftPhotos';
 import { claimGuestDrafts } from '@/lib/guestDrafts';
 
 export const runtime = 'nodejs';
@@ -43,6 +44,9 @@ export async function DELETE(_req, { params }) {
   if (!s) return unauthorized();
   try {
     await claim(s);
-    return (await deleteDraft(db, s.uid, params.id)) ? NextResponse.json({ ok: true }) : notFound();
+    const before = await getDraft(db, s.uid, params.id);
+    if (!(await deleteDraft(db, s.uid, params.id))) return notFound();
+    await removeDraftPhotos(draftPhotoKeys(before?.data)).catch(() => {});   // its photos go too
+    return NextResponse.json({ ok: true });
   } catch { return notFound(); }
 }

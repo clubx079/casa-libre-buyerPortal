@@ -57,10 +57,16 @@ function DraftCard({ d, lang, onContinue, onDelete }) {
         {data.mode && <span className="text-[10px] font-semibold bg-ink text-paper px-2.5 py-1 rounded-pill">{data.mode === 'alquiler' ? x.rent : x.sale}</span>}
         <span className="ml-auto font-mono text-[11px] text-ink/45">{x.saved(ago(d.updated_at, lang))}</span>
       </div>
-      <div>
-        <div className="text-[16px] font-bold tracking-head line-clamp-1">{title}</div>
-        <div className="text-[12.5px] text-ink/55 line-clamp-1">{[data.addressText, data.city].filter(Boolean).join(' · ')}</div>
-        {miss.length > 0 && <div className="text-[12px] text-ink/60 mt-1.5">{x.missing}: {miss.join(', ')}</div>}
+      <div className="flex gap-3">
+        {Array.isArray(data.photos) && data.photos[0]?.url && (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img src={data.photos[0].url} alt="" className="w-16 h-16 rounded-[10px] object-cover border border-ink/10 shrink-0" />
+        )}
+        <div className="min-w-0">
+          <div className="text-[16px] font-bold tracking-head line-clamp-1">{title}</div>
+          <div className="text-[12.5px] text-ink/55 line-clamp-1">{[data.addressText, data.city].filter(Boolean).join(' · ')}</div>
+          {miss.length > 0 && <div className="text-[12px] text-ink/60 mt-1.5">{x.missing}: {miss.join(', ')}</div>}
+        </div>
       </div>
       <div className="flex gap-2 mt-auto">
         <button onClick={onContinue} className="flex-[2] py-2 rounded-pill bg-ink text-paper text-[13px] font-bold hover:bg-ink/90">{x.cont}</button>
