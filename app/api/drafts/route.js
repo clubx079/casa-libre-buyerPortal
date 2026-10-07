@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import * as db from '@/lib/db';
 import { listDrafts, createDraft } from '@/lib/drafts';
+import { claimGuestDrafts } from '@/lib/guestDrafts';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -14,6 +15,8 @@ export async function GET() {
   const s = getSession();
   if (!s) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   try {
+    // Drafts saved while they weren't signed in (same email) become theirs here.
+    await claimGuestDrafts(db, s.email, s.uid).catch(() => {});
     return NextResponse.json({ drafts: await listDrafts(db, s.uid) });
   } catch {
     return NextResponse.json({ drafts: [], pending: true });

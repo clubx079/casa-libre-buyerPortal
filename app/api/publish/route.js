@@ -8,10 +8,11 @@ import { revalidateTag } from 'next/cache';
 import { insert, update } from '@/lib/db';
 import * as dbApi from '@/lib/db';
 import { deleteDraft } from '@/lib/drafts';
+import { claimGuestDrafts } from '@/lib/guestDrafts';
 import { zoneCanonical, dedupeKey } from '@/lib/dedupe';
 import { put } from '@/lib/b2';
 import { stampLogo } from '@/lib/stampLogo';
-import { getUsdToPyg } from '@/lib/fx';
+import { getUsdToPyg, getUsdTo } from '@/lib/fx';
 import { getSession } from '@/lib/auth';
 import { sendListingPublishedEmail } from '@/lib/email';
 import { COUNTRY } from '@/lib/country';
@@ -68,12 +69,22 @@ export async function POST(req) {
   const neighborhood = get('neighborhood');
   const city = get('city') || 'Asunción';
   const priceRaw = get('price').replace(/[^\d.]/g, '');
-  const price = Number(priceRaw);
+  let price = Number(priceRaw);
   // The currency the seller chose (US$ or this country's). It used to be forced to the
   // local currency for every rental, so a rent entered in US$ was stored as local.
   // Nothing chosen (an older client) → sale in US$, rent in the local currency.
   const wanted = get('currency').toUpperCase();
-  const currency = wanted === 'USD' || wanted === COUNTRY.currencyCode ? wanted : (mode === 'alquiler' ? COUNTRY.currencyCode : 'USD');
+  let currency = wanted === 'USD' || wanted === COUNTRY.currencyCode ? wanted : (mode === 'alquiler' ? COUNTRY.currencyCode : 'USD');
+  // A form-only currency (Venezuela: bolívars) is converted to US$ at the live rate;
+  // the amount the seller typed is kept in raw_data.
+  let entered = null;
+  if (COUNTRY.extraCurrency && wanted === COUNTRY.extraCurrency.code && Number.isFinite(price) && price > 0) {
+    const perUsd = await getUsdTo(wanted);
+    if (!perUsd) return NextResponse.json({ error: 'fx_unavailable' }, { status: 503 });
+    entered = { price, currency: wanted, per_usd: perUsd };
+    price = Math.round(price / perUsd);
+    currency = 'USD';
+  }
   const area = Number(get('area').replace(/[^\d.]/g, '')) || null;
   const description = get('description');
   // Default the public contact to the logged-in user's name/email when not given.
@@ -155,7 +166,7 @@ export async function POST(req) {
     is_delisted: false,
     created_by: session.uid,   // who published this deal
     posted_by: session.uid,
-    raw_data: { published_via: 'buyer-portal', user_id: session.uid, user_email: session.email },
+    raw_data: { published_via: 'buyer-portal', user_id: session.uid, user_email: session.email, ...(entered ? { entered_price: entered } : {}) },
   };
 
   // Ingest-pipeline parity: give the user listing a canonical zone + dedupe
@@ -230,7 +241,7 @@ export async function POST(req) {
 
   // Published from a draft ("Borradores") → the draft is done; remove it (owner-scoped).
   const draftId = get('draft_id');
-  if (draftId && propertyId) { try { await deleteDraft(dbApi, session.uid, draftId); } catch {} }
+  if (draftId && propertyId) { try { await claimGuestDrafts(dbApi, session.email, session.uid); await deleteDraft(dbApi, session.uid, draftId); } catch {} }
 
   // Instant-index via IndexNow: ping Bing (+ participating engines) with the new
   // listing's canonical URL and the pages that list it, so it's crawled in minutes

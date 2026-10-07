@@ -68,7 +68,8 @@ const DICT = {
     errSendOtp: 'No se pudo enviar el código. Intentá de nuevo.', emailTaken: 'Este correo ya tiene una cuenta.', loginInstead: 'Iniciar sesión para continuar',
     errCode: 'Código inválido o vencido', errType: 'Seleccioná el tipo de propiedad', errPrice: 'Ingresá un precio válido',
     errPriceFloorSale: 'El precio de venta debe ser de al menos US$ 5.000', errPriceFloorRent: `El alquiler mensual debe ser de al menos ${COUNTRY.currencySymbol} ${COUNTRY.rentFloorLocal.toLocaleString('es-PY')}`,
-    currencyPh: 'Moneda', errCurrency: 'Elegí la moneda',
+    currencyPh: 'Moneda', errCurrency: 'Elegí la moneda', extraNote: 'Se publica en US$, convertido al cambio del día.',
+    resumedNote: 'Seguimos donde lo dejaste.', startOver: 'Empezar de nuevo',
     errArea: 'Ingresá la superficie', errAreaRange: (max) => `La superficie debe estar entre 5 y ${max.toLocaleString('es-PY')} m²`, errPhone: 'Ingresá un teléfono válido', errPhotos: 'Agregá al menos una foto',
     errSubmit: 'No se pudo publicar. Intentá de nuevo.',
   },
@@ -108,7 +109,8 @@ const DICT = {
     errSendOtp: 'Could not send the code. Please try again.', emailTaken: 'This email already has an account.', loginInstead: 'Log in to continue',
     errCode: 'Invalid or expired code', errType: 'Select the property type', errPrice: 'Enter a valid price',
     errPriceFloorSale: 'Sale price must be at least US$ 5,000', errPriceFloorRent: `Monthly rent must be at least ${COUNTRY.currencySymbol} ${COUNTRY.rentFloorLocal.toLocaleString('en-US')}`,
-    currencyPh: 'Currency', errCurrency: 'Choose the currency',
+    currencyPh: 'Currency', errCurrency: 'Choose the currency', extraNote: "Published in US$, converted at today's rate.",
+    resumedNote: 'Picking up where you left off.', startOver: 'Start over',
     errArea: 'Enter the area', errAreaRange: (max) => `Area must be between 5 and ${max.toLocaleString('en-US')} m²`, errPhone: 'Enter a valid phone', errPhotos: 'Add at least one photo',
     errSubmit: 'Could not publish. Please try again.',
   },
@@ -129,6 +131,19 @@ const Spinner = () => (
     <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
   </svg>
 );
+
+// Drafts for someone not signed in (lib/guestDrafts.js): this browser's random key and
+// the draft it's working on ({ key, email, id }), kept in localStorage. Fail-soft.
+const GUEST_STASH = 'cl_guest_draft';
+const readGuest = () => { try { return JSON.parse(localStorage.getItem(GUEST_STASH) || 'null') || {}; } catch { return {}; } };
+const writeGuest = (v) => { try { localStorage.setItem(GUEST_STASH, JSON.stringify(v)); } catch { /* storage blocked */ } };
+const guestKey = () => {
+  const g = readGuest();
+  if (g.key) return g.key;
+  const key = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : null;
+  if (key) writeGuest({ ...g, key });
+  return key;
+};
 
 // Property-type picker that always opens DOWNWARD, as a list inside the popup (a
 // native <select> opens upward when it sits low in the window).
@@ -176,6 +191,7 @@ export default function SellFlowProvider({ children }) {
   const [step, setStep] = useState(0);          // 0 op · 1 seller · 2 location + type · 3 details · 4 confirm
   const [phase, setPhase] = useState('');        // '' | 'otp' — email-confirm overlay between step 3 and 4
   const [confirmOk, setConfirmOk] = useState(false);   // "I confirm my details are correct" (step 4)
+  const [resumed, setResumed] = useState(false);       // reopened a draft saved while not signed in
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [termsOk, setTermsOk] = useState(false);   // Terms of Service opt-in (step 1)
@@ -203,7 +219,7 @@ export default function SellFlowProvider({ children }) {
   const creatingDraftRef = useRef(false);
 
   const reset = () => {
-    setStep(0); setPhase(''); setErr(''); setErrs({}); setBusy(false); setCode(''); setVerified(false); setEmailTaken(false); setLoginCode(''); setCodeSent(false); setPhotos([]); setResult(null); setShowHi(false); setHighlighted(false); setPaying(false); setPlan(null); setConfirmOk(false);
+    setStep(0); setPhase(''); setErr(''); setErrs({}); setBusy(false); setCode(''); setVerified(false); setEmailTaken(false); setLoginCode(''); setCodeSent(false); setPhotos([]); setResult(null); setShowHi(false); setHighlighted(false); setPaying(false); setPlan(null); setConfirmOk(false); setResumed(false);
     setF(BLANK); setDraftId(null); creatingDraftRef.current = false;
   };
   const close = () => { setOpen(false); reset(); };
@@ -240,6 +256,23 @@ export default function SellFlowProvider({ children }) {
     setPhase('otp');
   };
 
+  // Not signed in, and this browser has a saved draft → reopen it where they were.
+  const resumeGuest = async () => {
+    const g = readGuest();
+    if (!g.key || !g.id || !g.email) return;
+    try {
+      const r = await fetch(`/api/drafts/guest?${new URLSearchParams({ email: g.email, key: g.key, id: g.id })}`);
+      if (!r.ok) { if (r.status === 404) writeGuest({ key: g.key }); return; }
+      const { draft } = await r.json();
+      if (!draft?.data) return;
+      setF({ ...BLANK, ...draft.data, ptype: normalizeTypeKey(draft.data.ptype), email: g.email });
+      setDraftId(draft.id); setTermsOk(true); setResumed(true);
+      setStep(!draft.data.ptype ? 2 : 3);
+      track('sell_guest_draft_resumed', {});
+    } catch { /* offline: just start fresh */ }
+  };
+  const startOver = () => { writeGuest({ key: readGuest().key }); reset(); setOpen(true); };
+
   // Logged in or not, everyone gets the wizard. When we already know the person we
   // prefill their name/email and skip the email-verification step.
   // openSell({ draft }) resumes one of the user's drafts at the details step.
@@ -259,6 +292,7 @@ export default function SellFlowProvider({ children }) {
     }
     setOpen(true);
     track('sell_wizard_opened', { signed_in: !!user });
+    if (!user) resumeGuest();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
@@ -360,10 +394,35 @@ export default function SellFlowProvider({ children }) {
     return () => clearTimeout(id);
   }, [open, user, draftId, result, draftJson]);
 
+  // Not signed in: the same draft, saved under their email + this browser's key
+  // (lib/guestDrafts.js) once the address is picked — closing the wizard loses
+  // nothing, and signing in later puts it in My listings → Drafts. When they confirm
+  // their email mid-wizard, the signed-in autosave above carries on with this draft.
+  const guestDraftIdRef = useRef(null);
+  useEffect(() => { guestDraftIdRef.current = draftId; }, [draftId]);
+  useEffect(() => {
+    if (!open || user || authLoading || result || !emailOk(f.email) || !draftReady(f)) return undefined;
+    const id = setTimeout(async () => {
+      const key = guestKey();
+      if (!key) return;
+      try {
+        const r = await fetch('/api/drafts/guest', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: f.email, key, id: guestDraftIdRef.current, data: JSON.parse(draftJson) }) });
+        const j = await r.json().catch(() => ({}));
+        if (!j.draft?.id) return;
+        if (j.draft.id !== guestDraftIdRef.current) setDraftId(j.draft.id);
+        writeGuest({ key, email: f.email.trim().toLowerCase(), id: j.draft.id });
+      } catch { /* offline: try again on the next change */ }
+    }, 800);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, user, authLoading, result, f.email, draftJson]);
+
   const set = (k, v) => setF((s) => ({ ...s, [k]: v }));
   const setField = (k) => (e) => { const v = e.target.value; setF((s) => ({ ...s, [k]: v })); setErrs((er) => (er[k] ? { ...er, [k]: undefined } : er)); };
   // No default: the seller chooses US$ or this country's currency (Venezuela's site is US$ only).
-  const priceCurrency = f.currency === 'USD' || f.currency === COUNTRY.currencyCode ? f.currency : '';
+  // Venezuela's form also offers bolívars (COUNTRY.extraCurrency), converted to US$ on publish.
+  const priceCurrency = f.currency === 'USD' || f.currency === COUNTRY.currencyCode || f.currency === COUNTRY.extraCurrency?.code ? f.currency : '';
+  const curSymbol = (c) => (c === 'USD' ? 'US$' : c === COUNTRY.extraCurrency?.code ? COUNTRY.extraCurrency.symbol : COUNTRY.currencySymbol);
 
   // If a returning user logs in via the fallback auth modal while the wizard is
   // open (e.g. their email was already registered), jump them straight to confirm.
@@ -511,7 +570,7 @@ export default function SellFlowProvider({ children }) {
     const p = numOf(f.price);
     if (!priceCurrency) e.currency = t.errCurrency;   // no default: the seller picks US$ or the local currency
     if (!Number.isFinite(p) || p <= 0) e.price = t.errPrice;
-    else if (!priceCurrency) { /* floors need the currency */ }
+    else if (!priceCurrency || priceCurrency === COUNTRY.extraCurrency?.code) { /* floors need the currency; bolívars are checked by the server after conversion */ }
     else if (f.mode === 'venta') { const usd = priceCurrency === 'USD' ? p : p / APPROX_RATE; if (usd < 5000) e.price = t.errPriceFloorSale; }
     else { const local = priceCurrency === COUNTRY.currencyCode ? p : p * APPROX_RATE; if (local < COUNTRY.rentFloorLocal) e.price = t.errPriceFloorRent; }
     const a = numOf(f.area); const range = areaRange(f.ptype);   // land: any size
@@ -552,7 +611,7 @@ export default function SellFlowProvider({ children }) {
       const res = await fetch('/api/publish', { method: 'POST', body: fd });
       const j = await res.json().catch(() => ({}));
       if (!res.ok || !j.ok) throw new Error(j.error || 'failed');
-      setDraftId(null);
+      setDraftId(null); writeGuest({ key: readGuest().key });   // published: this browser has no draft in progress
       window.dispatchEvent(new Event('cl:listings-changed'));   // My listings refreshes its tabs
       track('listing_created', { property_id: j.id, slug: j.slug, ref: j.ref, operation: f.mode, property_type: f.ptype, city: f.city, neighborhood: f.neighborhood, price: f.price ? Number(f.price) : null, currency: priceCurrency, photos: photos.length });
       setResult({ id: j.id, ref: j.ref });
@@ -572,12 +631,19 @@ export default function SellFlowProvider({ children }) {
           <div className="relative w-full max-w-[480px] bg-paper border-[1.5px] border-ink rounded-[20px] sm:rounded-[24px] shadow-hard p-5 sm:p-6 md:p-7 max-h-[92vh] overflow-y-auto cl-scroll">
             <button onClick={close} aria-label={t.close} className="absolute top-4 right-4 w-8 h-8 rounded-pill border border-ink/25 flex items-center justify-center text-ink/60 hover:text-ink">×</button>
 
-            {/* 4-step stepper */}
+            {/* 5-step stepper */}
             <div className="flex items-center gap-1.5 mb-5 mt-1 pr-9">
               {t.steps.map((_, i) => (
                 <span key={i} className={`h-1.5 flex-1 rounded-pill ${i <= step ? 'bg-ink' : 'bg-ink/15'}`} />
               ))}
             </div>
+
+            {resumed && !result && phase !== 'otp' && (
+              <div className="mb-4 flex items-center justify-between gap-3 rounded-[12px] bg-card border border-ink/15 px-3.5 py-2.5 text-[12.5px]" data-testid="sell-resumed">
+                <span className="text-ink/70">{t.resumedNote}</span>
+                <button type="button" onClick={startOver} className="font-semibold underline shrink-0">{t.startOver}</button>
+              </div>
+            )}
 
             {/* ---- SUCCESS ---- */}
             {result ? (
@@ -734,10 +800,12 @@ export default function SellFlowProvider({ children }) {
                               <option value="" disabled>{t.currencyPh}</option>
                               <option value="USD" className="text-ink">US$</option>
                               {COUNTRY.currencyCode !== 'USD' && <option value={COUNTRY.currencyCode} className="text-ink">{COUNTRY.currencySymbol}</option>}
+                              {COUNTRY.extraCurrency && <option value={COUNTRY.extraCurrency.code} className="text-ink">{COUNTRY.extraCurrency.symbol}</option>}
                             </select>
                           </div>
                           <FErr k="price" />
                           <FErr k="currency" />
+                          {COUNTRY.extraCurrency && priceCurrency === COUNTRY.extraCurrency.code && <span className="block mt-1 text-[12px] text-ink/55">{t.extraNote}</span>}
                         </label>
                         <label className="w-[86px] sm:w-[116px] shrink-0"><span className={labelCls}>{t.fArea}</span>
                           <input value={f.area} onChange={setField('area')} inputMode="numeric" placeholder="120" className={fieldCls('area')} /><FErr k="area" />
@@ -790,7 +858,7 @@ export default function SellFlowProvider({ children }) {
                         {[
                           [t.cOp, `${f.mode === 'venta' ? t.sell : t.rent} · ${(t.types.find(([v]) => v === f.ptype) || [])[1] || ''}`],
                           [t.cAddr, [f.addressText || f.neighborhood, f.city].filter(Boolean).join(' · ')],
-                          [t.fPrice(f.mode), `${priceCurrency === 'USD' ? 'US$' : COUNTRY.currencySymbol} ${f.price}${f.area ? ` · ${f.area} m²` : ''}`],
+                          [t.fPrice(f.mode), `${curSymbol(priceCurrency)} ${f.price}${f.area ? ` · ${f.area} m²` : ''}`],
                           [t.cPhone, f.contact_phone],
                           [t.cContact, [f.seller_type === 'agent' ? t.agent : t.owner, f.contact_name, f.email].filter(Boolean).join(' · ')],
                           ...(f.description.trim() ? [[t.fDesc, f.description.trim().length > 110 ? `${f.description.trim().slice(0, 110)}…` : f.description.trim()]] : []),
