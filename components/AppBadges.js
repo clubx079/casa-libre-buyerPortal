@@ -5,8 +5,10 @@
 //  - variant="default" (marketplace): mobile = caption on top + badges row;
 //    desktop = badge · caption · badge on one line, slightly larger.
 //  - variant="row" (home, below the search bar): just the two badges side by side.
+// Google Play opens the app's store page; App Store opens /descargar (no iPhone app yet).
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
+import { PLAY_STORE_URL } from '@/lib/appLinks';
 
 const T = { es: 'Funciona mejor en la app', en: 'It works better on the app', pt: 'Funciona melhor no app' };
 
@@ -30,15 +32,20 @@ function Badge({ store, big }) {
   const isApple = store === 'apple';
   const top = isApple ? 'Download on the' : 'GET IT ON';
   const name = isApple ? 'App Store' : 'Google Play';
-  return (
-    <Link href="/descargar" aria-label={name} className={`inline-flex items-center rounded-[9px] bg-ink text-paper transition-transform active:translate-y-px ${big ? 'gap-2.5 px-4 py-2' : 'gap-2 px-3 py-[7px]'}`}>
+  const cls = `inline-flex items-center rounded-[9px] bg-ink text-paper transition-transform active:translate-y-px ${big ? 'gap-2.5 px-4 py-2' : 'gap-2 px-3 py-[7px]'}`;
+  const inner = (
+    <>
       {isApple ? <Apple s={big ? 22 : 18} /> : <Play s={big ? 18 : 15} />}
       <span className="flex flex-col leading-none text-left gap-[3px]">
         <span className={`uppercase tracking-[.06em] text-paper/75 ${big ? 'text-[9px]' : 'text-[8px]'}`}>{top}</span>
         <span className={`font-semibold ${big ? 'text-[15px]' : 'text-[12.5px]'}`}>{name}</span>
       </span>
-    </Link>
+    </>
   );
+  if (!isApple) {
+    return <a href={PLAY_STORE_URL} target="_blank" rel="noopener noreferrer" aria-label={name} className={cls}>{inner}</a>;
+  }
+  return <Link href="/descargar" aria-label={name} className={cls}>{inner}</Link>;
 }
 
 export default function AppBadges({ className = '', variant = 'default' }) {

@@ -60,3 +60,13 @@ test('a variable inside link text and url renders one link', () => {
   const html = bodyToHtml('Mirá [{{property_title}}]({{property_url}})', { property_title: 'Casa 3', property_url: 'https://x.com/p?a=1&b=2' });
   assert.match(html, /<a href="https:\/\/x\.com\/p\?a=1&amp;b=2"[^>]*>Casa 3<\/a>/);
 });
+
+test('app badges: Google Play opens the store page, App Store opens /descargar', () => {
+  const frame = { appleSrc: 'cid:a', playSrc: 'cid:p', downloadUrl: 'https://casa-libre.com.py/descargar', playUrl: 'https://play.google.com/store/apps/details?id=py.casalibre.mobile' };
+  const { html } = renderTemplate({ subject: 'S', heading: 'H', body: 'B' }, {}, frame);
+  assert.match(html, /<a href="https:\/\/casa-libre\.com\.py\/descargar"[^>]*><img src="cid:a"/);
+  assert.match(html, /<a href="https:\/\/play\.google\.com\/store\/apps\/details\?id=py\.casalibre\.mobile"[^>]*><img src="cid:p"/);
+  // an older frame without playUrl still links both badges to /descargar
+  const { html: old } = renderTemplate({ subject: 'S', heading: 'H', body: 'B' }, {}, { ...frame, playUrl: undefined });
+  assert.match(old, /<a href="https:\/\/casa-libre\.com\.py\/descargar"[^>]*><img src="cid:p"/);
+});
