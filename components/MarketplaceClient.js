@@ -384,6 +384,17 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
     return pins.filter((p) => p.lat != null && p.lng != null && distanceKm(userLoc.lat, userLoc.lng, p.lat, p.lng) <= NEAR_RADIUS_KM);
   }, [nearMe, userLoc, pins]);
 
+  // "Show all": the whole list again AND the map zoomed out to fit every listing
+  // (a camera move of ours, so it doesn't filter the list to the map again).
+  const showAllArea = () => {
+    setArea(null);
+    const ref = mapRef.current;
+    if (!ref) return;
+    const b = new ref.google.maps.LatLngBounds();
+    displayPins.forEach((l) => { if (l.lat != null && l.lng != null && inParaguay(l.lat, l.lng)) b.extend({ lat: l.lat, lng: l.lng }); });
+    if (!b.isEmpty()) moveCamera(() => ref.map.fitBounds(b, 40));
+  };
+
   // ---- Google Maps init with marker clustering (Advanced Markers) ----
   useEffect(() => {
     // Below `md` this desktop layout is hidden (the mobile view uses
@@ -634,7 +645,7 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
           <div className="flex items-center justify-between gap-2.5 px-4 md:px-7 pt-3.5">
             <span className="font-mono text-[12px] text-ink/50">
               {t.results(headerCount)}
-              {area && !nearMe && <> · {m.inArea} · <button type="button" onClick={() => setArea(null)} className="underline font-semibold text-ink" data-testid="area-show-all">{m.showAll}</button></>}
+              {area && !nearMe && <> · {m.inArea} · <button type="button" onClick={showAllArea} className="underline font-semibold text-ink" data-testid="area-show-all">{m.showAll}</button></>}
             </span>
             <div className="relative">
               <button onClick={(e) => { e.stopPropagation(); setSortOpen((o) => !o); }} className="flex items-center gap-2 border border-ink/30 bg-card rounded-pill px-3.5 py-2 text-[13px] font-medium">

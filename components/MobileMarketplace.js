@@ -232,7 +232,14 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
   const previewRef = useRef(null);          // { id, l } of the pin currently previewed
   const imgMapRef = useRef({});             // fresh image map for the click closure (avoids stale state)
   useEffect(() => {
-    if (view !== 'map' || mapRef.current || !mapEl.current) return;
+    if (view !== 'map' || !mapEl.current) return;
+    // Back from the list: the map's box is a new element, so put the existing map
+    // (camera + pins kept) back inside it. Without this the map stayed blank.
+    if (mapRef.current) {
+      const div = mapRef.current.map.getDiv();
+      if (div.parentNode !== mapEl.current) mapEl.current.appendChild(div);
+      return;
+    }
     let cancelled = false;
     (async () => {
       const { MarkerClusterer, SuperClusterAlgorithm } = await import('@googlemaps/markerclusterer');
@@ -240,7 +247,10 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
       if (cancelled || !mapEl.current || mapRef.current || !window.google?.maps) return;
       const google = window.google;
       camMoveUntil.current = Date.now() + 2500;   // the map's own first render isn't a visitor move
-      const map = new google.maps.Map(mapEl.current, mapOptions(google, { center: COUNTRY.mapCenter, zoom: COUNTRY.mapZoomMobile, gestureHandling: 'greedy' }));
+      const holder = document.createElement('div');   // the map lives in its own div so it can move between boxes
+      holder.style.cssText = 'position:absolute;inset:0';
+      mapEl.current.appendChild(holder);
+      const map = new google.maps.Map(holder, mapOptions(google, { center: COUNTRY.mapCenter, zoom: COUNTRY.mapZoomMobile, gestureHandling: 'greedy' }));
       const renderer = { render: ({ count, position }) => new google.maps.Marker({ position, zIndex: 1000 + count, icon: clusterIcon(google, count, false) }) };
       // Bigger radius → fewer, larger clusters so the streets stay readable when
       // there are many listings (was 46). Zoom in to break clusters apart.
@@ -278,6 +288,20 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
     return pins.filter((p) => p.lat != null && p.lng != null && distanceKm(userLoc.lat, userLoc.lng, p.lat, p.lng) <= NEAR_RADIUS_KM);
   }, [nearMe, userLoc, pins]);
 
+  // "Show all": the whole list again AND the map zoomed out to fit every listing
+  // (a camera move of ours, so it doesn't filter the list to the map again).
+  // On phones "Show all" sits in the list view (map not on screen) → the map zooms out
+  // to every listing the next time it's shown (drawMarkers).
+  const fitAllRef = useRef(false);
+  const showAllArea = () => {
+    setArea(null);
+    const ref = mapRef.current;
+    if (!ref || view !== 'map') { fitAllRef.current = true; return; }
+    const b = new ref.google.maps.LatLngBounds();
+    displayPins.forEach((l) => { if (l.lat != null && l.lng != null && inParaguay(l.lat, l.lng)) b.extend({ lat: l.lat, lng: l.lng }); });
+    if (!b.isEmpty()) moveCamera(() => ref.map.fitBounds(b, 40));
+  };
+
   const drawMarkers = useCallback(() => {
     const ref = mapRef.current, cluster = clusterRef.current;
     if (!ref || !cluster) return;
@@ -307,6 +331,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
       bounds.extend({ lat: l.lat, lng: l.lng }); n++;
     });
     cluster.addMarkers(markers);
+    if (fitAllRef.current && n && !areaRef.current) { fitAllRef.current = false; moveCamera(() => map.fitBounds(bounds, 36)); skipFitRef.current = false; return; }   // after "Show all"
     // Don't refit while near-me is locked, nor on the toggle itself (so deselect
     // can restore the previous view instead of snapping to the filtered bounds).
     if (n && !nearMe && !skipFitRef.current && !areaRef.current && (typeF !== 'all' || priceF !== 'all' || bedF !== 'all' || barrioF !== 'all' || heightF !== 'all' || q)) { moveCamera(() => map.fitBounds(bounds, 36)); }
@@ -513,7 +538,9 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
 
       {/* BODY */}
       {view === 'map' ? (
-        <div className="relative flex-1 min-h-0">
+        // Distinct keys: React must not reuse the map's DOM node for the list view (Google's
+        // map layers would stay inside it and cover the list, e.g. the "Show all" link).
+        <div key="map-view" className="relative flex-1 min-h-0">
           <div ref={mapEl} className="absolute inset-0 z-0" />
           {/* "Near me" toggle — Google-style navigation triangle. Tap to lock the
               map on the user + show only nearby listings; tap again to reset.
@@ -530,11 +557,11 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
           <button onClick={() => setView('list')} className="absolute bottom-5 left-1/2 -translate-x-1/2 z-[400] flex items-center gap-2 bg-ink text-paper rounded-pill py-3 px-5 text-[15px] font-medium shadow-hard">☰ {X.list}</button>
         </div>
       ) : (
-        <div className="px-4 pb-8 flex flex-col gap-4">
+        <div key="list-view" className="px-4 pb-8 flex flex-col gap-4">
           {area && !nearMe && (
             <div className="flex items-center justify-between gap-3 rounded-[12px] border border-ink/15 bg-card px-3.5 py-2.5 text-[13px]">
               <span className="font-medium text-ink/70">{X.inArea}</span>
-              <button type="button" onClick={() => setArea(null)} className="font-semibold underline text-ink" data-testid="m-area-show-all">{X.showAll}</button>
+              <button type="button" onClick={showAllArea} className="font-semibold underline text-ink" data-testid="m-area-show-all">{X.showAll}</button>
             </div>
           )}
           {displayRows.length === 0 && !loadingList && <div className="py-14 text-center font-mono text-[13px] text-ink/45">{area && !nearMe ? X.emptyArea : X.noResults}</div>}
