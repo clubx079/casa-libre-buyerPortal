@@ -1,516 +1,81 @@
 'use client';
-import { typeOptions, areaRange } from '@/lib/propertyTypeOptions';
-import { useEffect, useMemo, useRef, useState } from 'react';
+// /publicar — the address every "List for free" / "Sell" link points at (emails,
+// crawlers, open-in-new-tab). A plain click on one of those links already opens the
+// sell wizard over the current page (SellFlow); landing here directly opens the same
+// wizard, signed in or not. This page is only what shows behind it, with a button to
+// bring it back if it's closed. (It used to hold a separate publish form for
+// signed-in users; everyone now uses the one wizard.)
+import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
 import { useAuth } from '@/components/AuthProvider';
 import AuthButton from '@/components/AuthButton';
-import { track } from '@/lib/analytics';
-import AddressAutocomplete from '@/components/AddressAutocomplete';
 import { useSellFlow } from '@/components/SellFlow';
-import HighlightModal from '@/components/HighlightModal';
-import RecommendedTag from '@/components/RecommendedTag';
-import PlanBox from '@/components/PlanBox';
-import { VerifiedIcon } from '@/components/VerifiedTag';
-import { loadPendingSell, clearPendingSell } from '@/lib/pendingSell';
 import { COUNTRY } from '@/lib/country';
 
 const DICT = {
   es: {
-    navBack: 'Ver propiedades', navBuy: 'Comprar', navRent: 'Alquilar', navSell: 'Vender', navCta: 'Publicar gratis', stepLabels: ['Detalles', 'Listo'],
-    s1Title: 'Publicá tu propiedad', s1TitleSerif: 'en minutos.',
-    s1Sub: 'Contanos sobre tu propiedad. Se publica al instante en el marketplace.',
-    resumeBanner: 'Ya guardamos tus datos. Completá los últimos detalles — precio, superficie y fotos — para publicar tu propiedad.',
-    opVenta: 'Vender', opAlquiler: 'Alquilar',
-    roleQ: '¿Sos el propietario o un agente?', roleOwner: 'Propietario', roleAgent: 'Agente',
-    fType: 'Tipo de propiedad', typePh: 'Seleccioná el tipo', types: typeOptions('es'),
-    fHood: 'Barrio', fHoodPh: 'Villa Morra, Recoleta…', fCity: 'Ciudad', fCityPh: COUNTRY.capital,
-    fPrice: (m) => (m === 'venta' ? 'Precio' : 'Alquiler mensual'), fPricePh: (m) => (m === 'venta' ? '145.000' : '4.500.000'),
-    fArea: 'Superficie (m²)', fDesc: 'Descripción', fDescPh: 'Depto luminoso con balcón, a 2 cuadras del Shopping del Sol…',
-    fName: 'Tu nombre', fNamePh: 'Ana Giménez', fPhone: 'WhatsApp / teléfono', fPhonePh: '0981 123 456',
-    fPhotos: 'Arrastrá o elegí tus fotos', fPhotosSub: 'mín. 4 fotos · JPG o PNG · las fotos reales venden más rápido',
-    photosChosen: (n) => `${n} foto${n === 1 ? '' : 's'} seleccionada${n === 1 ? '' : 's'}`,
-    publishBtn: 'Publicar gratis', publishVerified: 'Publicar por US$5', publishHome: 'Publicar por US$20', paying: 'Publicando…', payNote: 'Se publica al instante en el marketplace',
-    gateTitle: 'Necesitás una cuenta para publicar', gateSub: 'Creá tu cuenta o ingresá para publicar y gestionar tus propiedades. Podés volver a abrir el ingreso cuando quieras.', gateBtn: 'Ingresar / Crear cuenta',
-    s4Title: '¡Tu propiedad está', s4TitleSerif: 'publicada!',
-    s4Sub: 'Ya aparece en el marketplace de Casa Libre. Compartí el enlace con quien quieras.',
-    s4View: 'Ver mi propiedad', s4Btn1: 'Ver propiedades', s4Btn2: 'Publicar otra',
-    planTitle: 'Sumá visibilidad',
-    v5Title: 'Insignia Verificada en el marketplace', v5Price: 'US$5 · 30 días',
-    v20Title: 'Mostrá tu propiedad en la portada con la insignia Verificada', v20Price: 'US$20 · 30 días',
-    usTitle: 'Sumá visibilidad a tu propiedad', usSub: 'Elegí un plan y destacá tu aviso por 30 días.', usVerify: 'Verificar · US$5', usHome: 'En la portada · US$20', payingMsg: 'Procesando pago…',
-    hiDoneVerified: '¡Tu propiedad está verificada por 30 días!', hiDoneHome: '¡Tu propiedad está en la portada por 30 días!',
-    backLabel: '← Atrás',
-    errType: 'Seleccioná el tipo de propiedad', errHood: 'Ingresá el barrio', errCity: 'Ingresá la ciudad', errPrice: 'Ingresá un precio válido',
-    errPriceFloorSale: 'El precio de venta debe ser de al menos US$ 5.000', errPriceFloorRent: 'El alquiler mensual debe ser de al menos ₲ 300.000',
-    errArea: 'Ingresá la superficie (m²)', errAreaRange: (max) => `La superficie debe estar entre 5 y ${max.toLocaleString('es-PY')} m²`,
-    errName: 'Ingresá tu nombre', errPhone: 'Ingresá un WhatsApp / teléfono válido (mín. 6 dígitos)', errPhotos: 'Agregá al menos una foto',
-    errFix: 'Faltan algunos datos. Revisá los campos marcados para publicar.',
-    errSubmit: 'No se pudo publicar. Intentá de nuevo.',
-    fmtGs: (v) => COUNTRY.currencySymbol + ' ' + v.toLocaleString(COUNTRY.locale), fmtUsd: (v) => '≈ US$ ' + v, locale: COUNTRY.locale,
+    navBuy: 'Comprar', navRent: 'Alquilar', navSell: 'Vender', navCta: 'Publicar gratis',
+    title: 'Publicá tu propiedad', titleSerif: 'en minutos.',
+    sub: 'Contanos sobre tu propiedad. Se publica al instante en el marketplace.',
+    btn: 'Publicar propiedad',
   },
   en: {
-    navBack: 'Browse listings', navBuy: 'Buy', navRent: 'Rent', navSell: 'Sell', navCta: 'List for free', stepLabels: ['Details', 'Done'],
-    s1Title: 'List your property', s1TitleSerif: 'in minutes.',
-    s1Sub: 'Tell us about your property. It goes live in the marketplace instantly.',
-    resumeBanner: 'We saved your details. Add the last bits — price, area and photos — to publish your listing.',
-    opVenta: 'Sell', opAlquiler: 'Rent out',
-    roleQ: 'Are you the owner or an agent?', roleOwner: 'Owner', roleAgent: 'Agent',
-    fType: 'Property type', typePh: 'Select the type', types: typeOptions('en'),
-    fHood: 'Neighborhood', fHoodPh: 'Villa Morra, Recoleta…', fCity: 'City', fCityPh: COUNTRY.capital,
-    fPrice: (m) => (m === 'venta' ? 'Price' : 'Monthly rent'), fPricePh: (m) => (m === 'venta' ? '145,000' : '4,500,000'),
-    fArea: 'Area (m²)', fDesc: 'Description', fDescPh: 'Bright apartment with balcony, 2 blocks from Shopping del Sol…',
-    fName: 'Your name', fNamePh: 'Ana Giménez', fPhone: 'WhatsApp / phone', fPhonePh: '0981 123 456',
-    fPhotos: 'Drag or choose your photos', fPhotosSub: 'min. 4 photos · JPG or PNG · real photos sell faster',
-    photosChosen: (n) => `${n} photo${n === 1 ? '' : 's'} selected`,
-    publishBtn: 'Publish for free', publishVerified: 'Publish for US$5', publishHome: 'Publish for US$20', paying: 'Publishing…', payNote: 'Goes live in the marketplace instantly',
-    gateTitle: 'You need an account to post', gateSub: 'Create an account or log in to post and manage your properties. You can reopen the login anytime.', gateBtn: 'Log in / Sign up',
-    s4Title: 'Your listing is', s4TitleSerif: 'live!',
-    s4Sub: 'It already shows in the Casa Libre marketplace. Share the link with anyone.',
-    s4View: 'View my listing', s4Btn1: 'Browse listings', s4Btn2: 'List another',
-    planTitle: 'Add visibility',
-    v5Title: 'Verified badge on marketplace', v5Price: 'US$5 · 30 days',
-    v20Title: 'Display your property on the Home page with the Verified badge', v20Price: 'US$20 · 30 days',
-    usTitle: 'Add visibility to your listing', usSub: 'Pick a plan to feature your listing for 30 days.', usVerify: 'Verify · US$5', usHome: 'On the home page · US$20', payingMsg: 'Processing payment…',
-    hiDoneVerified: 'Your listing is verified for 30 days!', hiDoneHome: 'Your listing is on the home page for 30 days!',
-    backLabel: '← Back',
-    errType: 'Select the property type', errHood: 'Enter the neighborhood', errCity: 'Enter the city', errPrice: 'Enter a valid price',
-    errPriceFloorSale: 'Sale price must be at least US$ 5,000', errPriceFloorRent: 'Monthly rent must be at least ₲ 300,000',
-    errArea: 'Enter the area (m²)', errAreaRange: (max) => `Area must be between 5 and ${max.toLocaleString('en-US')} m²`,
-    errName: 'Enter your name', errPhone: 'Enter a valid WhatsApp / phone number (min. 6 digits)', errPhotos: 'Add at least one photo',
-    errFix: 'Some details are missing. Please fix the highlighted fields to publish.',
-    errSubmit: 'Could not publish. Please try again.',
-    fmtGs: (v) => COUNTRY.currencySymbol + ' ' + v.toLocaleString('en-US'), fmtUsd: (v) => '≈ US$ ' + v, locale: 'en-US',
+    navBuy: 'Buy', navRent: 'Rent', navSell: 'Sell', navCta: 'List for free',
+    title: 'List your property', titleSerif: 'in minutes.',
+    sub: 'Tell us about your property. It goes live in the marketplace instantly.',
+    btn: 'List a property',
   },
 };
 
-const inputCls = 'px-4 py-[14px] border-[1.5px] border-ink/35 rounded-input bg-card font-medium text-[15px] outline-none focus:border-ink';
-const labelCls = 'flex flex-col gap-[7px] text-[13px] font-semibold';
-
 export default function PublicarClient() {
   const [lang, setLang] = useLang();
-  const { user, loading, openAuth } = useAuth();
+  const { loading } = useAuth();
   const { openSell } = useSellFlow();
-  const [addrText, setAddrText] = useState('');
-  const [step, setStep] = useState(1);
-  const [mode, setMode] = useState('venta');
-  const [f, setF] = useState({ ptype: '', neighborhood: '', city: '', price: '', currency: '', area: '', description: '', contact_name: '', contact_phone: '', seller_type: 'owner' });
-  const [photos, setPhotos] = useState([]); // {file, url}
-  const [err, setErr] = useState('');
-  const [errs, setErrs] = useState({}); // per-field errors { field: message }
-  const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState(null); // {ref, slug}
-  const [showHi, setShowHi] = useState(false);       // promotion payment modal (only when a card must be entered / 3DS)
-  const [highlighted, setHighlighted] = useState(false);
-  const [paying, setPaying] = useState(false);       // silently charging a saved card (no modal)
-  const [plan, setPlan] = useState(null);            // selected promo plan: null | 'verified' | 'home'
-  const fileRef = useRef(null);
   const autoOpened = useRef(false);
-  const prefilled = useRef(false);
-  const [resumed, setResumed] = useState(false); // came from the sell wizard → finish this listing
   const t = DICT[lang];
 
-  // A logged-out visitor who reaches the sell page gets the collect-first sell
-  // wizard (address → details → photos → contact → login-last), NOT a bare login
-  // prompt. Runs once per mount; guarded so it never re-fires if they close it.
+  // Open the wizard once per visit. Guarded so it never re-fires if they close it,
+  // and skipped on ?sell=… / ?publicar=1 (back from Google etc.), which SellFlow
+  // reopens by itself at the right step.
   useEffect(() => {
-    if (!loading && !user && !autoOpened.current) {
-      autoOpened.current = true;
-      openSell();
-    }
-  }, [loading, user, openSell]);
-
-  // Resume from the sell wizard: a logged-out visitor collected operation,
-  // owner/agent, name, contact and address as a guest; after logging in we land
-  // here PRE-FILLED so they only add price, area, description and photos. The
-  // pending data is consumed (cleared) once read.
-  useEffect(() => {
-    if (!user || prefilled.current) return;
-    prefilled.current = true;
-    // Back from Google mid-wizard: the sell wizard itself resumes (SellFlow) — leave the stash to it.
-    if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('sell') === 'resume') return;
-    (async () => {
-      const payload = await loadPendingSell();
-      const x = payload?.fields;
-      if (!x) return;
-      if (x.mode === 'venta' || x.mode === 'alquiler') setMode(x.mode);
-      if (x.addressText) setAddrText(x.addressText);
-      setF((s) => ({
-        ...s,
-        seller_type: x.seller_type || s.seller_type,
-        neighborhood: x.neighborhood || s.neighborhood,
-        city: x.city || s.city,
-        contact_name: x.contact_name || s.contact_name,
-        contact_phone: x.contact_phone || s.contact_phone,
-      }));
-      setResumed(true);
-      await clearPendingSell();
-    })();
-  }, [user]);
-
-  // Prefill contact from the logged-in user (only if the fields are still empty).
-  useEffect(() => {
-    if (!user) return;
-    setF((s) => ({ ...s, contact_name: s.contact_name || user.full_name || '', contact_phone: s.contact_phone || user.phone || '' }));
-  }, [user]);
-
-  // Update a field and clear its error as soon as the user edits it.
-  const set = (k) => (e) => {
-    const v = e.target.value;
-    setF((s) => ({ ...s, [k]: v }));
-    setErrs((er) => (er[k] ? { ...er, [k]: undefined } : er));
-  };
-  const addPhotos = (list) => {
-    const files = Array.from(list || []).filter((x) => x.type.startsWith('image/'));
-    setPhotos((p) => [...p, ...files.map((file) => ({ file, url: URL.createObjectURL(file) }))].slice(0, 20));
-    setErrs((er) => (er.photos ? { ...er, photos: undefined } : er));
-  };
-  const removePhoto = (i) => setPhotos((p) => p.filter((_, idx) => idx !== i));
-
-  const priceCurrency = f.currency || (mode === 'alquiler' ? 'PYG' : 'USD');
-
-  // Full completeness validation — a published listing must clear the same bar the
-  // marketplace uses to show it (contact + location + plausible price + area), so
-  // a user's listing is never created "incomplete" and then hidden/404'd.
-  const APPROX_RATE = 7300; // client-side floor approximation; the live gate uses the real rate
-  const numOf = (v) => Number(String(v).replace(/[^\d.]/g, ''));
-  const validate = () => {
-    const e = {};
-    if (!f.ptype) e.ptype = t.errType;
-    if (!f.neighborhood.trim()) e.neighborhood = t.errHood;
-    if (!f.city.trim()) e.city = t.errCity;
-
-    const p = numOf(f.price);
-    if (!Number.isFinite(p) || p <= 0) e.price = t.errPrice;
-    else if (mode === 'venta') {
-      const usd = priceCurrency === 'USD' ? p : p / APPROX_RATE;
-      if (usd < 5000) e.price = t.errPriceFloorSale;
-    } else {
-      const pyg = priceCurrency === 'PYG' ? p : p * APPROX_RATE;
-      if (pyg < COUNTRY.rentFloorLocal) e.price = t.errPriceFloorRent;
-    }
-
-    const range = areaRange(f.ptype); // land: any size
-    const a = numOf(f.area);
-    if (!Number.isFinite(a) || a <= 0) e.area = t.errArea;
-    else if (range && (a < range[0] || a > range[1])) e.area = t.errAreaRange(range[1]);
-
-    if (!f.contact_name.trim()) e.contact_name = t.errName;
-    if (String(f.contact_phone).replace(/\D/g, '').length < 6) e.contact_phone = t.errPhone;
-
-    if (photos.length < 1) e.photos = t.errPhotos;
-    return e;
-  };
-  const back = () => { setErr(''); setStep(1); };
-
-  // Pay for a promotion. Saved card → charge silently (NO modal); no card / 3DS /
-  // decline → open the modal. Kills the ugly modal open/close flash for returning users.
-  const payWithPlan = async (pl, propertyId) => {
-    setPlan(pl);
-    let hasCard = false;
-    try { const pr = await fetch('/api/account/payments'); const pj = await pr.json(); hasCard = !!(pj?.card?.last4); } catch {}
-    if (!hasCard) { setShowHi(true); return; }
-    setPaying(true);
-    try {
-      const r = await fetch('/api/highlight/create-intent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ propertyId, plan: pl, useSavedCard: true }) });
-      const j = await r.json().catch(() => ({}));
-      if (j.status === 'succeeded') { setHighlighted(true); setPaying(false); return; }
-      setPaying(false); setShowHi(true);
-    } catch { setPaying(false); setShowHi(true); }
-  };
-
-  // Free publish — no plan, no payment. Requires login (gated below).
-  // openHighlightAfter = the selected plan; a saved card is then charged silently,
-  // otherwise the payment modal opens. A cancelled/failed payment still leaves it published.
-  const publishListing = async (openHighlightAfter = false) => {
-    const e = validate();
-    if (Object.keys(e).length) {
-      setErrs(e);
-      setErr(t.errFix);
-      // jump to the first field with an error so it's obvious what to fix
-      if (typeof document !== 'undefined') {
-        const first = document.querySelector('[data-err="1"]');
-        first?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-      return;
-    }
-    setErrs({}); setBusy(true); setErr('');
-    try {
-      const fd = new FormData();
-      fd.set('mode', mode);
-      fd.set('ptype', f.ptype);
-      fd.set('neighborhood', f.neighborhood);
-      fd.set('city', f.city);
-      fd.set('price', f.price);
-      fd.set('currency', priceCurrency);
-      fd.set('area', f.area);
-      fd.set('description', f.description);
-      fd.set('contact_name', f.contact_name);
-      fd.set('contact_phone', f.contact_phone);
-      fd.set('seller_type', f.seller_type);
-      photos.forEach((p) => fd.append('photos', p.file));
-      const res = await fetch('/api/publish', { method: 'POST', body: fd });
-      const j = await res.json();
-      if (!res.ok || !j.ok) throw new Error(j.error || 'failed');
-      track('listing_created', {
-        property_id: j.id,
-        slug: j.slug,
-        ref: j.ref,
-        operation: mode,
-        property_type: f.ptype,
-        city: f.city,
-        neighborhood: f.neighborhood,
-        price: f.price ? Number(f.price) : null,
-        currency: priceCurrency,
-        photos: photos.length,
-      });
-      setResult({ ref: j.ref, id: j.id });
-      setStep(2);
-      if (openHighlightAfter) await payWithPlan(openHighlightAfter, j.id);
-    } catch {
-      setErr(t.errSubmit);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const restart = () => {
-    setStep(1); setMode('venta'); setResult(null); setErr(''); setErrs({}); setShowHi(false); setHighlighted(false); setPaying(false); setPlan(null);
-    setF({ ptype: '', neighborhood: '', city: '', price: '', currency: '', area: '', description: '', contact_name: '', contact_phone: '', seller_type: 'owner' });
-    setPhotos([]);
-  };
-
-  // Input class + inline error helpers (red border + message on the errored field).
-  const fieldCls = (k) => `px-4 py-[14px] border-[1.5px] rounded-input bg-card font-medium text-[15px] outline-none ${errs[k] ? 'border-red-500 focus:border-red-600' : 'border-ink/35 focus:border-ink'}`;
-  const FErr = ({ k }) => (errs[k] ? <span data-err="1" className="text-[12.5px] font-medium text-red-600">{errs[k]}</span> : null);
-
-  const stepper = t.stepLabels.map((label, i) => {
-    const n = i + 1, active = step === n, done = step > n;
-    return { n: done ? '✓' : String(n), label, active, done, go: () => { if (n < step) setStep(n); } };
-  });
-
-  const nav = (
-    <nav className="flex items-center justify-center md:justify-between flex-wrap gap-3 px-5 md:px-9 py-4 border-b border-ink/12">
-      <div className="flex flex-col gap-0.5 leading-none">
-        <Link href="/" className="font-bold text-[22px] tracking-head">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></Link>
-      </div>
-      <div className="flex gap-2 flex-wrap text-[14px] font-medium">
-        <Link href="/propiedades?op=venta" className="inline-flex items-center h-[40px] px-[18px] border border-ink rounded-pill">{t.navBuy}</Link>
-        <Link href="/propiedades?op=alquiler" className="inline-flex items-center h-[40px] px-[18px] border border-ink rounded-pill">{t.navRent}</Link>
-        {/* We're on the sell page — show the Sell tab as selected, matching how
-            Buy/Rent look filled when active on the marketplace. */}
-        <Link href="/publicar" aria-current="page" className="inline-flex items-center h-[40px] px-[18px] border border-ink rounded-pill bg-ink text-paper">{t.navSell}</Link>
-      </div>
-      <div className="flex items-center gap-3.5">
-        <div className="flex items-center h-[40px] border border-ink/30 rounded-pill p-[3px] text-[12px] font-semibold">
-          {['es', 'en'].map((l) => (
-            <button key={l} onClick={() => setLang(l)} className={`h-full flex items-center px-3 rounded-pill ${lang === l ? 'bg-ink text-paper' : 'text-ink/55'}`}>{l.toUpperCase()}</button>
-          ))}
-        </div>
-        <AuthButton />
-        <Link href="/publicar" className="inline-flex items-center h-[40px] px-[22px] bg-ink text-paper rounded-pill text-[14px] font-semibold whitespace-nowrap">{t.navCta}</Link>
-      </div>
-    </nav>
-  );
-
-  // Gate the whole flow behind login so every published deal has an owner.
-  // The modal auto-opens on mount (effect above); this is just the fallback
-  // screen shown behind/after it in case the visitor closes it without
-  // logging in, with a button to bring it back.
-  if (!loading && !user) {
-    return (
-      <div className="min-h-screen">
-        {nav}
-        <div className="max-w-[520px] mx-auto px-5 py-24 text-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/mascot.png" alt="" className="w-[130px] object-contain mx-auto mb-4" />
-          <h1 className="text-[clamp(30px,4.5vw,42px)] font-bold tracking-display leading-tight mb-2">{t.gateTitle}</h1>
-          <p className="text-[16px] text-ink/55 mb-7">{t.gateSub}</p>
-          <button onClick={() => openSell()} className="px-8 py-4 bg-ink text-paper font-semibold text-[15px] rounded-pill shadow-hard-soft">{t.gateBtn}</button>
-        </div>
-      </div>
-    );
-  }
+    if (loading || autoOpened.current) return;
+    autoOpened.current = true;
+    const q = new URLSearchParams(window.location.search);
+    if (q.get('sell') || q.get('publicar')) return;
+    openSell();
+  }, [loading, openSell]);
 
   return (
     <div className="min-h-screen">
-      {nav}
-
-      <div className="max-w-[860px] mx-auto px-5 md:px-11 pt-10 pb-[90px]">
-        {/* STEPPER */}
-        <div className="flex items-center gap-3.5 mb-11 flex-wrap">
-          {stepper.map((s, i) => (
-            <button key={i} onClick={s.go} className="flex items-center gap-2 cursor-pointer">
-              <span className={`w-7 h-7 rounded-pill inline-flex items-center justify-center text-[13px] font-bold border-[1.5px] ${s.active || s.done ? 'bg-ink text-paper border-ink' : 'text-ink/40 border-ink/30'}`}>{s.n}</span>
-              <span className={`text-[13.5px] ${s.active ? 'font-bold text-ink' : 'font-medium text-ink/45'}`}>{s.label}</span>
-            </button>
-          ))}
+      <nav className="flex items-center justify-center md:justify-between flex-wrap gap-3 px-5 md:px-9 py-4 border-b border-ink/12">
+        <div className="flex flex-col gap-0.5 leading-none">
+          <Link href="/" className="font-bold text-[22px] tracking-head">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></Link>
         </div>
-
-        {/* STEP 1 — DETAILS */}
-        {step === 1 && (
-          <div>
-            <h1 className="text-[clamp(34px,4.5vw,48px)] font-bold tracking-[-0.04em] mb-2">{t.s1Title} <span className="font-serif italic font-normal">{t.s1TitleSerif}</span></h1>
-            <p className="text-[16px] text-ink/55 mb-[34px]">{t.s1Sub}</p>
-            {resumed && (
-              <div className="flex items-start gap-3 mb-7 border-[1.5px] border-ink/20 bg-card rounded-[14px] px-4 py-3.5">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/mascot.png" alt="" className="w-9 h-9 object-contain shrink-0" />
-                <p className="text-[14px] font-medium text-ink">{t.resumeBanner}</p>
-              </div>
-            )}
-            <div className="flex gap-2.5 mb-[26px]">
-              {[['venta', t.opVenta], ['alquiler', t.opAlquiler]].map(([m, label]) => (
-                <button key={m} onClick={() => setMode(m)} className={`px-[22px] py-2.5 rounded-pill text-[14px] font-semibold border-[1.5px] border-ink ${mode === m ? 'bg-ink text-paper' : 'bg-transparent'}`}>{label}</button>
-              ))}
-            </div>
-            <div className="mb-[26px]">
-              <div className="text-[13px] font-semibold mb-2">{t.roleQ}</div>
-              <div className="flex gap-2.5">
-                {[['owner', t.roleOwner], ['agent', t.roleAgent]].map(([r, label]) => (
-                  <button key={r} type="button" onClick={() => setF((s) => ({ ...s, seller_type: r }))} className={`px-[22px] py-2.5 rounded-pill text-[14px] font-semibold border-[1.5px] border-ink ${f.seller_type === r ? 'bg-ink text-paper' : 'bg-transparent'}`}>{label}</button>
-                ))}
-              </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <label className={`${labelCls} sm:col-span-2`}>{lang === 'en' ? 'Address' : 'Dirección'} <span className="font-normal text-ink/45">· Google</span>
-                <AddressAutocomplete value={addrText} onChange={setAddrText}
-                  onSelect={({ neighborhood, city }) => { setF((s) => ({ ...s, neighborhood, city })); setErrs((er) => ({ ...er, neighborhood: undefined, city: undefined })); }}
-                  placeholder={lang === 'en' ? 'Search the address…' : 'Buscá la dirección…'} className={inputCls} />
-              </label>
-              <label className={labelCls}>{t.fType}
-                <select value={f.ptype} onChange={set('ptype')} className={`${fieldCls('ptype')} w-full cursor-pointer ${f.ptype ? '' : 'text-ink/45'}`} data-testid="publicar-ptype">
-                  <option value="" disabled>{t.typePh}</option>
-                  {t.types.map(([v, l]) => <option key={v} value={v} className="text-ink">{l}</option>)}
-                </select>
-                <FErr k="ptype" />
-              </label>
-              <label className={labelCls}>{t.fHood}
-                <input value={f.neighborhood} onChange={set('neighborhood')} placeholder={t.fHoodPh} className={fieldCls('neighborhood')} />
-                <FErr k="neighborhood" />
-              </label>
-              <label className={labelCls}>{t.fCity}
-                <input value={f.city} onChange={set('city')} placeholder={t.fCityPh} className={fieldCls('city')} />
-                <FErr k="city" />
-              </label>
-              <label className={labelCls}>{t.fPrice(mode)}
-                <div className="flex gap-2">
-                  <input value={f.price} onChange={set('price')} inputMode="numeric" placeholder={t.fPricePh(mode)} className={`${fieldCls('price')} flex-1 min-w-0`} />
-                  <select value={priceCurrency} onChange={set('currency')} className={`${inputCls} cursor-pointer w-[92px]`}>
-                    <option value="USD">US$</option>
-                    <option value={COUNTRY.currencyCode}>{COUNTRY.currencySymbol}</option>
-                  </select>
-                </div>
-                <FErr k="price" />
-              </label>
-              <label className={labelCls}>{t.fArea}
-                <input value={f.area} onChange={set('area')} inputMode="numeric" placeholder="120" className={fieldCls('area')} />
-                <FErr k="area" />
-              </label>
-              <label className={labelCls}>{t.fName}
-                <input value={f.contact_name} onChange={set('contact_name')} placeholder={t.fNamePh} className={fieldCls('contact_name')} />
-                <FErr k="contact_name" />
-              </label>
-              <label className={labelCls}>{t.fPhone}
-                <input value={f.contact_phone} onChange={set('contact_phone')} placeholder={t.fPhonePh} className={fieldCls('contact_phone')} />
-                <FErr k="contact_phone" />
-              </label>
-            </div>
-            <label className={`${labelCls} mt-4`}>{t.fDesc}
-              <textarea value={f.description} onChange={set('description')} rows={4} placeholder={t.fDescPh} className={`${inputCls} resize-y`} />
-            </label>
-
-            {/* PHOTOS */}
-            <div
-              onClick={() => fileRef.current?.click()}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => { e.preventDefault(); addPhotos(e.dataTransfer.files); }}
-              className={`mt-[22px] border-[1.5px] border-dashed rounded-[18px] p-[34px] text-center bg-card cursor-pointer transition-colors ${errs.photos ? 'border-red-500' : 'border-ink/35 hover:border-ink'}`}
-            >
-              <div className="text-[15px] font-semibold mb-1">{t.fPhotos}</div>
-              <div className="font-mono text-[12px] text-ink/45">{photos.length ? t.photosChosen(photos.length) : t.fPhotosSub}</div>
-              <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => addPhotos(e.target.files)} />
-            </div>
-            {errs.photos && <div className="mt-1.5"><FErr k="photos" /></div>}
-            {photos.length > 0 && (
-              <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 mt-3">
-                {photos.map((p, i) => (
-                  <div key={i} className="relative aspect-square rounded-[10px] overflow-hidden border border-ink/15">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={p.url} alt="" className="w-full h-full object-cover" />
-                    <button onClick={(e) => { e.stopPropagation(); removePhoto(i); }} className="absolute top-1 right-1 w-5 h-5 rounded-pill bg-ink text-paper text-[11px] leading-none flex items-center justify-center">×</button>
-                    {i === 0 && <span className="absolute bottom-1 left-1 text-[9px] font-semibold bg-ink text-paper px-1.5 py-0.5 rounded-pill">1ª</span>}
-                  </div>
-                ))}
-              </div>
-            )}
+        <div className="flex gap-2 flex-wrap text-[14px] font-medium">
+          <Link href="/propiedades?op=venta" className="inline-flex items-center h-[40px] px-[18px] border border-ink rounded-pill">{t.navBuy}</Link>
+          <Link href="/propiedades?op=alquiler" className="inline-flex items-center h-[40px] px-[18px] border border-ink rounded-pill">{t.navRent}</Link>
+          {/* We're on the sell page — show the Sell tab as selected, matching how
+              Buy/Rent look filled when active on the marketplace. */}
+          <Link href="/publicar" aria-current="page" className="inline-flex items-center h-[40px] px-[18px] border border-ink rounded-pill bg-ink text-paper">{t.navSell}</Link>
+        </div>
+        <div className="flex items-center gap-3.5">
+          <div className="flex items-center h-[40px] border border-ink/30 rounded-pill p-[3px] text-[12px] font-semibold">
+            {['es', 'en'].map((l) => (
+              <button key={l} onClick={() => setLang(l)} className={`h-full flex items-center px-3 rounded-pill ${lang === l ? 'bg-ink text-paper' : 'text-ink/55'}`}>{l.toUpperCase()}</button>
+            ))}
           </div>
-        )}
+          <AuthButton />
+          <Link href="/publicar" className="inline-flex items-center h-[40px] px-[22px] bg-ink text-paper rounded-pill text-[14px] font-semibold whitespace-nowrap">{t.navCta}</Link>
+        </div>
+      </nav>
 
-        {/* STEP 2 — CONFIRMATION */}
-        {step === 2 && (
-          <div className="text-center py-8">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/mascot.png" alt="" className="w-[170px] object-contain mx-auto mb-2.5" />
-            <h1 className="text-[clamp(36px,5vw,54px)] font-bold tracking-[-0.04em] mb-2.5">{t.s4Title} <span className="font-serif italic font-normal">{t.s4TitleSerif}</span></h1>
-            <p className="text-[17px] text-ink/55 max-w-[440px] mx-auto mb-2.5">{t.s4Sub}</p>
-            <div className="font-mono text-[12px] text-ink/45 mb-7">REF: {result?.ref}</div>
-
-            {/* Promotion upsell — publish is already done (free); this is optional. */}
-            <div className="max-w-[440px] mx-auto mb-7">
-              {highlighted ? (
-                <div className="rounded-[16px] border-[1.5px] border-ink bg-card px-4 py-3 text-[14px] font-bold text-ink">{plan === 'home' ? t.hiDoneHome : t.hiDoneVerified}</div>
-              ) : paying ? (
-                <div className="rounded-[16px] border-[1.5px] border-ink bg-card px-4 py-3 text-[14px] font-bold text-ink">{t.payingMsg}</div>
-              ) : (
-                <div className="rounded-[16px] border-[1.5px] border-ink bg-card px-5 py-4 text-left shadow-hard-sm">
-                  <div className="text-[16px] font-bold tracking-head mb-1">{t.usTitle}</div>
-                  <p className="text-[13px] text-ink/60 mb-3">{t.usSub}</p>
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <button onClick={() => payWithPlan('verified', result.id)} className="py-3 rounded-pill border-[1.5px] border-ink font-bold text-[13px] hover:bg-ink hover:text-paper transition-colors">{t.usVerify}</button>
-                    <button onClick={() => payWithPlan('home', result.id)} className="py-3 rounded-pill bg-ink text-paper font-bold text-[13px] hover:bg-ink/90">{t.usHome}</button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="flex gap-3 justify-center flex-wrap">
-              {result?.id && <Link href={`/propiedad/${result.id}`} className="px-8 py-4 bg-ink text-paper font-semibold text-[15px] rounded-pill shadow-hard-soft">{t.s4View}</Link>}
-              <Link href="/propiedades" className="px-8 py-4 border-2 border-ink font-semibold text-[15px] rounded-pill">{t.s4Btn1}</Link>
-              <button onClick={restart} className="px-8 py-4 border-2 border-ink font-semibold text-[15px] rounded-pill">{t.s4Btn2}</button>
-            </div>
-
-            {showHi && result?.id && (
-              <HighlightModal
-                propertyId={result.id}
-                plan={plan || 'verified'}
-                lang={lang}
-                propertyLabel={[(t.types.find(([v]) => v === f.ptype) || [])[1], f.neighborhood].filter(Boolean).join(' · ')}
-                onClose={() => setShowHi(false)}
-                onSuccess={() => { setHighlighted(true); setShowHi(false); }}
-              />
-            )}
-          </div>
-        )}
-
-        {err && <div className="mt-6 text-[14px] font-medium text-red-700 bg-red-50 border border-red-200 rounded-[12px] px-4 py-3">{err}</div>}
-
-        {/* FOOTER — publish (free, instant) */}
-        {step === 1 && (
-          <div className="mt-11 pt-[26px] border-t border-ink/15 flex flex-col gap-4">
-            {/* Promotion plans — two prominent, mutually-exclusive boxes. */}
-            <div>
-              <div className="text-[13px] font-semibold mb-2">{t.planTitle}</div>
-              <div className="grid gap-2.5">
-                <PlanBox on={plan === 'verified'} onClick={() => setPlan((p) => (p === 'verified' ? null : 'verified'))} title={t.v5Title} price={t.v5Price} benefits={[]} icon={<VerifiedIcon className="w-4 h-4" />} />
-                <PlanBox on={plan === 'home'} onClick={() => setPlan((p) => (p === 'home' ? null : 'home'))} title={t.v20Title} price={t.v20Price} benefits={[]} icon={<VerifiedIcon className="w-4 h-4" />} badge={<RecommendedTag lang={lang} className="text-[8px] px-1.5 py-0.5" />} />
-              </div>
-            </div>
-            <div className="flex justify-end">
-              <button onClick={() => publishListing(plan)} disabled={busy} className="px-[28px] py-3.5 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60">{busy ? t.paying : (plan === 'home' ? t.publishHome : plan === 'verified' ? t.publishVerified : t.publishBtn)}</button>
-            </div>
-          </div>
-        )}
+      <div className="max-w-[520px] mx-auto px-5 py-24 text-center">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/mascot.png" alt="" className="w-[130px] object-contain mx-auto mb-4" />
+        <h1 className="text-[clamp(30px,4.5vw,42px)] font-bold tracking-display leading-tight mb-2">{t.title} <span className="font-serif italic font-normal">{t.titleSerif}</span></h1>
+        <p className="text-[16px] text-ink/55 mb-7">{t.sub}</p>
+        <button onClick={() => openSell()} className="px-8 py-4 bg-ink text-paper font-semibold text-[15px] rounded-pill shadow-hard-soft">{t.btn}</button>
       </div>
     </div>
   );

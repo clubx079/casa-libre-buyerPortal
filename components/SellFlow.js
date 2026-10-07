@@ -472,12 +472,12 @@ export default function SellFlowProvider({ children }) {
     return () => window.removeEventListener('pageshow', onShow);
   }, []);
 
-  // A signed-out visitor who clicks any "List for free" / "Sell" link (they all point
-  // at /publicar) gets the wizard right here, over the page they're on — not the
-  // "You need an account to post" screen. Capture phase on window runs before Next's
-  // <Link>, which skips navigating once the click is defaultPrevented.
+  // Anyone who clicks a "List for free" / "Sell" / "List a property" link (they all
+  // point at /publicar) gets the wizard right here, over the page they're on — signed
+  // in or not (e.g. the account dashboard's button). Capture phase on window runs
+  // before Next's <Link>, which skips navigating once the click is defaultPrevented.
   useEffect(() => {
-    if (authLoading || user) return undefined;
+    if (authLoading) return undefined;
     const onClick = (e) => {
       const a = e.target?.closest?.('a[href]');
       if (!a || !isSellLinkClick({
