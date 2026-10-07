@@ -23,7 +23,7 @@ import HighlightModal from '@/components/HighlightModal';
 import RecommendedTag from '@/components/RecommendedTag';
 import PlanBox from '@/components/PlanBox';
 import { VerifiedIcon } from '@/components/VerifiedTag';
-import { savePendingSell, loadPendingSell, clearPendingSell } from '@/lib/pendingSell';
+import { savePendingSell, loadPendingSell, clearPendingSell, saveProgressPhotos, loadProgressPhotos, clearProgressPhotos } from '@/lib/pendingSell';
 import { cleanDraftData, draftReady } from '@/lib/drafts';
 import { isSellLinkClick } from '@/lib/sellLink';
 import { COUNTRY } from '@/lib/country';
@@ -132,17 +132,24 @@ const Spinner = () => (
   </svg>
 );
 
-// Drafts for someone not signed in (lib/guestDrafts.js): this browser's random key and
-// the draft it's working on ({ key, email, id }), kept in localStorage. Fail-soft.
-const GUEST_STASH = 'cl_guest_draft';
-const readGuest = () => { try { return JSON.parse(localStorage.getItem(GUEST_STASH) || 'null') || {}; } catch { return {}; } };
-const writeGuest = (v) => { try { localStorage.setItem(GUEST_STASH, JSON.stringify(v)); } catch { /* storage blocked */ } };
+// The wizard's progress, kept in this browser while it's closed — from the first click,
+// at every step — so reopening goes straight back to where the person was:
+// { owner: account id | 'guest', step, f, draftId, termsOk, at, dismissed }. Photos are
+// kept in IndexedDB (lib/pendingSell). Only shown to the same owner, so on a shared
+// computer one person's listing never opens for someone else. `dismissed` = drafts they
+// chose "Start over" on (not offered again automatically). Fail-soft.
+const PROGRESS = 'cl_sell_progress';
+const PROGRESS_DAYS = 30;
+const readProgress = () => { try { return JSON.parse(localStorage.getItem(PROGRESS) || 'null') || {}; } catch { return {}; } };
+const writeProgress = (v) => { try { localStorage.setItem(PROGRESS, JSON.stringify(v)); } catch { /* storage blocked */ } };
+// This browser's random key for drafts saved while not signed in (lib/guestDrafts.js).
+const GUEST_KEY = 'cl_guest_key';
 const guestKey = () => {
-  const g = readGuest();
-  if (g.key) return g.key;
-  const key = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : null;
-  if (key) writeGuest({ ...g, key });
-  return key;
+  try {
+    let key = localStorage.getItem(GUEST_KEY);
+    if (!key && typeof crypto !== 'undefined' && crypto.randomUUID) { key = crypto.randomUUID(); localStorage.setItem(GUEST_KEY, key); }
+    return key || null;
+  } catch { return null; }
 };
 
 // Property-type picker: a small list that drops DOWN under the field and floats over
@@ -271,62 +278,94 @@ export default function SellFlowProvider({ children }) {
     setPhase('otp');
   };
 
-  // Not signed in, and this browser has a saved draft → reopen it where they were.
-  // Shown at once from this browser's copy of the draft (no step-1 flash while the
-  // server answers); the server is asked in the background. If the draft is gone
-  // there (published, or moved to an account), what they typed stays and the next
-  // autosave starts a fresh draft.
-  const resumeGuest = () => {
-    const g = readGuest();
-    const local = !!(g.data && draftReady(g.data));
-    if (!g.key || !g.email || (!g.id && !local)) return;
-    const apply = (data, id) => {
-      setF({ ...BLANK, ...data, ptype: normalizeTypeKey(data.ptype), email: g.email });
-      setDraftId(id || null); setTermsOk(true); setResumed(true);
-      setStep(!data.ptype ? 2 : 3);
-    };
-    if (local) { apply(g.data, g.id); track('sell_guest_draft_resumed', {}); }
-    if (!g.id) return;
-    fetch(`/api/drafts/guest?${new URLSearchParams({ email: g.email, key: g.key, id: g.id })}`)
-      .then(async (r) => {
-        if (r.status === 404) { setDraftId((cur) => (cur === g.id ? null : cur)); writeGuest({ key: g.key, email: g.email, data: g.data }); return; }
-        if (!r.ok || local) return;
-        const { draft } = await r.json();
-        if (draft?.data) { apply(draft.data, draft.id); track('sell_guest_draft_resumed', {}); }
-      })
-      .catch(() => { /* offline: the local copy is enough */ });
-  };
-  const startOver = () => { writeGuest({ key: readGuest().key }); reset(); setOpen(true); };
-  // Signed in on this browser → their guest draft is now in My listings → Drafts;
-  // forget the local copy so it isn't offered again after they log out.
-  useEffect(() => {
-    if (!user) return;
-    const g = readGuest();
-    if (g.id || g.data) writeGuest({ key: g.key });
-  }, [user]);
+  const me = user?.id || 'guest';
 
-  // Logged in or not, everyone gets the wizard. When we already know the person we
-  // prefill their name/email and skip the email-verification step.
-  // openSell({ draft }) resumes one of the user's drafts at the details step.
-  // (Also used directly as an onClick handler, so ignore anything that isn't options.)
-  const openSell = useCallback((opts) => {
-    const draft = opts && typeof opts === 'object' && opts.draft ? opts.draft : null;
-    if (draft && user) {
-      openAtDetails(draft.data || {}, draft.id);
-      track('sell_draft_resumed', {});
-      return;
-    }
+  // A fresh wizard (signed in: name/email prefilled, no email-confirm step).
+  const freshStart = () => {
     reset();
     openedLoggedInRef.current = !!user;
     if (user) {
       setVerified(true);
       setF((s0) => ({ ...s0, contact_name: user.full_name || user.name || '', email: user.email || '' }));
     }
+  };
+
+  // Reopen what this browser was in the middle of — the same step, fields, draft and
+  // photos — instantly (no step-1 flash). A guest draft the server no longer has
+  // (published, or moved into an account) is checked in the background; the next
+  // autosave then starts a fresh one. → true when something was restored.
+  const resumeProgress = () => {
+    const pr = readProgress();
+    if (pr.owner !== me || !pr.f || (!pr.step && !pr.f.mode) || Date.now() - (pr.at || 0) > PROGRESS_DAYS * 86400000) return false;
+    setF({ ...BLANK, ...pr.f, ptype: normalizeTypeKey(pr.f.ptype), ...(user ? { email: user.email || pr.f.email, contact_name: pr.f.contact_name || user.full_name || user.name || '' } : {}) });
+    setStep(Math.min(pr.step || 0, user ? 4 : 3));
+    setDraftId(pr.draftId || null);
+    if (user && pr.draftId) creatingDraftRef.current = true;
+    setTermsOk(!!pr.termsOk);
+    setResumed(true);
+    loadProgressPhotos().then((x) => { if (x?.owner === me && x.files?.length) restorePhotos(x.files); }).catch(() => {});
+    if (!user && pr.draftId && pr.f.email) {
+      const key = guestKey();
+      if (key) fetch(`/api/drafts/guest?${new URLSearchParams({ email: pr.f.email, key, id: pr.draftId })}`).then((r) => { if (r.status === 404) setDraftId((cur) => (cur === pr.draftId ? null : cur)); }).catch(() => {});
+    }
+    return true;
+  };
+
+  // Signed in with nothing in progress on this browser → their latest draft (saved on
+  // another device, or before), unless they chose "Start over" on it.
+  const latestDraft = async () => {
+    const ctrl = new AbortController(); const tm = setTimeout(() => ctrl.abort(), 2500);
+    try {
+      const r = await fetch('/api/drafts', { signal: ctrl.signal });
+      const j = await r.json().catch(() => ({}));
+      const dismissed = readProgress().dismissed || [];
+      return (j.drafts || []).find((d) => !dismissed.includes(d.id)) || null;
+    } catch { return null; } finally { clearTimeout(tm); }
+  };
+
+  // "Start over": forget this browser's progress (the draft itself stays in My
+  // listings → Drafts) and begin a new listing.
+  const startOver = () => {
+    const pr = readProgress();
+    writeProgress({ owner: me, dismissed: [...new Set([...(pr.dismissed || []), draftId].filter(Boolean))].slice(-20) });
+    clearProgressPhotos();
+    freshStart();
     setOpen(true);
-    track('sell_wizard_opened', { signed_in: !!user });
-    if (!user) resumeGuest();
+  };
+
+  // Logged in or not, everyone gets the wizard, back where they left it when they
+  // closed it. When we already know the person we prefill their name/email and skip
+  // the email-verification step.
+  // openSell({ draft }) resumes one of the user's drafts at the details step.
+  // (Also used directly as an onClick handler, so ignore anything that isn't options.)
+  const openSell = useCallback(async (opts) => {
+    const draft = opts && typeof opts === 'object' && opts.draft ? opts.draft : null;
+    if (draft && user) {
+      openAtDetails(draft.data || {}, draft.id);
+      track('sell_draft_resumed', {});
+      return;
+    }
+    freshStart();
+    const resumedLocal = resumeProgress();
+    if (!resumedLocal && user) {
+      const d = await latestDraft();
+      if (d) { openAtDetails(d.data || {}, d.id); setResumed(true); track('sell_draft_resumed', { auto: true }); return; }
+    }
+    setOpen(true);
+    track('sell_wizard_opened', { signed_in: !!user, resumed: resumedLocal });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
+
+  // Remember the progress on every change while the wizard is open (until published)…
+  useEffect(() => {
+    if (!open || result || (step === 0 && !f.mode)) return;
+    writeProgress({ owner: me, step, f, draftId, termsOk, at: Date.now(), dismissed: readProgress().dismissed || [] });
+  }, [open, result, step, f, draftId, termsOk, me]);
+  // …and its photos (IndexedDB — files don't fit in localStorage).
+  useEffect(() => {
+    if (!open || result) return;
+    saveProgressPhotos({ owner: me, files: photos.map((p) => p.file) });
+  }, [open, result, photos, me]);
 
   // The mobile app opens the site at /?sell=1&app=1 — open the wizard straight away
   // so the person never lands on a page that just talks about listing.
@@ -421,7 +460,9 @@ export default function SellFlowProvider({ children }) {
   useEffect(() => {
     if (!open || !user || !draftId || result) return undefined;
     const id = setTimeout(() => {
-      fetch(`/api/drafts/${draftId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: JSON.parse(draftJson) }) }).catch(() => {});
+      fetch(`/api/drafts/${draftId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: JSON.parse(draftJson) }) })
+        .then((r) => { if (r.status === 404) { creatingDraftRef.current = false; setDraftId(null); } })   // deleted / published elsewhere → start a new one
+        .catch(() => {});
     }, 700);
     return () => clearTimeout(id);
   }, [open, user, draftId, result, draftJson]);
@@ -442,7 +483,6 @@ export default function SellFlowProvider({ children }) {
         const j = await r.json().catch(() => ({}));
         if (!j.draft?.id) return;
         if (j.draft.id !== guestDraftIdRef.current) setDraftId(j.draft.id);
-        writeGuest({ key, email: f.email.trim().toLowerCase(), id: j.draft.id, data: JSON.parse(draftJson) });   // a local copy reopens instantly
       } catch { /* offline: try again on the next change */ }
     }, 800);
     return () => clearTimeout(id);
@@ -643,7 +683,8 @@ export default function SellFlowProvider({ children }) {
       const res = await fetch('/api/publish', { method: 'POST', body: fd });
       const j = await res.json().catch(() => ({}));
       if (!res.ok || !j.ok) throw new Error(j.error || 'failed');
-      setDraftId(null); writeGuest({ key: readGuest().key });   // published: this browser has no draft in progress
+      setDraftId(null);
+      writeProgress({ owner: me, dismissed: readProgress().dismissed || [] }); clearProgressPhotos();   // published: nothing in progress any more
       window.dispatchEvent(new Event('cl:listings-changed'));   // My listings refreshes its tabs
       track('listing_created', { property_id: j.id, slug: j.slug, ref: j.ref, operation: f.mode, property_type: f.ptype, city: f.city, neighborhood: f.neighborhood, price: f.price ? Number(f.price) : null, currency: priceCurrency, photos: photos.length });
       setResult({ id: j.id, ref: j.ref });
