@@ -1,17 +1,19 @@
 'use client';
-// Sell flow — a 4-step popup wizard that a logged-out visitor completes end to end
+// Sell flow — a 5-step popup wizard that a logged-out visitor completes end to end
 // WITHOUT leaving the popup:
 //   1) Operation (sell / rent)
 //   2) Seller (owner/agent) + name + EMAIL
-//   3) Location (address)
-//   -> we email a confirmation code; the user verifies it inline (their account is
+//   3) Location (address) + property type
+//   4) Details (price, area, phone, description, photos)
+//   -> we confirm the email (Google, or a code verified inline: the account is
 //      created + they're logged in on the spot — no password screen)
-//   4) Details (type, price, area, phone, photos) -> Publish
-// The listing is posted from step 4; we never route to /publicar. A LOGGED-IN user
+//   5) Confirm: a short summary + "I confirm my details are correct" + optional
+//      visibility plan -> Publish (then Stripe, or the saved card, for a plan)
+// The listing is posted from step 5; we never route to /publicar. A LOGGED-IN user
 // gets the same wizard, minus the parts we already know: their name and email are
-// taken from the session and the confirmation code is skipped entirely.
+// taken from the session and the confirmation step is skipped entirely.
 import { typeOptions, normalizeTypeKey, areaRange } from '@/lib/propertyTypeOptions';
-import { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
+import { createContext, useContext, useState, useCallback, useRef, useEffect, Fragment } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLang } from '@/lib/useLang';
 import { useAuth } from '@/components/AuthProvider';
@@ -31,7 +33,7 @@ export const useSellFlow = () => useContext(SellFlowContext);
 
 const DICT = {
   es: {
-    steps: ['Operación', 'Vendedor', 'Ubicación', 'Detalles'],
+    steps: ['Operación', 'Vendedor', 'Ubicación', 'Detalles', 'Confirmar'],
     q1: '¿Qué querés hacer?', sell: 'Vender', rent: 'Alquilar',
     q2: '¿Sos el propietario o un agente?', owner: 'Propietario', agent: 'Agente',
     name: 'Tu nombre', namePh: 'Ana Giménez', email: 'Tu correo electrónico', emailPh: 'ana@correo.com',
@@ -42,7 +44,9 @@ const DICT = {
     otpTitle: 'Código de confirmación enviado', otpSub: (e) => `Ingresá el código que enviamos a ${e} para verificar tu correo.`,
     codePh: 'Código de 6 dígitos', verify: 'Verificar', verifying: 'Verificando…', resend: 'Reenviar código', resent: 'Código reenviado',
     haveAccount: 'Ya existe una cuenta', existsSub: (e) => `${e} ya tiene una cuenta en Casa Libre. Ingresá con Google o te enviamos un código de 6 dígitos.`, haveAccountSub: (e) => `Te enviamos un código a ${e}. Ingresalo para continuar.`, googleBtn: 'Continuar con Google', orText: 'o', login: 'Ingresar', errGeneric: 'Algo salió mal. Intentá de nuevo.', doneDash: 'Ir a mi panel',
-    d4Title: 'Últimos detalles', d4Sub: 'Completá los datos de tu propiedad y publicá — se publica al instante.',
+    d4Title: 'Detalles de la propiedad', d4Sub: 'Completá los datos de tu propiedad.',
+    cTitle: 'Confirmá los datos', cSub: 'Revisá tu propiedad antes de publicarla.', cCheck: 'Confirmo que los datos son correctos', errConfirm: 'Confirmá que los datos son correctos para publicar.',
+    cOp: 'Operación', cAddr: 'Dirección', cPhone: 'WhatsApp', cContact: 'Contacto', cPhotos: (n) => `${n} foto${n === 1 ? '' : 's'}`,
     fType: 'Tipo de propiedad', typePh: 'Seleccioná el tipo', types: typeOptions('es'),
     fPrice: (m) => (m === 'venta' ? 'Precio' : 'Alquiler mensual'), fPricePh: (m) => (m === 'venta' ? '145.000' : '4.500.000'),
     fArea: 'Superficie (m²)', fDesc: 'Descripción', fDescPh: 'Depto luminoso con balcón, a 2 cuadras del Shopping del Sol…',
@@ -68,7 +72,7 @@ const DICT = {
     errSubmit: 'No se pudo publicar. Intentá de nuevo.',
   },
   en: {
-    steps: ['Operation', 'Seller', 'Location', 'Details'],
+    steps: ['Operation', 'Seller', 'Location', 'Details', 'Confirm'],
     q1: 'What do you want to do?', sell: 'Sell', rent: 'Rent out',
     q2: 'Are you the owner or an agent?', owner: 'Owner', agent: 'Agent',
     name: 'Your name', namePh: 'Ana Giménez', email: 'Your email', emailPh: 'ana@email.com',
@@ -79,7 +83,9 @@ const DICT = {
     otpTitle: 'Confirmation code sent', otpSub: (e) => `Enter the code we emailed to ${e} to verify your email.`,
     codePh: '6-digit code', verify: 'Verify', verifying: 'Verifying…', resend: 'Resend code', resent: 'Code resent',
     haveAccount: 'Account already exists', existsSub: (e) => `${e} already has a Casa Libre account. Log in with Google or we'll email you a 6-digit code.`, haveAccountSub: (e) => `We sent a code to ${e}. Enter it to continue.`, googleBtn: 'Continue with Google', orText: 'or', login: 'Log in', errGeneric: 'Something went wrong. Try again.', doneDash: 'Go to my dashboard',
-    d4Title: 'Last details', d4Sub: 'Fill in your property and publish — it goes live instantly.',
+    d4Title: 'Property details', d4Sub: 'Fill in your property\'s details.',
+    cTitle: 'Confirm the details', cSub: 'Check your property before you publish it.', cCheck: 'I confirm my details are correct', errConfirm: 'Please confirm your details are correct to publish.',
+    cOp: 'Operation', cAddr: 'Address', cPhone: 'WhatsApp', cContact: 'Contact', cPhotos: (n) => `${n} photo${n === 1 ? '' : 's'}`,
     fType: 'Property type', typePh: 'Select the type', types: typeOptions('en'),
     fPrice: (m) => (m === 'venta' ? 'Price' : 'Monthly rent'), fPricePh: (m) => (m === 'venta' ? '145,000' : '4,500,000'),
     fArea: 'Area (m²)', fDesc: 'Description', fDescPh: 'Bright apartment with balcony, 2 blocks from Shopping del Sol…',
@@ -127,8 +133,9 @@ export default function SellFlowProvider({ children }) {
   const router = useRouter();
   const { user, loading: authLoading, openAuth, refreshUser } = useAuth();
   const [open, setOpen] = useState(false);
-  const [step, setStep] = useState(0);          // 0 op · 1 seller · 2 location · 3 details
-  const [phase, setPhase] = useState('');        // '' | 'otp' — code-verify overlay between step 2 and 3
+  const [step, setStep] = useState(0);          // 0 op · 1 seller · 2 location + type · 3 details · 4 confirm
+  const [phase, setPhase] = useState('');        // '' | 'otp' — email-confirm overlay between step 3 and 4
+  const [confirmOk, setConfirmOk] = useState(false);   // "I confirm my details are correct" (step 4)
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [termsOk, setTermsOk] = useState(false);   // Terms of Service opt-in (step 1)
@@ -156,32 +163,38 @@ export default function SellFlowProvider({ children }) {
   const creatingDraftRef = useRef(false);
 
   const reset = () => {
-    setStep(0); setPhase(''); setErr(''); setErrs({}); setBusy(false); setCode(''); setVerified(false); setEmailTaken(false); setLoginCode(''); setCodeSent(false); setPhotos([]); setResult(null); setShowHi(false); setHighlighted(false); setPaying(false); setPlan(null);
+    setStep(0); setPhase(''); setErr(''); setErrs({}); setBusy(false); setCode(''); setVerified(false); setEmailTaken(false); setLoginCode(''); setCodeSent(false); setPhotos([]); setResult(null); setShowHi(false); setHighlighted(false); setPaying(false); setPlan(null); setConfirmOk(false);
     setF(BLANK); setDraftId(null); creatingDraftRef.current = false;
   };
   const close = () => { setOpen(false); reset(); };
 
-  // Straight to the last step with everything we already have — used when resuming
-  // a saved draft and when coming back from Google sign-in.
-  const openAtDetails = (fields, id = null) => {
+  // Photos stashed before the Google redirect come back as File objects.
+  const restorePhotos = (files) => setPhotos((files || []).filter(Boolean).map((file) => ({ file, url: URL.createObjectURL(file) })));
+
+  // Resume with everything we already have — a saved draft (details step; the type
+  // is asked with the address, so a draft without it opens there) or the way back
+  // from Google sign-in (toConfirm: the details were filled before signing in).
+  const openAtDetails = (fields, id = null, { photos: files = null, toConfirm = false } = {}) => {
     reset();
     openedLoggedInRef.current = true;
     setVerified(true);
     setF({ ...BLANK, ...fields, ptype: normalizeTypeKey(fields.ptype), contact_name: fields.contact_name || user?.full_name || user?.name || '', email: user?.email || '' });
+    if (files) restorePhotos(files);
     if (id) { setDraftId(id); creatingDraftRef.current = true; }
-    setStep(draftReady(fields) ? 3 : 0);
+    setStep(!draftReady(fields) ? 0 : !fields.ptype ? 2 : toConfirm ? 4 : 3);
     setOpen(true);
   };
 
   // Back from Google WITHOUT signing in: same wizard, on the confirm-email screen
   // (Google / Send code), with what they had entered. Terms were accepted in step 1.
-  const reopenAtConfirm = async (fields) => {
+  const reopenAtConfirm = async (fields, files = null) => {
     reset();
     openedLoggedInRef.current = false;
     setF({ ...BLANK, ...fields });
+    if (files) restorePhotos(files);
     setTermsOk(true);
     if (!fields.email || !fields.neighborhood) { setStep(fields.seller_type ? 1 : 0); setOpen(true); return; }
-    setStep(2);
+    setStep(3);
     setOpen(true);
     setEmailTaken(await emailExists(fields.email));
     setPhase('otp');
@@ -236,14 +249,14 @@ export default function SellFlowProvider({ children }) {
         if (authErr && !(pending?.savedAt && Date.now() - pending.savedAt < 60 * 60 * 1000)) return;
         await clearPendingSell();
         if (!user) {                              // sign-in didn't complete → back to the confirm screen
-          if (pending?.fields) { if (pending.fromApp) setFromApp(true); if (pending.appReturn) setAppReturn(pending.appReturn); reopenAtConfirm(pending.fields); track('sell_google_abandoned', {}); }
+          if (pending?.fields) { if (pending.fromApp) setFromApp(true); if (pending.appReturn) setAppReturn(pending.appReturn); reopenAtConfirm(pending.fields, pending.photos); track('sell_google_abandoned', {}); }
           return;
         }
         if (!pending && sell !== 'resume') return;   // signed in and nothing stashed: leave the page as is
         const x = pending?.fields || {};
         if (pending?.fromApp) setFromApp(true);
         if (pending?.appReturn) setAppReturn(pending.appReturn);
-        openAtDetails(x, pending?.draftId || null);
+        openAtDetails(x, pending?.draftId || null, { photos: pending?.photos, toConfirm: !!pending });
         track('sell_google_resumed', {});
       })();
     }
@@ -312,38 +325,46 @@ export default function SellFlowProvider({ children }) {
   const priceCurrency = f.currency || (f.mode === 'alquiler' ? COUNTRY.currencyCode : 'USD');
 
   // If a returning user logs in via the fallback auth modal while the wizard is
-  // open (e.g. their email was already registered), jump them straight to details.
+  // open (e.g. their email was already registered), jump them straight to confirm.
   // Not when the wizard was opened by someone already signed in — they still have
-  // to choose the operation, say whether they're the owner, and pick the address.
+  // to choose the operation, say whether they're the owner, and fill everything in.
   const advancedRef = useRef(false);
   useEffect(() => {
     if (openedLoggedInRef.current) return;
     const cameFromLoginOverlay = phase === 'otp' || emailTaken;
-    if (user && open && cameFromLoginOverlay && step < 3 && !advancedRef.current) { advancedRef.current = true; setPhase(''); setStep(3); }
+    if (user && open && cameFromLoginOverlay && step < 4 && !advancedRef.current) { advancedRef.current = true; setPhase(''); setStep(4); }
     if (!user) advancedRef.current = false;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, open, phase, emailTaken]);
 
-  // ---- step navigation (collection steps 0..2) ----
+  // ---- step navigation ----
   const collectValid = () => {
     if (step === 1) return !!f.seller_type && (!!user || (f.contact_name.trim() && emailOk(f.email))) && termsOk;
-    if (step === 2) return !!f.neighborhood;
+    if (step === 2) return !!f.neighborhood && !!f.ptype;
     return true;
   };
   const collectErr = () => (step === 1
     ? (!f.seller_type ? t.errSeller : !user && !f.contact_name.trim() ? t.errName : !user && !emailOk(f.email) ? t.errEmail : t.errTerms)
-    : t.errAddr);
-  // A signed-in visitor never sees the code step: their email is already verified.
+    : !f.neighborhood ? t.errAddr : t.errType);
+  // A signed-in visitor never sees the email-confirm step: their email is already verified.
   const next = async () => {
-    if (!collectValid()) { setErr(collectErr()); return; }
-    setErr('');
-    // after address → email the code + open verify overlay (skip if already verified this session)
-    if (step === 2) {
-      if (verified) { setStep(3); return; }
+    // after the details → confirm the email (Google / code), then the confirm screen
+    if (step === 3) {
+      const e = validateDetails();
+      if (e.ptype) { setErrs({ ptype: e.ptype }); setErr(''); setStep(2); return; }   // the type is asked with the address
+      if (Object.keys(e).length) { setErrs(e); setErr(''); return; }
+      setErrs({}); setErr('');
+      if (verified) { setStep(4); return; }
       setCodeSent(false); setCode(''); setLoginCode('');
       setBusy(true); const exists = await emailExists(); setBusy(false);
       setEmailTaken(exists); setPhase('otp'); return;
     }
+    if (!collectValid()) {
+      setErr(collectErr());
+      if (step === 2 && f.neighborhood && !f.ptype) setErrs((er) => ({ ...er, ptype: t.errType }));
+      return;
+    }
+    setErr('');
     setStep((s) => s + 1);
   };
   const back = () => { setErr(''); setEmailTaken(false); setCodeSent(false); if (phase === 'otp') { setPhase(''); return; } setStep((s) => Math.max(s - 1, 0)); };
@@ -385,7 +406,7 @@ export default function SellFlowProvider({ children }) {
       const j = await res.json().catch(() => ({}));
       if (!res.ok || !j.ok) { setErr(t.errCode); return; }
       track('sell_otp_verified', {});
-      setVerified(true); setPhase(''); setStep(3);   // account created + logged in → go to details (step 4)
+      setVerified(true); setPhase(''); setStep(4);   // account created + logged in → confirm screen
       refreshUser?.();                                // reflect the new session in the header/app immediately (was showing "not logged in")
     } catch { setErr(t.errCode); } finally { setBusy(false); }
   };
@@ -393,13 +414,14 @@ export default function SellFlowProvider({ children }) {
   // ---- returning user (email already registered): inline Google / code login ----
   // Instead of showing "email taken" and opening the full auth modal, we keep the
   // user in the wizard: we email them a sign-in code (their email is known from
-  // step 2) or they use Google. On success we jump straight to details (step 3).
+  // step 1) or they use Google. On success we jump straight to confirm (step 4).
   const googleSignIn = async () => {
     setErr('');
     try {
-      // Stash what the guest entered, then come back to THIS page with ?sell=resume:
-      // the wizard reopens at the details step, signed in — same as the code path.
-      await savePendingSell({ fields: { mode: f.mode, seller_type: f.seller_type, contact_name: f.contact_name, email: f.email, neighborhood: f.neighborhood, city: f.city, addressText: f.addressText }, fromApp, appReturn, savedAt: Date.now() });
+      // Stash what the guest entered (details + photo files), then come back to THIS
+      // page with ?sell=resume: the wizard reopens at confirm, signed in — same as the
+      // code path.
+      await savePendingSell({ fields: { mode: f.mode, seller_type: f.seller_type, contact_name: f.contact_name, email: f.email, neighborhood: f.neighborhood, city: f.city, addressText: f.addressText, ptype: f.ptype, price: f.price, currency: f.currency, area: f.area, description: f.description, contact_phone: f.contact_phone }, photos: photos.map((p) => p.file), fromApp, appReturn, savedAt: Date.now() });
       const here = /^\/[A-Za-z0-9/_-]*$/.test(window.location.pathname) ? window.location.pathname : '/';
       const r = await fetch('/api/auth/google', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ next: `${here}?sell=resume` }) });
       const j = await r.json().catch(() => ({}));
@@ -430,7 +452,7 @@ export default function SellFlowProvider({ children }) {
       const j = await res.json().catch(() => ({}));
       if (!res.ok || !j.ok) { setErr(t.errCode); return; }
       track('user_logged_in', { method: 'email_otp' });
-      setVerified(true); setEmailTaken(false); setPhase(''); setStep(3);   // logged in → straight to details
+      setVerified(true); setEmailTaken(false); setPhase(''); setStep(4);   // logged in → confirm screen
       refreshUser?.();                                                      // update header/user app-wide
     } catch { setErr(t.errCode); } finally { setBusy(false); }
   };
@@ -474,7 +496,8 @@ export default function SellFlowProvider({ children }) {
 
   const publish = async (openHighlightAfter = false) => {
     const e = validateDetails();
-    if (Object.keys(e).length) { setErrs(e); setErr(''); return; }
+    if (Object.keys(e).length) { setErrs(e); setErr(''); setStep(e.ptype ? 2 : 3); return; }
+    if (!confirmOk) { setErr(t.errConfirm); return; }
     setErrs({}); setBusy(true); setErr('');
     try {
       const fd = new FormData();
@@ -643,22 +666,22 @@ export default function SellFlowProvider({ children }) {
                         <span className="px-3 py-1.5 rounded-pill bg-card border border-ink/20 font-medium">{t.ciudad}: <b>{f.city}</b></span>
                       </div>
                     ) : null}
+                    <label className="block mt-4"><span className={labelCls}>{t.fType}</span>
+                      <select value={f.ptype} onChange={setField('ptype')} className={`${fieldCls('ptype')} cursor-pointer ${f.ptype ? '' : 'text-ink/45'}`} data-testid="sell-ptype">
+                        <option value="" disabled>{t.typePh}</option>
+                        {t.types.map(([v, l]) => <option key={v} value={v} className="text-ink">{l}</option>)}
+                      </select>
+                      <FErr k="ptype" />
+                    </label>
                   </div>
                 )}
 
-                {/* ---- STEP 3 · Details + publish ---- */}
+                {/* ---- STEP 3 · Details ---- */}
                 {step === 3 && (
                   <div>
                     <h2 className="text-[22px] font-bold tracking-head mb-1">{t.d4Title}</h2>
                     <p className="text-[13px] text-ink/50 mb-4">{t.d4Sub}</p>
                     <div className="grid grid-cols-1 gap-3">
-                      <label className="sm:col-span-2"><span className={labelCls}>{t.fType}</span>
-                        <select value={f.ptype} onChange={setField('ptype')} className={`${fieldCls('ptype')} cursor-pointer ${f.ptype ? '' : 'text-ink/45'}`} data-testid="sell-ptype">
-                          <option value="" disabled>{t.typePh}</option>
-                          {t.types.map(([v, l]) => <option key={v} value={v} className="text-ink">{l}</option>)}
-                        </select>
-                        <FErr k="ptype" />
-                      </label>
                       {/* price (long) + area (small) on one row — price is fluid so it
                           gets the width; area + currency stay compact. Fits down to ~360px. */}
                       <div className="flex gap-3">
@@ -698,6 +721,41 @@ export default function SellFlowProvider({ children }) {
                         ))}
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* ---- STEP 4 · Confirm + visibility + publish ---- */}
+                {step === 4 && (
+                  <div>
+                    <h2 className="text-[22px] font-bold tracking-head mb-1">{t.cTitle}</h2>
+                    <p className="text-[13px] text-ink/50 mb-4">{t.cSub}</p>
+                    <div className="rounded-[16px] border-[1.5px] border-ink/15 bg-card p-4" data-testid="sell-summary">
+                      {photos.length > 0 && (
+                        <div className="flex items-center gap-1.5 mb-3">
+                          {photos.slice(0, 5).map((p, i) => (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img key={i} src={p.url} alt="" className="w-12 h-12 rounded-[8px] object-cover border border-ink/10 shrink-0" />
+                          ))}
+                          <span className="ml-1 font-mono text-[11px] text-ink/50">{t.cPhotos(photos.length)}</span>
+                        </div>
+                      )}
+                      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-[13px]">
+                        {[
+                          [t.cOp, `${f.mode === 'venta' ? t.sell : t.rent} · ${(t.types.find(([v]) => v === f.ptype) || [])[1] || ''}`],
+                          [t.cAddr, [f.addressText || f.neighborhood, f.city].filter(Boolean).join(' · ')],
+                          [t.fPrice(f.mode), `${priceCurrency === 'USD' ? 'US$' : COUNTRY.currencySymbol} ${f.price}${f.area ? ` · ${f.area} m²` : ''}`],
+                          [t.cPhone, f.contact_phone],
+                          [t.cContact, [f.seller_type === 'agent' ? t.agent : t.owner, f.contact_name, f.email].filter(Boolean).join(' · ')],
+                          ...(f.description.trim() ? [[t.fDesc, f.description.trim().length > 110 ? `${f.description.trim().slice(0, 110)}…` : f.description.trim()]] : []),
+                        ].map(([k, v]) => (
+                          <Fragment key={k}><dt className="text-ink/50 whitespace-nowrap">{k}</dt><dd className="font-semibold text-ink break-words min-w-0">{v}</dd></Fragment>
+                        ))}
+                      </dl>
+                    </div>
+                    <label className="mt-4 flex items-start gap-2.5 text-[14px] font-semibold leading-snug cursor-pointer select-none">
+                      <input type="checkbox" checked={confirmOk} onChange={(e) => { setConfirmOk(e.target.checked); if (e.target.checked && err === t.errConfirm) setErr(''); }} className="mt-[2px] w-4 h-4 accent-ink shrink-0 cursor-pointer" data-testid="sell-confirm" />
+                      <span>{t.cCheck}</span>
+                    </label>
 
                     {/* Promotion plans — two prominent, mutually-exclusive boxes. */}
                     <div className="mt-4">
@@ -716,7 +774,7 @@ export default function SellFlowProvider({ children }) {
                 {step > 0 && (
                   <div className="flex items-center justify-between gap-2 mt-6">
                     <button onClick={back} className="text-[13px] font-medium text-ink/55 hover:text-ink shrink-0">{t.back}</button>
-                    {step < 3 ? (
+                    {step < 4 ? (
                       <button onClick={next} disabled={busy} className="px-7 py-3 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60 inline-flex items-center justify-center min-w-[108px]">{busy ? <Spinner /> : t.next}</button>
                     ) : (
                       <button onClick={() => publish(plan)} disabled={busy} className="px-7 py-3 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60">{busy ? t.publishing : (plan === 'home' ? t.publishHome : plan === 'verified' ? t.publishVerified : t.publishBtn)}</button>
