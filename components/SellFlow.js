@@ -345,7 +345,9 @@ export default function SellFlowProvider({ children }) {
   // listings → Drafts) and begin a new listing.
   const startOver = () => {
     const pr = readProgress();
-    writeProgress({ owner: me, dismissed: [...new Set([...(pr.dismissed || []), draftId].filter(Boolean))].slice(-20) });
+    // fresh: the next opening starts empty too — no draft is reopened automatically until
+    // they make progress again (their drafts stay in My listings → Drafts).
+    writeProgress({ owner: me, fresh: true, dismissed: [...new Set([...(pr.dismissed || []), draftId].filter(Boolean))].slice(-20) });
     clearProgressPhotos();
     freshStart();
     setOpen(true);
@@ -364,8 +366,9 @@ export default function SellFlowProvider({ children }) {
       return;
     }
     freshStart();
+    const wantsFresh = (() => { const pr = readProgress(); return pr.owner === me && !!pr.fresh; })();
     const resumedLocal = resumeProgress();
-    if (!resumedLocal && user) {
+    if (!resumedLocal && user && !wantsFresh) {
       const d = await latestDraft();
       if (d) { openAtDetails(d.data || {}, d.id); setResumed(true); track('sell_draft_resumed', { auto: true }); return; }
     }
@@ -742,7 +745,7 @@ export default function SellFlowProvider({ children }) {
       const j = await res.json().catch(() => ({}));
       if (!res.ok || !j.ok) throw new Error(j.error || 'failed');
       setDraftId(null);
-      writeProgress({ owner: me, dismissed: readProgress().dismissed || [] }); clearProgressPhotos();   // published: nothing in progress any more
+      writeProgress({ owner: me, fresh: true, dismissed: readProgress().dismissed || [] }); clearProgressPhotos();   // published: the next listing starts empty
       window.dispatchEvent(new Event('cl:listings-changed'));   // My listings refreshes its tabs
       track('listing_created', { property_id: j.id, slug: j.slug, ref: j.ref, operation: f.mode, property_type: f.ptype, city: f.city, neighborhood: f.neighborhood, price: f.price ? Number(f.price) : null, currency: priceCurrency, photos: photos.length });
       setResult({ id: j.id, ref: j.ref });
