@@ -1,8 +1,8 @@
 // Google Maps helpers shared by the property maps.
 //
 // The basemap is Google's normal map with a very light Casa Libre tint
-// (CL_MAP_TINT: warm land, softer water and parks, no business/place markers —
-// roads and street/area names stay Google's own). Markers are brand-coloured SVG pills. The old, much stronger cream
+// (CL_MAP_TINT: warm land, softer water and parks, no business/place markers, transit
+// icons or highway number signs — roads and street/area names stay Google's own). Markers are brand-coloured SVG pills. The old, much stronger cream
 // style CL_MAP_STYLE is kept below but not applied.
 import { loadGoogleMapsAPI } from './googleMapsLoader';
 import { COUNTRY } from '@/lib/country';
@@ -26,6 +26,9 @@ export const CL_MAP_TINT = [
   // listing pins — park areas stay green, streets and neighbourhood names stay.
   { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] },
   { featureType: 'transit', elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
+  // No highway number signs (the green "4", "7", "9" route shields, common in Bolivia /
+  // Venezuela) — road names stay.
+  { featureType: 'road', elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
 ];
 
 export const CL_MAP_STYLE = [
