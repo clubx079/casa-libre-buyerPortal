@@ -67,7 +67,8 @@ const DICT = {
     errSeller: 'Elegí propietario o agente', errName: 'Ingresá tu nombre', errEmail: 'Ingresá un correo válido', errAddr: 'Elegí una dirección',
     errSendOtp: 'No se pudo enviar el código. Intentá de nuevo.', emailTaken: 'Este correo ya tiene una cuenta.', loginInstead: 'Iniciar sesión para continuar',
     errCode: 'Código inválido o vencido', errType: 'Seleccioná el tipo de propiedad', errPrice: 'Ingresá un precio válido',
-    errPriceFloorSale: 'El precio de venta debe ser de al menos US$ 5.000', errPriceFloorRent: `El alquiler mensual debe ser de al menos ${COUNTRY.currencySymbol} 300.000`,
+    errPriceFloorSale: 'El precio de venta debe ser de al menos US$ 5.000', errPriceFloorRent: `El alquiler mensual debe ser de al menos ${COUNTRY.currencySymbol} ${COUNTRY.rentFloorLocal.toLocaleString('es-PY')}`,
+    currencyPh: 'Moneda', errCurrency: 'Elegí la moneda',
     errArea: 'Ingresá la superficie', errAreaRange: (max) => `La superficie debe estar entre 5 y ${max.toLocaleString('es-PY')} m²`, errPhone: 'Ingresá un teléfono válido', errPhotos: 'Agregá al menos una foto',
     errSubmit: 'No se pudo publicar. Intentá de nuevo.',
   },
@@ -106,7 +107,8 @@ const DICT = {
     errSeller: 'Choose owner or agent', errName: 'Enter your name', errEmail: 'Enter a valid email', errAddr: 'Choose an address',
     errSendOtp: 'Could not send the code. Please try again.', emailTaken: 'This email already has an account.', loginInstead: 'Log in to continue',
     errCode: 'Invalid or expired code', errType: 'Select the property type', errPrice: 'Enter a valid price',
-    errPriceFloorSale: 'Sale price must be at least US$ 5,000', errPriceFloorRent: `Monthly rent must be at least ${COUNTRY.currencySymbol} 300,000`,
+    errPriceFloorSale: 'Sale price must be at least US$ 5,000', errPriceFloorRent: `Monthly rent must be at least ${COUNTRY.currencySymbol} ${COUNTRY.rentFloorLocal.toLocaleString('en-US')}`,
+    currencyPh: 'Currency', errCurrency: 'Choose the currency',
     errArea: 'Enter the area', errAreaRange: (max) => `Area must be between 5 and ${max.toLocaleString('en-US')} m²`, errPhone: 'Enter a valid phone', errPhotos: 'Add at least one photo',
     errSubmit: 'Could not publish. Please try again.',
   },
@@ -116,7 +118,8 @@ const inputCls = 'w-full px-4 py-[13px] border-[1.5px] border-ink/30 rounded-inp
 const labelCls = 'block text-[13px] font-semibold mb-1.5';
 const pickCls = (on) => `flex-1 px-5 py-3.5 rounded-pill border-[1.5px] text-[15px] font-semibold transition-colors ${on ? 'bg-ink text-paper border-ink' : 'bg-card border-ink hover:bg-hatch2'}`;   // round pills — same shape as the Buy / Sell / Rent CTAs
 const emailOk = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || ''));
-const APPROX_RATE = 7300;
+// This country's currency per US$ (offline fallback; the server checks with the live rate).
+const APPROX_RATE = COUNTRY.fxFallback || 7300;
 const numOf = (v) => Number(String(v).replace(/[^\d.]/g, ''));
 
 // Inline loading spinner — used on the Next / Log in buttons instead of a text label.
@@ -126,6 +129,43 @@ const Spinner = () => (
     <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
   </svg>
 );
+
+// Property-type picker that always opens DOWNWARD, as a list inside the popup (a
+// native <select> opens upward when it sits low in the window).
+function TypePicker({ value, onChange, options, placeholder, invalid }) {
+  const [open, setOpen] = useState(false);
+  const boxRef = useRef(null);
+  const listRef = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    listRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    const onDown = (e) => { if (boxRef.current && !boxRef.current.contains(e.target)) setOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey); };
+  }, [open]);
+  const label = (options.find(([v]) => v === value) || [])[1];
+  return (
+    <div ref={boxRef}>
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-haspopup="listbox" aria-expanded={open} data-testid="sell-ptype"
+        className={`w-full flex items-center justify-between gap-2 px-4 py-[13px] border-[1.5px] rounded-input bg-card font-medium text-[15px] text-left outline-none ${invalid ? 'border-red-500' : open ? 'border-ink' : 'border-ink/30 focus:border-ink'}`}>
+        <span className={label ? 'text-ink' : 'text-ink/45'}>{label || placeholder}</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={`shrink-0 text-ink/60 transition-transform ${open ? 'rotate-180' : ''}`}><path d="m6 9 6 6 6-6" /></svg>
+      </button>
+      {open && (
+        <ul ref={listRef} role="listbox" className="mt-1.5 max-h-[240px] overflow-y-auto cl-scroll rounded-input border-[1.5px] border-ink bg-card py-1">
+          {options.map(([v, l]) => (
+            <li key={v} role="option" aria-selected={v === value}>
+              <button type="button" onClick={() => { onChange(v); setOpen(false); }} data-testid={`sell-ptype-${v}`}
+                className={`w-full text-left px-4 py-2.5 text-[14.5px] ${v === value ? 'bg-ink text-paper font-semibold' : 'hover:bg-hatch2'}`}>{l}</button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 export default function SellFlowProvider({ children }) {
   const [lang] = useLang();
@@ -322,7 +362,8 @@ export default function SellFlowProvider({ children }) {
 
   const set = (k, v) => setF((s) => ({ ...s, [k]: v }));
   const setField = (k) => (e) => { const v = e.target.value; setF((s) => ({ ...s, [k]: v })); setErrs((er) => (er[k] ? { ...er, [k]: undefined } : er)); };
-  const priceCurrency = f.currency || (f.mode === 'alquiler' ? COUNTRY.currencyCode : 'USD');
+  // No default: the seller chooses US$ or this country's currency (Venezuela's site is US$ only).
+  const priceCurrency = f.currency === 'USD' || f.currency === COUNTRY.currencyCode ? f.currency : '';
 
   // If a returning user logs in via the fallback auth modal while the wizard is
   // open (e.g. their email was already registered), jump them straight to confirm.
@@ -468,9 +509,11 @@ export default function SellFlowProvider({ children }) {
     const e = {};
     if (!f.ptype) e.ptype = t.errType;
     const p = numOf(f.price);
+    if (!priceCurrency) e.currency = t.errCurrency;   // no default: the seller picks US$ or the local currency
     if (!Number.isFinite(p) || p <= 0) e.price = t.errPrice;
+    else if (!priceCurrency) { /* floors need the currency */ }
     else if (f.mode === 'venta') { const usd = priceCurrency === 'USD' ? p : p / APPROX_RATE; if (usd < 5000) e.price = t.errPriceFloorSale; }
-    else { const pyg = priceCurrency === 'PYG' ? p : p * APPROX_RATE; if (pyg < COUNTRY.rentFloorLocal) e.price = t.errPriceFloorRent; }
+    else { const local = priceCurrency === COUNTRY.currencyCode ? p : p * APPROX_RATE; if (local < COUNTRY.rentFloorLocal) e.price = t.errPriceFloorRent; }
     const a = numOf(f.area); const range = areaRange(f.ptype);   // land: any size
     if (!Number.isFinite(a) || a <= 0) e.area = t.errArea; else if (range && (a < range[0] || a > range[1])) e.area = t.errAreaRange(range[1]);
     if (String(f.contact_phone).replace(/\D/g, '').length < 6) e.contact_phone = t.errPhone;
@@ -666,13 +709,11 @@ export default function SellFlowProvider({ children }) {
                         <span className="px-3 py-1.5 rounded-pill bg-card border border-ink/20 font-medium">{t.ciudad}: <b>{f.city}</b></span>
                       </div>
                     ) : null}
-                    <label className="block mt-4"><span className={labelCls}>{t.fType}</span>
-                      <select value={f.ptype} onChange={setField('ptype')} className={`${fieldCls('ptype')} cursor-pointer ${f.ptype ? '' : 'text-ink/45'}`} data-testid="sell-ptype">
-                        <option value="" disabled>{t.typePh}</option>
-                        {t.types.map(([v, l]) => <option key={v} value={v} className="text-ink">{l}</option>)}
-                      </select>
+                    <div className="mt-4"><span className={labelCls}>{t.fType}</span>
+                      <TypePicker value={f.ptype} options={t.types} placeholder={t.typePh} invalid={!!errs.ptype}
+                        onChange={(v) => { set('ptype', v); setErrs((er) => (er.ptype ? { ...er, ptype: undefined } : er)); if (err === t.errType) setErr(''); }} />
                       <FErr k="ptype" />
-                    </label>
+                    </div>
                   </div>
                 )}
 
@@ -688,9 +729,15 @@ export default function SellFlowProvider({ children }) {
                         <label className="flex-1 min-w-0"><span className={labelCls}>{t.fPrice(f.mode)}</span>
                           <div className="flex gap-2">
                             <input value={f.price} onChange={setField('price')} inputMode="numeric" placeholder={t.fPricePh(f.mode)} className={`${fieldCls('price')} flex-1 min-w-0`} />
-                            <select value={priceCurrency} onChange={setField('currency')} className="px-2.5 py-[13px] border-[1.5px] border-ink/30 rounded-input bg-card font-medium text-[15px] outline-none focus:border-ink cursor-pointer w-[68px] sm:w-[80px] shrink-0"><option value="USD">US$</option><option value={COUNTRY.currencyCode}>{COUNTRY.currencySymbol}</option></select>
+                            <select value={priceCurrency} onChange={setField('currency')} data-testid="sell-currency"
+                              className={`px-2.5 py-[13px] border-[1.5px] rounded-input bg-card font-medium text-[15px] outline-none cursor-pointer w-[96px] sm:w-[104px] shrink-0 ${errs.currency ? 'border-red-500 focus:border-red-600' : 'border-ink/30 focus:border-ink'} ${priceCurrency ? '' : 'text-ink/45'}`}>
+                              <option value="" disabled>{t.currencyPh}</option>
+                              <option value="USD" className="text-ink">US$</option>
+                              {COUNTRY.currencyCode !== 'USD' && <option value={COUNTRY.currencyCode} className="text-ink">{COUNTRY.currencySymbol}</option>}
+                            </select>
                           </div>
                           <FErr k="price" />
+                          <FErr k="currency" />
                         </label>
                         <label className="w-[86px] sm:w-[116px] shrink-0"><span className={labelCls}>{t.fArea}</span>
                           <input value={f.area} onChange={setField('area')} inputMode="numeric" placeholder="120" className={fieldCls('area')} /><FErr k="area" />

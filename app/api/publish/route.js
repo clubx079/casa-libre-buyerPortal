@@ -69,7 +69,11 @@ export async function POST(req) {
   const city = get('city') || 'Asunción';
   const priceRaw = get('price').replace(/[^\d.]/g, '');
   const price = Number(priceRaw);
-  const currency = get('currency').toUpperCase() === COUNTRY.currencyCode || mode === 'alquiler' ? COUNTRY.currencyCode : 'USD';
+  // The currency the seller chose (US$ or this country's). It used to be forced to the
+  // local currency for every rental, so a rent entered in US$ was stored as local.
+  // Nothing chosen (an older client) → sale in US$, rent in the local currency.
+  const wanted = get('currency').toUpperCase();
+  const currency = wanted === 'USD' || wanted === COUNTRY.currencyCode ? wanted : (mode === 'alquiler' ? COUNTRY.currencyCode : 'USD');
   const area = Number(get('area').replace(/[^\d.]/g, '')) || null;
   const description = get('description');
   // Default the public contact to the logged-in user's name/email when not given.
