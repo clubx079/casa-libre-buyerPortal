@@ -145,40 +145,55 @@ const guestKey = () => {
   return key;
 };
 
-// Property-type picker that always opens DOWNWARD, as a list inside the popup (a
-// native <select> opens upward when it sits low in the window).
+// Property-type picker: a small list that drops DOWN under the field and floats over
+// the form, like the address suggestions (a native <select> opened upward when it sat
+// low in the window). Positioned to the field on the screen, so the popup's scroll
+// box never cuts it off; it follows the field when the page or popup scrolls.
 function TypePicker({ value, onChange, options, placeholder, invalid }) {
   const [open, setOpen] = useState(false);
-  const boxRef = useRef(null);
+  const [pos, setPos] = useState(null);
+  const btnRef = useRef(null);
   const listRef = useRef(null);
+  const place = useCallback(() => {
+    const r = btnRef.current?.getBoundingClientRect();
+    if (r) setPos({ top: r.bottom + 4, left: r.left, width: r.width, maxHeight: Math.max(150, Math.min(280, window.innerHeight - r.bottom - 12)) });
+  }, []);
   useEffect(() => {
     if (!open) return undefined;
-    listRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    const onDown = (e) => { if (boxRef.current && !boxRef.current.contains(e.target)) setOpen(false); };
+    place();
+    const onDown = (e) => { if (!btnRef.current?.contains(e.target) && !listRef.current?.contains(e.target)) setOpen(false); };
     const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    window.addEventListener('scroll', place, true);
+    window.addEventListener('resize', place);
     document.addEventListener('mousedown', onDown);
     document.addEventListener('keydown', onKey);
-    return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey); };
-  }, [open]);
+    return () => {
+      window.removeEventListener('scroll', place, true);
+      window.removeEventListener('resize', place);
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open, place]);
   const label = (options.find(([v]) => v === value) || [])[1];
   return (
-    <div ref={boxRef}>
-      <button type="button" onClick={() => setOpen((o) => !o)} aria-haspopup="listbox" aria-expanded={open} data-testid="sell-ptype"
+    <>
+      <button ref={btnRef} type="button" onClick={() => setOpen((o) => !o)} aria-haspopup="listbox" aria-expanded={open} data-testid="sell-ptype"
         className={`w-full flex items-center justify-between gap-2 px-4 py-[13px] border-[1.5px] rounded-input bg-card font-medium text-[15px] text-left outline-none ${invalid ? 'border-red-500' : open ? 'border-ink' : 'border-ink/30 focus:border-ink'}`}>
         <span className={label ? 'text-ink' : 'text-ink/45'}>{label || placeholder}</span>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={`shrink-0 text-ink/60 transition-transform ${open ? 'rotate-180' : ''}`}><path d="m6 9 6 6 6-6" /></svg>
       </button>
-      {open && (
-        <ul ref={listRef} role="listbox" className="mt-1.5 max-h-[240px] overflow-y-auto cl-scroll rounded-input border-[1.5px] border-ink bg-card py-1">
+      {open && pos && (
+        <ul ref={listRef} role="listbox" style={{ position: 'fixed', top: pos.top, left: pos.left, width: pos.width, maxHeight: pos.maxHeight, zIndex: 1100 }}
+          className="overflow-y-auto cl-scroll bg-white border border-ink/15 rounded-[10px] shadow-[0_6px_20px_rgba(17,17,17,.14)] py-1">
           {options.map(([v, l]) => (
             <li key={v} role="option" aria-selected={v === value}>
               <button type="button" onClick={() => { onChange(v); setOpen(false); }} data-testid={`sell-ptype-${v}`}
-                className={`w-full text-left px-4 py-2.5 text-[14.5px] ${v === value ? 'bg-ink text-paper font-semibold' : 'hover:bg-hatch2'}`}>{l}</button>
+                className={`w-full text-left px-4 py-2 text-[14px] ${v === value ? 'font-semibold bg-ink/[.06]' : 'hover:bg-ink/[.04]'}`}>{l}</button>
             </li>
           ))}
         </ul>
       )}
-    </div>
+    </>
   );
 }
 
@@ -257,21 +272,38 @@ export default function SellFlowProvider({ children }) {
   };
 
   // Not signed in, and this browser has a saved draft → reopen it where they were.
-  const resumeGuest = async () => {
+  // Shown at once from this browser's copy of the draft (no step-1 flash while the
+  // server answers); the server is asked in the background. If the draft is gone
+  // there (published, or moved to an account), what they typed stays and the next
+  // autosave starts a fresh draft.
+  const resumeGuest = () => {
     const g = readGuest();
-    if (!g.key || !g.id || !g.email) return;
-    try {
-      const r = await fetch(`/api/drafts/guest?${new URLSearchParams({ email: g.email, key: g.key, id: g.id })}`);
-      if (!r.ok) { if (r.status === 404) writeGuest({ key: g.key }); return; }
-      const { draft } = await r.json();
-      if (!draft?.data) return;
-      setF({ ...BLANK, ...draft.data, ptype: normalizeTypeKey(draft.data.ptype), email: g.email });
-      setDraftId(draft.id); setTermsOk(true); setResumed(true);
-      setStep(!draft.data.ptype ? 2 : 3);
-      track('sell_guest_draft_resumed', {});
-    } catch { /* offline: just start fresh */ }
+    const local = !!(g.data && draftReady(g.data));
+    if (!g.key || !g.email || (!g.id && !local)) return;
+    const apply = (data, id) => {
+      setF({ ...BLANK, ...data, ptype: normalizeTypeKey(data.ptype), email: g.email });
+      setDraftId(id || null); setTermsOk(true); setResumed(true);
+      setStep(!data.ptype ? 2 : 3);
+    };
+    if (local) { apply(g.data, g.id); track('sell_guest_draft_resumed', {}); }
+    if (!g.id) return;
+    fetch(`/api/drafts/guest?${new URLSearchParams({ email: g.email, key: g.key, id: g.id })}`)
+      .then(async (r) => {
+        if (r.status === 404) { setDraftId((cur) => (cur === g.id ? null : cur)); writeGuest({ key: g.key, email: g.email, data: g.data }); return; }
+        if (!r.ok || local) return;
+        const { draft } = await r.json();
+        if (draft?.data) { apply(draft.data, draft.id); track('sell_guest_draft_resumed', {}); }
+      })
+      .catch(() => { /* offline: the local copy is enough */ });
   };
   const startOver = () => { writeGuest({ key: readGuest().key }); reset(); setOpen(true); };
+  // Signed in on this browser → their guest draft is now in My listings → Drafts;
+  // forget the local copy so it isn't offered again after they log out.
+  useEffect(() => {
+    if (!user) return;
+    const g = readGuest();
+    if (g.id || g.data) writeGuest({ key: g.key });
+  }, [user]);
 
   // Logged in or not, everyone gets the wizard. When we already know the person we
   // prefill their name/email and skip the email-verification step.
@@ -410,7 +442,7 @@ export default function SellFlowProvider({ children }) {
         const j = await r.json().catch(() => ({}));
         if (!j.draft?.id) return;
         if (j.draft.id !== guestDraftIdRef.current) setDraftId(j.draft.id);
-        writeGuest({ key, email: f.email.trim().toLowerCase(), id: j.draft.id });
+        writeGuest({ key, email: f.email.trim().toLowerCase(), id: j.draft.id, data: JSON.parse(draftJson) });   // a local copy reopens instantly
       } catch { /* offline: try again on the next change */ }
     }, 800);
     return () => clearTimeout(id);
