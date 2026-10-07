@@ -14,7 +14,7 @@ const DICT = {
     emailTitle: 'Ingresá o creá tu cuenta', emailSub: 'Te enviamos un código a tu email. Sin contraseñas.',
     email: 'Email', emailPh: 'tu@email.com', continue: 'Enviar código', googleBtn: 'Continuar con Google', orText: 'o',
     loginTitle: 'Ingresá el código', signupTitle: 'Creá tu cuenta',
-    codeSub: (e) => `Enviamos un código de 6 dígitos a ${e}.`, spamHint: '¿No llegó? Revisá la carpeta de spam.',
+    codeSub: (e) => `Enviamos un código de 6 dígitos a ${e}.`,
     name: 'Nombre completo', namePh: 'Ana Giménez', phone: 'WhatsApp / teléfono (opcional)', phonePh: '0981 123 456',
     code: 'Código', login: 'Ingresar', create: 'Crear cuenta', resend: 'Reenviar código', resent: 'Código reenviado ✓',
     changeEmail: '← Cambiar email', close: 'Cerrar',
@@ -30,7 +30,7 @@ const DICT = {
     emailTitle: 'Log in or sign up', emailSub: "We'll email you a code. No passwords.",
     email: 'Email', emailPh: 'you@email.com', continue: 'Send code', googleBtn: 'Continue with Google', orText: 'or',
     loginTitle: 'Enter the code', signupTitle: 'Create your account',
-    codeSub: (e) => `We sent a 6-digit code to ${e}.`, spamHint: "Didn't get it? Check your spam folder.",
+    codeSub: (e) => `We sent a 6-digit code to ${e}.`,
     name: 'Full name', namePh: 'Ana Giménez', phone: 'WhatsApp / phone (optional)', phonePh: '0981 123 456',
     code: 'Code', login: 'Log in', create: 'Create account', resend: 'Resend code', resent: 'Code resent ✓',
     changeEmail: '← Change email', close: 'Close',
@@ -183,7 +183,6 @@ export default function AuthModal({ onAuthed, onClose }) {
             )}
             <label className="block text-[13px] font-semibold mb-1.5">{t.code}</label>
             <input ref={mode === 'signup' ? undefined : firstField} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" placeholder="000000" className={`${inputCls} tracking-[8px] text-center font-mono text-[20px]`} data-testid="auth-code" />
-            <p className="mt-1.5 text-[12px] text-ink/45">{t.spamHint}</p>
             {mode === 'signup' && (
               <label className="mt-4 flex items-start gap-2.5 text-[13px] leading-snug text-ink/75 cursor-pointer select-none">
                 <input type="checkbox" checked={termsOk} onChange={(e) => { setTermsOk(e.target.checked); if (e.target.checked && err === t.errTerms) setErr(''); }} className="mt-[2px] w-4 h-4 accent-ink shrink-0 cursor-pointer" data-testid="signup-terms" />
