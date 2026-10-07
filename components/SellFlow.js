@@ -582,8 +582,9 @@ export default function SellFlowProvider({ children }) {
       setEmailTaken(exists); setPhase('otp'); return;
     }
     if (!collectValid()) {
+      // Only the type missing → the message goes under the type field, not twice.
+      if (step === 2 && f.neighborhood && !f.ptype) { setErr(''); setErrs((er) => ({ ...er, ptype: t.errType })); return; }
       setErr(collectErr());
-      if (step === 2 && f.neighborhood && !f.ptype) setErrs((er) => ({ ...er, ptype: t.errType }));
       return;
     }
     setErr('');
