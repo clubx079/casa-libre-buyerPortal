@@ -5,7 +5,7 @@ import { typeOptions } from '@/lib/propertyTypeOptions';
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { typeLabel, typeKey } from '@/lib/propertyType';
-import { T, fmtUsd, fmtPyg, shortUsd, titleCaseZone, bedAbbr, bathWord, parkWord, isUnverified, contactSellerFor, contactShort } from '@/lib/ui';
+import { T, fmtUsd, fmtPyg, shortUsd, titleCaseZone, bedAbbr, bathWord, parkWord, isUnverified, contactSellerFor, NO_PRICE_PIN } from '@/lib/ui';
 import { fmtRate } from '@/lib/money';
 import { useLang } from '@/lib/useLang';
 import AuthButton from '@/components/AuthButton';
@@ -285,7 +285,7 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
   const noPrice = (l) => !!l.nv || isUnverified(l, 'price');
   const priceMain = (l) => (noPrice(l) ? contactSellerFor('price', lang) : (fmtUsd(l.usd, lang) || '—') + (l.mode === 'alquiler' ? t.perMonth : ''));
   const priceSub = (l) => (!noPrice(l) && fmtPyg(l.pyg, lang) ? fmtPyg(l.pyg, lang) + (l.mode === 'alquiler' ? t.perMonth : '') : '');
-  const shortPill = (l) => (noPrice(l) ? contactShort(lang) : shortUsd(l.usd));
+  const shortPill = (l) => (noPrice(l) ? NO_PRICE_PIN : shortUsd(l.usd));
 
   // ---- geolocation: "my location" recenter + "near me" radius filter ----
   const showGeoMsg = (text) => {

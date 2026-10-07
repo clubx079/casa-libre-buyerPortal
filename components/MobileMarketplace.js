@@ -12,7 +12,7 @@ import { useLang } from '@/lib/useLang';
 import { useSellFlow } from '@/components/SellFlow';
 import { useFavorites } from '@/components/FavoritesProvider';
 import { typeLabel, typeKey } from '@/lib/propertyType';
-import { T, fmtUsd, fmtPyg, shortUsd, titleCaseZone, bedAbbr, bathWord, parkWord, loc, isUnverified, contactSellerFor, contactShort } from '@/lib/ui';
+import { T, fmtUsd, fmtPyg, shortUsd, titleCaseZone, bedAbbr, bathWord, parkWord, loc, isUnverified, contactSellerFor, NO_PRICE_PIN } from '@/lib/ui';
 import { loadGoogleMapsAPI, mapOptions, pinIcon, clusterIcon, inParaguay, youAreHereIcon } from '@/utils/gmap';
 import { distanceKm, getUserLocation, NEAR_RADIUS_KM } from '@/utils/geo';
 import { COUNTRY } from '@/lib/country';
@@ -291,7 +291,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
     displayPins.forEach((l) => {
       if (!inParaguay(l.lat, l.lng)) return; // never plot mis-geocoded listings outside PY
       const promoted = !!(l.hl || l.verified);
-      const mk = new google.maps.Marker({ position: { lat: l.lat, lng: l.lng }, icon: pinIcon(google, (l.nv || isUnverified(l, 'price')) ? contactShort(lang) : shortUsd(l.usd), false, { promoted }), zIndex: promoted ? 10000 : undefined });
+      const mk = new google.maps.Marker({ position: { lat: l.lat, lng: l.lng }, icon: pinIcon(google, (l.nv || isUnverified(l, 'price')) ? NO_PRICE_PIN : shortUsd(l.usd), false, { promoted }), zIndex: promoted ? 10000 : undefined });
       // Tap a pin → show a preview card (image + price + details); tapping the card
       // opens the listing in a NEW TAB. (Was: navigate directly in the same tab.)
       mk.addListener('click', () => {
