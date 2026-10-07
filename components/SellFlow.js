@@ -213,7 +213,12 @@ export default function SellFlowProvider({ children }) {
   const [step, setStep] = useState(0);          // 0 op · 1 seller · 2 location + type · 3 details · 4 confirm
   const [phase, setPhase] = useState('');        // '' | 'otp' — email-confirm overlay between step 3 and 4
   const [confirmOk, setConfirmOk] = useState(false);   // "I confirm my details are correct" (step 4)
-  const [resumed, setResumed] = useState(false);       // reopened a draft saved while not signed in
+  const [resumed, setResumed] = useState(false);       // reopened where they left off → the "Picking up…" bar
+  // The bar is only for the screen they come back to: once they move to another step
+  // they're continuing, so it goes away (until the next time the wizard is reopened).
+  const resumedAtRef = useRef(null);
+  useEffect(() => { resumedAtRef.current = resumed ? step : null; }, [resumed]);   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (resumed && resumedAtRef.current !== null && step !== resumedAtRef.current) setResumed(false); }, [step, resumed]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [termsOk, setTermsOk] = useState(false);   // Terms of Service opt-in (step 1)
