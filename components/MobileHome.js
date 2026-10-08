@@ -12,7 +12,7 @@ import { typeLabel } from '@/lib/propertyType';
 import { fmtUsd, isUnverified, contactSellerFor } from '@/lib/ui';
 import { COUNTRY } from '@/lib/country';
 import VerifiedTag from '@/components/VerifiedTag';
-import AppBadges from '@/components/AppBadges';
+import { StickyAppBadges } from '@/components/AppBadges';
 import AuthButton from '@/components/AuthButton';
 
 const H = {
@@ -124,7 +124,7 @@ export default function MobileHome({ featured = [], count = 0, tickerData = [] }
 
       {/* APP BADGES — also below the city searches */}
       <div className="px-4 mt-4 flex justify-center">
-        <AppBadges variant="row" />
+        <StickyAppBadges variant="row" />
       </div>
 
       {/* MASCOT + CAPTION */}

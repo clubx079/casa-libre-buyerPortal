@@ -6,6 +6,10 @@
 //    desktop = badge · caption · badge on one line, slightly larger.
 //  - variant="row" (home, below the search bar): just the two badges side by side.
 // Google Play opens the app's store page; App Store opens /descargar (no iPhone app yet).
+//  - StickyAppBadges: the badges in place, plus a slim bar pinned to the bottom of the
+//    screen once that spot scrolls away — so the app stays one tap away while people
+//    scroll (home + phone listings; the desktop listings page never scrolls).
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
 import { PLAY_STORE_URL } from '@/lib/appLinks';
@@ -78,5 +82,39 @@ export default function AppBadges({ className = '', variant = 'default' }) {
         <Badge store="play" big />
       </div>
     </div>
+  );
+}
+
+// The badges where they are, and — once that spot has scrolled above the top of the
+// screen — the same badges in a bar pinned to the bottom. (CSS sticky can't do this
+// on the home page: the badges sit inside the hero, so they'd only stick within it.)
+// While the bar shows, the page gets the same space at its end, so the footer's last
+// line is never hidden under it.
+// z-[300]: above the page, below the sort/filter sheets (500) and every modal (999+).
+export function StickyAppBadges({ variant = 'default', className = '' }) {
+  const ref = useRef(null);
+  const barRef = useRef(null);
+  const [pinned, setPinned] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return undefined;
+    const io = new IntersectionObserver(([e]) => setPinned(!e.isIntersecting && e.boundingClientRect.top < 0));
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  useEffect(() => {
+    if (!pinned || !barRef.current) return undefined;
+    document.body.style.paddingBottom = `${barRef.current.offsetHeight}px`;
+    return () => { document.body.style.paddingBottom = ''; };
+  }, [pinned]);
+  return (
+    <>
+      <div ref={ref} className={className}><AppBadges variant={variant} /></div>
+      {pinned && (
+        <div ref={barRef} data-testid="sticky-app-badges" className="fixed bottom-0 inset-x-0 z-[300] bg-paper/95 backdrop-blur-sm border-t border-ink/12 shadow-[0_-2px_10px_rgba(17,17,17,0.08)] px-4 pt-2 pb-[max(8px,env(safe-area-inset-bottom))]">
+          <AppBadges />
+        </div>
+      )}
+    </>
   );
 }

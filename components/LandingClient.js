@@ -5,7 +5,7 @@ import { useLang } from '@/lib/useLang';
 import AuthButton from '@/components/AuthButton';
 import { useSellFlow } from '@/components/SellFlow';
 import VerifiedTag from '@/components/VerifiedTag';
-import AppBadges from '@/components/AppBadges';
+import { StickyAppBadges } from '@/components/AppBadges';
 import { useRouter } from 'next/navigation';
 import { typeLabel } from '@/lib/propertyType';
 import { fmtUsd, fmtPyg, bathWord, isUnverified, contactSellerFor } from '@/lib/ui';
@@ -136,7 +136,7 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
           </div>
           {/* APP BADGES — below the search bar, side by side */}
           <div className="mt-5 flex justify-center md:justify-start">
-            <AppBadges variant="row" />
+            <StickyAppBadges variant="row" />
           </div>
         </div>
         <div className="flex flex-row md:flex-col items-center justify-center gap-2.5 md:gap-3.5 mt-1.5 md:mt-0">

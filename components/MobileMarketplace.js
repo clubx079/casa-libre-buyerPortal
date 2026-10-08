@@ -19,7 +19,7 @@ import { COUNTRY } from '@/lib/country';
 import { CATEGORIES } from '@/lib/zoning/categories';
 import ZoningMapToggle, { useZoningOverlay } from '@/components/ZoningMapToggle';
 import VerifiedTag from '@/components/VerifiedTag';
-import AppBadges from '@/components/AppBadges';
+import { StickyAppBadges } from '@/components/AppBadges';
 import AuthButton from '@/components/AuthButton';
 import { track } from '@/lib/analytics';
 import { priceBand } from '@/lib/dataLayer';
@@ -466,7 +466,9 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
   const sortShort = (SORTS.find((s) => s.k === sort) || SORTS[0])[lang === 'en' ? 'enS' : 'esS'];
 
   return (
-    <div className="min-h-screen bg-paper flex flex-col">
+    // overflow-x-clip: nothing may make the page wider than the phone (a wider page
+    // zooms out and pushes bottom-pinned bars off screen). Clip, not hidden — no scroll box.
+    <div className="min-h-screen bg-paper flex flex-col overflow-x-clip">
       {/* Non-blocking geolocation toast (near-me can be toggled from the list view). */}
       {geoMsg && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[600] max-w-[90%] px-4 py-2.5 rounded-pill bg-ink text-paper text-[13px] font-medium shadow-hard text-center">{geoMsg}</div>
@@ -485,10 +487,8 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
         </div>
       </div>
 
-      {/* APP BADGES — centered, just above the search bar */}
-      <div className="px-4 pb-2">
-        <AppBadges />
-      </div>
+      {/* APP BADGES — centered, just above the search bar; pinned to the top once scrolled past */}
+      <StickyAppBadges className="px-4 pb-2" />
 
       {/* SEARCH */}
       <div className="px-4 pb-3">
@@ -523,16 +523,19 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
         </div>
       </div>
 
-      {/* RESULTS ROW */}
+      {/* RESULTS ROW — must fit a 360px phone: it used to run ~25px past the screen,
+          which made the whole page wider than the phone (and pushed the pinned app
+          bar below the bottom edge). Narrower controls under 400px; under 380px the
+          sort button is just its icon; the count only shortens as a last resort. */}
       <div className="flex items-center gap-2.5 px-4 pb-3">
-        <span className="font-mono text-[12.5px] text-ink/60 shrink-0">{nf(displayCount)} {X.propsWord}</span>
-        <div className="flex-1 flex items-center justify-end gap-2.5">
+        <span className="font-mono text-[12.5px] text-ink/60 min-w-0 truncate">{nf(displayCount)} {X.propsWord}</span>
+        <div className="ml-auto shrink-0 flex items-center gap-2">
           <div className="flex bg-ink rounded-pill p-[3px]">
             {[['list', X.list], ['map', X.map]].map(([k, lb]) => (
-              <button key={k} onClick={() => setView(k)} className={`px-4 py-[7px] rounded-pill text-[13px] font-bold ${view === k ? 'bg-paper text-ink' : 'text-paper'}`}>{lb}</button>
+              <button key={k} onClick={() => setView(k)} className={`px-3 min-[400px]:px-4 py-[7px] rounded-pill text-[13px] font-bold ${view === k ? 'bg-paper text-ink' : 'text-paper'}`}>{lb}</button>
             ))}
           </div>
-          <button onClick={() => setSortOpen(true)} className="flex items-center gap-1.5 border-[1.5px] border-ink/30 rounded-pill px-3.5 h-9 text-[13px] font-medium text-ink">{sortShort}<span className="text-[13px]">⇅</span></button>
+          <button onClick={() => setSortOpen(true)} aria-label={sortShort} className="flex items-center gap-1.5 border-[1.5px] border-ink/30 rounded-pill px-2.5 min-[400px]:px-3.5 h-9 text-[13px] font-medium text-ink"><span className="max-[379px]:hidden">{sortShort}</span><span className="text-[13px]" aria-hidden="true">⇅</span></button>
         </div>
       </div>
 
