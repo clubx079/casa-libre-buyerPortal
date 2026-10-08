@@ -90,6 +90,10 @@ export default function AppBadges({ className = '', variant = 'default' }) {
 // on the home page: the badges sit inside the hero, so they'd only stick within it.)
 // While the bar shows, the page gets the same space at its end, so the footer's last
 // line is never hidden under it.
+// iPhone Safari (iOS 26) draws the page under its own see-through toolbar, below the
+// bottom of the viewport — a strip of listings showed under the bar. The bar's paper
+// background continues 200px past its bottom edge to fill that strip; elsewhere that
+// part is simply off screen.
 // z-[300]: above the page, below the sort/filter sheets (500) and every modal (999+).
 export function StickyAppBadges({ variant = 'default', className = '' }) {
   const ref = useRef(null);
@@ -111,8 +115,9 @@ export function StickyAppBadges({ variant = 'default', className = '' }) {
     <>
       <div ref={ref} className={className}><AppBadges variant={variant} /></div>
       {pinned && (
-        <div ref={barRef} data-testid="sticky-app-badges" className="fixed bottom-0 inset-x-0 z-[300] bg-paper/95 backdrop-blur-sm border-t border-ink/12 shadow-[0_-2px_10px_rgba(17,17,17,0.08)] px-4 pt-2 pb-[max(8px,env(safe-area-inset-bottom))]">
+        <div ref={barRef} data-testid="sticky-app-badges" className="fixed bottom-0 inset-x-0 z-[300] bg-paper border-t border-ink/12 shadow-[0_-2px_10px_rgba(17,17,17,0.08)] px-4 pt-2 pb-[max(8px,env(safe-area-inset-bottom))]">
           <AppBadges />
+          <span aria-hidden="true" className="absolute inset-x-0 top-full h-[200px] bg-paper" />
         </div>
       )}
     </>
