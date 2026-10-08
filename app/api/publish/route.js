@@ -76,10 +76,10 @@ export async function POST(req) {
   // Nothing chosen (an older client) → sale in US$, rent in the local currency.
   const wanted = get('currency').toUpperCase();
   let currency = wanted === 'USD' || wanted === COUNTRY.currencyCode ? wanted : (mode === 'alquiler' ? COUNTRY.currencyCode : 'USD');
-  // A form-only currency (Venezuela: bolívars) is converted to US$ at the live rate;
-  // the amount the seller typed is kept in raw_data.
+  // Venezuela (storeLocalAsUsd): a price in bolívares is converted to US$ at the live
+  // rate; the amount the seller typed is kept in raw_data.
   let entered = null;
-  if (COUNTRY.extraCurrency && wanted === COUNTRY.extraCurrency.code && Number.isFinite(price) && price > 0) {
+  if (COUNTRY.storeLocalAsUsd && wanted === COUNTRY.currencyCode && Number.isFinite(price) && price > 0) {
     const perUsd = await getUsdTo(wanted);
     if (!perUsd) return NextResponse.json({ error: 'fx_unavailable' }, { status: 503 });
     entered = { price, currency: wanted, per_usd: perUsd };

@@ -541,10 +541,10 @@ export default function SellFlowProvider({ children }) {
 
   const set = (k, v) => setF((s) => ({ ...s, [k]: v }));
   const setField = (k) => (e) => { const v = e.target.value; setF((s) => ({ ...s, [k]: v })); setErrs((er) => (er[k] ? { ...er, [k]: undefined } : er)); };
-  // No default: the seller chooses US$ or this country's currency (Venezuela's site is US$ only).
-  // Venezuela's form also offers bolívars (COUNTRY.extraCurrency), converted to US$ on publish.
-  const priceCurrency = f.currency === 'USD' || f.currency === COUNTRY.currencyCode || f.currency === COUNTRY.extraCurrency?.code ? f.currency : '';
-  const curSymbol = (c) => (c === 'USD' ? 'US$' : c === COUNTRY.extraCurrency?.code ? COUNTRY.extraCurrency.symbol : COUNTRY.currencySymbol);
+  // No default: the seller chooses US$ or this country's currency.
+  // Venezuela's bolívares are converted to US$ on publish (COUNTRY.storeLocalAsUsd).
+  const priceCurrency = f.currency === 'USD' || f.currency === COUNTRY.currencyCode ? f.currency : '';
+  const curSymbol = (c) => (c === 'USD' ? 'US$' : COUNTRY.currencySymbol);
 
   // If a returning user logs in via the fallback auth modal while the wizard is
   // open (e.g. their email was already registered), jump them straight to confirm.
@@ -700,7 +700,7 @@ export default function SellFlowProvider({ children }) {
     const p = numOf(f.price);
     if (!priceCurrency) e.currency = t.errCurrency;   // no default: the seller picks US$ or the local currency
     if (!Number.isFinite(p) || p <= 0) e.price = t.errPrice;
-    else if (!priceCurrency || priceCurrency === COUNTRY.extraCurrency?.code) { /* floors need the currency; bolívars are checked by the server after conversion */ }
+    else if (!priceCurrency) { /* floors need the currency */ }
     else if (f.mode === 'venta') { const usd = priceCurrency === 'USD' ? p : p / APPROX_RATE; if (usd < 5000) e.price = t.errPriceFloorSale; }
     else { const local = priceCurrency === COUNTRY.currencyCode ? p : p * APPROX_RATE; if (local < COUNTRY.rentFloorLocal) e.price = t.errPriceFloorRent; }
     const a = numOf(f.area); const range = areaRange(f.ptype);   // land: any size
@@ -935,12 +935,11 @@ export default function SellFlowProvider({ children }) {
                               <option value="" disabled>{t.currencyPh}</option>
                               <option value="USD" className="text-ink">US$</option>
                               {COUNTRY.currencyCode !== 'USD' && <option value={COUNTRY.currencyCode} className="text-ink">{COUNTRY.currencySymbol}</option>}
-                              {COUNTRY.extraCurrency && <option value={COUNTRY.extraCurrency.code} className="text-ink">{COUNTRY.extraCurrency.symbol}</option>}
                             </select>
                           </div>
                           <FErr k="price" />
                           <FErr k="currency" />
-                          {COUNTRY.extraCurrency && priceCurrency === COUNTRY.extraCurrency.code && <span className="block mt-1 text-[12px] text-ink/55">{t.extraNote}</span>}
+                          {COUNTRY.storeLocalAsUsd && priceCurrency === COUNTRY.currencyCode && <span className="block mt-1 text-[12px] text-ink/55">{t.extraNote}</span>}
                         </label>
                         <label className="w-[86px] sm:w-[116px] shrink-0"><span className={labelCls}>{t.fArea}</span>
                           <input value={f.area} onChange={setField('area')} inputMode="numeric" placeholder="120" className={fieldCls('area')} /><FErr k="area" />
