@@ -6,6 +6,7 @@ import { useLang } from '@/lib/useLang';
 import ListingCard from '@/components/account/ListingCard';
 import ConfirmModal from '@/components/ConfirmModal';
 import HighlightModal from '@/components/HighlightModal';
+import FixPhotosModal from '@/components/account/FixPhotosModal';
 import { CardGridSkeleton } from '@/components/account/Skeletons';
 import { useSellFlow } from '@/components/SellFlow';
 import { draftMissing } from '@/lib/drafts';
@@ -19,14 +20,22 @@ const daysLeft = (iso) => { try { return Math.max(1, Math.ceil((new Date(iso).ge
 
 const D = {
   es: {
-    tabActive: 'Publicadas', tabDrafts: 'Borradores', draftChip: 'Borrador', cont: 'Continuar', del: 'Eliminar',
+    tabActive: 'Publicadas', tabDrafts: 'Borradores', tabRejected: 'Rechazadas', draftChip: 'Borrador', cont: 'Continuar', del: 'Eliminar',
+    emptyRejected: 'No tenés publicaciones rechazadas.',
+    scanningNote: 'Estamos revisando las fotos. Se publica en un momento.',
+    rejectedNote: 'No la publicamos: algunas fotos pueden tener contenido para adultos (+18), dañino, ofensivo o sin relación con la propiedad. Cambialas y enviala de nuevo.',
+    fix: 'Cambiar fotos',
     emptyDrafts: 'No tenés borradores. Si empezás a publicar y no terminás, lo guardamos acá.',
     saved: (s) => `Guardado ${s}`, missing: 'Falta', miss: { price: 'precio', area: 'superficie', phone: 'teléfono', photos: 'fotos' },
     confirmT: 'Eliminar borrador', confirm: '¿Querés eliminar este borrador?',
     types: { casa: 'Casa', departamento: 'Departamento', duplex: 'Dúplex', terreno: 'Terreno' }, sale: 'Venta', rent: 'Alquiler', property: 'Propiedad',
   },
   en: {
-    tabActive: 'Published', tabDrafts: 'Drafts', draftChip: 'Draft', cont: 'Continue', del: 'Delete',
+    tabActive: 'Published', tabDrafts: 'Drafts', tabRejected: 'Rejected', draftChip: 'Draft', cont: 'Continue', del: 'Delete',
+    emptyRejected: 'No rejected listings.',
+    scanningNote: "We're checking the photos. It goes live in a moment.",
+    rejectedNote: "We didn't publish it: some photos may show 18+, harmful, abusive or unrelated content. Replace them and submit again.",
+    fix: 'Fix photos',
     emptyDrafts: "No drafts. If you start a listing and don't finish, we keep it here.",
     saved: (s) => `Saved ${s}`, missing: 'Missing', miss: { price: 'price', area: 'area', phone: 'phone', photos: 'photos' },
     confirmT: 'Delete draft', confirm: 'Delete this draft?',
@@ -81,7 +90,8 @@ export default function MyListingsPage() {
   const t = T[lang];
   const x = D[lang] || D.es;
   const { openSell } = useSellFlow();
-  const [tab, setTab] = useState('active');           // 'active' | 'drafts'
+  const [tab, setTab] = useState('active');           // 'active' | 'rejected' | 'drafts'
+  const [fix, setFix] = useState(null);               // { id, label } — the "Fix photos" window
   const [drafts, setDrafts] = useState(null);
   const [confirmDraft, setConfirmDraft] = useState(null);
   const [listings, setListings] = useState(null);
@@ -97,11 +107,25 @@ export default function MyListingsPage() {
   };
   useEffect(() => {
     load();
-    try { if (new URLSearchParams(window.location.search).get('tab') === 'borradores') setTab('drafts'); } catch {}
+    try { const tb = new URLSearchParams(window.location.search).get('tab'); if (tb === 'borradores') setTab('drafts'); else if (tb === 'rechazadas') setTab('rejected'); } catch {}
     // The sell wizard publishes / starts drafts in place — refresh both tabs when it does.
     window.addEventListener('cl:listings-changed', load);
     return () => window.removeEventListener('cl:listings-changed', load);
   }, []);
+
+  // While a listing's photos are being checked (lib/listingScan.js — usually seconds),
+  // look again every 4 s, for up to ~3 minutes, so it moves to live / Rejected by itself.
+  const polls = useRef(0);
+  useEffect(() => {
+    if (!listings || !listings.some((l) => l.scan === 'scanning') || polls.current >= 45) return undefined;
+    const id = setTimeout(() => {
+      polls.current += 1;
+      fetch('/api/account/listings').then((r) => r.json()).then((j) => setListings(j.listings || [])).catch(() => {});
+    }, 4000);
+    return () => clearTimeout(id);
+  }, [listings]);
+  const published = (listings || []).filter((l) => l.scan !== 'rejected');
+  const rejected = (listings || []).filter((l) => l.scan === 'rejected');
 
   // Deep link from the mobile app's "Continuar": /cuenta/publicaciones?tab=borradores&draft=<id>
   // → open that draft in the sell wizard as soon as the drafts have loaded (once).
@@ -173,16 +197,16 @@ export default function MyListingsPage() {
       <div className="flex items-start justify-between gap-4 mb-7">
         <div>
           <h1 className="text-[clamp(26px,4vw,36px)] font-bold tracking-display leading-tight">{t.title}</h1>
-          <p className="text-[14px] text-ink/55 mt-1">{t.sub(listings?.length ?? 0)}</p>
+          <p className="text-[14px] text-ink/55 mt-1">{t.sub(published.length)}</p>
         </div>
         {listings && listings.length > 0 && (
           <Link href="/publicar" className="shrink-0 px-5 py-3 rounded-pill bg-ink text-paper font-semibold text-[14px] shadow-hard-soft">{t.publish}</Link>
         )}
       </div>
 
-      {/* Tabs: published listings / unfinished drafts */}
+      {/* Tabs: published listings (and ones being checked) / rejected / unfinished drafts */}
       <div role="tablist" className="inline-flex items-center border-[1.5px] border-ink rounded-pill p-[3px] bg-card mb-6">
-        {[['active', x.tabActive, listings?.length], ['drafts', x.tabDrafts, drafts?.length]].map(([k, label, n]) => (
+        {[['active', x.tabActive, listings && published.length], ['rejected', x.tabRejected, listings && rejected.length], ['drafts', x.tabDrafts, drafts?.length]].map(([k, label, n]) => (
           <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={`px-4 py-2 rounded-pill text-[13.5px] font-semibold inline-flex items-center gap-2 ${tab === k ? 'bg-ink text-paper' : 'text-ink/60'}`}>
             {label}
             {n != null && <span className={`min-w-[20px] h-5 px-1.5 rounded-pill text-[11px] font-bold inline-flex items-center justify-center ${tab === k ? 'bg-paper text-ink' : 'bg-ink/10 text-ink/70'}`}>{n}</span>}
@@ -203,16 +227,49 @@ export default function MyListingsPage() {
       )}
 
       {tab === 'active' && listings === null && <CardGridSkeleton n={3} />}
-      {tab === 'active' && listings !== null && listings.length === 0 && (
+      {tab === 'rejected' && (
+        listings === null ? <CardGridSkeleton n={2} /> : rejected.length === 0 ? (
+          <div className="bg-card border border-ink/15 rounded-card p-10 text-center font-mono text-[12px] text-ink/45">{x.emptyRejected}</div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {rejected.map((l) => (
+              <ListingCard key={l.id} l={l} action={
+                <div className="flex flex-col gap-2.5" data-testid="rejected-card">
+                  <p className="text-[12.5px] leading-snug text-red-700">{x.rejectedNote}</p>
+                  {l.rejectedPhotos?.length > 0 && (
+                    <div className="flex gap-1.5 flex-wrap">
+                      {l.rejectedPhotos.slice(0, 6).map((ph) => (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img key={ph.url || ph.position} src={ph.url} alt="" className="w-11 h-11 rounded-[8px] object-cover ring-2 ring-red-500 opacity-70" />
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <button onClick={() => setFix({ id: l.id, label: [l.type, l.neighborhood, l.city].filter(Boolean).join(' · ') })} className="flex-[2] py-2 rounded-pill bg-ink text-paper text-[13px] font-bold hover:bg-ink/90">{x.fix}</button>
+                    <button onClick={() => setConfirmId(l.id)} className="flex-1 py-2 rounded-pill border-[1.5px] border-red-300 text-red-700 text-[13px] font-semibold">{t.del}</button>
+                  </div>
+                </div>
+              } />
+            ))}
+          </div>
+        )
+      )}
+
+      {tab === 'active' && listings !== null && published.length === 0 && (
         <div className="bg-card border border-ink/15 rounded-card p-10 text-center">
           <div className="font-mono text-[12px] text-ink/45 mb-4">{t.empty}</div>
           <Link href="/publicar" className="inline-block px-6 py-3 rounded-pill bg-ink text-paper font-semibold text-[14px]">{t.publish}</Link>
         </div>
       )}
-      {tab === 'active' && listings && listings.length > 0 && (
+      {tab === 'active' && listings && published.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {listings.map((l) => (
-            <ListingCard key={l.id} l={l} action={
+          {published.map((l) => (
+            <ListingCard key={l.id} l={l} action={l.scan === 'scanning' ? (
+              <div className="flex flex-col gap-2.5">
+                <p className="text-[12.5px] leading-snug text-ink/60">{x.scanningNote}</p>
+                <button onClick={() => setConfirmId(l.id)} className="py-2 rounded-pill border-[1.5px] border-red-300 text-red-700 text-[13px] font-semibold">{t.del}</button>
+              </div>
+            ) : (
               <div className="flex flex-col gap-2">
                 {payingId === l.id ? (
                   <div className="text-center py-2 rounded-pill bg-card text-ink text-[12.5px] font-bold border-[1.5px] border-ink">{t.paying}</div>
@@ -237,7 +294,7 @@ export default function MyListingsPage() {
                   <button onClick={() => setConfirmId(l.id)} className="flex-1 py-2 rounded-pill border-[1.5px] border-red-300 text-red-700 text-[13px] font-semibold">{t.del}</button>
                 </div>
               </div>
-            } />
+            )} />
           ))}
         </div>
       )}
@@ -264,6 +321,15 @@ export default function MyListingsPage() {
         onConfirm={delDraft}
         onCancel={() => setConfirmDraft(null)}
       />
+
+      {fix && (
+        <FixPhotosModal
+          listing={fix}
+          lang={lang}
+          onClose={() => setFix(null)}
+          onDone={() => { setFix(null); setTab('active'); polls.current = 0; load(); }}
+        />
+      )}
 
       {promo && (
         <HighlightModal

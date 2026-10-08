@@ -4,6 +4,7 @@
 // client confirms + we vault for next time. Requires login + ownership; the property must
 // be active/complete and not already currently promoted.
 import { NextResponse } from 'next/server';
+import { SCAN_STATUS } from '@/lib/scanVerdict';
 import { revalidateTag } from 'next/cache';
 import { getSession } from '@/lib/auth';
 import { select } from '@/lib/db';
@@ -37,11 +38,14 @@ export async function POST(req) {
   if (!propertyId) return NextResponse.json({ error: 'missing_property' }, { status: 400 });
 
   // Ownership + publishability + not-already-promoted.
-  const rows = await select('properties', `select=id,created_by,admin_status,is_complete,promotion_plan,promotion_expires_at&id=eq.${encodeURIComponent(propertyId)}&limit=1`).catch(() => []);
+  const rows = await select('properties', `select=id,created_by,admin_status,status,is_complete,promotion_plan,promotion_expires_at&id=eq.${encodeURIComponent(propertyId)}&limit=1`).catch(() => []);
   const prop = Array.isArray(rows) && rows[0];
   if (!prop) return NextResponse.json({ error: 'not_found' }, { status: 404 });
   if (String(prop.created_by) !== String(session.uid)) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
-  if (prop.admin_status !== 'active' || prop.is_complete === false) return NextResponse.json({ error: 'not_publishable' }, { status: 400 });
+  // Live, or a new listing whose photos are being checked (or were just rejected — the
+  // wizard pays right after publishing; the plan applies once the listing is live).
+  const payable = prop.admin_status === 'active' || prop.status === SCAN_STATUS.scanning || prop.status === SCAN_STATUS.rejected;
+  if (!payable || prop.is_complete === false) return NextResponse.json({ error: 'not_publishable' }, { status: 400 });
   // A listing that's already promoted can still be RENEWED or UPGRADED (verified → home)
   // — we don't block it; new days stack onto whatever is left (extendFrom below).
   const extendFrom = prop.promotion_plan && prop.promotion_expires_at ? prop.promotion_expires_at : null;

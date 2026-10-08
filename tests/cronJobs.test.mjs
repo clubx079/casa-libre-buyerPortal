@@ -7,8 +7,8 @@ const at = (h) => new Date(Date.UTC(2026, 9, 7, h, 5));
 
 test('hourly jobs run every hour; 6-hourly ones at 00, 06, 12, 18 UTC; daily ones at 00 UTC', () => {
   const names = (h) => dueJobs(at(h)).map((j) => j.name).sort();
-  assert.deepEqual(names(13), ['automations', 'expire-highlights', 'zoning']);
-  assert.deepEqual(names(6), ['automations', 'expire-highlights', 'recompute-complete', 'renewal-reminders', 'zoning']);
+  assert.deepEqual(names(13), ['automations', 'expire-highlights', 'image-scan', 'zoning']);
+  assert.deepEqual(names(6), ['automations', 'expire-highlights', 'image-scan', 'recompute-complete', 'renewal-reminders', 'zoning']);
   assert.deepEqual(names(0), [...names(6), 'draft-photos'].sort());
   assert.deepEqual(names(5), names(13));
 });

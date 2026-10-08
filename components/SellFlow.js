@@ -55,6 +55,7 @@ const DICT = {
     publishBtn: 'Publicar gratis', publishing: 'Publicando…',
     backToApp: 'Volver a la app',
     doneTitle: '¡Tu propiedad está publicada!', doneSub: 'Ya aparece en el marketplace de Casa Libre.', doneView: 'Ver mi propiedad', doneBrowse: 'Ver propiedades',
+    scanTitle: '¡Listo! Estamos revisando tus fotos', scanSub: 'Se publica en un momento. Seguila en Mis publicaciones.', scanView: 'Mis publicaciones',
     // Promotion plans (optional paid visibility at publish) — two boxes, pick one.
     planTitle: 'Sumá visibilidad',
     v5Title: 'Insignia Verificada en el marketplace', v5Price: 'US$5 · 30 días',
@@ -96,6 +97,7 @@ const DICT = {
     publishBtn: 'Publish for free', publishing: 'Publishing…',
     backToApp: 'Back to the app',
     doneTitle: 'Your listing is live!', doneSub: 'It already shows in the Casa Libre marketplace.', doneView: 'View my listing', doneBrowse: 'Browse listings',
+    scanTitle: "Done! We're checking your photos", scanSub: 'It goes live in a moment. Follow it in My listings.', scanView: 'My listings',
     // Promotion plans (optional paid visibility at publish) — two boxes, pick one.
     planTitle: 'Add visibility',
     v5Title: 'Verified badge on marketplace', v5Price: 'US$5 · 30 days',
@@ -749,7 +751,7 @@ export default function SellFlowProvider({ children }) {
       writeProgress({ owner: me, fresh: true, dismissed: readProgress().dismissed || [] }); clearProgressPhotos();   // published: the next listing starts empty
       window.dispatchEvent(new Event('cl:listings-changed'));   // My listings refreshes its tabs
       track('listing_created', { property_id: j.id, slug: j.slug, ref: j.ref, operation: f.mode, property_type: f.ptype, city: f.city, neighborhood: f.neighborhood, price: f.price ? Number(f.price) : null, currency: priceCurrency, photos: photos.length });
-      setResult({ id: j.id, ref: j.ref });
+      setResult({ id: j.id, ref: j.ref, scanning: !!j.scanning });   // scanning: the AI photo check publishes it (lib/listingScan.js)
       if (openHighlightAfter) await payWithPlan(openHighlightAfter, j.id);
     } catch { setErr(t.errSubmit); } finally { setBusy(false); }
   };
@@ -785,8 +787,8 @@ export default function SellFlowProvider({ children }) {
               <div className="text-center py-4">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/mascot.png" alt="" className="w-[120px] object-contain mx-auto mb-2" />
-                <h2 className="text-[24px] font-bold tracking-head mb-1.5">{t.doneTitle}</h2>
-                <p className="text-[14px] text-ink/55 mb-1">{t.doneSub}</p>
+                <h2 className="text-[24px] font-bold tracking-head mb-1.5">{result.scanning ? t.scanTitle : t.doneTitle}</h2>
+                <p className="text-[14px] text-ink/55 mb-1">{result.scanning ? t.scanSub : t.doneSub}</p>
                 <div className="font-mono text-[11px] text-ink/45 mb-5">REF: {result.ref}</div>
 
                 {/* Promotion upsell — publish is already done (free); this is optional. */}
@@ -808,7 +810,7 @@ export default function SellFlowProvider({ children }) {
 
                 <div className="flex gap-2.5 justify-center flex-wrap">
                   <button onClick={() => { close(); router.push('/cuenta'); }} className="px-6 py-3 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft">{t.doneDash}</button>
-                  <button onClick={() => { const id = result.id; close(); router.push(`/propiedad/${id}`); }} className="px-6 py-3 border-2 border-ink rounded-pill font-semibold text-[14px]">{t.doneView}</button>
+                  <button onClick={() => { const id = result.id; const scanning = result.scanning; close(); router.push(scanning ? '/cuenta/publicaciones' : `/propiedad/${id}`); }} className="px-6 py-3 border-2 border-ink rounded-pill font-semibold text-[14px]">{result.scanning ? t.scanView : t.doneView}</button>
                 </div>
 
                 {showHi && result?.id && (

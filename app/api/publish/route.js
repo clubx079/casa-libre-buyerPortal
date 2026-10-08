@@ -1,10 +1,11 @@
-// POST /api/publish — publishes a user-submitted listing straight into the
-// marketplace. Inserts a `properties` row (admin_status=active, status=published,
-// origin=user) so getListings() picks it up, uploads any photos to B2 and links
-// them via property_images. Multipart/form-data.
+// POST /api/publish — saves a user-submitted listing (origin=user), uploads its photos
+// to B2 and links them via property_images, then answers at once. The listing starts
+// as status 'scanning' (admin_status inactive — not on the site): the AI photo check
+// runs in the background (lib/listingScan.js) and publishes it, or rejects it, without
+// the seller waiting. A listing without photos is published straight away.
+// Multipart/form-data.
 import { normalizeTypeKey, dbType, isLandType, areaRange } from '@/lib/propertyTypeOptions';
 import { NextResponse } from 'next/server';
-import { revalidateTag } from 'next/cache';
 import { insert, update } from '@/lib/db';
 import * as dbApi from '@/lib/db';
 import { deleteDraft, getDraft, draftPhotoKeys, orderedPhotoSources } from '@/lib/drafts';
@@ -15,10 +16,10 @@ import { put } from '@/lib/b2';
 import { stampLogo } from '@/lib/stampLogo';
 import { getUsdToPyg, getUsdTo } from '@/lib/fx';
 import { getSession } from '@/lib/auth';
-import { sendListingPublishedEmail } from '@/lib/email';
+import { startListingScan, publishListing, listingRef } from '@/lib/listingScan';
+import { SCAN_STATUS } from '@/lib/scanVerdict';
 import { COUNTRY } from '@/lib/country';
 import { genShortCode } from '@/lib/shortcode';
-import { submitToIndexNow } from '@/lib/indexnow';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -156,8 +157,8 @@ export async function POST(req) {
     contact_phone: contactPhone,
     latitude: null,   // patched after geocodePromise resolves
     longitude: null,
-    status: 'published',
-    admin_status: 'active',
+    status: SCAN_STATUS.scanning,   // the photo check publishes it (lib/listingScan.js)
+    admin_status: 'inactive',
     property_status: 'available',
     is_complete: true, // passed the form's completeness validation → searchable immediately
     origin: 'user',
@@ -167,7 +168,7 @@ export async function POST(req) {
     is_delisted: false,
     created_by: session.uid,   // who published this deal
     posted_by: session.uid,
-    raw_data: { published_via: 'buyer-portal', user_id: session.uid, user_email: session.email, ...(entered ? { entered_price: entered } : {}) },
+    raw_data: { published_via: 'buyer-portal', user_id: session.uid, user_email: session.email, ...(entered ? { entered_price: entered } : {}), moderation: { state: 'scanning', started_at: new Date().toISOString() } },
   };
 
   // Ingest-pipeline parity: give the user listing a canonical zone + dedupe
@@ -206,7 +207,7 @@ export async function POST(req) {
       try { buf = await stampLogo(raw); ext = 'webp'; ct = 'image/webp'; } catch {}
       const stored = await put(`user-uploads/${slug}/${i}.${ext}`, buf, ct);
       return {
-        __i: i, __url: stored.url,
+        __i: i, __url: stored.url, __raw: raw,   // __raw: as uploaded — the photo check reads it (no stamp)
         property_id: propertyId,
         source_url: stored.url, // no external source for user uploads — reuse the stored URL (NOT NULL column)
         storage_key: stored.key,
@@ -218,7 +219,8 @@ export async function POST(req) {
       };
     } catch { return null; }
   }));
-  const images = processed.filter(Boolean).map(({ __i, __url, ...rec }) => rec);
+  const images = processed.filter(Boolean).map(({ __i, __url, __raw, ...rec }) => rec);
+  const originals = new Map(processed.filter(Boolean).map((r) => [r.storage_key, r.__raw]));
   const firstUrl = (processed.find((r) => r && r.__i === 0) || {}).__url || null;
 
   if (images.length) { try { await insert('property_images', images, { returning: 'minimal' }); } catch {} }
@@ -231,22 +233,7 @@ export async function POST(req) {
   if (firstUrl) patch.feature_image_url = firstUrl;
   if (propertyId && Object.keys(patch).length) { try { await update('properties', `id=eq.${propertyId}`, patch, { returning: 'minimal' }); } catch {} }
 
-  const ref = `CL-${new Date().getFullYear()}-${String(propertyId || '').replace(/\D/g, '').slice(-5).padStart(5, '0') || '00000'}`;
-
-  // Confirmation email to the owner — awaited (serverless freezes the function
-  // after the response, killing fire-and-forget sends). Wrapped so it never
-  // blocks publish.
-  if (session.email) {
-    const site = (process.env.APP_PUBLIC_URL || COUNTRY.defaultUrl).replace(/\/$/, '');
-    await sendListingPublishedEmail(session.email, {
-      name: session.name || contactName,
-      title: `${property_type} · ${neighborhood}`,
-      ref,
-      url: propertyId ? `${site}/propiedad/${propertyId}` : null,
-    }).catch(() => {});
-  }
-
-  try { revalidateTag('listings'); } catch {}   // new listing shows on home/marketplace immediately
+  const ref = listingRef(propertyId, created?.created_at);
 
   // Published from a draft ("Borradores") → the draft is done; remove it (owner-scoped).
   const draftId = get('draft_id');
@@ -259,18 +246,12 @@ export async function POST(req) {
     } catch {}
   }
 
-  // Instant-index via IndexNow: ping Bing (+ participating engines) with the new
-  // listing's canonical URL and the pages that list it, so it's crawled in minutes
-  // instead of days. Best-effort — never blocks or fails the publish.
-  if (propertyId) {
-    const site = (process.env.APP_PUBLIC_URL || COUNTRY.defaultUrl).replace(/\/$/, '');
-    await submitToIndexNow([
-      `${site}/propiedad/${propertyId}`,
-      `${site}/`,
-      `${site}/${mode === 'alquiler' ? 'alquilar' : 'comprar'}`,
-      `${site}/propiedades`,
-    ]).catch(() => {});
-  }
+  // The AI photo check runs AFTER this response (the wizard goes on to its next steps
+  // meanwhile; My listings shows "Checking photos…"). When the photos pass, the listing
+  // goes live and the "your listing is live" email + search-engine ping are sent
+  // (lib/listingScan.js). Nothing to check → live now.
+  if (propertyId && images.length) startListingScan(propertyId, originals);
+  else if (propertyId) await publishListing({ ...created, ...patch }, { state: 'passed', checked_at: new Date().toISOString(), photos: 0 }).catch(() => {});
 
-  return NextResponse.json({ ok: true, slug, id: propertyId, ref, images: images.length });
+  return NextResponse.json({ ok: true, slug, id: propertyId, ref, images: images.length, scanning: images.length > 0 });
 }
