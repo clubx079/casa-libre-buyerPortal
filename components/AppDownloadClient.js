@@ -1,8 +1,8 @@
 'use client';
-// "App coming soon" landing — where the App Store / Google Play badges point to
-// (from the home page and every marketplace page). Branded ink/paper, ES default
-// + EN toggle. Informational: the app isn't published yet, so it explains what's
-// coming and points people to the web version meanwhile.
+// "iPhone app coming soon" landing — where the App Store badges point to (from the
+// home page and every marketplace page). Branded ink/paper, ES default + EN toggle.
+// The Android app is live (Google Play badges link straight to the store), so this
+// page only talks about the iPhone app and points people to the web meanwhile.
 import { useState } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
@@ -13,9 +13,9 @@ const T = {
   es: {
     tabs: [['Comprar', '/propiedades?op=venta'], ['Alquilar', '/propiedades?op=alquiler'], ['Vender', '/publicar']],
     cta: 'Publicar gratis',
-    kicker: 'App móvil',
-    h1: <>La app está <em>en camino.</em></>,
-    lede: `Estamos terminando la app de Casa Libre para iOS y Android. Muy pronto vas a poder buscar, guardar favoritos y hablar directo por WhatsApp desde tu teléfono. Mientras tanto, todo funciona igual desde la web.`,
+    kicker: 'App para iPhone',
+    h1: <>La app para iPhone está <em>en camino.</em></>,
+    lede: `Estamos terminando la app de Casa Libre para iPhone. Muy pronto vas a poder buscar, guardar favoritos y hablar directo por WhatsApp desde tu iPhone. Mientras tanto, todo funciona igual desde la web.`,
     browse: 'Explorar propiedades en la web',
     home: 'Volver al inicio',
     featTitle: 'Lo que vas a tener en la app',
@@ -29,9 +29,9 @@ const T = {
   en: {
     tabs: [['Buy', '/propiedades?op=venta'], ['Rent', '/propiedades?op=alquiler'], ['Sell', '/publicar']],
     cta: 'List for free',
-    kicker: 'Mobile app',
-    h1: <>The app is <em>on its way.</em></>,
-    lede: `We're finishing the Casa Libre app for iOS and Android. Very soon you'll be able to search, save favorites and chat directly on WhatsApp from your phone. In the meantime, everything works the same on the web.`,
+    kicker: 'iPhone app',
+    h1: <>The iPhone app is <em>on its way.</em></>,
+    lede: `We're finishing the Casa Libre app for iPhone. Very soon you'll be able to search, save favorites and chat directly on WhatsApp from your iPhone. In the meantime, everything works the same on the web.`,
     browse: 'Browse properties on the web',
     home: 'Back to home',
     featTitle: "What you'll get in the app",

@@ -8,9 +8,9 @@ import { COUNTRY } from '@/lib/country';
 export const dynamic = 'force-dynamic';
 
 export const metadata = {
-  title: 'La app de Casa Libre — muy pronto',
+  title: 'La app de Casa Libre para iPhone — muy pronto',
   description:
-    'La app de Casa Libre para iOS y Android está en camino: buscá propiedades, guardá favoritos y hablá directo por WhatsApp desde tu teléfono. Mientras tanto, usá la web — gratis.',
+    'La app de Casa Libre para iPhone está en camino: buscá propiedades, guardá favoritos y hablá directo por WhatsApp desde tu iPhone. Mientras tanto, usá la web — gratis.',
   alternates: { canonical: '/descargar' },
 };
 
