@@ -48,7 +48,8 @@ const emailOk = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || '').trim())
 const inputCls = 'w-full px-4 py-[13px] border-[1.5px] border-ink/30 rounded-input bg-card font-medium text-[15px] outline-none focus:border-ink';
 const btnCls = 'w-full py-3.5 bg-ink text-paper rounded-pill font-bold text-[15px] shadow-hard-soft disabled:opacity-60';
 
-export default function AuthModal({ onAuthed, onClose }) {
+// next = where "Continue with Google" comes back to (lib/returnPath.js); default /cuenta.
+export default function AuthModal({ onAuthed, onClose, next = null }) {
   const [lang] = useLang();
   const t = DICT[lang];
   const [step, setStep] = useState('email'); // email | code
@@ -76,7 +77,7 @@ export default function AuthModal({ onAuthed, onClose }) {
     setErr('');
     track('oauth_login_clicked', { provider: 'google' });
     try {
-      const r = await fetch('/api/auth/google', { method: 'POST' });
+      const r = next ? await post('/api/auth/google', { next }) : await fetch('/api/auth/google', { method: 'POST' });
       const j = await r.json();
       if (j.url) window.location.href = j.url;
       else setErr(t.errGeneric);

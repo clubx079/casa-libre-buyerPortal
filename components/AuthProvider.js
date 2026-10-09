@@ -2,6 +2,8 @@
 // App-wide auth context: loads the current session, hosts the login/signup modal,
 // and exposes openAuth()/logout(). openAuth(cb) runs cb after a successful login —
 // used to resume an action (e.g. continue to publish) once the user is in.
+// openAuth(cb, { next }) also tells "Continue with Google" where to come back to
+// (a full-page redirect, so cb can't run) — e.g. the draft link of a reminder email.
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import AuthModal from './AuthModal';
 import { identifyUser, resetUser } from '@/lib/analytics';
@@ -13,6 +15,7 @@ export default function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  const [next, setNext] = useState(null);   // Google sign-in return path
   const onDone = useRef(null);
 
   useEffect(() => {
@@ -43,8 +46,12 @@ export default function AuthProvider({ children }) {
   // logged in — covers session restore, email/OTP login, and Google OAuth.
   useEffect(() => { if (user?.id) identifyUser(user); }, [user]);
 
-  const openAuth = useCallback((cb) => { onDone.current = typeof cb === 'function' ? cb : null; setOpen(true); }, []);
-  const closeAuth = useCallback(() => { onDone.current = null; setOpen(false); }, []);
+  const openAuth = useCallback((cb, opts) => {
+    onDone.current = typeof cb === 'function' ? cb : null;
+    setNext(typeof opts?.next === 'string' ? opts.next : null);
+    setOpen(true);
+  }, []);
+  const closeAuth = useCallback(() => { onDone.current = null; setNext(null); setOpen(false); }, []);
 
   // Re-fetch the session and update `user` — used after an inline login (e.g. the
   // sell wizard's "you already have an account" screen) so the whole app sees the
@@ -57,6 +64,7 @@ export default function AuthProvider({ children }) {
   const handleAuthed = useCallback((u) => {
     setUser(u);
     setOpen(false);
+    setNext(null);
     const cb = onDone.current; onDone.current = null;
     if (cb) cb(u);
   }, []);
@@ -70,7 +78,7 @@ export default function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={{ user, loading, openAuth, closeAuth, logout, refreshUser }}>
       {children}
-      {open && <AuthModal onAuthed={handleAuthed} onClose={closeAuth} />}
+      {open && <AuthModal onAuthed={handleAuthed} onClose={closeAuth} next={next} />}
     </AuthContext.Provider>
   );
 }

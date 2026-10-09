@@ -20,3 +20,13 @@ test('open redirects and junk are rejected', () => {
     assert.equal(safeReturnPath(bad), null, String(bad));
   }
 });
+
+test('the draft reminder link survives sign-in: My listings → Drafts (+ the draft id)', () => {
+  const id = 'd1d1d1d1-0000-4000-8000-000000000001';
+  assert.equal(safeReturnPath(`/cuenta/publicaciones?tab=borradores&draft=${id}`), `/cuenta/publicaciones?tab=borradores&draft=${id}`);
+  assert.equal(safeReturnPath('/cuenta/publicaciones?tab=borradores'), '/cuenta/publicaciones?tab=borradores');
+  for (const bad of ['/cuenta/publicaciones?tab=borradores&draft=not-a-uuid', `/cuenta/publicaciones?tab=borradores&draft=${id}&x=1`,
+    `/cuenta/publicaciones?draft=${id}`, '/cuenta/publicaciones?tab=borradores&draft=https://evil.com', `//evil.com?tab=borradores&draft=${id}`]) {
+    assert.equal(safeReturnPath(bad), null, bad);
+  }
+});

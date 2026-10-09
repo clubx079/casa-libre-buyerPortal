@@ -78,8 +78,9 @@ export async function GET(req) {
     // Brand-new account → a short-lived, readable flag so the page we land on fires
     // user_signed_up { method: 'google' } once (components/PostHogProvider.js).
     // Not for sellers signing up from the sell flow — owner-side, not a buyer/renter
-    // conversion (casa-libre-tracking-instructions.md).
-    const sellerSignup = dest.startsWith('/publicar') || dest.includes('sell=resume');
+    // conversion (casa-libre-tracking-instructions.md) — nor for a guest seller coming
+    // back to finish a draft from the reminder email (tab=borradores).
+    const sellerSignup = dest.startsWith('/publicar') || dest.includes('sell=resume') || dest.includes('tab=borradores');
     if (user._isNew && !sellerSignup) {
       res.cookies.set(SIGNUP_COOKIE, 'google', {
         httpOnly: false, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: 60 * 10,

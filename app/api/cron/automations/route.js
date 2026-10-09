@@ -1,8 +1,9 @@
 // GET|POST /api/cron/automations — runs the automations for THIS country's DB:
-// "first listing → free home display" (lib/automations/firstListing.js) and
-// "listing getting views" (lib/automations/viewsMilestone.js). Schedule hourly
-// with the CRON_SECRET, like the other crons; also callable manually with ?secret=.
-// Does nothing until an admin switches the automation on (Automations page).
+// "first listing → free home display" (lib/automations/firstListing.js),
+// "listing getting views" (lib/automations/viewsMilestone.js) and "unfinished draft
+// reminders" (lib/automations/draftReminders.js). Schedule hourly with the
+// CRON_SECRET, like the other crons; also callable manually with ?secret=.
+// Each does nothing until an admin switches it on (Automations page).
 import { NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import * as db from '@/lib/db';
@@ -13,6 +14,7 @@ import { promoUsd } from '@/lib/stripe';
 import { COUNTRY } from '@/lib/country';
 import { runFirstListing, AUTOMATION_ID } from '@/lib/automations/firstListing';
 import { runViewsMilestone, VIEWS_AUTOMATION_ID } from '@/lib/automations/viewsMilestone';
+import { runDraftReminders, DRAFTS_AUTOMATION_ID } from '@/lib/automations/draftReminders';
 import { fetchListingViews, viewsConfigured } from '@/lib/posthogViews';
 import { sendPush } from '@/lib/push';
 import { runOwnerPushes } from '@/lib/ownerPushes';
@@ -35,10 +37,11 @@ async function handle(req) {
     ? { skipped: 'off' }
     : await runOwnerPushes(db, (o) => sendPush(db, o), { now: new Date(), countryCode: COUNTRY.code }).catch((e) => ({ error: e?.message || 'push_failed' }));
 
-  let automation, viewsAutomation, templates;
+  let automation, viewsAutomation, draftsAutomation, templates;
   try {
     [automation] = await db.select('automations', `id=eq.${AUTOMATION_ID}&limit=1`);
     [viewsAutomation] = await db.select('automations', `id=eq.${VIEWS_AUTOMATION_ID}&limit=1`).catch(() => []);
+    [draftsAutomation] = await db.select('automations', `id=eq.${DRAFTS_AUTOMATION_ID}&limit=1`).catch(() => []);
     templates = await db.select('email_templates', 'select=*');
   } catch (e) {
     // Migration 005 not applied on this country's DB yet.
@@ -74,7 +77,16 @@ async function handle(req) {
           emailOverride: process.env.AUTOMATION_EMAIL_OVERRIDE || '',
         }).catch((e) => ({ error: e?.message || 'views_failed' }));
     }
-    return NextResponse.json({ ok: true, ...result, views, pushes, at: new Date().toISOString() });
+
+    // Unfinished draft reminders (row seeded by migrations/013_draft_reminders.sql).
+    const drafts = !draftsAutomation
+      ? { skippedReason: 'not_set_up' }
+      : await runDraftReminders({
+        db, automation: draftsAutomation, templates, now: new Date(),
+        deliver: sendRenderedEmail, frame: templateFrame(), siteUrl: site,
+        emailOverride: process.env.AUTOMATION_EMAIL_OVERRIDE || '',
+      }).catch((e) => ({ error: e?.message || 'drafts_failed' }));
+    return NextResponse.json({ ok: true, ...result, views, drafts, pushes, at: new Date().toISOString() });
   } catch (e) {
     return NextResponse.json({ error: 'automation_failed', detail: e?.message }, { status: 500 });
   }
