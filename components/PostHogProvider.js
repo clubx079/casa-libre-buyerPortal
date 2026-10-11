@@ -4,7 +4,7 @@
 import { useEffect, Suspense } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import posthog from 'posthog-js';
-import { POSTHOG_KEY, POSTHOG_HOST, track } from '@/lib/analytics';
+import { POSTHOG_KEY, POSTHOG_HOST, track, capture, flushQueued } from '@/lib/analytics';
 import { consumeSignupSignal } from '@/lib/signupSignal';
 import { COUNTRY } from '@/lib/country';
 
@@ -12,11 +12,12 @@ function PageviewTracker() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   useEffect(() => {
-    if (!POSTHOG_KEY || !posthog.__loaded || typeof window === 'undefined') return;
+    if (!POSTHOG_KEY || typeof window === 'undefined') return;
     let url = window.location.origin + pathname;
     const qs = searchParams?.toString();
     if (qs) url += `?${qs}`;
-    posthog.capture('$pageview', { $current_url: url });
+    // queued until init on the first page (this effect runs before the provider's)
+    capture('$pageview', { $current_url: url });
   }, [pathname, searchParams]);
   return null;
 }
@@ -49,6 +50,7 @@ export default function PostHogProvider({ children }) {
     try {
       posthog.register({ site_country: COUNTRY.code, site_host: typeof window !== 'undefined' ? window.location.host : undefined });
     } catch { /* analytics must never break the page */ }
+    flushQueued();   // events from this first page that fired before init (incl. its $pageview)
     reportSignup();
   }, []);
 
