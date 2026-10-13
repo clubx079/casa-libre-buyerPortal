@@ -367,6 +367,7 @@ export default function MyListingsPage() {
         <ListingPaymentModal
           propertyId={lpay.id}
           kind={lpay.kind}
+          until={(listings || []).find((v) => v.id === lpay.id)?.paid?.until || null}
           lang={lang}
           propertyLabel={(() => { const it = (listings || []).find((v) => v.id === lpay.id); return it ? [it.type, it.neighborhood, it.city].filter(Boolean).join(' · ') : ''; })()}
           onClose={() => { setLpay(null); polls.current = 0; load(); }}

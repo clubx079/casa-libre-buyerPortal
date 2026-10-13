@@ -6,8 +6,9 @@
 //                    saved; paying publishes it.
 //   kind 'extend'  — "Extend your listing": 30 more days for US$5.
 // Prices come from the server (/api/listing-quota), set in the admin. Charged in US$.
-// No in-between step: it opens straight on the Stripe card form, or — with a saved card —
-// charges it at once (the seller already clicked a button showing the price).
+// 'publish': no in-between step — straight to the Stripe card form, or with a saved card it
+// charges at once (the seller already clicked a button showing the price).
+// 'extend': shows the price and the new end date first; the seller pays from there.
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import { getStripePromise } from '@/lib/stripeClient';
@@ -27,6 +28,7 @@ const DICT = {
     off: (p) => `${p}% OFF`, live: (d) => `Publicada ${d} días`, more: (d) => `+${d} días`,
     reset: 'Tus publicaciones gratis vuelven el 1.º del mes que viene.',
     agents: '¿Publicás muchas propiedades? Tenemos un plan para agentes e inmobiliarias.', agentsLink: 'Contactanos',
+    newUntil: (d) => `Queda publicada hasta el ${d}.`,
     payWith: (price, c) => `Pagar ${price} con ${c}`, pay: (price) => `Pagar ${price}`, otherCard: 'Usar otra tarjeta',
     newHint: 'Ingresá los datos de tu tarjeta. La guardamos de forma segura en Stripe.',
     loading: 'Cargando…', processing: 'Procesando pago…',
@@ -44,6 +46,7 @@ const DICT = {
     off: (p) => `${p}% OFF`, live: (d) => `Live for ${d} days`, more: (d) => `+${d} days`,
     reset: 'Your free listings come back on the 1st of next month.',
     agents: 'Listing a lot of properties? We have a plan for agents and agencies.', agentsLink: 'Contact us',
+    newUntil: (d) => `It stays live until ${d}.`,
     payWith: (price, c) => `Pay ${price} with ${c}`, pay: (price) => `Pay ${price}`, otherCard: 'Use another card',
     newHint: 'Enter your card details. We store it securely with Stripe.',
     loading: 'Loading…', processing: 'Processing payment…',
@@ -78,7 +81,9 @@ function CardForm({ onDone, t, price }) {
   );
 }
 
-export default function ListingPaymentModal({ propertyId, kind = 'publish', lang = 'es', propertyLabel, onClose, onSuccess }) {
+const brandLabel = (b) => ({ visa: 'Visa', mastercard: 'Mastercard', amex: 'American Express' }[b] || (b ? b[0].toUpperCase() + b.slice(1) : 'Card'));
+
+export default function ListingPaymentModal({ propertyId, kind = 'publish', lang = 'es', propertyLabel, until: currentUntil, onClose, onSuccess }) {
   const t = DICT[lang] || DICT.es;
   const [offer, setOffer] = useState(null);
   const [card, setCard] = useState(null);
@@ -131,11 +136,13 @@ export default function ListingPaymentModal({ propertyId, kind = 'publish', lang
 
   const started = useRef(false);
   useEffect(() => {
-    if (phase !== 'offer' || !offer || started.current) return;
+    if (kind === 'extend' || phase !== 'offer' || !offer || started.current) return;   // extend: the seller sees the price first
     started.current = true;
     start(!!card);
   }, [phase, offer, card, start]);
 
+  // Extend: the new end = what is left (or today, once ended) + the extension days.
+  const newUntil = kind === 'extend' && offer ? new Date(Math.max(Date.now(), currentUntil ? Date.parse(currentUntil) || 0 : 0) + offer.extendDays * 86400000).toISOString() : null;
   const fmt = (iso) => { try { return new Date(iso).toLocaleDateString(t.locale, { day: 'numeric', month: 'long', year: 'numeric' }); } catch { return ''; } };
   const local = kind === 'extend' ? offer?.local?.extend : offer?.local?.price;
 
@@ -151,7 +158,31 @@ export default function ListingPaymentModal({ propertyId, kind = 'publish', lang
             </div>
           )}
 
-          {(phase === 'loading' || phase === 'offer') && <div className="py-10 text-center text-ink/50 text-[14px]">{t.loading}</div>}
+          {(phase === 'loading' || (phase === 'offer' && kind !== 'extend')) && <div className="py-10 text-center text-ink/50 text-[14px]">{t.loading}</div>}
+
+          {/* Extend: the price + the new end date, then pay. */}
+          {phase === 'offer' && kind === 'extend' && offer && (
+            <div data-testid="lp-extend-offer">
+              <h2 className="text-[21px] font-bold tracking-head leading-tight mb-1 pr-8">{t.titleExtend}</h2>
+              {propertyLabel && <p className="text-[12.5px] font-medium text-ink/55 mb-4 truncate">{propertyLabel}</p>}
+              <div className="rounded-[16px] border-[1.5px] border-ink bg-card px-4 py-4 mb-4">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <span className="text-[30px] font-bold tracking-head leading-none" data-testid="lp-extend-price">{offer.extendPrice}</span>
+                  {offer.local?.extend && <span className="text-[12.5px] font-semibold text-ink/55">{offer.local.extend}</span>}
+                </div>
+                <div className="mt-2 text-[12.5px] font-semibold text-ink/60">{t.more(offer.extendDays)}</div>
+                {newUntil && <div className="mt-1 text-[12.5px] text-ink/60" data-testid="lp-extend-until">{t.newUntil(fmt(newUntil))}</div>}
+              </div>
+              {card ? (
+                <>
+                  <button onClick={() => start(true)} data-testid="lp-pay-saved" className="w-full py-3.5 bg-ink text-paper rounded-pill font-bold text-[15px]">{t.payWith(offer.extendPrice, `${brandLabel(card.brand)} •••• ${card.last4}`)}</button>
+                  <button onClick={() => start(false)} className="w-full mt-1 py-2.5 text-[13px] font-medium text-ink/60 hover:text-ink underline underline-offset-2">{t.otherCard}</button>
+                </>
+              ) : (
+                <button onClick={() => start(false)} data-testid="lp-pay" className="w-full py-3.5 bg-ink text-paper rounded-pill font-bold text-[15px]">{t.pay(offer.extendPrice)}</button>
+              )}
+            </div>
+          )}
 
           {phase === 'card' && clientSecret && stripeObj && (
             <div>
