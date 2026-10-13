@@ -76,7 +76,7 @@ export default function PaymentsPage() {
                         {p.property_id && p.property ? <Link href={`/propiedad/${p.property_id}`} className="font-medium hover:underline">{propLabel(p)}</Link> : <span className="text-ink/55">{propLabel(p)}</span>}
                         <div className="text-[11px] text-ink/45 mt-0.5">{planText(p)}</div>
                       </td>
-                      <td className="px-3 py-3 font-semibold tabular-nums">US${Number(p.amount_usd).toFixed(0)}</td>
+                      <td className="px-3 py-3 font-semibold tabular-nums">US${Number.isInteger(Number(p.amount_usd)) ? Number(p.amount_usd) : Number(p.amount_usd).toFixed(2)}</td>
                       <td className="px-3 py-3">
                         {p.status === 'succeeded'
                           ? <span className="inline-flex items-center gap-1.5 text-emerald-700 font-medium"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />{t.succeeded}</span>
