@@ -1047,7 +1047,7 @@ export default function SellFlowProvider({ children }) {
                       <div className="mt-4 rounded-[16px] border-[1.5px] border-ink bg-card px-4 py-3.5" data-testid="sell-paid-note">
                         <div className="text-[13px] font-semibold mb-1.5">{t.paidNote(quota.freePerMonth)}</div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          {quota.discountPct > 0 && <StrikePrice className="text-[16px]" data-testid="sell-list-price">{quota.listPrice}</StrikePrice>}
+                          {quota.discountPct > 0 && <StrikePrice className="text-[21px] leading-none" data-testid="sell-list-price">{quota.listPrice}</StrikePrice>}
                           {quota.discountPct > 0 && <span className="text-[10.5px] font-bold bg-ink text-paper px-2 py-0.5 rounded-pill">{quota.discountPct}% OFF</span>}
                           <span className="text-[22px] font-bold tracking-head leading-none">{quota.price}</span>
                           {quota.local?.price && <span className="text-[12px] font-semibold text-ink/55">{quota.local.price}</span>}

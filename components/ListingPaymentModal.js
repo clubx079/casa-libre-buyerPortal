@@ -149,7 +149,7 @@ export default function ListingPaymentModal({ propertyId, kind = 'publish', lang
           {offer && (phase === 'offer' || phase === 'card') && (
             <div className="rounded-[16px] border-[1.5px] border-ink bg-card px-4 py-4 mb-4" data-testid="lp-price">
               <div className="flex items-center gap-2.5 flex-wrap">
-                {kind === 'publish' && offer.discountPct > 0 && <StrikePrice className="text-[18px]" data-testid="lp-list-price">{offer.listPrice}</StrikePrice>}
+                {kind === 'publish' && offer.discountPct > 0 && <StrikePrice className="text-[23px] leading-none" data-testid="lp-list-price">{offer.listPrice}</StrikePrice>}
                 {kind === 'publish' && offer.discountPct > 0 && <span className="text-[11px] font-bold bg-ink text-paper px-2 py-0.5 rounded-pill" data-testid="lp-discount">{t.off(offer.discountPct)}</span>}
                 <span className="text-[30px] font-bold tracking-head leading-none" data-testid="lp-final-price">{price}</span>
                 {local && <span className="text-[12.5px] font-semibold text-ink/55" data-testid="lp-local">{local}</span>}
