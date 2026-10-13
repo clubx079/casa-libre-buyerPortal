@@ -65,7 +65,7 @@ const DICT = {
 const brandLabel = (b) => ({ visa: 'Visa', mastercard: 'Mastercard', amex: 'American Express' }[b] || (b ? b[0].toUpperCase() + b.slice(1) : 'Card'));
 
 // New-card form (rendered inside <Elements>).
-function CardForm({ onDone, t, price }) {
+function CardForm({ onDone, onFail, t, price }) {
   const stripe = useStripe();
   const elements = useElements();
   const [busy, setBusy] = useState(false);
@@ -74,7 +74,7 @@ function CardForm({ onDone, t, price }) {
     if (!stripe || !elements) return;
     setBusy(true); setErr('');
     const { error, paymentIntent } = await stripe.confirmPayment({ elements, redirect: 'if_required' });
-    if (error) { setErr(error.message || t.payFail); setBusy(false); return; }
+    if (error) { if (onFail && error.payment_intent?.id) onFail(error.payment_intent.id); setErr(error.message || t.payFail); setBusy(false); return; }
     if (paymentIntent && paymentIntent.status === 'succeeded') { onDone(paymentIntent.id); return; }
     setErr(t.payFail); setBusy(false);
   };
@@ -182,7 +182,7 @@ export default function HighlightModal({ propertyId, plan = 'verified', lang = '
           <div>
             <div className="text-[13px] text-ink/55 mb-4">{t.newHint}</div>
             <Elements stripe={stripeObj} options={{ clientSecret, appearance }}>
-              <CardForm onDone={serverConfirm} t={t} price={price} />
+              <CardForm onDone={serverConfirm} onFail={(id) => fetch('/api/highlight/confirm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ propertyId, paymentIntentId: id }) }).catch(() => {})} t={t} price={price} />
             </Elements>
             {savedCard && <button onClick={() => setPhase('choose')} className="w-full mt-2 py-2.5 text-[13px] font-medium text-ink/60 hover:text-ink underline underline-offset-2">{t.backSaved}</button>}
           </div>

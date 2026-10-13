@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { stripe } from '@/lib/stripe';
 import { applyListingPayment, getUserBillingRow, ensureStripeCustomer, saveDefaultCard } from '@/lib/listingPayments';
+import { recordDeclineOnce } from '@/lib/paymentFailures';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -25,7 +26,12 @@ export async function POST(req) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   }
   if (pi.status === 'processing') return NextResponse.json({ status: 'processing' });
-  if (pi.status !== 'succeeded') return NextResponse.json({ status: 'failed', error: 'El pago no se completó.' });
+  if (pi.status !== 'succeeded') {
+    // A card declined in the browser → recorded as a failed attempt (admin Earnings).
+    const kind = md.kind === 'extend' ? 'listing_extend' : 'listing';
+    await recordDeclineOnce(pi, { user_id: session.uid, property_id: propertyId, kind, plan: null, amount_usd: (Number(pi.amount) || 0) / 100, currency: 'usd' }).catch(() => {});
+    return NextResponse.json({ status: 'failed', error: 'El pago no se completó.' });
+  }
 
   const user = await getUserBillingRow(session.uid);
   let card = null;

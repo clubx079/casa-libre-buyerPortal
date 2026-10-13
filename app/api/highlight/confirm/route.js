@@ -9,6 +9,7 @@ import { getSession } from '@/lib/auth';
 import { select } from '@/lib/db';
 import { stripe, promoPlan, promoUsd } from '@/lib/stripe';
 import { getUserBillingRow, ensureStripeCustomer, grantPromotion, saveDefaultCard, recordPayment, paymentAlreadyRecorded } from '@/lib/billing';
+import { recordDeclineOnce } from '@/lib/paymentFailures';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -36,7 +37,11 @@ export async function POST(req) {
   const extendFrom = prop.promotion_plan && prop.promotion_expires_at ? prop.promotion_expires_at : null;
 
   if (pi.status === 'processing') return NextResponse.json({ status: 'processing' });
-  if (pi.status !== 'succeeded') return NextResponse.json({ status: 'failed', error: 'El pago no se completó.' });
+  if (pi.status !== 'succeeded') {
+    // A card declined in the browser → recorded as a failed attempt (admin Earnings).
+    await recordDeclineOnce(pi, { user_id: session.uid, property_id: propertyId, kind: 'highlight', plan: promoPlan(pi?.metadata?.plan), amount_usd: (Number(pi.amount) || 0) / 100, currency: 'usd' }).catch(() => {});
+    return NextResponse.json({ status: 'failed', error: 'El pago no se completó.' });
+  }
 
   // The plan the charge was created for (falls back to verified for old intents).
   const plan = promoPlan(pi?.metadata?.plan);

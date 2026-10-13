@@ -59,7 +59,7 @@ const DICT = {
 };
 
 
-function CardForm({ onDone, t, price }) {
+function CardForm({ onDone, onFail, t, price }) {
   const stripe = useStripe();
   const elements = useElements();
   const [busy, setBusy] = useState(false);
@@ -68,7 +68,7 @@ function CardForm({ onDone, t, price }) {
     if (!stripe || !elements) return;
     setBusy(true); setErr('');
     const { error, paymentIntent } = await stripe.confirmPayment({ elements, redirect: 'if_required' });
-    if (error) { setErr(error.message || t.fail); setBusy(false); return; }
+    if (error) { if (onFail && error.payment_intent?.id) onFail(error.payment_intent.id); setErr(error.message || t.fail); setBusy(false); return; }
     if (paymentIntent && paymentIntent.status === 'succeeded') { onDone(paymentIntent.id); return; }
     setErr(t.fail); setBusy(false);
   };
@@ -186,7 +186,7 @@ export default function ListingPaymentModal({ propertyId, kind = 'publish', lang
 
           {phase === 'card' && clientSecret && stripeObj && (
             <div>
-              <Elements stripe={stripeObj} options={{ clientSecret, appearance }}><CardForm onDone={serverConfirm} t={t} price={price} /></Elements>
+              <Elements stripe={stripeObj} options={{ clientSecret, appearance }}><CardForm onDone={serverConfirm} onFail={(id) => fetch('/api/listing-payment/confirm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ propertyId, paymentIntentId: id }) }).catch(() => {})} t={t} price={price} /></Elements>
             </div>
           )}
           {phase === 'processing' && <div className="py-10 text-center text-ink/60 text-[14px]">{t.processing}</div>}
