@@ -6,11 +6,11 @@
 //                    saved; paying publishes it.
 //   kind 'extend'  — "Extend your listing": 30 more days for US$5.
 // Prices come from the server (/api/listing-quota), set in the admin. Charged in US$.
-// Saved card → one click; no card → the Stripe card form (the card is kept for next time).
+// No in-between step: it opens straight on the Stripe card form, or — with a saved card —
+// charges it at once (the seller already clicked a button showing the price).
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import { getStripePromise } from '@/lib/stripeClient';
-import StrikePrice from '@/components/StrikePrice';
 
 const appearance = {
   theme: 'flat',
@@ -55,7 +55,6 @@ const DICT = {
   },
 };
 
-const brandLabel = (b) => ({ visa: 'Visa', mastercard: 'Mastercard', amex: 'American Express' }[b] || (b ? b[0].toUpperCase() + b.slice(1) : 'Card'));
 
 function CardForm({ onDone, t, price }) {
   const stripe = useStripe();
@@ -130,6 +129,13 @@ export default function ListingPaymentModal({ propertyId, kind = 'publish', lang
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [propertyId, kind, serverConfirm, t]);
 
+  const started = useRef(false);
+  useEffect(() => {
+    if (phase !== 'offer' || !offer || started.current) return;
+    started.current = true;
+    start(!!card);
+  }, [phase, offer, card, start]);
+
   const fmt = (iso) => { try { return new Date(iso).toLocaleDateString(t.locale, { day: 'numeric', month: 'long', year: 'numeric' }); } catch { return ''; } };
   const local = kind === 'extend' ? offer?.local?.extend : offer?.local?.price;
 
@@ -138,46 +144,17 @@ export default function ListingPaymentModal({ propertyId, kind = 'publish', lang
       <div className="min-h-full flex items-start sm:items-center justify-center p-4">
         <div className="relative w-full max-w-[460px] my-4 bg-paper rounded-[22px] border-[1.5px] border-ink/15 shadow-2xl p-6 sm:p-7" onClick={(e) => e.stopPropagation()}>
           <button onClick={onClose} aria-label={t.close} className="absolute top-4 right-4 w-8 h-8 grid place-items-center rounded-full hover:bg-ink/5 text-ink/50 text-lg">×</button>
-          <h2 className="text-[21px] font-bold tracking-head leading-tight mb-1.5 pr-8">{kind === 'extend' ? t.titleExtend : t.titlePublish}</h2>
-          {offer && <p className="text-[13px] text-ink/60 mb-4">{kind === 'extend' ? t.subExtend(offer.extendDays) : t.subPublish(offer.freePerMonth)}</p>}
-          {propertyLabel && <p className="text-[12.5px] font-medium text-ink/55 mb-4 truncate">{propertyLabel}</p>}
-
-          {phase === 'loading' && <div className="py-10 text-center text-ink/50 text-[14px]">{t.loading}</div>}
-
-          {offer && (phase === 'offer' || phase === 'card') && (
-            <div className="rounded-[16px] border-[1.5px] border-ink bg-card px-4 py-4 mb-4" data-testid="lp-price">
-              <div className="flex items-center gap-2.5 flex-wrap">
-                {kind === 'publish' && offer.discountPct > 0 && <StrikePrice className="text-[23px] leading-none" data-testid="lp-list-price">{offer.listPrice}</StrikePrice>}
-                {kind === 'publish' && offer.discountPct > 0 && <span className="text-[11px] font-bold bg-ink text-paper px-2 py-0.5 rounded-pill" data-testid="lp-discount">{t.off(offer.discountPct)}</span>}
-                <span className="text-[30px] font-bold tracking-head leading-none" data-testid="lp-final-price">{price}</span>
-                {local && <span className="text-[12.5px] font-semibold text-ink/55" data-testid="lp-local">{local}</span>}
-              </div>
-              <div className="mt-2 text-[12.5px] font-semibold text-ink/60">{kind === 'extend' ? t.more(offer.extendDays) : t.live(offer.days)}</div>
+          {offer && phase === 'card' && (
+            <div className="mb-4 pr-8" data-testid="lp-head">
+              <div className="text-[22px] font-bold tracking-head leading-none" data-testid="lp-final-price">{price}{local ? <span className="ml-2 text-[12.5px] font-semibold text-ink/55">{local}</span> : null}</div>
+              <div className="mt-1.5 text-[12.5px] font-semibold text-ink/55">{kind === 'extend' ? t.more(offer.extendDays) : t.live(offer.days)}{propertyLabel ? ` · ${propertyLabel}` : ''}</div>
             </div>
           )}
 
-          {phase === 'offer' && offer && (
-            <div className="flex flex-col gap-2">
-              {card ? (
-                <>
-                  <button onClick={() => start(true)} data-testid="lp-pay-saved" className="w-full py-3.5 bg-ink text-paper rounded-pill font-bold text-[15px]">{t.payWith(price, `${brandLabel(card.brand)} •••• ${card.last4}`)}</button>
-                  <button onClick={() => start(false)} className="w-full py-2.5 text-[13px] font-medium text-ink/60 hover:text-ink underline underline-offset-2">{t.otherCard}</button>
-                </>
-              ) : (
-                <button onClick={() => start(false)} data-testid="lp-pay" className="w-full py-3.5 bg-ink text-paper rounded-pill font-bold text-[15px]">{t.pay(price)}</button>
-              )}
-              {kind === 'publish' && (
-                <>
-                  <p className="text-[11.5px] text-ink/50 text-center mt-1">{t.reset}</p>
-                  <p className="text-[12px] text-ink/65 text-center mt-1">{t.agents} <a href="/empresas" className="font-semibold underline">{t.agentsLink}</a></p>
-                </>
-              )}
-            </div>
-          )}
+          {(phase === 'loading' || phase === 'offer') && <div className="py-10 text-center text-ink/50 text-[14px]">{t.loading}</div>}
 
           {phase === 'card' && clientSecret && stripeObj && (
             <div>
-              <div className="text-[13px] text-ink/55 mb-3">{t.newHint}</div>
               <Elements stripe={stripeObj} options={{ clientSecret, appearance }}><CardForm onDone={serverConfirm} t={t} price={price} /></Elements>
             </div>
           )}
@@ -198,7 +175,7 @@ export default function ListingPaymentModal({ propertyId, kind = 'publish', lang
               <div className="text-[15px] font-semibold mb-1">{t.errTitle}</div>
               <div className="text-[13px] text-ink/60 mb-6">{error}</div>
               <div className="flex gap-2">
-                <button onClick={() => setPhase('offer')} className="flex-1 py-3 bg-ink text-paper rounded-pill font-bold text-[14px]">{t.retry}</button>
+                <button onClick={() => start(!!card)} className="flex-1 py-3 bg-ink text-paper rounded-pill font-bold text-[14px]">{t.retry}</button>
                 <button onClick={onClose} className="flex-1 py-3 border-[1.5px] border-ink/25 rounded-pill font-bold text-[14px]">{t.close}</button>
               </div>
             </div>
