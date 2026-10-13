@@ -38,3 +38,29 @@ test('test mode prompt-only (latest) without the wall', () => {
   assert.equal(p.minVersion, '1.0.0');
   assert.equal(p.latestVersion, '9.9.9');
 });
+
+test('admin settings: no row / disabled row / junk → exactly the env values', () => {
+  const env = { MOBILE_MIN_VERSION_ANDROID: '1.2.0', MOBILE_LATEST_VERSION: '1.3.0' };
+  const base = appVersionPolicy({ platform: 'android', env });
+  for (const settings of [null, { enabled: false, free_tiers: [{ android: { min: '9.9.9' } }] }, { enabled: true, free_tiers: null }, { enabled: true, free_tiers: [{ android: { min: 'abc', latest: '' } }] }]) {
+    const p = appVersionPolicy({ platform: 'android', env, settings });
+    assert.equal(p.minVersion, base.minVersion);
+    assert.equal(p.latestVersion, base.latestVersion);
+    assert.equal(p.source, 'env');
+  }
+});
+
+test('admin settings: filled values win per platform, empty ones keep env', () => {
+  const env = { MOBILE_MIN_VERSION: '1.1.0', MOBILE_LATEST_VERSION: '1.3.0' };
+  const settings = { enabled: true, free_tiers: [{ android: { min: '1.3.0', latest: '1.4.0' }, ios: { latest: '1.4.0', storeUrl: 'https://apps.apple.com/app/id1' } }] };
+  const a = appVersionPolicy({ platform: 'android', env, settings });
+  assert.deepEqual([a.minVersion, a.latestVersion, a.source], ['1.3.0', '1.4.0', 'admin']);
+  const i = appVersionPolicy({ platform: 'ios', env, settings });
+  assert.deepEqual([i.minVersion, i.latestVersion, i.storeUrl], ['1.1.0', '1.4.0', 'https://apps.apple.com/app/id1']);
+});
+
+test('admin settings: tester list + test versions', () => {
+  const settings = { enabled: true, free_tiers: [{ testEmails: ['QA@x.com'], test: { android: { min: '9.9.9' } } }] };
+  assert.equal(appVersionPolicy({ platform: 'android', email: 'qa@x.com', env: {}, settings }).minVersion, '9.9.9');
+  assert.equal(appVersionPolicy({ platform: 'android', email: 'other@x.com', env: {}, settings }).minVersion, '1.0.0');
+});
