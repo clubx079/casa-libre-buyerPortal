@@ -20,6 +20,13 @@ import { startListingScan, publishListing, listingRef } from '@/lib/listingScan'
 import { SCAN_STATUS } from '@/lib/scanVerdict';
 import { COUNTRY } from '@/lib/country';
 import { genShortCode } from '@/lib/shortcode';
+import { getClientIP } from '@/lib/ip';
+import { makeSignals } from '@/lib/samePerson';
+import { listingQuota } from '@/lib/listingQuota';
+import { usd } from '@/lib/paidListings';
+import { localPrice } from '@/lib/localPrice';
+import { stripe } from '@/lib/stripe';
+import { LISTING_STATUS } from '@/lib/listingPayments';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -110,8 +117,14 @@ export async function POST(req) {
   if (!Number.isFinite(price) || price <= 0) return NextResponse.json({ error: 'missing_price' }, { status: 400 });
   if (String(contactPhone || '').replace(/\D/g, '').length < 6) return NextResponse.json({ error: 'missing_contact' }, { status: 400 });
 
-  // Listings are FREE — no payment required. Login (above) is the only gate, so
-  // every published deal is tied to a known user.
+  // Free listings per month (lib/paidListings.js, set in the admin): past the free ones,
+  // the listing is SAVED as 'payment_pending' (not on the site, no photo check yet) and
+  // the wizard asks for the payment; paying starts the photo check
+  // (/api/listing-payment). One person with several emails shares one quota
+  // (lib/samePerson.js) — the signals are kept on every listing for that.
+  const signals = makeSignals({ deviceId: get('device_id') || req.cookies?.get?.('cl_did')?.value, fp: get('device_fp'), ip: getClientIP(req) });
+  const quota = stripe ? await listingQuota(dbApi, { uid: session.uid, signals, countryCode: COUNTRY.code }).catch(() => null) : null;
+  const payFirst = !!quota?.paymentRequired;
 
   const property_type = dbType(ptype);
   const isLand = isLandType(ptype);
@@ -157,7 +170,7 @@ export async function POST(req) {
     contact_phone: contactPhone,
     latitude: null,   // patched after geocodePromise resolves
     longitude: null,
-    status: SCAN_STATUS.scanning,   // the photo check publishes it (lib/listingScan.js)
+    status: payFirst ? LISTING_STATUS.pending : SCAN_STATUS.scanning,   // the photo check publishes it (lib/listingScan.js)
     admin_status: 'inactive',
     property_status: 'available',
     is_complete: true, // passed the form's completeness validation → searchable immediately
@@ -168,7 +181,9 @@ export async function POST(req) {
     is_delisted: false,
     created_by: session.uid,   // who published this deal
     posted_by: session.uid,
-    raw_data: { published_via: 'buyer-portal', user_id: session.uid, user_email: session.email, ...(entered ? { entered_price: entered } : {}), moderation: { state: 'scanning', started_at: new Date().toISOString() } },
+    raw_data: { published_via: 'buyer-portal', user_id: session.uid, user_email: session.email, ...(entered ? { entered_price: entered } : {}), signals,
+      ...(payFirst ? { paid_listing: { state: 'pending', price_cents: quota.priceCents, list_cents: quota.listCents, discount_pct: quota.discountPct, days: quota.days } } : {}),
+      moderation: payFirst ? { state: 'awaiting_payment' } : { state: 'scanning', started_at: new Date().toISOString() } },
   };
 
   // Ingest-pipeline parity: give the user listing a canonical zone + dedupe
@@ -250,8 +265,21 @@ export async function POST(req) {
   // meanwhile; My listings shows "Checking photos…"). When the photos pass, the listing
   // goes live and the "your listing is live" email + search-engine ping are sent
   // (lib/listingScan.js). Nothing to check → live now.
+  if (payFirst && propertyId) {
+    const local = await localPrice(quota.priceCents);
+    return NextResponse.json({
+      ok: true, slug, id: propertyId, ref, images: images.length, scanning: false,
+      payment: { required: true, freePerMonth: quota.freePerMonth, price: usd(quota.priceCents), priceCents: quota.priceCents, listPrice: usd(quota.listCents), discountPct: quota.discountPct, days: quota.days, local },
+    });
+  }
+  // A free listing while the paywall is on → one ledger row, so deleting it later
+  // doesn't give the free slot back (lib/listingQuota.js).
+  if (quota?.enabled && propertyId) {
+    try { await insert('payments', { user_id: session.uid, property_id: propertyId, kind: 'listing_free', amount_usd: 0, currency: 'usd', status: 'free' }, { returning: 'minimal' }); } catch {}
+  }
+
   if (propertyId && images.length) startListingScan(propertyId, originals);
   else if (propertyId) await publishListing({ ...created, ...patch }, { state: 'passed', checked_at: new Date().toISOString(), photos: 0 }).catch(() => {});
 
-  return NextResponse.json({ ok: true, slug, id: propertyId, ref, images: images.length, scanning: images.length > 0 });
+  return NextResponse.json({ ok: true, slug, id: propertyId, ref, images: images.length, scanning: images.length > 0, ...(quota?.enabled ? { freeLeft: Math.max(0, quota.freeLeft - 1), freePerMonth: quota.freePerMonth } : {}) });
 }

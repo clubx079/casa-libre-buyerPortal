@@ -6,6 +6,7 @@ import { useLang } from '@/lib/useLang';
 import ListingCard from '@/components/account/ListingCard';
 import ConfirmModal from '@/components/ConfirmModal';
 import HighlightModal from '@/components/HighlightModal';
+import ListingPaymentModal from '@/components/ListingPaymentModal';
 import FixPhotosModal from '@/components/account/FixPhotosModal';
 import { CardGridSkeleton } from '@/components/account/Skeletons';
 import { useSellFlow } from '@/components/SellFlow';
@@ -23,6 +24,8 @@ const D = {
     tabActive: 'Publicadas', tabDrafts: 'Borradores', tabRejected: 'Rechazadas', draftChip: 'Borrador', cont: 'Continuar', del: 'Eliminar',
     emptyRejected: 'No tenés publicaciones rechazadas.',
     scanningNote: 'Estamos revisando las fotos. Se publica en un momento.',
+    pendingNote: 'Guardada, pero no está en el sitio: ya usaste tus publicaciones gratis del mes. Pagala para publicarla.', payPublish: 'Pagar y publicar',
+    endedNote: (d) => `Terminó${d ? ` el ${d}` : ''} y ya no está en el sitio. Extendela para volver a publicarla.`, extend: 'Extender', paidChip: 'Publicación paga',
     rejectedNote: 'No la publicamos: algunas fotos pueden tener contenido para adultos (+18), dañino, ofensivo o sin relación con la propiedad. Cambialas y enviala de nuevo.',
     fix: 'Cambiar fotos',
     emptyDrafts: 'No tenés borradores. Si empezás a publicar y no terminás, lo guardamos acá.',
@@ -34,6 +37,8 @@ const D = {
     tabActive: 'Published', tabDrafts: 'Drafts', tabRejected: 'Rejected', draftChip: 'Draft', cont: 'Continue', del: 'Delete',
     emptyRejected: 'No rejected listings.',
     scanningNote: "We're checking the photos. It goes live in a moment.",
+    pendingNote: "Saved, but not on the site: you've used this month's free listings. Pay to publish it.", payPublish: 'Pay and publish',
+    endedNote: (d) => `It ended${d ? ` on ${d}` : ''} and is off the site. Extend it to bring it back.`, extend: 'Extend', paidChip: 'Paid listing',
     rejectedNote: "We didn't publish it: some photos may show 18+, harmful, abusive or unrelated content. Replace them and submit again.",
     fix: 'Fix photos',
     emptyDrafts: "No drafts. If you start a listing and don't finish, we keep it here.",
@@ -100,6 +105,7 @@ export default function MyListingsPage() {
   const [promo, setPromo] = useState(null);     // { id, plan } — open the payment modal (no card / 3DS)
   const [payingId, setPayingId] = useState(null); // id being charged silently on a saved card
   const [autoPay, setAutoPay] = useState(false);  // one-shot: honor a ?pay=&plan= deep link once
+  const [lpay, setLpay] = useState(null);         // { id, kind: 'publish' | 'extend' } — the paid-listing pop-up
 
   const load = () => {
     fetch('/api/account/listings').then((r) => r.json()).then((j) => setListings(j.listings || [])).catch(() => setListings([]));
@@ -176,6 +182,11 @@ export default function MyListingsPage() {
     let id, pl;
     try { const sp = new URLSearchParams(window.location.search); id = sp.get('pay'); pl = sp.get('plan'); } catch {}
     if (id && (pl === 'verified' || pl === 'home')) { setAutoPay(true); payFor(id, pl); }
+    // From the paid-listing emails: ?extend=<id> (extend 30 days) · ?pay_listing=<id> (pay to publish)
+    let ext = null, pub = null;
+    try { const sp = new URLSearchParams(window.location.search); ext = sp.get('extend'); pub = sp.get('pay_listing'); } catch {}
+    if (ext && listings.some((l) => l.id === ext)) { setAutoPay(true); setLpay({ id: ext, kind: 'extend' }); }
+    else if (pub && listings.some((l) => l.id === pub)) { setAutoPay(true); setLpay({ id: pub, kind: 'publish' }); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listings, autoPay]);
 
@@ -264,13 +275,27 @@ export default function MyListingsPage() {
       {tab === 'active' && listings && published.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {published.map((l) => (
-            <ListingCard key={l.id} l={l} action={l.scan === 'scanning' ? (
+            <ListingCard key={l.id} l={l} action={l.payState ? (
+              <div className="flex flex-col gap-2.5" data-testid={`pay-card-${l.payState}`}>
+                <p className="text-[12.5px] leading-snug text-ink/70">{l.payState === 'payment_pending' ? x.pendingNote : x.endedNote(l.paid?.until ? new Date(l.paid.until).toLocaleDateString(lang === 'es' ? 'es' : 'en-US', { day: 'numeric', month: 'long' }) : '')}</p>
+                <div className="flex gap-2">
+                  <button onClick={() => setLpay({ id: l.id, kind: l.payState === 'payment_pending' ? 'publish' : 'extend' })} className="flex-[2] py-2 rounded-pill bg-ink text-paper text-[13px] font-bold hover:bg-ink/90">{l.payState === 'payment_pending' ? x.payPublish : x.extend}</button>
+                  <button onClick={() => setConfirmId(l.id)} className="flex-1 py-2 rounded-pill border-[1.5px] border-red-300 text-red-700 text-[13px] font-semibold">{t.del}</button>
+                </div>
+              </div>
+            ) : l.scan === 'scanning' ? (
               <div className="flex flex-col gap-2.5">
                 <p className="text-[12.5px] leading-snug text-ink/60">{x.scanningNote}</p>
                 <button onClick={() => setConfirmId(l.id)} className="py-2 rounded-pill border-[1.5px] border-red-300 text-red-700 text-[13px] font-semibold">{t.del}</button>
               </div>
             ) : (
               <div className="flex flex-col gap-2">
+                {l.paid?.state === 'active' && l.paid.until && (
+                  <div className="flex items-center gap-2" data-testid="paid-active">
+                    <div className="flex-1 text-center py-2 rounded-pill bg-card text-ink text-[12px] font-bold border-[1.5px] border-ink/40">{x.paidChip} · {t.daysLeft(daysLeft(l.paid.until))}</div>
+                    <button onClick={() => setLpay({ id: l.id, kind: 'extend' })} className="shrink-0 px-4 py-2 rounded-pill border-[1.5px] border-ink text-[13px] font-bold hover:bg-ink hover:text-paper">{x.extend}</button>
+                  </div>
+                )}
                 {payingId === l.id ? (
                   <div className="text-center py-2 rounded-pill bg-card text-ink text-[12.5px] font-bold border-[1.5px] border-ink">{t.paying}</div>
                 ) : l.verified ? (
@@ -328,6 +353,17 @@ export default function MyListingsPage() {
           lang={lang}
           onClose={() => setFix(null)}
           onDone={() => { setFix(null); setTab('active'); polls.current = 0; load(); }}
+        />
+      )}
+
+      {lpay && (
+        <ListingPaymentModal
+          propertyId={lpay.id}
+          kind={lpay.kind}
+          lang={lang}
+          propertyLabel={(() => { const it = (listings || []).find((v) => v.id === lpay.id); return it ? [it.type, it.neighborhood, it.city].filter(Boolean).join(' · ') : ''; })()}
+          onClose={() => { setLpay(null); polls.current = 0; load(); }}
+          onSuccess={() => { polls.current = 0; load(); }}
         />
       )}
 

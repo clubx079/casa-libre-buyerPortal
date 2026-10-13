@@ -20,6 +20,8 @@ import { useAuth } from '@/components/AuthProvider';
 import { track } from '@/lib/analytics';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import HighlightModal from '@/components/HighlightModal';
+import ListingPaymentModal from '@/components/ListingPaymentModal';
+import { appendDeviceSignals, deviceId, deviceFingerprint } from '@/lib/deviceSignals';
 import RecommendedTag from '@/components/RecommendedTag';
 import PlanBox from '@/components/PlanBox';
 import { VerifiedIcon } from '@/components/VerifiedTag';
@@ -53,6 +55,10 @@ const DICT = {
     fPhone: 'WhatsApp / teléfono (para compradores)', fPhonePh: '0981 123 456',
     fPhotos: 'Arrastrá o elegí tus fotos', fPhotosSub: 'mín. 1 foto · JPG o PNG', photosChosen: (n) => `${n} foto${n === 1 ? '' : 's'} seleccionada${n === 1 ? '' : 's'}`,
     publishBtn: 'Publicar gratis', publishing: 'Publicando…',
+    // Paid listings (lib/paidListings.js): past the free ones of the month.
+    paidNote: (n) => `Ya usaste tus ${n} publicaciones gratis de este mes. Esta cuesta:`, paidLive: (d) => `publicada ${d} días`, paidUsd: 'Se cobra en dólares (US$).', publishPaid: (p) => `Publicar · ${p}`,
+    freeLeftNote: (l, n) => `Te ${l === 1 ? 'queda' : 'quedan'} ${l} de ${n} publicaciones gratis este mes.`,
+    pendTitle: 'Tu publicación está guardada', pendSub: 'Falta el pago para publicarla. Podés pagarla desde Mis publicaciones.', payNow: 'Pagar y publicar',
     backToApp: 'Volver a la app',
     doneTitle: '¡Tu propiedad está publicada!', doneSub: 'Ya aparece en el marketplace de Casa Libre.', doneView: 'Ver mi propiedad', doneBrowse: 'Ver propiedades',
     scanTitle: '¡Listo! Estamos revisando tus fotos', scanSub: 'Se publica en un momento. Seguila en Mis publicaciones.', scanView: 'Mis publicaciones',
@@ -95,6 +101,9 @@ const DICT = {
     fPhone: 'WhatsApp / phone (for buyers)', fPhonePh: '0981 123 456',
     fPhotos: 'Drag or choose your photos', fPhotosSub: 'min. 1 photo · JPG or PNG', photosChosen: (n) => `${n} photo${n === 1 ? '' : 's'} selected`,
     publishBtn: 'Publish for free', publishing: 'Publishing…',
+    paidNote: (n) => `You've used your ${n} free listings this month. This one costs:`, paidLive: (d) => `live ${d} days`, paidUsd: 'Charged in US dollars (US$).', publishPaid: (p) => `Publish · ${p}`,
+    freeLeftNote: (l, n) => `${l} of ${n} free listings left this month.`,
+    pendTitle: 'Your listing is saved', pendSub: 'It needs the payment to go live. You can pay from My listings.', payNow: 'Pay and publish',
     backToApp: 'Back to the app',
     doneTitle: 'Your listing is live!', doneSub: 'It already shows in the Casa Libre marketplace.', doneView: 'View my listing', doneBrowse: 'Browse listings',
     scanTitle: "Done! We're checking your photos", scanSub: 'It goes live in a moment. Follow it in My listings.', scanView: 'My listings',
@@ -219,6 +228,15 @@ export default function SellFlowProvider({ children }) {
   // The bar is only for the screen they come back to: once they move to another step
   // they're continuing, so it goes away (until the next time the wizard is reopened).
   const resumedAtRef = useRef(null);
+  // The confirm step shows whether this listing is free or paid this month.
+  useEffect(() => {
+    if (!open || step !== 4) return;
+    let alive = true;
+    const qs = new URLSearchParams();
+    try { const id = deviceId(); const fp = deviceFingerprint(); if (id) qs.set('device_id', id); if (fp) qs.set('fp', fp); } catch {}
+    fetch(`/api/listing-quota?${qs}`).then((r) => (r.ok ? r.json() : null)).then((j) => { if (alive) setQuota(j); }).catch(() => {});
+    return () => { alive = false; };
+  }, [open, step]);
   useEffect(() => { resumedAtRef.current = resumed ? step : null; }, [resumed]);   // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (resumed && resumedAtRef.current !== null && step !== resumedAtRef.current) setResumed(false); }, [step, resumed]);
   const [busy, setBusy] = useState(false);
@@ -236,6 +254,8 @@ export default function SellFlowProvider({ children }) {
   const [highlighted, setHighlighted] = useState(false);
   const [paying, setPaying] = useState(false);    // silently charging a saved card (no modal)
   const [plan, setPlan] = useState(null);         // selected promo plan: null | 'verified' | 'home'
+  const [quota, setQuota] = useState(null);       // free listings left this month (/api/listing-quota)
+  const [listingPay, setListingPay] = useState(false);   // the paid-listing pop-up (ListingPaymentModal)
   const fileRef = useRef(null);
   const openedLoggedInRef = useRef(false);        // wizard was opened by a signed-in user
   const [fromApp, setFromApp] = useState(false);  // arrived from the mobile app (?app=1)
@@ -248,7 +268,7 @@ export default function SellFlowProvider({ children }) {
   const creatingDraftRef = useRef(false);
 
   const reset = () => {
-    setStep(0); setPhase(''); setErr(''); setErrs({}); setBusy(false); setCode(''); setVerified(false); setEmailTaken(false); setLoginCode(''); setCodeSent(false); setPhotos([]); setResult(null); setShowHi(false); setHighlighted(false); setPaying(false); setPlan(null); setConfirmOk(false); setResumed(false);
+    setStep(0); setPhase(''); setErr(''); setErrs({}); setBusy(false); setCode(''); setVerified(false); setEmailTaken(false); setLoginCode(''); setCodeSent(false); setPhotos([]); setResult(null); setShowHi(false); setHighlighted(false); setPaying(false); setPlan(null); setConfirmOk(false); setResumed(false); setQuota(null); setListingPay(false);
     setF(BLANK); setDraftId(null); creatingDraftRef.current = false;
   };
   const close = () => { setOpen(false); reset(); };
@@ -744,6 +764,7 @@ export default function SellFlowProvider({ children }) {
       photos.forEach((p) => { if (p.key) order.push({ k: p.key }); else if (p.file) { order.push({ f: nFiles++ }); fd.append('photos', p.file); } });
       fd.set('photo_order', JSON.stringify(order));
       if (draftId) fd.set('draft_id', draftId);   // the server removes the draft once published
+      appendDeviceSignals(fd);   // one person with several emails shares one free quota (lib/samePerson.js)
       const res = await fetch('/api/publish', { method: 'POST', body: fd });
       const j = await res.json().catch(() => ({}));
       if (!res.ok || !j.ok) throw new Error(j.error || 'failed');
@@ -751,7 +772,8 @@ export default function SellFlowProvider({ children }) {
       writeProgress({ owner: me, fresh: true, dismissed: readProgress().dismissed || [] }); clearProgressPhotos();   // published: the next listing starts empty
       window.dispatchEvent(new Event('cl:listings-changed'));   // My listings refreshes its tabs
       track('listing_created', { property_id: j.id, slug: j.slug, ref: j.ref, operation: f.mode, property_type: f.ptype, city: f.city, neighborhood: f.neighborhood, price: f.price ? Number(f.price) : null, currency: priceCurrency, photos: photos.length });
-      setResult({ id: j.id, ref: j.ref, scanning: !!j.scanning });   // scanning: the AI photo check publishes it (lib/listingScan.js)
+      setResult({ id: j.id, ref: j.ref, scanning: !!j.scanning, payment: j.payment || null });   // scanning: the AI photo check publishes it (lib/listingScan.js)
+      if (j.payment) { setListingPay(true); return; }   // over the free listings of the month → pay to publish
       if (openHighlightAfter) await payWithPlan(openHighlightAfter, j.id);
     } catch { setErr(t.errSubmit); } finally { setBusy(false); }
   };
@@ -787,12 +809,15 @@ export default function SellFlowProvider({ children }) {
               <div className="text-center py-4">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/mascot.png" alt="" className="w-[120px] object-contain mx-auto mb-2" />
-                <h2 className="text-[24px] font-bold tracking-head mb-1.5">{result.scanning ? t.scanTitle : t.doneTitle}</h2>
-                <p className="text-[14px] text-ink/55 mb-1">{result.scanning ? t.scanSub : t.doneSub}</p>
+                <h2 className="text-[24px] font-bold tracking-head mb-1.5">{result.payment ? t.pendTitle : result.scanning ? t.scanTitle : t.doneTitle}</h2>
+                <p className="text-[14px] text-ink/55 mb-1">{result.payment ? t.pendSub : result.scanning ? t.scanSub : t.doneSub}</p>
                 <div className="font-mono text-[11px] text-ink/45 mb-5">REF: {result.ref}</div>
 
-                {/* Promotion upsell — publish is already done (free); this is optional. */}
-                {highlighted ? (
+                {/* Promotion upsell — publish is already done (free); this is optional.
+                    Waiting for the paid-listing payment → the pay button instead. */}
+                {result.payment ? (
+                  <button onClick={() => setListingPay(true)} data-testid="sell-pay-now" className="mb-5 w-full py-3.5 rounded-pill bg-ink text-paper font-bold text-[15px] shadow-hard-soft">{t.payNow} · {result.payment.price}</button>
+                ) : highlighted ? (
                   <div className="mb-5 rounded-[16px] border-[1.5px] border-ink bg-card px-4 py-3 text-[13px] font-bold text-ink">{plan === 'home' ? t.hiDoneHome : t.hiDoneVerified}</div>
                 ) : paying ? (
                   <div className="mb-5 rounded-[16px] border-[1.5px] border-ink bg-card px-4 py-3 text-[13px] font-bold text-ink flex items-center justify-center gap-2"><Spinner />{t.payingMsg}</div>
@@ -810,9 +835,19 @@ export default function SellFlowProvider({ children }) {
 
                 <div className="flex gap-2.5 justify-center flex-wrap">
                   <button onClick={() => { close(); router.push('/cuenta'); }} className="px-6 py-3 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft">{t.doneDash}</button>
-                  <button onClick={() => { const id = result.id; const scanning = result.scanning; close(); router.push(scanning ? '/cuenta/publicaciones' : `/propiedad/${id}`); }} className="px-6 py-3 border-2 border-ink rounded-pill font-semibold text-[14px]">{result.scanning ? t.scanView : t.doneView}</button>
+                  <button onClick={() => { const id = result.id; const scanning = result.scanning; close(); router.push(scanning || result.payment ? '/cuenta/publicaciones' : `/propiedad/${id}`); }} className="px-6 py-3 border-2 border-ink rounded-pill font-semibold text-[14px]">{result.scanning || result.payment ? t.scanView : t.doneView}</button>
                 </div>
 
+                {listingPay && result?.id && (
+                  <ListingPaymentModal
+                    propertyId={result.id}
+                    kind="publish"
+                    lang={lang}
+                    propertyLabel={[(t.types.find(([v]) => v === f.ptype) || [])[1], f.neighborhood].filter(Boolean).join(' · ')}
+                    onClose={() => setListingPay(false)}
+                    onSuccess={() => { setResult((r) => ({ ...r, payment: null, scanning: true })); window.dispatchEvent(new Event('cl:listings-changed')); }}
+                  />
+                )}
                 {showHi && result?.id && (
                   <HighlightModal
                     propertyId={result.id}
@@ -1008,14 +1043,32 @@ export default function SellFlowProvider({ children }) {
                       <span>{t.cCheck}</span>
                     </label>
 
-                    {/* Promotion plans — two prominent, mutually-exclusive boxes. */}
-                    <div className="mt-4">
+                    {/* Free listings per month (lib/paidListings.js): the price, before publishing. */}
+                    {quota?.enabled && quota.paymentRequired && (
+                      <div className="mt-4 rounded-[16px] border-[1.5px] border-ink bg-card px-4 py-3.5" data-testid="sell-paid-note">
+                        <div className="text-[13px] font-semibold mb-1.5">{t.paidNote(quota.freePerMonth)}</div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {quota.discountPct > 0 && <span className="text-[16px] font-semibold text-ink/40 line-through">{quota.listPrice}</span>}
+                          {quota.discountPct > 0 && <span className="text-[10.5px] font-bold bg-ink text-paper px-2 py-0.5 rounded-pill">{quota.discountPct}% OFF</span>}
+                          <span className="text-[22px] font-bold tracking-head leading-none">{quota.price}</span>
+                          <span className="text-[12px] font-semibold text-ink/55">{t.paidLive(quota.days)}</span>
+                        </div>
+                        <div className="mt-1.5 text-[11px] text-ink/50">{quota.local?.price ? `${quota.local.price} · ` : ''}{t.paidUsd}</div>
+                      </div>
+                    )}
+                    {quota?.enabled && !quota.paymentRequired && quota.freeLeft != null && (
+                      <div className="mt-3 text-[12px] text-ink/55" data-testid="sell-free-left">{t.freeLeftNote(quota.freeLeft, quota.freePerMonth)}</div>
+                    )}
+
+                    {/* Promotion plans — two prominent, mutually-exclusive boxes (not while
+                        the listing itself has to be paid — they can promote it afterwards). */}
+                    {!(quota?.enabled && quota.paymentRequired) && <div className="mt-4">
                       <div className="text-[13px] font-semibold mb-2">{t.planTitle}</div>
                       <div className="grid gap-2.5">
                         <PlanBox on={plan === 'verified'} onClick={() => setPlan((p) => (p === 'verified' ? null : 'verified'))} title={t.v5Title} price={t.v5Price} benefits={[]} icon={<VerifiedIcon className="w-4 h-4" />} />
                         <PlanBox on={plan === 'home'} onClick={() => setPlan((p) => (p === 'home' ? null : 'home'))} title={t.v20Title} price={t.v20Price} benefits={[]} icon={<VerifiedIcon className="w-4 h-4" />} badge={<RecommendedTag lang={lang} className="text-[8px] px-1.5 py-0.5" />} />
                       </div>
-                    </div>
+                    </div>}
                   </div>
                 )}
 
@@ -1028,7 +1081,7 @@ export default function SellFlowProvider({ children }) {
                     {step < 4 ? (
                       <button onClick={next} disabled={busy} className="px-7 py-3 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60 inline-flex items-center justify-center min-w-[108px]">{busy ? <Spinner /> : t.next}</button>
                     ) : (
-                      <button onClick={() => publish(plan)} disabled={busy} className="px-7 py-3 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60">{busy ? t.publishing : (plan === 'home' ? t.publishHome : plan === 'verified' ? t.publishVerified : t.publishBtn)}</button>
+                      <button onClick={() => publish(quota?.paymentRequired ? false : plan)} disabled={busy} data-testid="sell-publish" className="px-7 py-3 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60">{busy ? t.publishing : quota?.enabled && quota.paymentRequired ? t.publishPaid(quota.price) : (plan === 'home' ? t.publishHome : plan === 'verified' ? t.publishVerified : t.publishBtn)}</button>
                     )}
                   </div>
                 )}

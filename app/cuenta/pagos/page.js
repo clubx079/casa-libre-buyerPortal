@@ -6,8 +6,8 @@ import CardModal from '@/components/CardModal';
 import { COUNTRY } from '@/lib/country';
 
 const T = {
-  es: { title: 'Pagos', sub: 'Tu tarjeta guardada y el historial de transacciones', cardTitle: 'Tarjeta guardada', noCard: 'Todavía no tenés una tarjeta guardada. Se guardará automáticamente la primera vez que destaques una propiedad.', histTitle: 'Historial de transacciones', empty: 'Todavía no realizaste ningún pago.', th: { prop: 'Propiedad', amount: 'Monto', status: 'Estado', date: 'Fecha' }, succeeded: 'Exitoso', failed: 'Fallido', deleted: 'Propiedad eliminada', highlight: 'Destacar propiedad', planV: 'Verificada', planH: 'Portada', renewal: 'Renovación', loading: 'Cargando…', changeCard: 'Cambiar tarjeta', addCard: 'Agregar tarjeta' },
-  en: { title: 'Payments', sub: 'Your saved card and transaction history', cardTitle: 'Saved card', noCard: "You don't have a saved card yet. It's saved automatically the first time you feature a property.", histTitle: 'Transaction history', empty: "You haven't made any payments yet.", th: { prop: 'Property', amount: 'Amount', status: 'Status', date: 'Date' }, succeeded: 'Succeeded', failed: 'Failed', deleted: 'Deleted property', highlight: 'Feature property', planV: 'Verified', planH: 'Landing', renewal: 'Renewal', loading: 'Loading…', changeCard: 'Change card', addCard: 'Add card' },
+  es: { title: 'Pagos', sub: 'Tu tarjeta guardada y el historial de transacciones', cardTitle: 'Tarjeta guardada', noCard: 'Todavía no tenés una tarjeta guardada. Se guardará automáticamente la primera vez que destaques una propiedad.', histTitle: 'Historial de transacciones', empty: 'Todavía no realizaste ningún pago.', th: { prop: 'Propiedad', amount: 'Monto', status: 'Estado', date: 'Fecha' }, succeeded: 'Exitoso', failed: 'Fallido', deleted: 'Propiedad eliminada', highlight: 'Destacar propiedad', planV: 'Verificada', planH: 'Portada', renewal: 'Renovación', listingPaid: 'Publicación adicional', listingExtend: 'Extensión de publicación', loading: 'Cargando…', changeCard: 'Cambiar tarjeta', addCard: 'Agregar tarjeta' },
+  en: { title: 'Payments', sub: 'Your saved card and transaction history', cardTitle: 'Saved card', noCard: "You don't have a saved card yet. It's saved automatically the first time you feature a property.", histTitle: 'Transaction history', empty: "You haven't made any payments yet.", th: { prop: 'Property', amount: 'Amount', status: 'Status', date: 'Date' }, succeeded: 'Succeeded', failed: 'Failed', deleted: 'Deleted property', highlight: 'Feature property', planV: 'Verified', planH: 'Landing', renewal: 'Renewal', listingPaid: 'Extra listing', listingExtend: 'Listing extension', loading: 'Loading…', changeCard: 'Change card', addCard: 'Add card' },
 };
 const brandLabel = (b) => ({ visa: 'Visa', mastercard: 'Mastercard', amex: 'American Express' }[b] || (b ? b[0].toUpperCase() + b.slice(1) : 'Tarjeta'));
 
@@ -23,7 +23,7 @@ export default function PaymentsPage() {
   const payments = data?.payments || [];
   const fmtDate = (iso) => { try { return new Date(iso).toLocaleDateString(lang === 'es' ? COUNTRY.locale : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' }); } catch { return ''; } };
   const propLabel = (p) => { const pr = p.property; if (!pr) return t.deleted; return [pr.property_type, pr.neighborhood || pr.city].filter(Boolean).join(' · ') || t.highlight; };
-  const planText = (p) => { const base = p.plan === 'home' ? t.planH : p.plan === 'verified' ? t.planV : t.highlight; return p.kind === 'renewal' ? `${base} · ${t.renewal}` : base; };
+  const planText = (p) => { if (p.kind === 'listing') return t.listingPaid; if (p.kind === 'listing_extend') return t.listingExtend; const base = p.plan === 'home' ? t.planH : p.plan === 'verified' ? t.planV : t.highlight; return p.kind === 'renewal' ? `${base} · ${t.renewal}` : base; };
 
   return (
     <div>

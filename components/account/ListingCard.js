@@ -19,8 +19,9 @@ export default function ListingCard({ l, action }) {
   // AI photo check (lib/listingScan.js): not on the site yet (or rejected) → no link to
   // the public page (it would 404), and a chip saying where it stands.
   const scan = l.scan;   // 'scanning' | 'rejected' | null
-  const Box = scan ? 'div' : Link;
-  const boxProps = scan ? {} : { href: `/propiedad/${l.id}` };
+  const pay = l.payState;   // 'payment_pending' | 'expired' | null (paid listings) — not on the site either
+  const Box = scan || pay ? 'div' : Link;
+  const boxProps = scan || pay ? {} : { href: `/propiedad/${l.id}` };
 
   return (
     <div className={`bg-card rounded-[18px] overflow-hidden flex flex-col ${l.verified ? 'border border-ink ring-[1.5px] ring-ink shadow-hard-sm' : 'border border-ink/15'}`}>
@@ -35,7 +36,9 @@ export default function ListingCard({ l, action }) {
           </span>
         )}
         {scan === 'rejected' && <span className="absolute top-2 right-2 text-[10px] font-bold bg-red-600 text-white px-2.5 py-1 rounded-pill" data-testid="scan-chip">{lang === 'es' ? 'Fotos no aceptadas' : 'Photos not accepted'}</span>}
-        {!scan && l.admin_status && l.admin_status !== 'active' && <span className="absolute top-2 right-2 text-[10px] font-semibold bg-paper text-ink border border-ink/20 px-2.5 py-1 rounded-pill capitalize">{l.admin_status}</span>}
+        {pay === 'payment_pending' && <span className="absolute top-2 right-2 text-[10px] font-bold bg-amber-400 text-ink px-2.5 py-1 rounded-pill" data-testid="pay-chip">{lang === 'es' ? 'Pago pendiente' : 'Payment pending'}</span>}
+        {pay === 'expired' && <span className="absolute top-2 right-2 text-[10px] font-bold bg-ink text-paper px-2.5 py-1 rounded-pill" data-testid="pay-chip">{lang === 'es' ? 'Vencida' : 'Ended'}</span>}
+        {!scan && !pay && l.admin_status && l.admin_status !== 'active' && <span className="absolute top-2 right-2 text-[10px] font-semibold bg-paper text-ink border border-ink/20 px-2.5 py-1 rounded-pill capitalize">{l.admin_status}</span>}
       </Box>
       <div className="relative p-3.5 flex-1 flex flex-col">
         {l.verified && <VerifiedTag lang={lang} className="absolute top-3 right-3 z-10 text-[9px] px-2 py-0.5" />}
