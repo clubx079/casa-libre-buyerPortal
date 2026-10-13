@@ -17,7 +17,7 @@ async function handle(req) {
     if (auth !== `Bearer ${secret}` && qs !== secret) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
   try {
-    const out = await scanPending(25);
+    const out = await scanPending(60);
     return NextResponse.json({ ok: true, ...out, at: new Date().toISOString() });
   } catch (e) {
     return NextResponse.json({ ok: false, error: String(e?.message || e).slice(0, 200) }, { status: 500 });
