@@ -49,6 +49,12 @@ test('one detail different (price) → NOT a duplicate, even with the same photo
   assert.equal(d, null);
 });
 
+test('a different description does not matter', async () => {
+  const rows = [{ id: 'a', ...base, description: 'Otra descripción completamente distinta', raw_data: { photo_hashes: ['ffffffffffffffff'] } }];
+  const d = await findDuplicateOf({ ...db(rows), uid: U, newRow: base, newHashes: ['ffffffffffffffff'], photoHashesOf: async (p) => p.raw_data.photo_hashes });
+  assert.equal(d?.id, 'a');
+});
+
 test('formatting differences in the details still match (spaces, case, phone format)', async () => {
   const rows = [{ id: 'a', ...base, neighborhood: '  villa  morra ', contact_phone: '0981123456', raw_data: { photo_hashes: ['ffffffffffffffff'] } }];
   const d = await findDuplicateOf({ ...db(rows), uid: U, newRow: base, newHashes: ['ffffffffffffffff'], photoHashesOf: async (p) => p.raw_data.photo_hashes });
