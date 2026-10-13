@@ -242,7 +242,9 @@ export default function SellFlowProvider({ children }) {
   useEffect(() => { if (resumed && resumedAtRef.current !== null && step !== resumedAtRef.current) setResumed(false); }, [step, resumed]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
-  const [termsOk, setTermsOk] = useState(false);   // Terms of Service opt-in (step 1)
+  // Terms of Service opt-in (step 1). Rule: it ALWAYS starts unticked — every new listing,
+  // a resumed one, coming back from Google — the seller ticks it themselves. Never pre-ticked.
+  const [termsOk, setTermsOk] = useState(false);
   const [errs, setErrs] = useState({});
   const [code, setCode] = useState('');
   const [verified, setVerified] = useState(false);
@@ -269,7 +271,7 @@ export default function SellFlowProvider({ children }) {
   const creatingDraftRef = useRef(false);
 
   const reset = () => {
-    setStep(0); setPhase(''); setErr(''); setErrs({}); setBusy(false); setCode(''); setVerified(false); setEmailTaken(false); setLoginCode(''); setCodeSent(false); setPhotos([]); setResult(null); setShowHi(false); setHighlighted(false); setPaying(false); setPlan(null); setConfirmOk(false); setResumed(false); setQuota(null); setListingPay(false);
+    setStep(0); setPhase(''); setErr(''); setErrs({}); setBusy(false); setCode(''); setVerified(false); setEmailTaken(false); setLoginCode(''); setCodeSent(false); setPhotos([]); setResult(null); setShowHi(false); setHighlighted(false); setPaying(false); setPlan(null); setConfirmOk(false); setTermsOk(false); setResumed(false); setQuota(null); setListingPay(false);
     setF(BLANK); setDraftId(null); creatingDraftRef.current = false;
   };
   const close = () => { setOpen(false); reset(); };
@@ -305,13 +307,12 @@ export default function SellFlowProvider({ children }) {
   };
 
   // Back from Google WITHOUT signing in: same wizard, on the confirm-email screen
-  // (Google / Send code), with what they had entered. Terms were accepted in step 1.
+  // (Google / Send code), with what they had entered.
   const reopenAtConfirm = async (fields, files = null) => {
     reset();
     openedLoggedInRef.current = false;
     setF({ ...BLANK, ...fields });
     if (files) restorePhotos(files);
-    setTermsOk(true);
     if (!fields.email || !fields.neighborhood) { setStep(fields.seller_type ? 1 : 0); setOpen(true); return; }
     setStep(3);
     setOpen(true);
@@ -342,7 +343,6 @@ export default function SellFlowProvider({ children }) {
     setStep(Math.min(pr.step || 0, user ? 4 : 3));
     setDraftId(pr.draftId || null);
     if (user && pr.draftId) creatingDraftRef.current = true;
-    setTermsOk(!!pr.termsOk);
     setResumed(true);
     loadProgressPhotos().then((x) => { if (x?.owner === me && x.files?.length) restorePhotos(x.files); }).catch(() => {});
     if (!user && pr.draftId && pr.f.email) {
