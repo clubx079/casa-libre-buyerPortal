@@ -27,6 +27,11 @@ import { usd } from '@/lib/paidListings';
 import { localPrice } from '@/lib/localPrice';
 import { stripe } from '@/lib/stripe';
 import { LISTING_STATUS } from '@/lib/listingPayments';
+import { dHash } from '@/lib/photoHash';
+import { getBytes } from '@/lib/b2';
+import { findDuplicateOf, DUPLICATE_STATUS } from '@/lib/duplicateCheck';
+import { holdInQuarantine } from '@/lib/listingScan';
+import { sendDuplicateNotice } from '@/lib/duplicateNotice';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -117,15 +122,6 @@ export async function POST(req) {
   if (!Number.isFinite(price) || price <= 0) return NextResponse.json({ error: 'missing_price' }, { status: 400 });
   if (String(contactPhone || '').replace(/\D/g, '').length < 6) return NextResponse.json({ error: 'missing_contact' }, { status: 400 });
 
-  // Free listings per month (lib/paidListings.js, set in the admin): past the free ones,
-  // the listing is SAVED as 'payment_pending' (not on the site, no photo check yet) and
-  // the wizard asks for the payment; paying starts the photo check
-  // (/api/listing-payment). One person with several emails shares one quota
-  // (lib/samePerson.js) — the signals are kept on every listing for that.
-  const signals = makeSignals({ deviceId: get('device_id') || req.cookies?.get?.('cl_did')?.value, fp: get('device_fp'), ip: getClientIP(req) });
-  const quota = stripe ? await listingQuota(dbApi, { uid: session.uid, signals, countryCode: COUNTRY.code }).catch(() => null) : null;
-  const payFirst = !!quota?.paymentRequired;
-
   const property_type = dbType(ptype);
   const isLand = isLandType(ptype);
   const rate = await getUsdToPyg().catch(() => Number(process.env[`${COUNTRY.fxTarget}_PER_USD`]) || COUNTRY.fxFallback);
@@ -144,6 +140,43 @@ export async function POST(req) {
     const pygVal = currency === COUNTRY.currencyCode ? price : Math.round(price * rate);
     if (!(pygVal >= COUNTRY.rentFloorLocal)) return NextResponse.json({ error: 'price_too_low' }, { status: 400 });
   }
+
+  // The photos, read once: in the seller's order (photo_order) — photos already uploaded
+  // to their draft (reused from storage, never sent again) and/or new files. Clients
+  // without photo_order (the app, older pages) send files only.
+  const files = form.getAll('photos').filter((f) => f && typeof f.arrayBuffer === 'function' && f.size > 0).slice(0, 20);
+  let order = null;
+  try { order = JSON.parse(get('photo_order') || 'null'); } catch { order = null; }
+  const sources = Array.isArray(order) ? orderedPhotoSources(order, files.length, ownerFolders(session)) : files.map((_, i) => ({ file: i }));
+  const raws = await Promise.all(sources.map(async (src) => {
+    try { const f = src.file != null ? files[src.file] : null; return f ? Buffer.from(await f.arrayBuffer()) : await draftPhotoBytes(src.key); } catch { return null; }
+  }));
+  const photoHashes = await Promise.all(raws.map((b) => (b ? dHash(b).catch(() => null) : null)));
+
+  // Same property listed twice by this account (lib/duplicateCheck.js): every detail
+  // exactly the same AND half or more of the photos the same → the new copy is held
+  // ('duplicate_review', not on the site, no payment, no photo check) and the owner is
+  // emailed now. On while the "same property listed twice" automation is on.
+  const [dupAuto] = await dbApi.select('automations', 'select=id,enabled,template_id&id=eq.duplicate_listings&limit=1').catch(() => []);
+  const dup = dupAuto?.enabled ? await findDuplicateOf({
+    select: dbApi.select, uid: session.uid, newHashes: photoHashes,
+    newRow: { listing_type: mode === 'alquiler' ? 'rent' : 'sale', property_type, price, currency, neighborhood, city, [isLand ? 'land_area' : 'covered_area']: area, description: description || null, contact_phone: contactPhone },
+    photoHashesOf: async (p) => {
+      if (Array.isArray(p.raw_data?.photo_hashes) && p.raw_data.photo_hashes.length) return p.raw_data.photo_hashes;
+      const imgs = await dbApi.select('property_images', `select=storage_key&property_id=eq.${encodeURIComponent(p.id)}&order=position.asc&limit=20`);
+      return Promise.all(imgs.map(async (im) => { try { return await dHash(await getBytes(im.storage_key)); } catch { return null; } }));
+    },
+  }).catch(() => null) : null;
+
+  // Free listings per month (lib/paidListings.js, set in the admin): past the free ones,
+  // the listing is SAVED as 'payment_pending' (not on the site, no photo check yet) and
+  // the wizard asks for the payment; paying starts the photo check
+  // (/api/listing-payment). One person with several emails shares one quota
+  // (lib/samePerson.js) — the signals are kept on every listing for that. A held
+  // duplicate is never charged.
+  const signals = makeSignals({ deviceId: get('device_id') || req.cookies?.get?.('cl_did')?.value, fp: get('device_fp'), ip: getClientIP(req) });
+  const quota = stripe && !dup ? await listingQuota(dbApi, { uid: session.uid, signals, countryCode: COUNTRY.code }).catch(() => null) : null;
+  const payFirst = !!quota?.paymentRequired;
 
   const slug = `${slugify(`${property_type}-${neighborhood}`) || 'propiedad'}-${Date.now().toString(36)}`;
   // Geocode runs in PARALLEL with the DB insert + photo uploads below (it's the
@@ -170,7 +203,7 @@ export async function POST(req) {
     contact_phone: contactPhone,
     latitude: null,   // patched after geocodePromise resolves
     longitude: null,
-    status: payFirst ? LISTING_STATUS.pending : SCAN_STATUS.scanning,   // the photo check publishes it (lib/listingScan.js)
+    status: dup ? DUPLICATE_STATUS : payFirst ? LISTING_STATUS.pending : SCAN_STATUS.scanning,   // the photo check publishes it (lib/listingScan.js)
     admin_status: 'inactive',
     property_status: 'available',
     is_complete: true, // passed the form's completeness validation → searchable immediately
@@ -182,8 +215,10 @@ export async function POST(req) {
     created_by: session.uid,   // who published this deal
     posted_by: session.uid,
     raw_data: { published_via: 'buyer-portal', user_id: session.uid, user_email: session.email, ...(entered ? { entered_price: entered } : {}), signals,
+      photo_hashes: photoHashes.filter(Boolean),
+      ...(dup ? { duplicate_of: dup.id } : {}),
       ...(payFirst ? { paid_listing: { state: 'pending', price_cents: quota.priceCents, list_cents: quota.listCents, discount_pct: quota.discountPct, days: quota.days } } : {}),
-      moderation: payFirst ? { state: 'awaiting_payment' } : { state: 'scanning', started_at: new Date().toISOString() } },
+      moderation: dup ? { state: 'duplicate', duplicate_of: dup.id, same_photos: `${dup.matched}/${dup.total}` } : payFirst ? { state: 'awaiting_payment' } : { state: 'scanning', started_at: new Date().toISOString() } },
   };
 
   // Ingest-pipeline parity: give the user listing a canonical zone + dedupe
@@ -204,17 +239,11 @@ export async function POST(req) {
 
   // Upload photos to B2 and link them — CONCURRENTLY (was one-at-a-time, the main
   // cause of slow publishes). Non-fatal: a listing publishes even if a photo fails.
-  // In the seller's order (photo_order): photos already uploaded to their draft —
-  // reused from storage, never sent again — and/or new files. Clients without
-  // photo_order (the app, older pages) send files only.
-  const files = form.getAll('photos').filter((f) => f && typeof f.arrayBuffer === 'function' && f.size > 0).slice(0, 20);
-  let order = null;
-  try { order = JSON.parse(get('photo_order') || 'null'); } catch { order = null; }
-  const sources = Array.isArray(order) ? orderedPhotoSources(order, files.length, ownerFolders(session)) : files.map((_, i) => ({ file: i }));
   const processed = await Promise.all(sources.map(async (src, i) => {
     try {
       const f = src.file != null ? files[src.file] : null;
-      const raw = f ? Buffer.from(await f.arrayBuffer()) : await draftPhotoBytes(src.key);
+      const raw = raws[i];
+      if (!raw) return null;
       // Brand every user photo with the Casa Libre mascot — best-effort: if stamping
       // fails (e.g. sharp unavailable), fall back to the original bytes.
       const name = f ? f.name : src.key;
@@ -265,6 +294,15 @@ export async function POST(req) {
   // meanwhile; My listings shows "Checking photos…"). When the photos pass, the listing
   // goes live and the "your listing is live" email + search-engine ping are sent
   // (lib/listingScan.js). Nothing to check → live now.
+  // A held duplicate: kept off the site, in the admin Quarantine ("Possible duplicate",
+  // Approve anyway publishes it), and the owner is emailed now — instead of the photo
+  // check / "your listing is live".
+  if (dup && propertyId) {
+    const held = { ...created, ...patch };
+    await holdInQuarantine(held, [], 'duplicate', { duplicate_of: dup.id }).catch(() => {});
+    await sendDuplicateNotice({ automation: dupAuto, held, original: dup.listing, count: dup.count, to: session.email, name: session.name }).catch(() => {});
+    return NextResponse.json({ ok: true, slug, id: propertyId, ref, images: images.length, scanning: false, duplicate: { of: dup.id } });
+  }
   if (payFirst && propertyId) {
     const local = await localPrice(quota.priceCents);
     return NextResponse.json({

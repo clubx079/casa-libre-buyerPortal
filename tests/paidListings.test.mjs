@@ -57,6 +57,7 @@ test('only unpaid listings of this month use the free quota', () => {
     { created_at: '2026-10-02T00:00:00Z' },
     { created_at: '2026-10-05T00:00:00Z', raw_data: { paid_listing: { state: 'active' } } },
     { created_at: '2026-09-30T00:00:00Z' },
+    { created_at: '2026-10-06T00:00:00Z', status: 'duplicate_review' },
   ];
   assert.equal(countFreeThisMonth(rows, ms), 1);
 });

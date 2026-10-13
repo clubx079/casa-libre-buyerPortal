@@ -3,6 +3,7 @@ import { revalidateTag } from 'next/cache';
 import { getSession } from '@/lib/auth';
 import { getUserListings } from '@/lib/listings';
 import { select, remove } from '@/lib/db';
+import { releaseFromQuarantine } from '@/lib/listingScan';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -31,6 +32,7 @@ export async function DELETE(req) {
   } catch (e) {
     return NextResponse.json({ error: 'delete_failed', detail: e?.message }, { status: 500 });
   }
+  await releaseFromQuarantine(id).catch(() => {});   // a held copy (rejected photos / possible duplicate) leaves the admin Quarantine too
   try { revalidateTag('listings'); } catch {}   // deleted listing drops off home/marketplace now
   return NextResponse.json({ ok: true });
 }

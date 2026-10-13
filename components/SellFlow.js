@@ -58,6 +58,7 @@ const DICT = {
     publishBtn: 'Publicar gratis', publishing: 'Publicando…',
     // Paid listings (lib/paidListings.js): past the free ones of the month.
     paidNote: (n) => `Ya usaste tus ${n} publicaciones gratis de este mes. Esta cuesta:`, paidLive: (d) => `publicada ${d} días`, publishPaid: (p, pl) => `Publicar · ${p}${pl === 'home' ? ' + US$20' : pl === 'verified' ? ' + US$5' : ''}`,
+    dupTitle: 'En revisión: puede ser una publicación repetida', dupSub: 'Tiene los mismos datos y fotos que otra de tus propiedades, así que no la publicamos. Te enviamos un email.',
     pendTitle: 'Tu publicación está guardada', pendSub: 'Falta el pago para publicarla. Podés pagarla desde Mis publicaciones.', payNow: 'Pagar y publicar',
     backToApp: 'Volver a la app',
     doneTitle: '¡Tu propiedad está publicada!', doneSub: 'Ya aparece en el marketplace de Casa Libre.', doneView: 'Ver mi propiedad', doneBrowse: 'Ver propiedades',
@@ -102,6 +103,7 @@ const DICT = {
     fPhotos: 'Drag or choose your photos', fPhotosSub: 'min. 1 photo · JPG or PNG', photosChosen: (n) => `${n} photo${n === 1 ? '' : 's'} selected`,
     publishBtn: 'Publish for free', publishing: 'Publishing…',
     paidNote: (n) => `You've used your ${n} free listings this month. This one costs:`, paidLive: (d) => `live ${d} days`, publishPaid: (p, pl) => `Publish · ${p}${pl === 'home' ? ' + US$20' : pl === 'verified' ? ' + US$5' : ''}`,
+    dupTitle: 'Under review: it might be a duplicate', dupSub: "It has the same details and photos as another of your listings, so we didn't publish it. We've emailed you.",
     pendTitle: 'Your listing is saved', pendSub: 'It needs the payment to go live. You can pay from My listings.', payNow: 'Pay and publish',
     backToApp: 'Back to the app',
     doneTitle: 'Your listing is live!', doneSub: 'It already shows in the Casa Libre marketplace.', doneView: 'View my listing', doneBrowse: 'Browse listings',
@@ -771,7 +773,8 @@ export default function SellFlowProvider({ children }) {
       writeProgress({ owner: me, fresh: true, dismissed: readProgress().dismissed || [] }); clearProgressPhotos();   // published: the next listing starts empty
       window.dispatchEvent(new Event('cl:listings-changed'));   // My listings refreshes its tabs
       track('listing_created', { property_id: j.id, slug: j.slug, ref: j.ref, operation: f.mode, property_type: f.ptype, city: f.city, neighborhood: f.neighborhood, price: f.price ? Number(f.price) : null, currency: priceCurrency, photos: photos.length });
-      setResult({ id: j.id, ref: j.ref, scanning: !!j.scanning, payment: j.payment || null });   // scanning: the AI photo check publishes it (lib/listingScan.js)
+      setResult({ id: j.id, ref: j.ref, scanning: !!j.scanning, payment: j.payment || null, duplicate: !!j.duplicate });   // scanning: the AI photo check publishes it (lib/listingScan.js)
+      if (j.duplicate) return;   // held as a possible duplicate — nothing to pay or promote
       if (j.payment) { setListingPay(true); return; }   // over the free listings of the month → pay to publish (a picked plan follows the payment)
       if (openHighlightAfter) await payWithPlan(openHighlightAfter, j.id);
     } catch { setErr(t.errSubmit); } finally { setBusy(false); }
@@ -808,13 +811,13 @@ export default function SellFlowProvider({ children }) {
               <div className="text-center py-4">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/mascot.png" alt="" className="w-[120px] object-contain mx-auto mb-2" />
-                <h2 className="text-[24px] font-bold tracking-head mb-1.5">{result.payment ? t.pendTitle : result.scanning ? t.scanTitle : t.doneTitle}</h2>
-                <p className="text-[14px] text-ink/55 mb-1">{result.payment ? t.pendSub : result.scanning ? t.scanSub : t.doneSub}</p>
+                <h2 className="text-[24px] font-bold tracking-head mb-1.5">{result.duplicate ? t.dupTitle : result.payment ? t.pendTitle : result.scanning ? t.scanTitle : t.doneTitle}</h2>
+                <p className="text-[14px] text-ink/55 mb-1">{result.duplicate ? t.dupSub : result.payment ? t.pendSub : result.scanning ? t.scanSub : t.doneSub}</p>
                 <div className="font-mono text-[11px] text-ink/45 mb-5">REF: {result.ref}</div>
 
                 {/* Promotion upsell — publish is already done (free); this is optional.
                     Waiting for the paid-listing payment → the pay button instead. */}
-                {result.payment ? (
+                {result.duplicate ? null : result.payment ? (
                   <button onClick={() => setListingPay(true)} data-testid="sell-pay-now" className="mb-5 w-full py-3.5 rounded-pill bg-ink text-paper font-bold text-[15px] shadow-hard-soft">{t.payNow} · {result.payment.price}</button>
                 ) : highlighted ? (
                   <div className="mb-5 rounded-[16px] border-[1.5px] border-ink bg-card px-4 py-3 text-[13px] font-bold text-ink">{plan === 'home' ? t.hiDoneHome : t.hiDoneVerified}</div>
@@ -834,7 +837,7 @@ export default function SellFlowProvider({ children }) {
 
                 <div className="flex gap-2.5 justify-center flex-wrap">
                   <button onClick={() => { close(); router.push('/cuenta'); }} className="px-6 py-3 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft">{t.doneDash}</button>
-                  <button onClick={() => { const id = result.id; const scanning = result.scanning; close(); router.push(scanning || result.payment ? '/cuenta/publicaciones' : `/propiedad/${id}`); }} className="px-6 py-3 border-2 border-ink rounded-pill font-semibold text-[14px]">{result.scanning || result.payment ? t.scanView : t.doneView}</button>
+                  <button onClick={() => { const id = result.id; const scanning = result.scanning; close(); router.push(scanning || result.payment || result.duplicate ? '/cuenta/publicaciones' : `/propiedad/${id}`); }} className="px-6 py-3 border-2 border-ink rounded-pill font-semibold text-[14px]">{result.scanning || result.payment || result.duplicate ? t.scanView : t.doneView}</button>
                 </div>
 
                 {listingPay && result?.id && (

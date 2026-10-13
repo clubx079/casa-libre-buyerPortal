@@ -24,6 +24,7 @@ const D = {
     tabActive: 'Publicadas', tabDrafts: 'Borradores', tabRejected: 'Rechazadas', draftChip: 'Borrador', cont: 'Continuar', del: 'Eliminar',
     emptyRejected: 'No tenés publicaciones rechazadas.',
     scanningNote: 'Estamos revisando las fotos. Se publica en un momento.',
+    reviewNote: 'En revisión: puede ser una publicación repetida. Tiene los mismos datos y fotos que otra de tus propiedades, así que no la publicamos. Te enviamos un email.',
     pendingNote: 'Guardada, pero no está en el sitio: ya usaste tus publicaciones gratis del mes. Pagala para publicarla.', payPublish: 'Pagar y publicar',
     endedNote: (d) => `Terminó${d ? ` el ${d}` : ''} y ya no está en el sitio. Extendela para volver a publicarla.`, extend: 'Extender', paidChip: 'Publicación paga',
     rejectedNote: 'No la publicamos: algunas fotos pueden tener contenido para adultos (+18), dañino, ofensivo o sin relación con la propiedad. Cambialas y enviala de nuevo.',
@@ -37,6 +38,7 @@ const D = {
     tabActive: 'Published', tabDrafts: 'Drafts', tabRejected: 'Rejected', draftChip: 'Draft', cont: 'Continue', del: 'Delete',
     emptyRejected: 'No rejected listings.',
     scanningNote: "We're checking the photos. It goes live in a moment.",
+    reviewNote: "Under review: it might be a duplicate. It has the same details and photos as another of your listings, so we didn't publish it. We've emailed you.",
     pendingNote: "Saved, but not on the site: you've used this month's free listings. Pay to publish it.", payPublish: 'Pay and publish',
     endedNote: (d) => `It ended${d ? ` on ${d}` : ''} and is off the site. Extend it to bring it back.`, extend: 'Extend', paidChip: 'Paid listing',
     rejectedNote: "We didn't publish it: some photos may show 18+, harmful, abusive or unrelated content. Replace them and submit again.",
@@ -275,7 +277,12 @@ export default function MyListingsPage() {
       {tab === 'active' && listings && published.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {published.map((l) => (
-            <ListingCard key={l.id} l={l} action={l.payState ? (
+            <ListingCard key={l.id} l={l} action={l.review ? (
+              <div className="flex flex-col gap-2.5" data-testid="review-card">
+                <p className="text-[12.5px] leading-snug text-ink/70">{x.reviewNote}</p>
+                <button onClick={() => setConfirmId(l.id)} className="py-2 rounded-pill border-[1.5px] border-red-300 text-red-700 text-[13px] font-semibold">{t.del}</button>
+              </div>
+            ) : l.payState ? (
               <div className="flex flex-col gap-2.5" data-testid={`pay-card-${l.payState}`}>
                 <p className="text-[12.5px] leading-snug text-ink/70">{l.payState === 'payment_pending' ? x.pendingNote : x.endedNote(l.paid?.until ? new Date(l.paid.until).toLocaleDateString(lang === 'es' ? 'es' : 'en-US', { day: 'numeric', month: 'long' }) : '')}</p>
                 <div className="flex gap-2">
