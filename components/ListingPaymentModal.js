@@ -32,8 +32,7 @@ const DICT = {
     loading: 'Cargando…', processing: 'Procesando pago…',
     okPublish: '¡Pago recibido! Revisamos las fotos y la publicamos en un momento.', okExtend: '¡Listo! Tu publicación fue extendida.',
     okUntil: (d) => `Estará en el sitio hasta el ${d}.`, done: 'Listo',
-    errTitle: 'El pago no se completó', retry: 'Reintentar', close: 'Cerrar', later: 'Pagar más tarde',
-    laterNote: 'Queda guardada en Mis publicaciones como «Pago pendiente».',
+    errTitle: 'El pago no se completó', retry: 'Reintentar', close: 'Cerrar',
     err: { unauthorized: 'Iniciá sesión para pagar.', not_pending: 'Esta publicación ya fue pagada.', not_paid_listing: 'Esta publicación no se puede extender.', forbidden: 'No podés pagar esta publicación.', not_found: 'No encontramos la publicación.', stripe_not_configured: 'El pago no está disponible en este momento.' },
     fail: 'El pago no se completó.', locale: 'es',
   },
@@ -50,8 +49,7 @@ const DICT = {
     loading: 'Loading…', processing: 'Processing payment…',
     okPublish: 'Payment received! We check the photos and publish it in a moment.', okExtend: 'Done! Your listing was extended.',
     okUntil: (d) => `It stays on the site until ${d}.`, done: 'Done',
-    errTitle: 'Payment did not complete', retry: 'Try again', close: 'Close', later: 'Pay later',
-    laterNote: 'It stays saved in My listings as "Payment pending".',
+    errTitle: 'Payment did not complete', retry: 'Try again', close: 'Close',
     err: { unauthorized: 'Log in to pay.', not_pending: 'This listing is already paid.', not_paid_listing: "This listing can't be extended.", forbidden: "You can't pay for this listing.", not_found: 'Listing not found.', stripe_not_configured: 'Payments are unavailable right now.' },
     fail: 'Payment did not complete.', locale: 'en-US',
   },
@@ -170,8 +168,7 @@ export default function ListingPaymentModal({ propertyId, kind = 'publish', lang
               )}
               {kind === 'publish' && (
                 <>
-                  <button onClick={onClose} className="w-full py-2.5 border-[1.5px] border-ink/25 rounded-pill font-semibold text-[13px]">{t.later}</button>
-                  <p className="text-[11.5px] text-ink/50 text-center">{t.laterNote} {t.reset}</p>
+                  <p className="text-[11.5px] text-ink/50 text-center mt-1">{t.reset}</p>
                   <p className="text-[12px] text-ink/65 text-center mt-1">{t.agents} <a href="/empresas" className="font-semibold underline">{t.agentsLink}</a></p>
                 </>
               )}
