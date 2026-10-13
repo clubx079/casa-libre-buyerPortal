@@ -21,6 +21,7 @@ import { track } from '@/lib/analytics';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import HighlightModal from '@/components/HighlightModal';
 import ListingPaymentModal from '@/components/ListingPaymentModal';
+import StrikePrice from '@/components/StrikePrice';
 import { appendDeviceSignals, deviceId, deviceFingerprint } from '@/lib/deviceSignals';
 import RecommendedTag from '@/components/RecommendedTag';
 import PlanBox from '@/components/PlanBox';
@@ -56,8 +57,7 @@ const DICT = {
     fPhotos: 'Arrastrá o elegí tus fotos', fPhotosSub: 'mín. 1 foto · JPG o PNG', photosChosen: (n) => `${n} foto${n === 1 ? '' : 's'} seleccionada${n === 1 ? '' : 's'}`,
     publishBtn: 'Publicar gratis', publishing: 'Publicando…',
     // Paid listings (lib/paidListings.js): past the free ones of the month.
-    paidNote: (n) => `Ya usaste tus ${n} publicaciones gratis de este mes. Esta cuesta:`, paidLive: (d) => `publicada ${d} días`, paidUsd: 'Se cobra en dólares (US$).', publishPaid: (p) => `Publicar · ${p}`,
-    freeLeftNote: (l, n) => `Te ${l === 1 ? 'queda' : 'quedan'} ${l} de ${n} publicaciones gratis este mes.`,
+    paidNote: (n) => `Ya usaste tus ${n} publicaciones gratis de este mes. Esta cuesta:`, paidLive: (d) => `publicada ${d} días`, publishPaid: (p, pl) => `Publicar · ${p}${pl === 'home' ? ' + US$20' : pl === 'verified' ? ' + US$5' : ''}`,
     pendTitle: 'Tu publicación está guardada', pendSub: 'Falta el pago para publicarla. Podés pagarla desde Mis publicaciones.', payNow: 'Pagar y publicar',
     backToApp: 'Volver a la app',
     doneTitle: '¡Tu propiedad está publicada!', doneSub: 'Ya aparece en el marketplace de Casa Libre.', doneView: 'Ver mi propiedad', doneBrowse: 'Ver propiedades',
@@ -101,8 +101,7 @@ const DICT = {
     fPhone: 'WhatsApp / phone (for buyers)', fPhonePh: '0981 123 456',
     fPhotos: 'Drag or choose your photos', fPhotosSub: 'min. 1 photo · JPG or PNG', photosChosen: (n) => `${n} photo${n === 1 ? '' : 's'} selected`,
     publishBtn: 'Publish for free', publishing: 'Publishing…',
-    paidNote: (n) => `You've used your ${n} free listings this month. This one costs:`, paidLive: (d) => `live ${d} days`, paidUsd: 'Charged in US dollars (US$).', publishPaid: (p) => `Publish · ${p}`,
-    freeLeftNote: (l, n) => `${l} of ${n} free listings left this month.`,
+    paidNote: (n) => `You've used your ${n} free listings this month. This one costs:`, paidLive: (d) => `live ${d} days`, publishPaid: (p, pl) => `Publish · ${p}${pl === 'home' ? ' + US$20' : pl === 'verified' ? ' + US$5' : ''}`,
     pendTitle: 'Your listing is saved', pendSub: 'It needs the payment to go live. You can pay from My listings.', payNow: 'Pay and publish',
     backToApp: 'Back to the app',
     doneTitle: 'Your listing is live!', doneSub: 'It already shows in the Casa Libre marketplace.', doneView: 'View my listing', doneBrowse: 'Browse listings',
@@ -773,7 +772,7 @@ export default function SellFlowProvider({ children }) {
       window.dispatchEvent(new Event('cl:listings-changed'));   // My listings refreshes its tabs
       track('listing_created', { property_id: j.id, slug: j.slug, ref: j.ref, operation: f.mode, property_type: f.ptype, city: f.city, neighborhood: f.neighborhood, price: f.price ? Number(f.price) : null, currency: priceCurrency, photos: photos.length });
       setResult({ id: j.id, ref: j.ref, scanning: !!j.scanning, payment: j.payment || null });   // scanning: the AI photo check publishes it (lib/listingScan.js)
-      if (j.payment) { setListingPay(true); return; }   // over the free listings of the month → pay to publish
+      if (j.payment) { setListingPay(true); return; }   // over the free listings of the month → pay to publish (a picked plan follows the payment)
       if (openHighlightAfter) await payWithPlan(openHighlightAfter, j.id);
     } catch { setErr(t.errSubmit); } finally { setBusy(false); }
   };
@@ -845,7 +844,7 @@ export default function SellFlowProvider({ children }) {
                     lang={lang}
                     propertyLabel={[(t.types.find(([v]) => v === f.ptype) || [])[1], f.neighborhood].filter(Boolean).join(' · ')}
                     onClose={() => setListingPay(false)}
-                    onSuccess={() => { setResult((r) => ({ ...r, payment: null, scanning: true })); window.dispatchEvent(new Event('cl:listings-changed')); }}
+                    onSuccess={() => { setResult((r) => ({ ...r, payment: null, scanning: true })); window.dispatchEvent(new Event('cl:listings-changed')); if (plan) { setListingPay(false); payWithPlan(plan, result.id); } }}
                   />
                 )}
                 {showHi && result?.id && (
@@ -1048,27 +1047,24 @@ export default function SellFlowProvider({ children }) {
                       <div className="mt-4 rounded-[16px] border-[1.5px] border-ink bg-card px-4 py-3.5" data-testid="sell-paid-note">
                         <div className="text-[13px] font-semibold mb-1.5">{t.paidNote(quota.freePerMonth)}</div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          {quota.discountPct > 0 && <span className="text-[16px] font-semibold text-ink/40 line-through">{quota.listPrice}</span>}
+                          {quota.discountPct > 0 && <StrikePrice className="text-[16px]" data-testid="sell-list-price">{quota.listPrice}</StrikePrice>}
                           {quota.discountPct > 0 && <span className="text-[10.5px] font-bold bg-ink text-paper px-2 py-0.5 rounded-pill">{quota.discountPct}% OFF</span>}
                           <span className="text-[22px] font-bold tracking-head leading-none">{quota.price}</span>
-                          <span className="text-[12px] font-semibold text-ink/55">{t.paidLive(quota.days)}</span>
+                          {quota.local?.price && <span className="text-[12px] font-semibold text-ink/55">{quota.local.price}</span>}
                         </div>
-                        <div className="mt-1.5 text-[11px] text-ink/50">{quota.local?.price ? `${quota.local.price} · ` : ''}{t.paidUsd}</div>
+                        <div className="mt-1.5 text-[12px] font-semibold text-ink/55">{t.paidLive(quota.days)}</div>
                       </div>
                     )}
-                    {quota?.enabled && !quota.paymentRequired && quota.freeLeft != null && (
-                      <div className="mt-3 text-[12px] text-ink/55" data-testid="sell-free-left">{t.freeLeftNote(quota.freeLeft, quota.freePerMonth)}</div>
-                    )}
 
-                    {/* Promotion plans — two prominent, mutually-exclusive boxes (not while
-                        the listing itself has to be paid — they can promote it afterwards). */}
-                    {!(quota?.enabled && quota.paymentRequired) && <div className="mt-4">
+                    {/* Promotion plans — two prominent, mutually-exclusive boxes. On a paid
+                        listing the plan is charged right after the listing's own payment. */}
+                    <div className="mt-4">
                       <div className="text-[13px] font-semibold mb-2">{t.planTitle}</div>
                       <div className="grid gap-2.5">
                         <PlanBox on={plan === 'verified'} onClick={() => setPlan((p) => (p === 'verified' ? null : 'verified'))} title={t.v5Title} price={t.v5Price} benefits={[]} icon={<VerifiedIcon className="w-4 h-4" />} />
                         <PlanBox on={plan === 'home'} onClick={() => setPlan((p) => (p === 'home' ? null : 'home'))} title={t.v20Title} price={t.v20Price} benefits={[]} icon={<VerifiedIcon className="w-4 h-4" />} badge={<RecommendedTag lang={lang} className="text-[8px] px-1.5 py-0.5" />} />
                       </div>
-                    </div>}
+                    </div>
                   </div>
                 )}
 
@@ -1081,7 +1077,7 @@ export default function SellFlowProvider({ children }) {
                     {step < 4 ? (
                       <button onClick={next} disabled={busy} className="px-7 py-3 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60 inline-flex items-center justify-center min-w-[108px]">{busy ? <Spinner /> : t.next}</button>
                     ) : (
-                      <button onClick={() => publish(quota?.paymentRequired ? false : plan)} disabled={busy} data-testid="sell-publish" className="px-7 py-3 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60">{busy ? t.publishing : quota?.enabled && quota.paymentRequired ? t.publishPaid(quota.price) : (plan === 'home' ? t.publishHome : plan === 'verified' ? t.publishVerified : t.publishBtn)}</button>
+                      <button onClick={() => publish(plan)} disabled={busy} data-testid="sell-publish" className="px-7 py-3 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60">{busy ? t.publishing : quota?.enabled && quota.paymentRequired ? t.publishPaid(quota.price, plan) : (plan === 'home' ? t.publishHome : plan === 'verified' ? t.publishVerified : t.publishBtn)}</button>
                     )}
                   </div>
                 )}

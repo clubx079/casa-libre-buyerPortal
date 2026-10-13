@@ -10,6 +10,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import { getStripePromise } from '@/lib/stripeClient';
+import StrikePrice from '@/components/StrikePrice';
 
 const appearance = {
   theme: 'flat',
@@ -24,7 +25,6 @@ const DICT = {
     titleExtend: 'Extendé tu publicación',
     subExtend: (d) => `Tu propiedad vuelve a estar (o sigue) en el sitio ${d} días más.`,
     off: (p) => `${p}% OFF`, live: (d) => `Publicada ${d} días`, more: (d) => `+${d} días`,
-    usd: 'Se cobra en dólares (US$).',
     reset: 'Tus publicaciones gratis vuelven el 1.º del mes que viene.',
     agents: '¿Publicás muchas propiedades? Tenemos un plan para agentes e inmobiliarias.', agentsLink: 'Contactanos',
     payWith: (price, c) => `Pagar ${price} con ${c}`, pay: (price) => `Pagar ${price}`, otherCard: 'Usar otra tarjeta',
@@ -43,7 +43,6 @@ const DICT = {
     titleExtend: 'Extend your listing',
     subExtend: (d) => `Your listing goes back on (or stays on) the site for ${d} more days.`,
     off: (p) => `${p}% OFF`, live: (d) => `Live for ${d} days`, more: (d) => `+${d} days`,
-    usd: 'Charged in US dollars (US$).',
     reset: 'Your free listings come back on the 1st of next month.',
     agents: 'Listing a lot of properties? We have a plan for agents and agencies.', agentsLink: 'Contact us',
     payWith: (price, c) => `Pay ${price} with ${c}`, pay: (price) => `Pay ${price}`, otherCard: 'Use another card',
@@ -150,12 +149,12 @@ export default function ListingPaymentModal({ propertyId, kind = 'publish', lang
           {offer && (phase === 'offer' || phase === 'card') && (
             <div className="rounded-[16px] border-[1.5px] border-ink bg-card px-4 py-4 mb-4" data-testid="lp-price">
               <div className="flex items-center gap-2.5 flex-wrap">
-                {kind === 'publish' && offer.discountPct > 0 && <span className="text-[18px] font-semibold text-ink/40 line-through" data-testid="lp-list-price">{offer.listPrice}</span>}
+                {kind === 'publish' && offer.discountPct > 0 && <StrikePrice className="text-[18px]" data-testid="lp-list-price">{offer.listPrice}</StrikePrice>}
                 {kind === 'publish' && offer.discountPct > 0 && <span className="text-[11px] font-bold bg-ink text-paper px-2 py-0.5 rounded-pill" data-testid="lp-discount">{t.off(offer.discountPct)}</span>}
                 <span className="text-[30px] font-bold tracking-head leading-none" data-testid="lp-final-price">{price}</span>
-                <span className="text-[12.5px] font-semibold text-ink/60">{kind === 'extend' ? t.more(offer.extendDays) : t.live(offer.days)}</span>
+                {local && <span className="text-[12.5px] font-semibold text-ink/55" data-testid="lp-local">{local}</span>}
               </div>
-              <div className="mt-2 text-[11px] text-ink/50" data-testid="lp-local">{local ? `${local} · ` : ''}{t.usd}</div>
+              <div className="mt-2 text-[12.5px] font-semibold text-ink/60">{kind === 'extend' ? t.more(offer.extendDays) : t.live(offer.days)}</div>
             </div>
           )}
 
