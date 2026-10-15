@@ -1,7 +1,8 @@
 // GET|POST /api/cron/automations — runs the automations for THIS country's DB:
 // "first listing → free home display" (lib/automations/firstListing.js),
 // "listing getting views" (lib/automations/viewsMilestone.js) and "unfinished draft
-// reminders" (lib/automations/draftReminders.js) and paid listings (lib/automations/paidListings.js). Schedule hourly with the
+// reminders" (lib/automations/draftReminders.js), paid listings (lib/automations/paidListings.js) and "signed up but
+// never listed" (lib/automations/noListingNudge.js). Schedule hourly with the
 // CRON_SECRET, like the other crons; also callable manually with ?secret=.
 // Each does nothing until an admin switches it on (Automations page).
 import { NextResponse } from 'next/server';
@@ -16,6 +17,7 @@ import { runFirstListing, AUTOMATION_ID } from '@/lib/automations/firstListing';
 import { runViewsMilestone, VIEWS_AUTOMATION_ID } from '@/lib/automations/viewsMilestone';
 import { runDraftReminders, DRAFTS_AUTOMATION_ID } from '@/lib/automations/draftReminders';
 import { runPaidListings, PAID_AUTOMATION_ID } from '@/lib/automations/paidListings';
+import { runNoListingNudge, NO_LISTING_AUTOMATION_ID } from '@/lib/automations/noListingNudge';
 import { fetchListingViews, viewsConfigured } from '@/lib/posthogViews';
 import { sendPush } from '@/lib/push';
 import { runOwnerPushes } from '@/lib/ownerPushes';
@@ -38,12 +40,13 @@ async function handle(req) {
     ? { skipped: 'off' }
     : await runOwnerPushes(db, (o) => sendPush(db, o), { now: new Date(), countryCode: COUNTRY.code }).catch((e) => ({ error: e?.message || 'push_failed' }));
 
-  let automation, viewsAutomation, draftsAutomation, paidAutomation, templates;
+  let automation, viewsAutomation, draftsAutomation, paidAutomation, noListingAutomation, templates;
   try {
     [automation] = await db.select('automations', `id=eq.${AUTOMATION_ID}&limit=1`);
     [viewsAutomation] = await db.select('automations', `id=eq.${VIEWS_AUTOMATION_ID}&limit=1`).catch(() => []);
     [draftsAutomation] = await db.select('automations', `id=eq.${DRAFTS_AUTOMATION_ID}&limit=1`).catch(() => []);
     [paidAutomation] = await db.select('automations', `id=eq.${PAID_AUTOMATION_ID}&limit=1`).catch(() => []);
+    [noListingAutomation] = await db.select('automations', `id=eq.${NO_LISTING_AUTOMATION_ID}&limit=1`).catch(() => []);
     templates = await db.select('email_templates', 'select=*');
   } catch (e) {
     // Migration 005 not applied on this country's DB yet.
@@ -102,7 +105,15 @@ async function handle(req) {
         formatDate: (s) => { try { return new Date(s).toLocaleDateString(COUNTRY.locale, { day: 'numeric', month: 'long' }); } catch { return String(s).slice(0, 10); } },
       }).catch((e) => ({ error: e?.message || 'paid_failed' }));
     if (paid.ended) revalidateTag('listings');
-    return NextResponse.json({ ok: true, ...result, views, drafts, duplicates, paid, pushes, at: new Date().toISOString() });
+    // Signed up but never listed: welcome + "post your first listing free" email(s).
+    // The row is created by the admin's Automations page; until then nothing is sent.
+    const noListing = !noListingAutomation
+      ? { skippedReason: 'not_set_up' }
+      : await runNoListingNudge({
+        db, automation: noListingAutomation, templates, now: new Date(), deliver: sendRenderedEmail, frame: templateFrame(), siteUrl: site,
+        countryCode: COUNTRY.code, emailOverride: process.env.AUTOMATION_EMAIL_OVERRIDE || '',
+      }).catch((e) => ({ error: e?.message || 'no_listing_failed' }));
+    return NextResponse.json({ ok: true, ...result, views, drafts, duplicates, paid, noListing, pushes, at: new Date().toISOString() });
   } catch (e) {
     return NextResponse.json({ error: 'automation_failed', detail: e?.message }, { status: 500 });
   }
