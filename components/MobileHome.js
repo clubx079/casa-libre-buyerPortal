@@ -122,10 +122,8 @@ export default function MobileHome({ featured = [], count = 0, tickerData = [] }
         {t.chips.map((c) => <Link key={c} href={`/propiedades?q=${encodeURIComponent(c)}`} className="text-[13.5px] font-bold px-4 py-[9px] border-[1.5px] border-ink/25 rounded-pill bg-card">{c}</Link>)}
       </div>
 
-      {/* APP BADGES — also below the city searches */}
-      <div className="px-4 mt-4 flex justify-center">
-        <StickyAppBadges variant="row" />
-      </div>
+      {/* APP BADGES — a bar fixed at the bottom of the screen (components/AppBadges.js) */}
+      <StickyAppBadges placement="home_phone" />
 
       {/* MASCOT + CAPTION */}
       <div className="flex items-center gap-4 px-5 mt-7 mb-5">

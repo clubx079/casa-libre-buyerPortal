@@ -6,13 +6,17 @@
 //    desktop = badge · caption · badge on one line, slightly larger.
 //  - variant="row" (home, below the search bar): just the two badges side by side.
 // Google Play opens the app's store page; App Store opens /descargar (no iPhone app yet).
-//  - StickyAppBadges: the badges in place, plus a slim bar pinned to the bottom of the
-//    screen once that spot scrolls away — so the app stays one tap away while people
-//    scroll (home + phone listings; the desktop listings page never scrolls).
-import { useEffect, useRef, useState } from 'react';
+//  - StickyAppBadges: a bar pinned to the bottom of the screen the whole time (nothing at
+//    the top any more — people saw it at the top, ignored it, then it jumped to the
+//    bottom). `inline` = the same bar as the last row of a full-height page (desktop
+//    listings, which never scrolls) instead of floating over it.
+// Every badge tap is tracked: 'app_badge_clicked' { store, placement } (PostHog + GTM),
+// shown in the admin Analytics user funnel as "Clicked an app button".
+import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
 import { PLAY_STORE_URL } from '@/lib/appLinks';
+import { track } from '@/lib/analytics';
 
 const T = { es: 'Funciona mejor en la app', en: 'It works better on the app', pt: 'Funciona melhor no app' };
 
@@ -32,35 +36,36 @@ const Play = ({ s = 15 }) => (
   </svg>
 );
 
-function Badge({ store, big }) {
+function Badge({ store, big, xl, placement = '' }) {
   const isApple = store === 'apple';
   const top = isApple ? 'Download on the' : 'GET IT ON';
   const name = isApple ? 'App Store' : 'Google Play';
-  const cls = `inline-flex items-center rounded-[9px] bg-ink text-paper transition-transform active:translate-y-px ${big ? 'gap-2.5 px-4 py-2' : 'gap-2 px-3 py-[7px]'}`;
+  const cls = `inline-flex items-center rounded-[10px] bg-ink text-paper transition-transform active:translate-y-px ${xl ? 'gap-3 px-5 py-2.5' : big ? 'gap-2.5 px-4 py-2' : 'gap-2 px-3 py-[7px]'}`;
   const inner = (
     <>
-      {isApple ? <Apple s={big ? 22 : 18} /> : <Play s={big ? 18 : 15} />}
+      {isApple ? <Apple s={xl ? 26 : big ? 22 : 18} /> : <Play s={xl ? 22 : big ? 18 : 15} />}
       <span className="flex flex-col leading-none text-left gap-[3px]">
-        <span className={`uppercase tracking-[.06em] text-paper/75 ${big ? 'text-[9px]' : 'text-[8px]'}`}>{top}</span>
-        <span className={`font-semibold ${big ? 'text-[15px]' : 'text-[12.5px]'}`}>{name}</span>
+        <span className={`uppercase tracking-[.06em] text-paper/75 ${xl ? 'text-[10px]' : big ? 'text-[9px]' : 'text-[8px]'}`}>{top}</span>
+        <span className={`font-semibold ${xl ? 'text-[17px]' : big ? 'text-[15px]' : 'text-[12.5px]'}`}>{name}</span>
       </span>
     </>
   );
+  const onClick = () => track('app_badge_clicked', { store: isApple ? 'app_store' : 'google_play', placement });
   if (!isApple) {
-    return <a href={PLAY_STORE_URL} target="_blank" rel="noopener noreferrer" aria-label={name} className={cls}>{inner}</a>;
+    return <a href={PLAY_STORE_URL} target="_blank" rel="noopener noreferrer" aria-label={name} className={cls} onClick={onClick}>{inner}</a>;
   }
-  return <Link href="/descargar" aria-label={name} className={cls}>{inner}</Link>;
+  return <Link href="/descargar" aria-label={name} className={cls} onClick={onClick}>{inner}</Link>;
 }
 
-export default function AppBadges({ className = '', variant = 'default' }) {
+export default function AppBadges({ className = '', variant = 'default', placement = '' }) {
   const [lang] = useLang();
   const label = T[lang] || T.es;
 
   if (variant === 'row') {
     return (
       <div className={`flex items-center gap-3 ${className}`}>
-        <Badge store="apple" big />
-        <Badge store="play" big />
+        <Badge store="apple" big placement={placement} />
+        <Badge store="play" big placement={placement} />
       </div>
     );
   }
@@ -71,55 +76,52 @@ export default function AppBadges({ className = '', variant = 'default' }) {
       <div className="md:hidden flex flex-col items-center gap-1.5 text-center">
         <span className="text-[10.5px] font-medium text-ink/55">{label}</span>
         <div className="flex items-center gap-2.5">
-          <Badge store="apple" />
-          <Badge store="play" />
+          <Badge store="apple" placement={placement} />
+          <Badge store="play" placement={placement} />
         </div>
       </div>
       {/* desktop: badge · caption · badge on one line */}
       <div className="hidden md:flex items-center justify-center gap-4">
-        <Badge store="apple" big />
+        <Badge store="apple" big placement={placement} />
         <span className="text-[13.5px] font-medium text-ink/60 whitespace-nowrap">{label}</span>
-        <Badge store="play" big />
+        <Badge store="play" big placement={placement} />
       </div>
     </div>
   );
 }
 
-// The badges where they are, and — once that spot has scrolled above the top of the
-// screen — the same badges in a bar pinned to the bottom. (CSS sticky can't do this
-// on the home page: the badges sit inside the hero, so they'd only stick within it.)
-// While the bar shows, the page gets the same space at its end, so the footer's last
-// line is never hidden under it.
-// iPhone Safari (iOS 26) draws the page under its own see-through toolbar, below the
-// bottom of the viewport — a strip of listings showed under the bar. The bar's paper
-// background continues 200px past its bottom edge to fill that strip; elsewhere that
-// part is simply off screen.
-// z-[300]: above the page, below the sort/filter sheets (500) and every modal (999+).
-export function StickyAppBadges({ variant = 'default', className = '' }) {
-  const ref = useRef(null);
+// The bar: caption + two large badges, always at the bottom of the screen. While it
+// shows, the page gets the same space at its end, so the footer's last line is never
+// hidden under it. iPhone Safari (iOS 26) draws the page under its own see-through
+// toolbar, below the viewport: the bar's paper background continues 200px past its
+// bottom edge to fill that strip. z-[300]: above the page, below sheets (500) / modals.
+export function StickyAppBadges({ placement = 'bar', inline = false }) {
+  const [lang] = useLang();
+  const label = T[lang] || T.es;
   const barRef = useRef(null);
-  const [pinned, setPinned] = useState(false);
   useEffect(() => {
-    const el = ref.current;
-    if (!el || typeof IntersectionObserver === 'undefined') return undefined;
-    const io = new IntersectionObserver(([e]) => setPinned(!e.isIntersecting && e.boundingClientRect.top < 0));
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
-  useEffect(() => {
-    if (!pinned || !barRef.current) return undefined;
-    document.body.style.paddingBottom = `${barRef.current.offsetHeight}px`;
-    return () => { document.body.style.paddingBottom = ''; };
-  }, [pinned]);
+    if (inline || !barRef.current) return undefined;
+    const set = () => { document.body.style.paddingBottom = `${barRef.current?.offsetHeight || 0}px`; };
+    set();
+    window.addEventListener('resize', set);
+    return () => { window.removeEventListener('resize', set); document.body.style.paddingBottom = ''; };
+  }, [inline]);
+  const content = (
+    <div className="flex items-center justify-center gap-x-5 gap-y-2 flex-wrap">
+      <span className="text-[14px] md:text-[15px] font-semibold text-ink/75 w-full sm:w-auto text-center">{label}</span>
+      <div className="flex items-center gap-3">
+        <Badge store="apple" xl placement={placement} />
+        <Badge store="play" xl placement={placement} />
+      </div>
+    </div>
+  );
+  if (inline) {
+    return <div data-testid="app-badges-bar" className="shrink-0 bg-paper border-t border-ink/12 px-4 py-3">{content}</div>;
+  }
   return (
-    <>
-      <div ref={ref} className={className}><AppBadges variant={variant} /></div>
-      {pinned && (
-        <div ref={barRef} data-testid="sticky-app-badges" className="fixed bottom-0 inset-x-0 z-[300] bg-paper border-t border-ink/12 shadow-[0_-2px_10px_rgba(17,17,17,0.08)] px-4 pt-2 pb-[max(8px,env(safe-area-inset-bottom))]">
-          <AppBadges />
-          <span aria-hidden="true" className="absolute inset-x-0 top-full h-[200px] bg-paper" />
-        </div>
-      )}
-    </>
+    <div ref={barRef} data-testid="app-badges-bar" className="fixed bottom-0 inset-x-0 z-[300] bg-paper border-t border-ink/12 shadow-[0_-2px_12px_rgba(17,17,17,0.10)] px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))]">
+      {content}
+      <span aria-hidden="true" className="absolute inset-x-0 top-full h-[200px] bg-paper" />
+    </div>
   );
 }

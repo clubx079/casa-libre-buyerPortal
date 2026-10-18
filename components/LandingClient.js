@@ -134,10 +134,8 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
               <Link key={c} href={`/propiedades?q=${encodeURIComponent(c)}`} className="text-[13px] font-medium px-3.5 py-[7px] border border-ink/25 rounded-pill bg-card">{c}</Link>
             ))}
           </div>
-          {/* APP BADGES — below the search bar, side by side */}
-          <div className="mt-5 flex justify-center md:justify-start">
-            <StickyAppBadges variant="row" />
-          </div>
+          {/* APP BADGES — a bar fixed at the bottom of the screen (components/AppBadges.js) */}
+          <StickyAppBadges placement="home" />
         </div>
         <div className="flex flex-row md:flex-col items-center justify-center gap-2.5 md:gap-3.5 mt-1.5 md:mt-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}

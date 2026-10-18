@@ -10,7 +10,7 @@ import { fmtRate } from '@/lib/money';
 import { useLang } from '@/lib/useLang';
 import AuthButton from '@/components/AuthButton';
 import VerifiedTag from '@/components/VerifiedTag';
-import AppBadges from '@/components/AppBadges';
+import { StickyAppBadges } from '@/components/AppBadges';
 import { useSellFlow } from '@/components/SellFlow';
 import { track } from '@/lib/analytics';
 import { priceBand } from '@/lib/dataLayer';
@@ -601,10 +601,6 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
         </div>
       </nav>
 
-      {/* APP BADGES — centered, just above the search / filters bar */}
-      <div className="flex justify-center px-5 md:px-9 py-2 border-b border-ink/12">
-        <AppBadges />
-      </div>
 
       {/* FILTERS */}
       <div className="flex items-center gap-2.5 flex-wrap px-5 md:px-9 py-3 border-b border-ink/12">
@@ -730,6 +726,8 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
           )}
         </div>
       </div>
+      {/* APP BADGES — the last row of the screen (this page never scrolls), components/AppBadges.js */}
+      <StickyAppBadges inline placement="listings" />
     </div>
   );
 }
