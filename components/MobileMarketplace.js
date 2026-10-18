@@ -594,9 +594,9 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
       )}
 
       {/* SORT SHEET */}
-      {/* APP BADGES — always at the bottom (components/AppBadges.js): the last row of the
-          screen on the map (so it never covers it), a fixed bar over the scrolling list. */}
-      <StickyAppBadges placement="listings_phone" inline={view === 'map'} />
+      {/* APP BADGES — on the map: the last row of the screen (so it never covers it); on the
+          list the site-wide bar (app/layout.js) is at the bottom. */}
+      {view === 'map' && <StickyAppBadges placement="listings_phone" inline />}
 
       {sortOpen && (
         <div className="fixed inset-0 z-[500] bg-ink/40 flex items-end" onClick={() => setSortOpen(false)}>

@@ -148,6 +148,20 @@ export default function PropertyDetailView({ l, url }) {
   // Trackable mobile-bar WhatsApp (own token; only one WA button shows per
   // viewport, so it never collides with the contact card's).
   const [mbarToken] = useState(genToken);
+  // The WhatsApp bar (phones only) tells the site-wide app bar how high it is, so both show:
+  // WhatsApp at the very bottom, "get the app" right above it.
+  const mbarRef = useRef(null);
+  useEffect(() => {
+    const el = mbarRef.current;
+    if (!el) return undefined;
+    const root = document.documentElement;
+    const set = () => root.style.setProperty('--cl-bottom-bar', `${el.offsetHeight || 0}px`);
+    set();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(set) : null;
+    ro?.observe(el);
+    window.addEventListener('resize', set);
+    return () => { ro?.disconnect(); window.removeEventListener('resize', set); root.style.removeProperty('--cl-bottom-bar'); };
+  }, []);
   const mbarMsg = `Hola! Que tal? Está disponible la propiedad?\n\n${shortUrl(url, mbarToken, l.short_code)}`;
   const mbarWa = waDigits ? `https://wa.me/${waDigits}?text=${encodeURIComponent(mbarMsg)}` : null;
   const recordMbarContact = () =>
@@ -356,8 +370,8 @@ export default function PropertyDetailView({ l, url }) {
         </div>
       </div>
 
-      {/* ── MOBILE STICKY BAR ── */}
-      <div className="hidden max-[920px]:flex fixed left-0 right-0 bottom-0 z-[400] bg-card border-t-[1.5px] border-ink px-3.5 py-2.5 items-center gap-3" style={{ paddingBottom: 'calc(10px + env(safe-area-inset-bottom))' }}>
+      {/* ── MOBILE STICKY BAR ── (its height → --cl-bottom-bar, so the app bar sits above it) */}
+      <div ref={mbarRef} className="hidden max-[920px]:flex fixed left-0 right-0 bottom-0 z-[400] bg-card border-t-[1.5px] border-ink px-3.5 py-2.5 items-center gap-3" style={{ paddingBottom: 'calc(10px + env(safe-area-inset-bottom))' }}>
         <div className="min-w-0">
           <span className="block font-bold text-[15px] leading-tight">{bigPrice}{priceSfx}</span>
           <small className="block font-mono text-[10px] text-ink/50 truncate">{zone} · {t.ref} {listingRef}</small>

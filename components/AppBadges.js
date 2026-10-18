@@ -6,14 +6,16 @@
 //    desktop = badge · caption · badge on one line, slightly larger.
 //  - variant="row" (home, below the search bar): just the two badges side by side.
 // Google Play opens the app's store page; App Store opens /descargar (no iPhone app yet).
-//  - StickyAppBadges: a bar pinned to the bottom of the screen the whole time (nothing at
-//    the top any more — people saw it at the top, ignored it, then it jumped to the
-//    bottom). `inline` = the same bar as the last row of a full-height page (desktop
-//    listings, which never scrolls) instead of floating over it.
+//  - GlobalAppBar (app/layout.js): the bar pinned to the bottom of EVERY page. A page with
+//    its own bottom bar (property page on phones: the WhatsApp bar) sets the CSS variable
+//    --cl-bottom-bar to that bar's height, and the app bar sits right above it.
+//  - StickyAppBadges `inline`: the same bar as the last row of a full-height page (desktop
+//    listings, phone map) — while one is on screen the global bar steps aside.
 // Every badge tap is tracked: 'app_badge_clicked' { store, placement } (PostHog + GTM),
 // shown in the admin Analytics user funnel as "Clicked an app button".
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useLang } from '@/lib/useLang';
 import { PLAY_STORE_URL } from '@/lib/appLinks';
 import { track } from '@/lib/analytics';
@@ -95,10 +97,30 @@ export default function AppBadges({ className = '', variant = 'default', placeme
 // hidden under it. iPhone Safari (iOS 26) draws the page under its own see-through
 // toolbar, below the viewport: the bar's paper background continues 200px past its
 // bottom edge to fill that strip. z-[300]: above the page, below sheets (500) / modals.
+// How many inline bars are on screen (the global one hides while any is).
+let inlineBars = 0;
+const inlineSubs = new Set();
+const setInline = (d) => { inlineBars = Math.max(0, inlineBars + d); inlineSubs.forEach((fn) => fn(inlineBars)); };
+
 export function StickyAppBadges({ placement = 'bar', inline = false }) {
   const [lang] = useLang();
   const label = T[lang] || T.es;
   const barRef = useRef(null);
+  // Only a VISIBLE inline bar counts (pages also mount a hidden phone/desktop version).
+  const inlineRef = useRef(null);
+  useEffect(() => {
+    if (!inline || !inlineRef.current) return undefined;
+    let counted = false;
+    const check = () => {
+      const on = (inlineRef.current?.offsetHeight || 0) > 0;
+      if (on !== counted) { counted = on; setInline(on ? +1 : -1); }
+    };
+    check();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(check) : null;
+    ro?.observe(inlineRef.current);
+    window.addEventListener('resize', check);
+    return () => { ro?.disconnect(); window.removeEventListener('resize', check); if (counted) setInline(-1); };
+  }, [inline]);
   useEffect(() => {
     if (inline || !barRef.current) return undefined;
     // Pages mount a phone and a desktop version (one hidden by CSS): only the visible
@@ -123,12 +145,27 @@ export function StickyAppBadges({ placement = 'bar', inline = false }) {
     </div>
   );
   if (inline) {
-    return <div data-testid="app-badges-bar" className="shrink-0 bg-paper border-t border-ink/12 px-4 py-3">{content}</div>;
+    return <div ref={inlineRef} data-testid="app-badges-bar" className="shrink-0 bg-paper border-t border-ink/12 px-4 py-3">{content}</div>;
   }
   return (
-    <div ref={barRef} data-testid="app-badges-bar" className="fixed bottom-0 inset-x-0 z-[300] bg-paper border-t border-ink/12 shadow-[0_-2px_12px_rgba(17,17,17,0.10)] px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))]">
+    <div ref={barRef} data-testid="app-badges-bar" style={{ bottom: 'var(--cl-bottom-bar, 0px)' }} className="fixed inset-x-0 z-[300] bg-paper border-t border-ink/12 shadow-[0_-2px_12px_rgba(17,17,17,0.10)] px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))]">
       {content}
       <span aria-hidden="true" className="absolute inset-x-0 top-full h-[200px] bg-paper" />
     </div>
   );
+}
+
+// The bar on every page (app/layout.js). Placement for the click event = the page's first
+// path segment ("home" for /). Steps aside while a page shows its own inline bar.
+export function GlobalAppBar() {
+  const path = usePathname() || '/';
+  const [hidden, setHidden] = useState(inlineBars > 0);
+  useEffect(() => {
+    const fn = (n) => setHidden(n > 0);
+    inlineSubs.add(fn); fn(inlineBars);
+    return () => { inlineSubs.delete(fn); };
+  }, []);
+  if (hidden) return null;
+  const placement = path === '/' ? 'home' : path.split('/')[1] || 'page';
+  return <StickyAppBadges key={placement} placement={placement} />;
 }
