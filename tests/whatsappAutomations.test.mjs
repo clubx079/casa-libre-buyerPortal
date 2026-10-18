@@ -32,7 +32,7 @@ beforeEach(() => {
   sentToRelay.length = 0;
   process.env.RELAY_API_KEY = 'rk_test_x';
   delete process.env.WHATSAPP_TEST_TO;
-  globalThis.fetch = async (url, init) => { sentToRelay.push({ url, body: JSON.parse(init.body) }); return new Response(JSON.stringify({ id: 'msg_1', status: 'queued' }), { status: 202 }); };
+  globalThis.fetch = async (url, init) => { if (!init?.body) return new Response(JSON.stringify({ data: [] }), { status: 200 }); sentToRelay.push({ url, body: JSON.parse(init.body) }); return new Response(JSON.stringify({ id: 'msg_1', status: 'queued' }), { status: 202 }); };
 });
 
 const tpl = { id: 'tpl1', key: 'listing-views', subject: 'Tu propiedad ya tiene {{views}} visitas', heading: '', body: 'Hola {{name}}', button_label: '', button_url: '' };
@@ -54,9 +54,10 @@ test('whatsapp channel with consent: the WhatsApp template, no email', async () 
   const db = fakeDb({ channel: 'whatsapp', user: { whatsapp_opt_in_at: '2026-10-19T00:00:00Z' } });
   assert.equal(await sendOnce(base(db)), 'sent');
   assert.equal(emails.length, 0);
-  assert.equal(sentToRelay.length, 1);
-  assert.deepEqual(sentToRelay[0].body.variables, { body: ['Ana', 'Casa · Luque', '50'], buttons: [{ index: 0, text: 'abc-123' }] });
-  assert.equal(sentToRelay[0].body.to, '+595981123456');
+  const msgs = sentToRelay.filter((x) => x.url.includes('/messages/'));
+  assert.equal(msgs.length, 1);
+  assert.deepEqual(msgs[0].body.variables, { body: ['Ana', 'Casa · Luque', '50'], buttons: [{ index: 0, text: 'abc-123' }] });
+  assert.equal(msgs[0].body.to, '+595981123456');
   const row = db.log[0];
   assert.equal(row.channel, 'whatsapp');
   assert.equal(row.status, 'sent');
@@ -77,7 +78,7 @@ test('whatsapp channel without consent falls back to email', async () => {
 
 test('both: email and WhatsApp', async () => {
   emails.length = 0;
-  const db = fakeDb({ channel: 'both', user: { phone_verified_at: '2026-10-18T00:00:00Z' } });
+  const db = fakeDb({ channel: 'both', user: { whatsapp_opt_in_at: '2026-10-18T00:00:00Z' } });
   assert.equal(await sendOnce(base(db)), 'sent');
   assert.equal(emails.length, 1);
   assert.equal(sentToRelay.length, 1);
@@ -117,4 +118,12 @@ test('Relay webhook signature', async () => {
   assert.equal(verifyRelaySignature(body, `t=${t},v1=${v1}`, 'whsec_x', 300, t + 10), true);
   assert.equal(verifyRelaySignature(body + ' ', `t=${t},v1=${v1}`, 'whsec_x', 300, t + 10), false);
   assert.equal(verifyRelaySignature(body, `t=${t},v1=${v1}`, 'whsec_x', 300, t + 1000), false);
+});
+
+test('a marketing template (Meta moved cl_visitas there) needs consent: a WhatsApp-proven number is not enough', async () => {
+  emails.length = 0;
+  const db = fakeDb({ channel: 'whatsapp', user: { phone_verified_at: '2026-10-18T00:00:00Z' } });
+  assert.equal(await sendOnce(base(db)), 'sent');
+  assert.equal(sentToRelay.filter((x) => x.url.includes('/messages/')).length, 0);
+  assert.equal(emails.length, 1);
 });
