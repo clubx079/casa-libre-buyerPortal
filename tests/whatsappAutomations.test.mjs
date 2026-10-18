@@ -134,3 +134,14 @@ test('WhatsApp only (no email fallback): someone without consent gets nothing', 
   assert.equal(await sendOnce(base(db)), 'no_email');
   assert.equal(emails.length, 0);
 });
+
+test('a DB without migration 017 (live today): plain email, the channel lookup asked once', async () => {
+  emails.length = 0;
+  let asked = 0;
+  const db = fakeDb();
+  db.select = async (table) => { if (table === 'automations') { asked++; const e = new Error('unknown column "channel"'); e.code = 'PGRST100'; throw e; } return []; };
+  for (let i = 0; i < 3; i++) assert.equal(await sendOnce({ ...base(db), dedupeKey: `k${i}` }), 'sent');
+  assert.equal(emails.length, 3);
+  assert.equal(asked, 1);
+  assert.ok(db.log.every((r) => !('channel' in r)));   // email rows look exactly as before
+});
