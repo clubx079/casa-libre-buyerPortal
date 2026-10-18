@@ -47,7 +47,7 @@ const DICT = {
     sendByEmail: 'Enviar código por email', sendByWa: 'Enviar código por WhatsApp',
     waOtpSub: (p) => `Ingresá el código que enviamos por WhatsApp al ${p}.`, waTest: (c) => `Modo de prueba (no se envía WhatsApp): el código es ${c}`,
     errWaSend: 'No se pudo enviar el código por WhatsApp. Probá por email.', errWaNotLinked: 'Ese WhatsApp todavía no está vinculado a la cuenta de este email. Usá el código por email.',
-    fWa: 'Tu WhatsApp (para compradores)',
+    fWa: 'Tu WhatsApp (para compradores)', waConsent: 'Acepto recibir avisos sobre mis publicaciones por WhatsApp',
     otpTitle: 'Código de confirmación enviado', otpSub: (e) => `Ingresá el código que enviamos a ${e} para verificar tu correo.`,
     codePh: 'Código de 6 dígitos', verify: 'Verificar', verifying: 'Verificando…', resend: 'Reenviar código', resent: 'Código reenviado',
     haveAccount: 'Ya existe una cuenta', existsSub: (e) => `${e} ya tiene una cuenta en Casa Libre. Ingresá con Google o te enviamos un código de 6 dígitos por email o WhatsApp.`, haveAccountSub: (e) => `Te enviamos un código a ${e}. Ingresalo para continuar.`, googleBtn: 'Continuar con Google', orText: 'o', login: 'Ingresar', errGeneric: 'Algo salió mal. Intentá de nuevo.', doneDash: 'Ir a mi panel',
@@ -97,7 +97,7 @@ const DICT = {
     sendByEmail: 'Send code by email', sendByWa: 'Send code on WhatsApp',
     waOtpSub: (p) => `Enter the code we sent on WhatsApp to ${p}.`, waTest: (c) => `Test mode (no WhatsApp is sent): the code is ${c}`,
     errWaSend: 'Could not send the WhatsApp code. Try by email.', errWaNotLinked: "That WhatsApp isn't linked to this email's account yet. Use the email code.",
-    fWa: 'Your WhatsApp (for buyers)',
+    fWa: 'Your WhatsApp (for buyers)', waConsent: 'Send me updates about my listings on WhatsApp',
     otpTitle: 'Confirmation code sent', otpSub: (e) => `Enter the code we emailed to ${e} to verify your email.`,
     codePh: '6-digit code', verify: 'Verify', verifying: 'Verifying…', resend: 'Resend code', resent: 'Code resent',
     haveAccount: 'Account already exists', existsSub: (e) => `${e} already has a Casa Libre account. Log in with Google or we'll send you a 6-digit code by email or WhatsApp.`, haveAccountSub: (e) => `We sent a code to ${e}. Enter it to continue.`, googleBtn: 'Continue with Google', orText: 'or', login: 'Log in', errGeneric: 'Something went wrong. Try again.', doneDash: 'Go to my dashboard',
@@ -143,6 +143,8 @@ const emailOk = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || ''));
 // The seller's WhatsApp (step 1): country code + number. 8+ digits = more than the bare prefix.
 const phoneOk = (p) => String(p || '').replace(/\D/g, '').length >= 8;
 const WHATSAPP_LOGIN = process.env.NEXT_PUBLIC_WHATSAPP_LOGIN === '1';
+// WhatsApp consent (automations by WhatsApp, migration 017): saved once signed in.
+const saveWaConsent = () => fetch('/api/account/whatsapp-consent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ optIn: true }) }).catch(() => {});
 // This country's currency per US$ (offline fallback; the server checks with the live rate).
 const APPROX_RATE = COUNTRY.fxFallback || 7300;
 const numOf = (v) => Number(String(v).replace(/[^\d.]/g, ''));
@@ -265,6 +267,7 @@ export default function SellFlowProvider({ children }) {
   const [waCode, setWaCode] = useState('');
   const [waDev, setWaDev] = useState('');            // test key only: the code itself
   const [sendingWa, setSendingWa] = useState(false); // spinner on the WhatsApp button, not the email one
+  const [waOk, setWaOk] = useState(false);            // "updates on WhatsApp" consent (unticked by default)
   const [loginCode, setLoginCode] = useState('');   // sign-in code for an email that already has an account
   const [codeSent, setCodeSent] = useState(false);  // the visitor clicked "Send code" on the confirm-email screen
   const [photos, setPhotos] = useState([]);      // { file?, url (shown), key? + remote? once uploaded to the draft, failed? }
@@ -668,6 +671,7 @@ export default function SellFlowProvider({ children }) {
       const j = await res.json().catch(() => ({}));
       if (!res.ok || !j.ok) { setErr(t.errCode); return; }
       track('sell_otp_verified', {});
+      if (waOk) await saveWaConsent();
       setVerified(true); setPhase(''); setStep(4);   // account created + logged in → confirm screen
       refreshUser?.();                                // reflect the new session in the header/app immediately (was showing "not logged in")
     } catch { setErr(t.errCode); } finally { setBusy(false); }
@@ -697,6 +701,7 @@ export default function SellFlowProvider({ children }) {
       if (j.error === 'email_taken') { setErr(t.errWaNotLinked); return; }
       if (!res.ok || !j.ok) { setErr(t.errCode); return; }
       track(j.mode === 'signup' ? 'user_signed_up' : 'user_logged_in', { method: 'whatsapp_otp' });
+      if (waOk) await saveWaConsent();
       setVerified(true); setEmailTaken(false); setPhase(''); setStep(4);
       refreshUser?.();
     } catch { setErr(t.errCode); } finally { setBusy(false); }
@@ -743,6 +748,7 @@ export default function SellFlowProvider({ children }) {
       const j = await res.json().catch(() => ({}));
       if (!res.ok || !j.ok) { setErr(t.errCode); return; }
       track('user_logged_in', { method: 'email_otp' });
+      if (waOk) await saveWaConsent();
       setVerified(true); setEmailTaken(false); setPhase(''); setStep(4);   // logged in → confirm screen
       refreshUser?.();                                                      // update header/user app-wide
     } catch { setErr(t.errCode); } finally { setBusy(false); }
@@ -797,6 +803,7 @@ export default function SellFlowProvider({ children }) {
     const e = validateDetails();
     if (Object.keys(e).length) { setErrs(e); setErr(''); setStep(e.ptype ? 2 : 3); return; }
     if (!phoneOk(f.contact_phone)) { setErr(t.errPhone); setStep(1); return; }
+    if (user && waOk) saveWaConsent();
     if (!confirmOk) { setErr(t.errConfirm); return; }
     setErrs({}); setBusy(true); setErr('');
     try {
@@ -995,6 +1002,10 @@ export default function SellFlowProvider({ children }) {
                         <label className={labelCls}>{t.fWa}</label>
                         <input value={f.contact_phone} onChange={(e) => set('contact_phone', e.target.value)}
                           placeholder={`+${COUNTRY.phonePrefix} ${(COUNTRY.phonePlaceholder || '').replace(/^0/, '')}`} className={inputCls} inputMode="tel" autoComplete="tel" type="tel" data-testid="sell-phone" />
+                        <label className="mt-2.5 flex items-start gap-2.5 text-[13px] leading-snug text-ink/75 cursor-pointer select-none">
+                          <input type="checkbox" checked={waOk} onChange={(e) => setWaOk(e.target.checked)} className="mt-[2px] w-4 h-4 accent-ink shrink-0 cursor-pointer" data-testid="sell-wa-consent" />
+                          <span>{t.waConsent}</span>
+                        </label>
                       </div>
                     )}
                     {/* Terms of Service opt-in — required to continue (consent before we store anything). */}

@@ -33,6 +33,7 @@ const DICT = {
     changePhone: '← Cambiar número', errPhone: 'Ingresá un número de WhatsApp válido',
     errEmailTaken: 'Ese email ya tiene una cuenta. Ingresá con tu email.', errWaSend: 'No se pudo enviar el código por WhatsApp. Probá con tu email.',
     testCode: (c) => `Modo de prueba (no se envía WhatsApp): el código es ${c}`,
+    waConsent: 'Acepto recibir avisos sobre mis publicaciones por WhatsApp',
   },
   en: {
     emailTitle: 'Log in or sign up', emailSub: "We'll email you a code. No passwords.",
@@ -54,8 +55,11 @@ const DICT = {
     changePhone: '← Change number', errPhone: 'Enter a valid WhatsApp number',
     errEmailTaken: 'That email already has an account. Log in with your email.', errWaSend: 'Could not send the WhatsApp code. Try with your email.',
     testCode: (c) => `Test mode (no WhatsApp is sent): the code is ${c}`,
+    waConsent: 'Send me updates about my listings on WhatsApp',
   },
 };
+// WhatsApp consent (automations by WhatsApp, migration 017): saved once signed in.
+const saveWaConsent = () => fetch('/api/account/whatsapp-consent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ optIn: true }) }).catch(() => {});
 const WHATSAPP_LOGIN = process.env.NEXT_PUBLIC_WHATSAPP_LOGIN === '1';
 
 const emailOk = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || '').trim());
@@ -75,6 +79,7 @@ export default function AuthModal({ onAuthed, onClose, next = null }) {
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [termsOk, setTermsOk] = useState(false);   // Terms of Service opt-in (sign-up)
+  const [waOk, setWaOk] = useState(false);         // WhatsApp updates opt-in (sign-up, unticked by default)
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -161,6 +166,7 @@ export default function AuthModal({ onAuthed, onClose, next = null }) {
       if (j.error === 'invalid_email') { setErr(t.errEmail); return; }
       if (!r.ok || !j.ok) { setErr(j.error === 'too_many_attempts' ? t.errRate : t.errCode); return; }
       const m = wa ? 'whatsapp_otp' : 'email_otp';
+      if (j.mode === 'signup' && waOk) await saveWaConsent();
       if (j.mode === 'signup') track('user_signed_up', { method: m });   // value agreed with the ads agency
       else track('user_logged_in', { method: m });
       onAuthed(j.user);
@@ -241,6 +247,12 @@ export default function AuthModal({ onAuthed, onClose, next = null }) {
               <label className="mt-4 flex items-start gap-2.5 text-[13px] leading-snug text-ink/75 cursor-pointer select-none">
                 <input type="checkbox" checked={termsOk} onChange={(e) => { setTermsOk(e.target.checked); if (e.target.checked && err === t.errTerms) setErr(''); }} className="mt-[2px] w-4 h-4 accent-ink shrink-0 cursor-pointer" data-testid="signup-terms" />
                 <span>{t.termsPre}<a href="/terminos" target="_blank" rel="noopener" className="underline font-semibold text-ink">{t.termsLink}</a>{t.termsMid}<a href="/privacidad" target="_blank" rel="noopener" className="underline font-semibold text-ink">{t.privacyLink}</a></span>
+              </label>
+            )}
+            {mode === 'signup' && (
+              <label className="mt-2.5 flex items-start gap-2.5 text-[13px] leading-snug text-ink/75 cursor-pointer select-none">
+                <input type="checkbox" checked={waOk} onChange={(e) => setWaOk(e.target.checked)} className="mt-[2px] w-4 h-4 accent-ink shrink-0 cursor-pointer" data-testid="signup-wa-consent" />
+                <span>{t.waConsent}</span>
               </label>
             )}
             <button type="submit" disabled={busy || code.length !== 6} className={`${btnCls} mt-5`}>{busy ? t.verifying : (mode === 'signup' ? t.create : t.login)}</button>
