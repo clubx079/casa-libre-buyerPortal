@@ -2,10 +2,10 @@
 // Sell flow — a 5-step popup wizard that a logged-out visitor completes end to end
 // WITHOUT leaving the popup:
 //   1) Operation (sell / rent)
-//   2) Seller (owner/agent) + name + EMAIL
+//   2) Seller (owner/agent) + name + EMAIL + WhatsApp number (shown to buyers)
 //   3) Location (address) + property type
-//   4) Details (price, area, phone, description, photos)
-//   -> we confirm the email (Google, or a code verified inline: the account is
+//   4) Details (price, area, description, photos)
+//   -> we confirm the account (Google, or a code by email or WhatsApp verified inline: the account is
 //      created + they're logged in on the spot — no password screen)
 //   5) Confirm: a short summary + "I confirm my details are correct" + optional
 //      visibility plan -> Publish (then Stripe, or the saved card, for a plan)
@@ -43,10 +43,14 @@ const DICT = {
     termsPre: 'Acepto los ', termsLink: 'Términos y Condiciones', termsMid: ' y la ', privacyLink: 'Política de Privacidad', errTerms: 'Para continuar, aceptá los Términos y Condiciones.',
     q3: '¿Dónde está la propiedad?', addrPh: 'Escribí la dirección…', addrHint: 'Elegí una dirección de la lista para estandarizarla.',
     barrio: 'Barrio', ciudad: 'Ciudad',
-    verifyTitle: 'Confirmá tu email', verifySub: (e) => `Para publicar, continuá con Google o te enviamos un código de 6 dígitos a ${e}.`, sendCode: 'Enviar código',
+    verifyTitle: 'Confirmá tu cuenta', verifySub: (e) => `Para publicar, continuá con Google o te enviamos un código de 6 dígitos a ${e} o por WhatsApp.`, sendCode: 'Enviar código',
+    sendByEmail: 'Enviar código por email', sendByWa: 'Enviar código por WhatsApp',
+    waOtpSub: (p) => `Ingresá el código que enviamos por WhatsApp al ${p}.`, waTest: (c) => `Modo de prueba (no se envía WhatsApp): el código es ${c}`,
+    errWaSend: 'No se pudo enviar el código por WhatsApp. Probá por email.', errWaNotLinked: 'Ese WhatsApp todavía no está vinculado a la cuenta de este email. Usá el código por email.',
+    fWa: 'Tu WhatsApp (para compradores)',
     otpTitle: 'Código de confirmación enviado', otpSub: (e) => `Ingresá el código que enviamos a ${e} para verificar tu correo.`,
     codePh: 'Código de 6 dígitos', verify: 'Verificar', verifying: 'Verificando…', resend: 'Reenviar código', resent: 'Código reenviado',
-    haveAccount: 'Ya existe una cuenta', existsSub: (e) => `${e} ya tiene una cuenta en Casa Libre. Ingresá con Google o te enviamos un código de 6 dígitos.`, haveAccountSub: (e) => `Te enviamos un código a ${e}. Ingresalo para continuar.`, googleBtn: 'Continuar con Google', orText: 'o', login: 'Ingresar', errGeneric: 'Algo salió mal. Intentá de nuevo.', doneDash: 'Ir a mi panel',
+    haveAccount: 'Ya existe una cuenta', existsSub: (e) => `${e} ya tiene una cuenta en Casa Libre. Ingresá con Google o te enviamos un código de 6 dígitos por email o WhatsApp.`, haveAccountSub: (e) => `Te enviamos un código a ${e}. Ingresalo para continuar.`, googleBtn: 'Continuar con Google', orText: 'o', login: 'Ingresar', errGeneric: 'Algo salió mal. Intentá de nuevo.', doneDash: 'Ir a mi panel',
     d4Title: 'Detalles de la propiedad', d4Sub: 'Completá los datos de tu propiedad.',
     cTitle: 'Confirmá los datos', cSub: 'Revisá tu propiedad antes de publicarla.', cCheck: 'Confirmo que los datos son correctos', errConfirm: 'Confirmá que los datos son correctos para publicar.',
     cOp: 'Operación', cAddr: 'Dirección', cPhone: 'WhatsApp', cContact: 'Contacto', cPhotos: (n) => `${n} foto${n === 1 ? '' : 's'}`,
@@ -89,10 +93,14 @@ const DICT = {
     termsPre: 'I agree to the ', termsLink: 'Terms of Service', termsMid: ' and the ', privacyLink: 'Privacy Policy', errTerms: 'To continue, please accept the Terms of Service.',
     q3: 'Where is the property?', addrPh: 'Type the address…', addrHint: 'Pick an address from the list to standardize it.',
     barrio: 'Neighborhood', ciudad: 'City',
-    verifyTitle: 'Confirm your email', verifySub: (e) => `To publish, continue with Google or we'll email a 6-digit code to ${e}.`, sendCode: 'Send code',
+    verifyTitle: 'Confirm your account', verifySub: (e) => `To publish, continue with Google or we'll send a 6-digit code to ${e} or on WhatsApp.`, sendCode: 'Send code',
+    sendByEmail: 'Send code by email', sendByWa: 'Send code on WhatsApp',
+    waOtpSub: (p) => `Enter the code we sent on WhatsApp to ${p}.`, waTest: (c) => `Test mode (no WhatsApp is sent): the code is ${c}`,
+    errWaSend: 'Could not send the WhatsApp code. Try by email.', errWaNotLinked: "That WhatsApp isn't linked to this email's account yet. Use the email code.",
+    fWa: 'Your WhatsApp (for buyers)',
     otpTitle: 'Confirmation code sent', otpSub: (e) => `Enter the code we emailed to ${e} to verify your email.`,
     codePh: '6-digit code', verify: 'Verify', verifying: 'Verifying…', resend: 'Resend code', resent: 'Code resent',
-    haveAccount: 'Account already exists', existsSub: (e) => `${e} already has a Casa Libre account. Log in with Google or we'll email you a 6-digit code.`, haveAccountSub: (e) => `We sent a code to ${e}. Enter it to continue.`, googleBtn: 'Continue with Google', orText: 'or', login: 'Log in', errGeneric: 'Something went wrong. Try again.', doneDash: 'Go to my dashboard',
+    haveAccount: 'Account already exists', existsSub: (e) => `${e} already has a Casa Libre account. Log in with Google or we'll send you a 6-digit code by email or WhatsApp.`, haveAccountSub: (e) => `We sent a code to ${e}. Enter it to continue.`, googleBtn: 'Continue with Google', orText: 'or', login: 'Log in', errGeneric: 'Something went wrong. Try again.', doneDash: 'Go to my dashboard',
     d4Title: 'Property details', d4Sub: 'Fill in your property\'s details.',
     cTitle: 'Confirm the details', cSub: 'Check your property before you publish it.', cCheck: 'I confirm my details are correct', errConfirm: 'Please confirm your details are correct to publish.',
     cOp: 'Operation', cAddr: 'Address', cPhone: 'WhatsApp', cContact: 'Contact', cPhotos: (n) => `${n} photo${n === 1 ? '' : 's'}`,
@@ -132,6 +140,9 @@ const inputCls = 'w-full px-4 py-[13px] border-[1.5px] border-ink/30 rounded-inp
 const labelCls = 'block text-[13px] font-semibold mb-1.5';
 const pickCls = (on) => `flex-1 px-5 py-3.5 rounded-pill border-[1.5px] text-[15px] font-semibold transition-colors ${on ? 'bg-ink text-paper border-ink' : 'bg-card border-ink hover:bg-hatch2'}`;   // round pills — same shape as the Buy / Sell / Rent CTAs
 const emailOk = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || ''));
+// The seller's WhatsApp (step 1): country code + number. 8+ digits = more than the bare prefix.
+const phoneOk = (p) => String(p || '').replace(/\D/g, '').length >= 8;
+const WHATSAPP_LOGIN = process.env.NEXT_PUBLIC_WHATSAPP_LOGIN === '1';
 // This country's currency per US$ (offline fallback; the server checks with the live rate).
 const APPROX_RATE = COUNTRY.fxFallback || 7300;
 const numOf = (v) => Number(String(v).replace(/[^\d.]/g, ''));
@@ -249,6 +260,10 @@ export default function SellFlowProvider({ children }) {
   const [code, setCode] = useState('');
   const [verified, setVerified] = useState(false);
   const [emailTaken, setEmailTaken] = useState(false);
+  const [channel, setChannel] = useState('email');   // where the confirm code went: email | whatsapp
+  const [waPhone, setWaPhone] = useState('');        // E.164 the WhatsApp code went to
+  const [waCode, setWaCode] = useState('');
+  const [waDev, setWaDev] = useState('');            // test key only: the code itself
   const [loginCode, setLoginCode] = useState('');   // sign-in code for an email that already has an account
   const [codeSent, setCodeSent] = useState(false);  // the visitor clicked "Send code" on the confirm-email screen
   const [photos, setPhotos] = useState([]);      // { file?, url (shown), key? + remote? once uploaded to the draft, failed? }
@@ -584,12 +599,12 @@ export default function SellFlowProvider({ children }) {
 
   // ---- step navigation ----
   const collectValid = () => {
-    if (step === 1) return !!f.seller_type && (!!user || (f.contact_name.trim() && emailOk(f.email))) && termsOk;
+    if (step === 1) return !!f.seller_type && (!!user || (f.contact_name.trim() && emailOk(f.email))) && phoneOk(f.contact_phone) && termsOk;
     if (step === 2) return !!f.neighborhood && !!f.ptype;
     return true;
   };
   const collectErr = () => (step === 1
-    ? (!f.seller_type ? t.errSeller : !user && !f.contact_name.trim() ? t.errName : !user && !emailOk(f.email) ? t.errEmail : t.errTerms)
+    ? (!f.seller_type ? t.errSeller : !user && !f.contact_name.trim() ? t.errName : !user && !emailOk(f.email) ? t.errEmail : !phoneOk(f.contact_phone) ? t.errPhone : t.errTerms)
     : !f.neighborhood ? t.errAddr : t.errType);
   // A signed-in visitor never sees the email-confirm step: their email is already verified.
   const next = async () => {
@@ -600,7 +615,7 @@ export default function SellFlowProvider({ children }) {
       if (Object.keys(e).length) { setErrs(e); setErr(''); return; }
       setErrs({}); setErr('');
       if (verified) { setStep(4); return; }
-      setCodeSent(false); setCode(''); setLoginCode('');
+      setCodeSent(false); setCode(''); setLoginCode(''); setWaCode(''); setWaDev(''); setChannel('email');
       setBusy(true); const exists = await emailExists(); setBusy(false);
       setEmailTaken(exists); setPhase('otp'); return;
     }
@@ -613,7 +628,7 @@ export default function SellFlowProvider({ children }) {
     setErr('');
     setStep((s) => s + 1);
   };
-  const back = () => { setErr(''); setEmailTaken(false); setCodeSent(false); if (phase === 'otp') { setPhase(''); return; } setStep((s) => Math.max(s - 1, 0)); };
+  const back = () => { setErr(''); setEmailTaken(false); setCodeSent(false); setChannel('email'); if (phase === 'otp') { setPhase(''); return; } setStep((s) => Math.max(s - 1, 0)); };
 
   // Does the email already have an account? Only decides what the confirm screen says
   // (nothing is sent). Unknown / slow → treated as new; Send code still finds out.
@@ -654,6 +669,35 @@ export default function SellFlowProvider({ children }) {
       track('sell_otp_verified', {});
       setVerified(true); setPhase(''); setStep(4);   // account created + logged in → confirm screen
       refreshUser?.();                                // reflect the new session in the header/app immediately (was showing "not logged in")
+    } catch { setErr(t.errCode); } finally { setBusy(false); }
+  };
+
+  // ---- WhatsApp code (Relay) — the second button on the confirm screen ----
+  // Sent to the number from step 1. If that number is already proven on an account it
+  // signs in to it; otherwise the account is created with the name + email of step 1.
+  const sendWaCode = async () => {
+    setBusy(true); setErr('');
+    try {
+      const res = await fetch('/api/auth/whatsapp/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: f.contact_phone }) });
+      const j = await res.json().catch(() => ({}));
+      if (res.status === 429) { setErr(t.errSendOtp); return; }
+      if (j.error === 'invalid_phone') { setErr(t.errPhone); return; }
+      if (!res.ok || !j.ok) { setErr(t.errWaSend); return; }
+      setWaPhone(j.phone); setWaDev(j.devCode || ''); setWaCode(''); setChannel('whatsapp'); setCodeSent(true);
+      track('sell_otp_sent', { channel: 'whatsapp' });
+    } catch { setErr(t.errWaSend); } finally { setBusy(false); }
+  };
+  const verifyWaCode = async () => {
+    if (String(waCode).length !== 6) { setErr(t.errCode); return; }
+    setBusy(true); setErr('');
+    try {
+      const res = await fetch('/api/auth/whatsapp/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: waPhone, code: waCode, fullName: f.contact_name, email: f.email }) });
+      const j = await res.json().catch(() => ({}));
+      if (j.error === 'email_taken') { setErr(t.errWaNotLinked); return; }
+      if (!res.ok || !j.ok) { setErr(t.errCode); return; }
+      track(j.mode === 'signup' ? 'user_signed_up' : 'user_logged_in', { method: 'whatsapp_otp' });
+      setVerified(true); setEmailTaken(false); setPhase(''); setStep(4);
+      refreshUser?.();
     } catch { setErr(t.errCode); } finally { setBusy(false); }
   };
 
@@ -728,7 +772,6 @@ export default function SellFlowProvider({ children }) {
     else { const local = priceCurrency === COUNTRY.currencyCode ? p : p * APPROX_RATE; if (local < COUNTRY.rentFloorLocal) e.price = t.errPriceFloorRent; }
     const a = numOf(f.area); const range = areaRange(f.ptype);   // land: any size
     if (!Number.isFinite(a) || a <= 0) e.area = t.errArea; else if (range && (a < range[0] || a > range[1])) e.area = t.errAreaRange(range[1]);
-    if (String(f.contact_phone).replace(/\D/g, '').length < 6) e.contact_phone = t.errPhone;
     if (photos.length < 1) e.photos = t.errPhotos;
     return e;
   };
@@ -752,6 +795,7 @@ export default function SellFlowProvider({ children }) {
   const publish = async (openHighlightAfter = false) => {
     const e = validateDetails();
     if (Object.keys(e).length) { setErrs(e); setErr(''); setStep(e.ptype ? 2 : 3); return; }
+    if (!phoneOk(f.contact_phone)) { setErr(t.errPhone); setStep(1); return; }
     if (!confirmOk) { setErr(t.errConfirm); return; }
     setErrs({}); setBusy(true); setErr('');
     try {
@@ -875,7 +919,25 @@ export default function SellFlowProvider({ children }) {
                     <div className="flex items-center gap-3 my-4">
                       <span className="flex-1 h-px bg-ink/12" /><span className="text-[12px] text-ink/40 font-mono">{t.orText}</span><span className="flex-1 h-px bg-ink/12" />
                     </div>
-                    <button onClick={emailTaken ? sendExistingCode : sendOtp} disabled={busy} className="w-full px-7 py-3.5 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60 inline-flex items-center justify-center min-h-[48px]" data-testid="sell-send-code">{busy ? <Spinner /> : t.sendCode}</button>
+                    <div className="grid grid-cols-1 gap-2.5">
+                      <button onClick={emailTaken ? sendExistingCode : sendOtp} disabled={busy} className="w-full px-7 py-3.5 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60 inline-flex items-center justify-center min-h-[48px]" data-testid="sell-send-code">{busy ? <Spinner /> : t.sendByEmail}</button>
+                      {WHATSAPP_LOGIN && (
+                        <button onClick={sendWaCode} disabled={busy} className="w-full px-7 py-3.5 bg-card text-ink border-[1.5px] border-ink rounded-pill font-bold text-[14px] disabled:opacity-60 inline-flex items-center justify-center gap-2 min-h-[48px]" data-testid="sell-send-wa">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="#25D366" aria-hidden="true"><path d="M.06 24l1.69-6.16A11.87 11.87 0 0 1 .16 11.9C.16 5.34 5.5 0 12.06 0a11.82 11.82 0 0 1 8.41 3.49 11.82 11.82 0 0 1 3.48 8.42c0 6.56-5.34 11.9-11.9 11.9a11.9 11.9 0 0 1-5.69-1.45L.06 24zm6.6-3.8c1.68.99 3.28 1.59 5.39 1.59 5.45 0 9.89-4.43 9.89-9.88A9.87 9.87 0 0 0 12.07 2c-5.46 0-9.89 4.43-9.9 9.88 0 2.23.65 3.9 1.75 5.65l-1 3.65 3.74-.98zm11.39-5.46c-.07-.12-.27-.2-.57-.35-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.39-1.47-.88-.79-1.48-1.76-1.65-2.06-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.61-.92-2.21-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.8.37-.27.3-1.04 1.02-1.04 2.48s1.07 2.88 1.21 3.08c.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.69.63.71.23 1.36.2 1.87.12.57-.08 1.76-.72 2.01-1.41.25-.7.25-1.29.17-1.41z"/></svg>
+                          {t.sendByWa}
+                        </button>
+                      )}
+                    </div>
+                    {err && <div className="mt-4 text-[13px] font-medium text-red-700 bg-red-50 border border-red-200 rounded-[12px] px-3.5 py-2.5">{err}</div>}
+                  </>
+                ) : channel === 'whatsapp' ? (
+                  <>
+                    <h2 className="text-[22px] font-bold tracking-head mb-1">{t.otpTitle}</h2>
+                    <p className="text-[14px] text-ink/55 mb-4">{t.waOtpSub(waPhone)}</p>
+                    {waDev && <div className="mb-3 text-[12.5px] font-medium bg-amber-50 border border-amber-200 rounded-[12px] px-3.5 py-2.5">{t.waTest(waDev)}</div>}
+                    <input value={waCode} onChange={(e) => setWaCode(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder={t.codePh} inputMode="numeric" autoComplete="one-time-code" className={`${inputCls} text-center tracking-[0.3em] text-[18px] font-semibold`} onKeyDown={(e) => { if (e.key === 'Enter') verifyWaCode(); }} data-testid="sell-wa-code" autoFocus />
+                    <button onClick={verifyWaCode} disabled={busy} className="w-full mt-4 px-7 py-3.5 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60 inline-flex items-center justify-center min-h-[48px]">{busy ? <Spinner /> : t.verify}</button>
+                    <button type="button" onClick={sendWaCode} disabled={busy} className="w-full mt-2 text-[13px] font-medium text-ink/55 hover:text-ink">{t.resend}</button>
                     {err && <div className="mt-4 text-[13px] font-medium text-red-700 bg-red-50 border border-red-200 rounded-[12px] px-3.5 py-2.5">{err}</div>}
                   </>
                 ) : emailTaken ? (
@@ -925,6 +987,13 @@ export default function SellFlowProvider({ children }) {
                         <input value={f.contact_name} onChange={(e) => set('contact_name', e.target.value)} placeholder={t.namePh} className={`${inputCls} mb-3`} autoComplete="name" />
                         <label className={labelCls}>{t.email}</label>
                         <input value={f.email} onChange={(e) => set('email', e.target.value)} placeholder={t.emailPh} className={inputCls} autoComplete="email" inputMode="email" type="email" />
+                      </div>
+                    )}
+                    {f.seller_type && (
+                      <div className={user ? 'mt-5' : 'mt-3'}>
+                        <label className={labelCls}>{t.fWa}</label>
+                        <input value={f.contact_phone} onChange={(e) => set('contact_phone', e.target.value)} onFocus={() => { if (!String(f.contact_phone).trim()) set('contact_phone', `+${COUNTRY.phonePrefix} `); }}
+                          placeholder={`+${COUNTRY.phonePrefix} ${(COUNTRY.phonePlaceholder || '').replace(/^0/, '')}`} className={inputCls} inputMode="tel" autoComplete="tel" type="tel" data-testid="sell-phone" />
                       </div>
                     )}
                     {/* Terms of Service opt-in — required to continue (consent before we store anything). */}
@@ -984,9 +1053,6 @@ export default function SellFlowProvider({ children }) {
                           <input value={f.area} onChange={setField('area')} inputMode="numeric" placeholder="120" className={fieldCls('area')} /><FErr k="area" />
                         </label>
                       </div>
-                      <label className="sm:col-span-2"><span className={labelCls}>{t.fPhone}</span>
-                        <input value={f.contact_phone} onChange={setField('contact_phone')} placeholder={t.fPhonePh} className={fieldCls('contact_phone')} inputMode="tel" autoComplete="tel" /><FErr k="contact_phone" />
-                      </label>
                       <label className="sm:col-span-2"><span className={labelCls}>{t.fDesc}</span>
                         <textarea value={f.description} onChange={setField('description')} rows={3} placeholder={t.fDescPh} className={`${inputCls} resize-y`} />
                       </label>
