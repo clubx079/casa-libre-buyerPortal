@@ -264,6 +264,7 @@ export default function SellFlowProvider({ children }) {
   const [waPhone, setWaPhone] = useState('');        // E.164 the WhatsApp code went to
   const [waCode, setWaCode] = useState('');
   const [waDev, setWaDev] = useState('');            // test key only: the code itself
+  const [sendingWa, setSendingWa] = useState(false); // spinner on the WhatsApp button, not the email one
   const [loginCode, setLoginCode] = useState('');   // sign-in code for an email that already has an account
   const [codeSent, setCodeSent] = useState(false);  // the visitor clicked "Send code" on the confirm-email screen
   const [photos, setPhotos] = useState([]);      // { file?, url (shown), key? + remote? once uploaded to the draft, failed? }
@@ -676,7 +677,7 @@ export default function SellFlowProvider({ children }) {
   // Sent to the number from step 1. If that number is already proven on an account it
   // signs in to it; otherwise the account is created with the name + email of step 1.
   const sendWaCode = async () => {
-    setBusy(true); setErr('');
+    setBusy(true); setSendingWa(true); setErr('');
     try {
       const res = await fetch('/api/auth/whatsapp/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: f.contact_phone }) });
       const j = await res.json().catch(() => ({}));
@@ -685,7 +686,7 @@ export default function SellFlowProvider({ children }) {
       if (!res.ok || !j.ok) { setErr(t.errWaSend); return; }
       setWaPhone(j.phone); setWaDev(j.devCode || ''); setWaCode(''); setChannel('whatsapp'); setCodeSent(true);
       track('sell_otp_sent', { channel: 'whatsapp' });
-    } catch { setErr(t.errWaSend); } finally { setBusy(false); }
+    } catch { setErr(t.errWaSend); } finally { setBusy(false); setSendingWa(false); }
   };
   const verifyWaCode = async () => {
     if (String(waCode).length !== 6) { setErr(t.errCode); return; }
@@ -920,11 +921,11 @@ export default function SellFlowProvider({ children }) {
                       <span className="flex-1 h-px bg-ink/12" /><span className="text-[12px] text-ink/40 font-mono">{t.orText}</span><span className="flex-1 h-px bg-ink/12" />
                     </div>
                     <div className="grid grid-cols-1 gap-2.5">
-                      <button onClick={emailTaken ? sendExistingCode : sendOtp} disabled={busy} className="w-full px-7 py-3.5 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60 inline-flex items-center justify-center min-h-[48px]" data-testid="sell-send-code">{busy ? <Spinner /> : t.sendByEmail}</button>
+                      <button onClick={emailTaken ? sendExistingCode : sendOtp} disabled={busy} className="w-full px-7 py-3.5 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60 inline-flex items-center justify-center min-h-[48px]" data-testid="sell-send-code">{busy && !sendingWa ? <Spinner /> : t.sendByEmail}</button>
                       {WHATSAPP_LOGIN && (
                         <button onClick={sendWaCode} disabled={busy} className="w-full px-7 py-3.5 bg-card text-ink border-[1.5px] border-ink rounded-pill font-bold text-[14px] disabled:opacity-60 inline-flex items-center justify-center gap-2 min-h-[48px]" data-testid="sell-send-wa">
                           <svg width="18" height="18" viewBox="0 0 24 24" fill="#25D366" aria-hidden="true"><path d="M.06 24l1.69-6.16A11.87 11.87 0 0 1 .16 11.9C.16 5.34 5.5 0 12.06 0a11.82 11.82 0 0 1 8.41 3.49 11.82 11.82 0 0 1 3.48 8.42c0 6.56-5.34 11.9-11.9 11.9a11.9 11.9 0 0 1-5.69-1.45L.06 24zm6.6-3.8c1.68.99 3.28 1.59 5.39 1.59 5.45 0 9.89-4.43 9.89-9.88A9.87 9.87 0 0 0 12.07 2c-5.46 0-9.89 4.43-9.9 9.88 0 2.23.65 3.9 1.75 5.65l-1 3.65 3.74-.98zm11.39-5.46c-.07-.12-.27-.2-.57-.35-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.39-1.47-.88-.79-1.48-1.76-1.65-2.06-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.61-.92-2.21-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.8.37-.27.3-1.04 1.02-1.04 2.48s1.07 2.88 1.21 3.08c.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.69.63.71.23 1.36.2 1.87.12.57-.08 1.76-.72 2.01-1.41.25-.7.25-1.29.17-1.41z"/></svg>
-                          {t.sendByWa}
+                          {sendingWa ? <Spinner /> : t.sendByWa}
                         </button>
                       )}
                     </div>
@@ -992,7 +993,7 @@ export default function SellFlowProvider({ children }) {
                     {f.seller_type && (
                       <div className={user ? 'mt-5' : 'mt-3'}>
                         <label className={labelCls}>{t.fWa}</label>
-                        <input value={f.contact_phone} onChange={(e) => set('contact_phone', e.target.value)} onFocus={() => { if (!String(f.contact_phone).trim()) set('contact_phone', `+${COUNTRY.phonePrefix} `); }}
+                        <input value={f.contact_phone} onChange={(e) => set('contact_phone', e.target.value)}
                           placeholder={`+${COUNTRY.phonePrefix} ${(COUNTRY.phonePlaceholder || '').replace(/^0/, '')}`} className={inputCls} inputMode="tel" autoComplete="tel" type="tel" data-testid="sell-phone" />
                       </div>
                     )}

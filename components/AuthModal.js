@@ -191,7 +191,7 @@ export default function AuthModal({ onAuthed, onClose, next = null }) {
             {WHATSAPP_LOGIN && (
               <div className="grid grid-cols-2 gap-1 p-1 mb-4 rounded-pill border-[1.5px] border-ink/20" data-testid="auth-method">
                 {[['email', t.byEmail], ['whatsapp', t.byWhatsApp]].map(([v, l]) => (
-                  <button key={v} type="button" onClick={() => { setMethod(v); setErr(''); if (v === 'whatsapp' && !phone.trim()) setPhone(`+${COUNTRY.phonePrefix} `); }}
+                  <button key={v} type="button" onClick={() => { setMethod(v); setErr(''); }}
                     className={`py-2 rounded-pill text-[13.5px] font-semibold ${method === v ? 'bg-ink text-paper' : 'text-ink/60 hover:text-ink'}`}>{l}</button>
                 ))}
               </div>
