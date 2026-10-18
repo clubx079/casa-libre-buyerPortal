@@ -191,7 +191,7 @@ export default function AuthModal({ onAuthed, onClose, next = null }) {
             {WHATSAPP_LOGIN && (
               <div className="grid grid-cols-2 gap-1 p-1 mb-4 rounded-pill border-[1.5px] border-ink/20" data-testid="auth-method">
                 {[['email', t.byEmail], ['whatsapp', t.byWhatsApp]].map(([v, l]) => (
-                  <button key={v} type="button" onClick={() => { setMethod(v); setErr(''); }}
+                  <button key={v} type="button" onClick={() => { setMethod(v); setErr(''); if (v === 'whatsapp' && !phone.trim()) setPhone(`+${COUNTRY.phonePrefix} `); }}
                     className={`py-2 rounded-pill text-[13.5px] font-semibold ${method === v ? 'bg-ink text-paper' : 'text-ink/60 hover:text-ink'}`}>{l}</button>
                 ))}
               </div>
@@ -199,10 +199,7 @@ export default function AuthModal({ onAuthed, onClose, next = null }) {
             {method === 'whatsapp' ? (
               <>
                 <label className="block text-[13px] font-semibold mb-1.5">{t.waPhone}</label>
-                <div className="flex gap-2">
-                  <span className="px-3.5 py-[13px] border-[1.5px] border-ink/30 rounded-input bg-card font-medium text-[15px] text-ink/60 shrink-0">+{COUNTRY.phonePrefix}</span>
-                  <input ref={firstField} type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={COUNTRY.phonePlaceholder || t.phonePh} className={inputCls} autoComplete="tel" data-testid="auth-phone" />
-                </div>
+                <input ref={firstField} type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={`+${COUNTRY.phonePrefix} ${(COUNTRY.phonePlaceholder || '').replace(/^0/, '')}`} className={inputCls} autoComplete="tel" data-testid="auth-phone" />
               </>
             ) : (
               <>
