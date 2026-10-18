@@ -23,10 +23,10 @@ const OPT_OUT = /^\s*(no recibir m[aá]s|no me interesa|stop|baja|parar|cancelar
 async function optOut(phone) {
   const e164 = toE164(phone, COUNTRY.phonePrefix);
   if (!e164) return 0;
-  // users.phone is free text for people who typed it in: match on the last 8 digits, then
-  // keep only the rows that are really this number.
-  const tail = e164.slice(-8);
-  const rows = await select('users', `select=id,phone&phone=like.${encodeURIComponent(`%${tail}%`)}&limit=50`).catch(() => []);
+  // users.phone is free text (spaces, dashes, a leading 0): find the rows ending in the
+  // same last 3 digits, then keep only the ones that are really this number.
+  const tail = e164.slice(-3);
+  const rows = await select('users', `select=id,phone&phone=like.${encodeURIComponent(`%${tail}`)}&limit=2000`).catch(() => []);
   const ids = rows.filter((u) => toE164(u.phone, COUNTRY.phonePrefix) === e164).map((u) => u.id);
   for (const id of ids) {
     await update('users', `id=eq.${encodeURIComponent(id)}`, { whatsapp_opted_out_at: new Date().toISOString(), whatsapp_opt_in_at: null }, { returning: 'minimal' }).catch(() => {});
@@ -47,13 +47,17 @@ export async function POST(req) {
   if (/^message\.(sent|delivered|read|failed)$/.test(type) && d.id) {
     const status = type.split('.')[1];
     const [row] = await select('email_log', `select=id,status&relay_message_id=eq.${encodeURIComponent(d.id)}&limit=1`).catch(() => []);
+    let updated = false;
     if (row) {
       const forward = status === 'failed' ? row.status !== 'read' : (RANK[status] ?? 0) > (RANK[row.status] ?? 0);
       if (forward) {
-        await update('email_log', `id=eq.${encodeURIComponent(row.id)}`, { status, ...(status === 'failed' ? { error: String(d.error?.code || d.error?.message || 'failed').slice(0, 300) } : {}) }, { returning: 'minimal' }).catch(() => {});
+        // delivered / read need migration 018 (email_log status check); without it the
+        // row keeps 'sent' and this says so.
+        updated = await update('email_log', `id=eq.${encodeURIComponent(row.id)}`, { status, ...(status === 'failed' ? { error: String(d.error?.code || d.error?.message || 'failed').slice(0, 300) } : {}) }, { returning: 'minimal' })
+          .then(() => true).catch(() => false);
       }
     }
-    return NextResponse.json({ ok: true, updated: !!row });
+    return NextResponse.json({ ok: true, found: !!row, updated });
   }
   if (type === 'contact.opted_out') {
     return NextResponse.json({ ok: true, optedOut: await optOut(d.phone || d.contact?.phone) });
