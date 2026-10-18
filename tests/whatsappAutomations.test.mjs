@@ -68,9 +68,9 @@ test('whatsapp channel with consent: the WhatsApp template, no email', async () 
   assert.equal(sentToRelay.length, 1);
 });
 
-test('whatsapp channel without consent falls back to email', async () => {
+test('whatsapp channel, nobody with that email / no number → falls back to email', async () => {
   emails.length = 0;
-  const db = fakeDb({ channel: 'whatsapp' });
+  const db = fakeDb({ channel: 'whatsapp', user: { phone: null } });
   assert.equal(await sendOnce(base(db)), 'sent');
   assert.equal(sentToRelay.length, 0);
   assert.equal(emails.length, 1);
@@ -105,9 +105,9 @@ test('a Relay failure falls back to email and frees the WhatsApp claim', async (
 test('variables: a missing value means no WhatsApp; marketing needs consent', () => {
   assert.equal(waVariables('cl_visitas', { ...vars, views: '' }), null);
   assert.deepEqual(waVariables('cl_publicacion_vence', { name: 'Ana', property_title: 'Casa', listing_until: '10 de enero', free_days: '30', price: 'US$5', extend_url: 'https://casa-libre.com.py/cuenta/publicaciones?extend=p-9' }).buttons, [{ index: 0, text: 'p-9' }]);
-  assert.equal(waAllowed({ phone_verified_at: 'x' }, 'marketing'), false);
-  assert.equal(waAllowed({ whatsapp_opt_in_at: 'x' }, 'marketing'), true);
-  assert.equal(waAllowed({ whatsapp_opt_in_at: 'x', whatsapp_opted_out_at: 'y' }, 'utility'), false);
+  assert.equal(waAllowed({ phone: '0981 123 456' }, 'marketing'), true);    // no consent box: a number is enough
+  assert.equal(waAllowed({ phone: '0981 123 456', whatsapp_opted_out_at: 'y' }, 'utility'), false);
+  assert.equal(waAllowed(null, 'utility'), false);
 });
 
 test('Relay webhook signature', async () => {
@@ -120,17 +120,17 @@ test('Relay webhook signature', async () => {
   assert.equal(verifyRelaySignature(body, `t=${t},v1=${v1}`, 'whsec_x', 300, t + 1000), false);
 });
 
-test('a marketing template (Meta moved cl_visitas there) needs consent: a WhatsApp-proven number is not enough', async () => {
+test('someone who opted out (STOP / No recibir más) gets the email, not WhatsApp', async () => {
   emails.length = 0;
-  const db = fakeDb({ channel: 'whatsapp', user: { phone_verified_at: '2026-10-18T00:00:00Z' } });
+  const db = fakeDb({ channel: 'whatsapp', user: { whatsapp_opted_out_at: '2026-10-18T00:00:00Z' } });
   assert.equal(await sendOnce(base(db)), 'sent');
   assert.equal(sentToRelay.filter((x) => x.url.includes('/messages/')).length, 0);
   assert.equal(emails.length, 1);
 });
 
-test('WhatsApp only (no email fallback): someone without consent gets nothing', async () => {
+test('WhatsApp only (no email fallback): someone without a number gets nothing', async () => {
   emails.length = 0;
-  const db = fakeDb({ channel: 'whatsapp', wa: { tpl1: 'cl_visitas', __no_fallback: true } });
+  const db = fakeDb({ channel: 'whatsapp', wa: { tpl1: 'cl_visitas', __no_fallback: true }, user: { phone: null } });
   assert.equal(await sendOnce(base(db)), 'no_email');
   assert.equal(emails.length, 0);
 });
