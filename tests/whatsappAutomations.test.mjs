@@ -127,3 +127,10 @@ test('a marketing template (Meta moved cl_visitas there) needs consent: a WhatsA
   assert.equal(sentToRelay.filter((x) => x.url.includes('/messages/')).length, 0);
   assert.equal(emails.length, 1);
 });
+
+test('WhatsApp only (no email fallback): someone without consent gets nothing', async () => {
+  emails.length = 0;
+  const db = fakeDb({ channel: 'whatsapp', wa: { tpl1: 'cl_visitas', __no_fallback: true } });
+  assert.equal(await sendOnce(base(db)), 'no_email');
+  assert.equal(emails.length, 0);
+});
