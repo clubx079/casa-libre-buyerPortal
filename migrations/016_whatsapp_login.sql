@@ -8,3 +8,5 @@ alter table public.users add column if not exists phone_verified_at timestamptz;
 create unique index if not exists users_verified_phone_key
   on public.users (phone)
   where phone_verified_at is not null;
+
+notify pgrst, 'reload schema';
