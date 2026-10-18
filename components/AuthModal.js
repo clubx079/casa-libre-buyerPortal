@@ -4,6 +4,9 @@
 // existing account ('login') or create one ('signup'); /api/auth/code/verify checks
 // it and starts the session. New people also give their name (+ optional phone) and
 // accept the Terms. Google sign-in stays.
+// WhatsApp (NEXT_PUBLIC_WHATSAPP_LOGIN=1): the same two steps with the code sent to
+// WhatsApp by Relay — /api/auth/whatsapp/send + /verify. New people then give their
+// name and email instead of a phone.
 import { useEffect, useRef, useState } from 'react';
 import { useLang } from '@/lib/useLang';
 import { track } from '@/lib/analytics';
@@ -25,6 +28,11 @@ const DICT = {
     errBlocked: 'Esta cuenta no está disponible. Escribinos desde la página de contacto.',
     errGeneric: 'Algo salió mal. Intentá de nuevo.',
     sending: 'Enviando…', verifying: 'Verificando…',
+    byEmail: 'Email', byWhatsApp: 'WhatsApp', waSub: 'Te enviamos un código por WhatsApp. Sin contraseñas.',
+    waPhone: 'Tu número de WhatsApp', waCodeSub: (p) => `Enviamos un código de 6 dígitos por WhatsApp al ${p}.`,
+    changePhone: '← Cambiar número', errPhone: 'Ingresá un número de WhatsApp válido',
+    errEmailTaken: 'Ese email ya tiene una cuenta. Ingresá con tu email.', errWaSend: 'No se pudo enviar el código por WhatsApp. Probá con tu email.',
+    testCode: (c) => `Modo de prueba (no se envía WhatsApp): el código es ${c}`,
   },
   en: {
     emailTitle: 'Log in or sign up', emailSub: "We'll email you a code. No passwords.",
@@ -41,8 +49,14 @@ const DICT = {
     errBlocked: 'This account is unavailable. Write to us from the contact page.',
     errGeneric: 'Something went wrong. Try again.',
     sending: 'Sending…', verifying: 'Verifying…',
+    byEmail: 'Email', byWhatsApp: 'WhatsApp', waSub: "We'll send you a code on WhatsApp. No passwords.",
+    waPhone: 'Your WhatsApp number', waCodeSub: (p) => `We sent a 6-digit code on WhatsApp to ${p}.`,
+    changePhone: '← Change number', errPhone: 'Enter a valid WhatsApp number',
+    errEmailTaken: 'That email already has an account. Log in with your email.', errWaSend: 'Could not send the WhatsApp code. Try with your email.',
+    testCode: (c) => `Test mode (no WhatsApp is sent): the code is ${c}`,
   },
 };
+const WHATSAPP_LOGIN = process.env.NEXT_PUBLIC_WHATSAPP_LOGIN === '1';
 
 const emailOk = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || '').trim());
 const inputCls = 'w-full px-4 py-[13px] border-[1.5px] border-ink/30 rounded-input bg-card font-medium text-[15px] outline-none focus:border-ink';
@@ -53,6 +67,9 @@ export default function AuthModal({ onAuthed, onClose, next = null }) {
   const [lang] = useLang();
   const t = DICT[lang];
   const [step, setStep] = useState('email'); // email | code
+  const [method, setMethod] = useState('email'); // email | whatsapp
+  const [waPhone, setWaPhone] = useState('');    // E.164 the code went to (from the server)
+  const [devCode, setDevCode] = useState('');    // test key only
   const [mode, setMode] = useState('login'); // what the code will do: login | signup
   const [email, setEmail] = useState('');
   const [fullName, setFullName] = useState('');
@@ -97,18 +114,22 @@ export default function AuthModal({ onAuthed, onClose, next = null }) {
     </>
   );
 
-  // Email the code. The reply says whether it signs in or creates the account.
+  // Send the code (email or WhatsApp). The reply says whether it signs in or creates the account.
   const sendCode = async () => {
-    const r = await post('/api/auth/code/send', { email: email.trim() });
+    const wa = method === 'whatsapp';
+    const r = await post(wa ? '/api/auth/whatsapp/send' : '/api/auth/code/send', wa ? { phone: phone.trim() } : { email: email.trim() });
     const j = await r.json().catch(() => ({}));
     if (r.status === 429 || j.error === 'rate_limited' || j.error === 'cooldown') return { error: t.errRate };
-    if (!r.ok || !j.ok) return { error: t.errSend };
+    if (wa && j.error === 'invalid_phone') return { error: t.errPhone };
+    if (!r.ok || !j.ok) return { error: wa ? t.errWaSend : t.errSend };
+    if (wa) { setWaPhone(j.phone || phone.trim()); setDevCode(j.devCode || ''); }
     return { mode: j.mode === 'signup' ? 'signup' : 'login' };
   };
 
   const submitEmail = async (e) => {
     e.preventDefault(); setErr('');
-    if (!emailOk(email)) { setErr(t.errEmail); return; }
+    if (method === 'whatsapp') { if (phone.replace(/\D/g, '').length < 6) { setErr(t.errPhone); return; } }
+    else if (!emailOk(email)) { setErr(t.errEmail); return; }
     setBusy(true);
     try {
       const res = await sendCode();
@@ -120,21 +141,28 @@ export default function AuthModal({ onAuthed, onClose, next = null }) {
 
   const submitCode = async (e) => {
     e.preventDefault(); setErr('');
+    const wa = method === 'whatsapp';
     if (mode === 'signup') {
       if (!fullName.trim()) { setErr(t.errName); return; }
+      if (wa && !emailOk(email)) { setErr(t.errEmail); return; }
       if (!termsOk) { setErr(t.errTerms); return; }
     }
     setBusy(true);
     try {
-      const r = await post('/api/auth/code/verify', {
-        email: email.trim(), code,
-        ...(mode === 'signup' ? { fullName: fullName.trim(), phone: phone.trim() || undefined } : {}),
-      });
+      const r = wa
+        ? await post('/api/auth/whatsapp/verify', { phone: waPhone, code, ...(mode === 'signup' ? { fullName: fullName.trim(), email: email.trim() } : {}) })
+        : await post('/api/auth/code/verify', {
+          email: email.trim(), code,
+          ...(mode === 'signup' ? { fullName: fullName.trim(), phone: phone.trim() || undefined } : {}),
+        });
       const j = await r.json().catch(() => ({}));
       if (r.status === 403) { setErr(t.errBlocked); return; }
+      if (j.error === 'email_taken') { setErr(t.errEmailTaken); return; }
+      if (j.error === 'invalid_email') { setErr(t.errEmail); return; }
       if (!r.ok || !j.ok) { setErr(j.error === 'too_many_attempts' ? t.errRate : t.errCode); return; }
-      if (j.mode === 'signup') track('user_signed_up', { method: 'email_otp' });   // value agreed with the ads agency
-      else track('user_logged_in', { method: 'email_otp' });
+      const m = wa ? 'whatsapp_otp' : 'email_otp';
+      if (j.mode === 'signup') track('user_signed_up', { method: m });   // value agreed with the ads agency
+      else track('user_logged_in', { method: m });
       onAuthed(j.user);
     } catch { setErr(t.errGeneric); } finally { setBusy(false); }
   };
@@ -158,10 +186,30 @@ export default function AuthModal({ onAuthed, onClose, next = null }) {
         {step === 'email' && (
           <form onSubmit={submitEmail}>
             <h2 className="text-[24px] font-bold tracking-head leading-tight">{t.emailTitle}</h2>
-            <p className="text-[14px] text-ink/55 mt-1 mb-5">{t.emailSub}</p>
+            <p className="text-[14px] text-ink/55 mt-1 mb-5">{method === 'whatsapp' ? t.waSub : t.emailSub}</p>
             {googleBtn}
-            <label className="block text-[13px] font-semibold mb-1.5">{t.email}</label>
-            <input ref={firstField} type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t.emailPh} className={inputCls} autoComplete="email" />
+            {WHATSAPP_LOGIN && (
+              <div className="grid grid-cols-2 gap-1 p-1 mb-4 rounded-pill border-[1.5px] border-ink/20" data-testid="auth-method">
+                {[['email', t.byEmail], ['whatsapp', t.byWhatsApp]].map(([v, l]) => (
+                  <button key={v} type="button" onClick={() => { setMethod(v); setErr(''); }}
+                    className={`py-2 rounded-pill text-[13.5px] font-semibold ${method === v ? 'bg-ink text-paper' : 'text-ink/60 hover:text-ink'}`}>{l}</button>
+                ))}
+              </div>
+            )}
+            {method === 'whatsapp' ? (
+              <>
+                <label className="block text-[13px] font-semibold mb-1.5">{t.waPhone}</label>
+                <div className="flex gap-2">
+                  <span className="px-3.5 py-[13px] border-[1.5px] border-ink/30 rounded-input bg-card font-medium text-[15px] text-ink/60 shrink-0">+{COUNTRY.phonePrefix}</span>
+                  <input ref={firstField} type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={COUNTRY.phonePlaceholder || t.phonePh} className={inputCls} autoComplete="tel" data-testid="auth-phone" />
+                </div>
+              </>
+            ) : (
+              <>
+                <label className="block text-[13px] font-semibold mb-1.5">{t.email}</label>
+                <input ref={firstField} type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t.emailPh} className={inputCls} autoComplete="email" />
+              </>
+            )}
             <button type="submit" disabled={busy} className={`${btnCls} mt-5`}>{busy ? t.sending : t.continue}</button>
           </form>
         )}
@@ -169,17 +217,25 @@ export default function AuthModal({ onAuthed, onClose, next = null }) {
         {step === 'code' && (
           <form onSubmit={submitCode}>
             <h2 className="text-[24px] font-bold tracking-head leading-tight">{mode === 'signup' ? t.signupTitle : t.loginTitle}</h2>
-            <p className="text-[14px] text-ink/55 mt-1 mb-5">{t.codeSub(email.trim())}</p>
+            <p className="text-[14px] text-ink/55 mt-1 mb-5">{method === 'whatsapp' ? t.waCodeSub(waPhone) : t.codeSub(email.trim())}</p>
+            {devCode && <div className="mb-4 text-[12.5px] font-medium bg-amber-50 border border-amber-200 rounded-[12px] px-3.5 py-2.5" data-testid="auth-dev-code">{t.testCode(devCode)}</div>}
             {mode === 'signup' && (
               <div className="flex flex-col gap-3 mb-3">
                 <div>
                   <label className="block text-[13px] font-semibold mb-1.5">{t.name}</label>
                   <input ref={firstField} value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder={t.namePh} className={inputCls} autoComplete="name" />
                 </div>
-                <div>
-                  <label className="block text-[13px] font-semibold mb-1.5">{t.phone}</label>
-                  <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t.phonePh} className={inputCls} autoComplete="tel" />
-                </div>
+                {method === 'whatsapp' ? (
+                  <div>
+                    <label className="block text-[13px] font-semibold mb-1.5">{t.email}</label>
+                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t.emailPh} className={inputCls} autoComplete="email" />
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-[13px] font-semibold mb-1.5">{t.phone}</label>
+                    <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t.phonePh} className={inputCls} autoComplete="tel" />
+                  </div>
+                )}
               </div>
             )}
             <label className="block text-[13px] font-semibold mb-1.5">{t.code}</label>
@@ -192,7 +248,7 @@ export default function AuthModal({ onAuthed, onClose, next = null }) {
             )}
             <button type="submit" disabled={busy || code.length !== 6} className={`${btnCls} mt-5`}>{busy ? t.verifying : (mode === 'signup' ? t.create : t.login)}</button>
             <div className="flex items-center justify-between mt-4">
-              <button type="button" onClick={() => { setStep('email'); setErr(''); setCode(''); }} className="text-[13px] font-medium text-ink/55 hover:text-ink">{t.changeEmail}</button>
+              <button type="button" onClick={() => { setStep('email'); setErr(''); setCode(''); setDevCode(''); }} className="text-[13px] font-medium text-ink/55 hover:text-ink">{method === 'whatsapp' ? t.changePhone : t.changeEmail}</button>
               <button type="button" onClick={resend} className="text-[13px] font-medium text-ink/55 hover:text-ink">{resent ? t.resent : t.resend}</button>
             </div>
           </form>
