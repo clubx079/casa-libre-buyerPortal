@@ -101,10 +101,17 @@ export function StickyAppBadges({ placement = 'bar', inline = false }) {
   const barRef = useRef(null);
   useEffect(() => {
     if (inline || !barRef.current) return undefined;
-    const set = () => { document.body.style.paddingBottom = `${barRef.current?.offsetHeight || 0}px`; };
+    // Pages mount a phone and a desktop version (one hidden by CSS): only the visible
+    // bar reserves the space, and only it clears it again.
+    let mine = false;
+    const set = () => {
+      const h = barRef.current?.offsetHeight || 0;
+      if (h > 0) { document.body.style.paddingBottom = `${h}px`; mine = true; }
+      else if (mine) { document.body.style.paddingBottom = ''; mine = false; }
+    };
     set();
     window.addEventListener('resize', set);
-    return () => { window.removeEventListener('resize', set); document.body.style.paddingBottom = ''; };
+    return () => { window.removeEventListener('resize', set); if (mine) document.body.style.paddingBottom = ''; };
   }, [inline]);
   const content = (
     <div className="flex items-center justify-center gap-x-5 gap-y-2 flex-wrap">
