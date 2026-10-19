@@ -8,7 +8,7 @@ export const metadata = {
   alternates: { canonical: '/privacidad' },
 };
 
-// Keep in sync with section 6 of /terminos.
+// Keep in sync with section 5 of /terminos.
 const UPDATED_ES = '6 de octubre de 2026';
 const UPDATED_EN = 'October 6, 2026';
 const C = COUNTRY.name;
