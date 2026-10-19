@@ -39,45 +39,43 @@ const content = {
         ['p', 'Al publicar, nos otorgás una licencia mundial, no exclusiva, gratuita, transferible y sublicenciable para alojar, reproducir, adaptar (por ejemplo recortar, traducir o mejorar fotos), mostrar y distribuir ese contenido en la Plataforma, en nuestras redes y campañas, en buscadores y asistentes de inteligencia artificial, y a través de socios y portales con los que colaboremos. La licencia se mantiene mientras el contenido esté publicado y por el tiempo razonable necesario para retirarlo de copias de respaldo, cachés y materiales ya distribuidos. Esta licencia no nos autoriza a vender tus datos personales (ver sección 6).'],
         ['p', 'Podemos revisar, editar el formato, destacar, ocultar o eliminar cualquier publicación, a nuestro criterio y sin obligación de aviso previo, incluyendo las que no cumplan estos Términos o nuestros criterios de calidad.'],
 
-        ['h2', '5. Servicios pagos'],
-        ['p', 'Publicar es gratis. Ofrecemos servicios opcionales pagos, como el plan "Verificado" y el plan de exhibición en la página principal, con el precio, la duración y los beneficios indicados al momento de la compra. Los pagos se procesan por proveedores externos (por ejemplo Stripe) y no almacenamos los datos completos de tu tarjeta. Salvo que la ley disponga otra cosa, los servicios ya activados no son reembolsables. La renovación no es automática salvo que se indique; te avisaremos antes del vencimiento. Podemos modificar precios y planes para compras futuras.'],
 
-        ['h2', '6. Datos personales y consentimiento'],
+        ['h2', '5. Datos personales y consentimiento'],
         ['p', 'Al aceptar estos Términos otorgás tu consentimiento libre, expreso e informado para que Casa Libre recolecte, almacene, procese y utilice los datos que nos brindás o que se generan al usar la Plataforma, incluyendo: nombre, email, teléfono y WhatsApp; datos de tus publicaciones y de las propiedades; ubicación aproximada o precisa si la autorizás; búsquedas, favoritos, contactos y otras interacciones; datos del dispositivo, navegador, dirección IP y cookies o tecnologías similares.'],
         ['p', 'Usamos esos datos para: operar la Plataforma y mostrar tus publicaciones; permitir que los interesados te contacten; verificar cuentas y prevenir fraude; enviarte comunicaciones sobre tu cuenta y tus publicaciones; enviarte novedades y ofertas por email, WhatsApp, SMS o notificaciones; personalizar la experiencia; medir y mejorar nuestros servicios y campañas (incluyendo herramientas de analítica y publicidad de terceros); y elaborar estadísticas, estudios de mercado e índices del mercado inmobiliario a partir de datos agregados o anonimizados que no identifican a nadie.'],
         ['p', '<strong>Casa Libre no vende tus datos personales.</strong> No los vendemos ni alquilamos, ni los entregamos a terceros a cambio de dinero o de cualquier otra contraprestación.'],
-        ['p', 'Compartimos datos personales solo con los proveedores que nos prestan servicios (alojamiento en la nube, email, pagos, analítica, mapas y publicidad), que los usan únicamente para prestarnos ese servicio; con otros usuarios, cuando los contactás o te contactan; y cuando lo exija la ley o una autoridad. También podemos compartir información agregada o anonimizada, que no te identifica.'],
-        ['p', 'Tus datos pueden almacenarse y procesarse en servidores ubicados fuera de ' + C + ', incluyendo servicios en la nube de terceros, con medidas de seguridad razonables. Si Casa Libre se fusiona, se reorganiza o es adquirida, los datos pasarán a la nueva entidad como parte de esa operación, y esa entidad deberá respetar estos Términos y la Política de Privacidad, incluido el compromiso de no vender datos personales. Conservamos los datos mientras tengas una cuenta. Si la eliminás, borramos tus datos personales y solo conservamos el registro de tus pagos, como exige la ley, y estadísticas anónimas.'],
+        ['p', 'Compartimos datos personales solo con los proveedores que nos prestan servicios (alojamiento en la nube, email, analítica, mapas y publicidad), que los usan únicamente para prestarnos ese servicio; con otros usuarios, cuando los contactás o te contactan; y cuando lo exija la ley o una autoridad. También podemos compartir información agregada o anonimizada, que no te identifica.'],
+        ['p', 'Tus datos pueden almacenarse y procesarse en servidores ubicados fuera de ' + C + ', incluyendo servicios en la nube de terceros, con medidas de seguridad razonables. Si Casa Libre se fusiona, se reorganiza o es adquirida, los datos pasarán a la nueva entidad como parte de esa operación, y esa entidad deberá respetar estos Términos y la Política de Privacidad, incluido el compromiso de no vender datos personales. Conservamos los datos mientras tengas una cuenta. Si la eliminás, borramos tus datos personales y solo conservamos estadísticas anónimas.'],
         ['p', `Podés solicitar acceso, rectificación o eliminación de tus datos, y retirar tu consentimiento para comunicaciones de marketing, escribiéndonos desde nuestra ${contactEs}. El retiro del consentimiento no afecta los tratamientos realizados antes de tu solicitud, y puede impedir que sigas usando algunas funciones. Podés eliminar tu cuenta en cualquier momento desde la app (Cuenta → Eliminar cuenta) o en <a href="/eliminar-cuenta">esta página</a>. Los detalles están en la <a href="/privacidad">Política de Privacidad</a>.`],
 
-        ['h2', '7. Contactos entre usuarios'],
+        ['h2', '6. Contactos entre usuarios'],
         ['p', 'Cuando contactás a un publicador (por ejemplo por WhatsApp o teléfono), compartís con él tus datos de contacto y podemos registrar ese contacto. Los datos de contacto de otros usuarios solo pueden usarse para consultar por la propiedad publicada. Está prohibido usarlos para spam, marketing no solicitado, reventa de bases de datos o cualquier otro fin. Toda negociación, visita, pago o contrato es exclusivamente entre los usuarios: verificá la propiedad, la documentación y la identidad de la otra parte antes de pagar o firmar.'],
 
-        ['h2', '8. Usos prohibidos'],
+        ['h2', '7. Usos prohibidos'],
         ['p', 'No podés: extraer datos de la Plataforma en forma automatizada (scraping, bots, crawlers) sin nuestra autorización escrita; copiar o reutilizar publicaciones, fotos o bases de datos; eludir medidas técnicas o de seguridad; publicar malware; suplantar a otra persona; usar la Plataforma para actividades ilegales, fraudes o lavado de dinero; ni interferir con su funcionamiento.'],
 
-        ['h2', '9. Propiedad intelectual'],
+        ['h2', '8. Propiedad intelectual'],
         ['p', 'La marca Casa Libre, el diseño, el software, las bases de datos, los textos propios y demás elementos de la Plataforma nos pertenecen o están licenciados a nosotros y están protegidos por la ley. No adquirís ningún derecho sobre ellos por usar la Plataforma.'],
 
-        ['h2', '10. Sin garantías'],
+        ['h2', '9. Sin garantías'],
         ['p', 'La Plataforma se ofrece "tal cual" y "según disponibilidad". No garantizamos que las publicaciones sean exactas, que las propiedades estén disponibles o en las condiciones descritas, ni que la Plataforma funcione sin interrupciones o errores. La información de zonificación, precios de referencia, cotizaciones y cualquier otro dato informativo es orientativa y no reemplaza la consulta a la autoridad competente o a un profesional.'],
 
-        ['h2', '11. Limitación de responsabilidad'],
-        ['p', 'En la máxima medida permitida por la ley, Casa Libre no será responsable por daños indirectos, lucro cesante, pérdida de datos u oportunidades, ni por los actos, publicaciones u omisiones de los usuarios o de terceros, ni por las operaciones que realicen entre ellos. Nuestra responsabilidad total frente a vos no superará el monto que nos hayas pagado en los doce (12) meses anteriores al hecho que la origina.'],
+        ['h2', '10. Limitación de responsabilidad'],
+        ['p', 'En la máxima medida permitida por la ley, Casa Libre no será responsable por daños indirectos, lucro cesante, pérdida de datos u oportunidades, ni por los actos, publicaciones u omisiones de los usuarios o de terceros, ni por las operaciones que realicen entre ellos. Nuestra responsabilidad total frente a vos se limita al mínimo permitido por la ley aplicable.'],
 
-        ['h2', '12. Indemnidad'],
+        ['h2', '11. Indemnidad'],
         ['p', 'Te comprometés a mantener indemne a Casa Libre, sus titulares, empleados y colaboradores frente a reclamos, daños y gastos (incluidos honorarios legales) que resulten de tu contenido, de tu uso de la Plataforma o del incumplimiento de estos Términos o de la ley.'],
 
-        ['h2', '13. Suspensión y baja'],
+        ['h2', '12. Suspensión y baja'],
         ['p', 'Podemos suspender o cancelar tu cuenta y tus publicaciones si incumplís estos Términos, si hay indicios de fraude o si lo exige la ley. Podés cerrar tu cuenta cuando quieras desde tu panel o desde nuestra ' + contactEs + '. Las secciones sobre licencia de contenido, datos, propiedad intelectual, limitación de responsabilidad e indemnidad siguen vigentes después de la baja.'],
 
-        ['h2', '14. Cambios'],
+        ['h2', '13. Cambios'],
         ['p', 'Podemos modificar estos Términos. Publicaremos la versión nueva con su fecha y, si el cambio es relevante, te avisaremos por email o en la Plataforma. Si seguís usando la Plataforma después de la entrada en vigencia, aceptás la versión nueva.'],
 
-        ['h2', '15. Ley aplicable'],
+        ['h2', '14. Ley aplicable'],
         ['p', `Estos Términos se rigen por las leyes de ${C}. Cualquier controversia se someterá a los tribunales competentes de ${COUNTRY.capital || C}, salvo que la ley aplicable disponga otra jurisdicción obligatoria. Si alguna cláusula fuera inválida, las demás seguirán vigentes.`],
 
-        ['h2', '16. Contacto'],
+        ['h2', '15. Contacto'],
         ['p', `Para consultas sobre estos Términos o tus datos, escribinos desde nuestra ${contactEs}.`],
       ] },
     ],
@@ -103,45 +101,43 @@ const content = {
         ['p', 'By listing, you grant us a worldwide, non-exclusive, royalty-free, transferable and sublicensable licence to host, reproduce, adapt (e.g. crop, translate or enhance photos), display and distribute that content on the Platform, in our social channels and campaigns, in search engines and AI assistants, and through partners and portals we work with. The licence lasts while the content is published and for the reasonable time needed to remove it from backups, caches and material already distributed. This licence does not allow us to sell your personal data (see section 6).'],
         ['p', 'We may review, reformat, feature, hide or remove any listing at our discretion and without prior notice, including listings that breach these Terms or our quality criteria.'],
 
-        ['h2', '5. Paid services'],
-        ['p', 'Listing is free. We offer optional paid services, such as the "Verified" plan and the home-page display plan, with the price, duration and benefits shown at purchase. Payments are processed by third-party providers (e.g. Stripe); we do not store your full card details. Unless the law requires otherwise, services already activated are non-refundable. Renewal is not automatic unless stated; we will remind you before expiry. We may change prices and plans for future purchases.'],
 
-        ['h2', '6. Personal data and consent'],
+        ['h2', '5. Personal data and consent'],
         ['p', 'By accepting these Terms you give your free, express and informed consent for Casa Libre to collect, store, process and use the data you provide or that is generated when you use the Platform, including: name, email, phone and WhatsApp; your listings and property details; approximate or precise location if you allow it; searches, favourites, contacts and other interactions; device, browser, IP address and cookies or similar technologies.'],
         ['p', 'We use that data to: operate the Platform and show your listings; let interested people contact you; verify accounts and prevent fraud; send you messages about your account and listings; send you news and offers by email, WhatsApp, SMS or notifications; personalise your experience; measure and improve our services and campaigns (including third-party analytics and advertising tools); and produce statistics, market research and real-estate market indices from aggregated or anonymised data that does not identify anyone.'],
         ['p', '<strong>Casa Libre does not sell your personal data.</strong> We do not sell or rent it, or give it to anyone in exchange for money or anything else of value.'],
-        ['p', 'We share personal data only with the providers that work for us (cloud hosting, email, payments, analytics, maps and advertising), who use it solely to provide that service to us; with other users, when you contact them or they contact you; and when required by law or an authority. We may also share aggregated or anonymised information, which does not identify you.'],
-        ['p', `Your data may be stored and processed on servers located outside ${C}, including third-party cloud services, with reasonable security measures. If Casa Libre merges, reorganises or is acquired, data will pass to the new entity as part of that transaction, and that entity must follow these Terms and the Privacy Policy, including the commitment not to sell personal data. We keep data while you have an account. If you delete it, we erase your personal data and keep only the record of your payments, as the law requires, and anonymous statistics.`],
+        ['p', 'We share personal data only with the providers that work for us (cloud hosting, email, analytics, maps and advertising), who use it solely to provide that service to us; with other users, when you contact them or they contact you; and when required by law or an authority. We may also share aggregated or anonymised information, which does not identify you.'],
+        ['p', `Your data may be stored and processed on servers located outside ${C}, including third-party cloud services, with reasonable security measures. If Casa Libre merges, reorganises or is acquired, data will pass to the new entity as part of that transaction, and that entity must follow these Terms and the Privacy Policy, including the commitment not to sell personal data. We keep data while you have an account. If you delete it, we erase your personal data and keep only anonymous statistics.`],
         ['p', `You can request access to, correction or deletion of your data, and withdraw your consent to marketing messages, by writing to us via our ${contactEn}. Withdrawing consent does not affect processing done before your request and may prevent you from using some features. You can delete your account at any time in the app (Account → Delete account) or on <a href="/eliminar-cuenta">this page</a>. Details are in the <a href="/privacidad">Privacy Policy</a>.`],
 
-        ['h2', '7. Contacts between users'],
+        ['h2', '6. Contacts between users'],
         ['p', 'When you contact a lister (e.g. by WhatsApp or phone) you share your contact details with them and we may record that contact. Other users\' contact details may only be used to ask about the listed property. Using them for spam, unsolicited marketing, database resale or any other purpose is prohibited. Any negotiation, viewing, payment or contract is solely between the users: check the property, the documents and the other party\'s identity before paying or signing.'],
 
-        ['h2', '8. Prohibited uses'],
+        ['h2', '7. Prohibited uses'],
         ['p', 'You may not: extract data from the Platform by automated means (scraping, bots, crawlers) without our written permission; copy or reuse listings, photos or databases; circumvent technical or security measures; upload malware; impersonate anyone; use the Platform for illegal activity, fraud or money laundering; or interfere with its operation.'],
 
-        ['h2', '9. Intellectual property'],
+        ['h2', '8. Intellectual property'],
         ['p', 'The Casa Libre brand, design, software, databases, our own texts and other Platform elements belong to or are licensed to us and are protected by law. Using the Platform gives you no rights in them.'],
 
-        ['h2', '10. No warranties'],
+        ['h2', '9. No warranties'],
         ['p', 'The Platform is provided "as is" and "as available". We do not guarantee that listings are accurate, that properties are available or in the condition described, or that the Platform will run without interruption or errors. Zoning information, reference prices, exchange rates and any other informational data are indicative only and do not replace checking with the competent authority or a professional.'],
 
-        ['h2', '11. Limitation of liability'],
-        ['p', 'To the maximum extent permitted by law, Casa Libre is not liable for indirect damages, lost profits, loss of data or opportunities, for the acts, listings or omissions of users or third parties, or for transactions between them. Our total liability to you will not exceed the amount you paid us in the twelve (12) months before the event giving rise to it.'],
+        ['h2', '10. Limitation of liability'],
+        ['p', 'To the maximum extent permitted by law, Casa Libre is not liable for indirect damages, lost profits, loss of data or opportunities, for the acts, listings or omissions of users or third parties, or for transactions between them. Our total liability to you is limited to the minimum permitted by applicable law.'],
 
-        ['h2', '12. Indemnity'],
+        ['h2', '11. Indemnity'],
         ['p', 'You agree to hold Casa Libre, its owners, staff and collaborators harmless from claims, damages and costs (including legal fees) arising from your content, your use of the Platform or your breach of these Terms or the law.'],
 
-        ['h2', '13. Suspension and closure'],
+        ['h2', '12. Suspension and closure'],
         ['p', `We may suspend or close your account and listings if you breach these Terms, if there are signs of fraud or if the law requires it. You can close your account at any time from your dashboard or via our ${contactEn}. The sections on content licence, data, intellectual property, limitation of liability and indemnity survive closure.`],
 
-        ['h2', '14. Changes'],
+        ['h2', '13. Changes'],
         ['p', 'We may change these Terms. We will publish the new version with its date and, if the change is material, notify you by email or on the Platform. If you keep using the Platform after it takes effect, you accept the new version.'],
 
-        ['h2', '15. Governing law'],
+        ['h2', '14. Governing law'],
         ['p', `These Terms are governed by the laws of ${C}. Any dispute will be submitted to the competent courts of ${COUNTRY.capital || C}, unless applicable law mandates another jurisdiction. If any clause is invalid, the rest remain in force.`],
 
-        ['h2', '16. Contact'],
+        ['h2', '15. Contact'],
         ['p', `For questions about these Terms or your data, write to us via our ${contactEn}.`],
       ] },
     ],
