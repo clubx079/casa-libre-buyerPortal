@@ -6,7 +6,7 @@ import { getSession, setSessionCookie } from '@/lib/auth';
 import { findUserByEmail, getUserById, publicUser } from '@/lib/users';
 import { saveOtp, verifyOtp } from '@/lib/otp';
 import { sendOtpEmail } from '@/lib/email';
-import { update } from '@/lib/db';
+import { select, update } from '@/lib/db';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -36,7 +36,9 @@ export async function POST(req) {
   if (!result.valid) return NextResponse.json({ error: result.error }, { status: 400 });
   if (String(result.meta?.uid) !== String(s.uid)) return NextResponse.json({ error: 'mismatch' }, { status: 400 });
   try {
-    await update('users', `id=eq.${encodeURIComponent(s.uid)}`, { email: String(newEmail).trim().toLowerCase(), updated_at: new Date().toISOString() }, { returning: 'minimal' });
+    // The new email was proven with a code → for a WhatsApp sign-up that confirms it.
+    const [cur] = await select('users', `select=auth_provider&id=eq.${encodeURIComponent(s.uid)}&limit=1`).catch(() => []);
+    await update('users', `id=eq.${encodeURIComponent(s.uid)}`, { email: String(newEmail).trim().toLowerCase(), ...(cur?.auth_provider === 'whatsapp' ? { auth_provider: 'whatsapp_email' } : {}), updated_at: new Date().toISOString() }, { returning: 'minimal' });
   } catch (e) {
     return NextResponse.json({ error: 'update_failed', detail: e?.message }, { status: 500 });
   }

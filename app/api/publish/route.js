@@ -175,7 +175,7 @@ export async function POST(req) {
   // (lib/samePerson.js) — the signals are kept on every listing for that. A held
   // duplicate is never charged.
   const signals = makeSignals({ deviceId: get('device_id') || req.cookies?.get?.('cl_did')?.value, fp: get('device_fp'), ip: getClientIP(req) });
-  const quota = stripe && !dup ? await listingQuota(dbApi, { uid: session.uid, signals, countryCode: COUNTRY.code }).catch(() => null) : null;
+  const quota = stripe && !dup ? await listingQuota(dbApi, { uid: session.uid, signals, phone: contactPhone, phonePrefix: COUNTRY.phonePrefix, countryCode: COUNTRY.code }).catch(() => null) : null;
   const payFirst = !!quota?.paymentRequired;
 
   const slug = `${slugify(`${property_type}-${neighborhood}`) || 'propiedad'}-${Date.now().toString(36)}`;

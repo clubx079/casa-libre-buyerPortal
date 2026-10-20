@@ -31,7 +31,7 @@ const DICT = {
     byEmail: 'Email', byWhatsApp: 'WhatsApp', waSub: 'Te enviamos un código por WhatsApp. Sin contraseñas.',
     waPhone: 'Tu número de WhatsApp', waCodeSub: (p) => `Enviamos un código de 6 dígitos por WhatsApp al ${p}.`,
     changePhone: '← Cambiar número', errPhone: 'Ingresá un número de WhatsApp válido',
-    errEmailTaken: 'Ese email ya tiene una cuenta. Ingresá con tu email.', errWaSend: 'No se pudo enviar el código por WhatsApp. Probá con tu email.',
+    errEmailTaken: 'Ese email ya tiene una cuenta. Ingresá con tu email y agregá tu WhatsApp en Ajustes: así tenés una sola cuenta.', errWaSend: 'No se pudo enviar el código por WhatsApp. Probá con tu email.',
     testCode: (c) => `Modo de prueba (no se envía WhatsApp): el código es ${c}`,
   },
   en: {
@@ -52,7 +52,7 @@ const DICT = {
     byEmail: 'Email', byWhatsApp: 'WhatsApp', waSub: "We'll send you a code on WhatsApp. No passwords.",
     waPhone: 'Your WhatsApp number', waCodeSub: (p) => `We sent a 6-digit code on WhatsApp to ${p}.`,
     changePhone: '← Change number', errPhone: 'Enter a valid WhatsApp number',
-    errEmailTaken: 'That email already has an account. Log in with your email.', errWaSend: 'Could not send the WhatsApp code. Try with your email.',
+    errEmailTaken: 'That email already has an account. Log in with your email and add your WhatsApp in Settings, so you keep one account.', errWaSend: 'Could not send the WhatsApp code. Try with your email.',
     testCode: (c) => `Test mode (no WhatsApp is sent): the code is ${c}`,
   },
 };

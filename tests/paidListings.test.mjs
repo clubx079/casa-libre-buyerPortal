@@ -8,6 +8,7 @@ import { runPaidListings } from '../lib/automations/paidListings.js';
 const U1 = '11111111-1111-1111-1111-111111111111';
 const U2 = '22222222-2222-2222-2222-222222222222';
 const U3 = '33333333-3333-3333-3333-333333333333';
+const U4 = '44444444-4444-4444-4444-444444444444';
 
 test('no settings row = paywall off; defaults are 3 free, US$29 −80% = US$5.80, 90 days, +30 days for US$5', () => {
   const c = paidConfig(null);
@@ -147,6 +148,57 @@ test('quota: free listings of an account + the same person on another account ar
   assert.equal(q3.freeUsed, 1);
   assert.equal(q3.freeLeft, 2);
   assert.equal(q3.paymentRequired, false);
+});
+
+test('same person by PHONE: the same contact phone on two accounts is enough on its own', () => {
+  const listings = [
+    { created_by: U2, contact_phone: '0981 123 456', raw_data: { signals: { device_id: 'dev-other111', fp: 'zz', ip: '10.9.9.9' } } },
+    { created_by: U3, contact_phone: '0971 000 000', raw_data: { signals: {} } },
+  ];
+  // U1 publishes with +595981123456 from a different device and network → still U2
+  const l = linkedAccounts(U1, { device_id: 'dev-mine1111', fp: 'aa', ip: '181.2.2.2' }, listings, 2, { phones: ['+595981123456'], prefix: '595' });
+  assert.deepEqual(l, [{ userId: U2, matched: ['phone'] }]);
+  // another account's VERIFIED WhatsApp = this listing's phone → same person too
+  const v = linkedAccounts(U1, {}, [], 2, { phones: ['+595981123456'], prefix: '595', verified: [{ id: U3, phone: '+595981123456' }] });
+  assert.deepEqual(v, [{ userId: U3, matched: ['phone'] }]);
+});
+
+test('admin groups: same contact phone, or a listing phone = another account\'s verified WhatsApp', () => {
+  const g = samePersonGroups([
+    { created_by: U1, contact_phone: '+595 981 123-456' },
+    { created_by: U2, contact_phone: '0981123456', raw_data: { signals: { device_id: 'dev-x1234567' } } },
+    { created_by: U3, contact_phone: '0972 222 222' },
+  ], 2, { prefix: '595', verified: [{ id: U4, phone: '+595972222222' }] });
+  const byUsers = g.map((x) => ({ users: x.users, matched: x.matched })).sort((a, b) => a.users[0].localeCompare(b.users[0]));
+  assert.equal(g.length, 2);
+  assert.ok(g.some((x) => x.users.includes(U1) && x.users.includes(U2) && x.matched.includes('phone')));
+  assert.ok(g.some((x) => x.users.includes(U3) && x.users.includes(U4) && x.matched.includes('phone')));
+  assert.ok(byUsers.length === 2);
+});
+
+test('quota, the "fake email" trick: WhatsApp account used its free listings → a new email account with the same number shares them', async () => {
+  const now = new Date('2026-10-13T15:00:00Z');
+  const db = fakeDb({
+    automations: [{ id: 'paid_listings', enabled: true, first_tier_count: 2 }],
+    users: [
+      { id: U1, phone: '+595981123456', phone_verified_at: '2026-10-01T00:00:00.000Z' },   // WhatsApp sign-up, fake email
+      { id: U2, phone: null, phone_verified_at: null },                                    // new account, real email
+    ],
+    properties: [
+      { id: 'p1', origin: 'user', created_by: U1, created_at: '2026-10-02T00:00:00.000Z', contact_phone: '+595981123456', raw_data: { signals: { device_id: 'dev-phone111', fp: 'ph1', ip: '181.1.1.1' } } },
+      { id: 'p2', origin: 'user', created_by: U1, created_at: '2026-10-03T00:00:00.000Z', contact_phone: '+595981123456', raw_data: { signals: { device_id: 'dev-phone111', fp: 'ph1', ip: '181.1.1.1' } } },
+    ],
+    payments: [],
+  });
+  // U2: other device (laptop), other network — only the number on the new listing is the same
+  const q = await listingQuota(db, { uid: U2, signals: { device_id: 'dev-laptop11', fp: 'lp1', ip: '10.0.0.7' }, phone: '0981 123 456', phonePrefix: '595', countryCode: 'py', now });
+  assert.deepEqual(q.linked, [{ userId: U1, matched: ['phone'] }]);
+  assert.equal(q.freeUsed, 2);
+  assert.equal(q.paymentRequired, true);
+  // a different number on the new listing → not linked, gets its own free listings
+  const q2 = await listingQuota(db, { uid: U2, signals: { device_id: 'dev-laptop11', fp: 'lp1', ip: '10.0.0.7' }, phone: '0972 555 555', phonePrefix: '595', countryCode: 'py', now });
+  assert.deepEqual(q2.linked, []);
+  assert.equal(q2.paymentRequired, false);
 });
 
 test('quota: deleting a free listing does not give the slot back (the ledger counts it)', async () => {

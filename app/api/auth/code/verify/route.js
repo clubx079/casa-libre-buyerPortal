@@ -7,6 +7,7 @@
 // No password is asked for, or set, at any point.
 import { NextResponse } from 'next/server';
 import { verifyOtp } from '@/lib/otp';
+import { update } from '@/lib/db';
 import { findUserByEmail, createUser, verifyExistingUser, touchLogin, publicUser } from '@/lib/users';
 import { setSessionCookie } from '@/lib/auth';
 import { reviewCodeMatches } from '@/lib/reviewLogin';
@@ -40,6 +41,8 @@ export async function POST(req) {
     }
     user = existing;
     await touchLogin(user.id, ip).catch(() => {});
+    // An email code proves the email: a WhatsApp sign-up's email is now confirmed (lib/emailConfirm.js).
+    if (existing.auth_provider === 'whatsapp') await update('users', `id=eq.${encodeURIComponent(existing.id)}`, { auth_provider: 'whatsapp_email' }, { returning: 'minimal' }).catch(() => {});
   } else if (existing) {
     // placeholder row from the send step (or an abandoned signup) → confirm it
     user = await verifyExistingUser(existing.id, { fullName: fullName || existing.full_name || null, phone });

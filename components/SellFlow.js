@@ -246,6 +246,7 @@ export default function SellFlowProvider({ children }) {
     let alive = true;
     const qs = new URLSearchParams();
     try { const id = deviceId(); const fp = deviceFingerprint(); if (id) qs.set('device_id', id); if (fp) qs.set('fp', fp); } catch {}
+    if (f.contact_phone) qs.set('phone', f.contact_phone);   // same number on another account = same person
     fetch(`/api/listing-quota?${qs}`).then((r) => (r.ok ? r.json() : null)).then((j) => { if (alive) setQuota(j); }).catch(() => {});
     return () => { alive = false; };
   }, [open, step]);

@@ -56,7 +56,7 @@ test('whatsapp channel with consent: the WhatsApp template, no email', async () 
   assert.equal(emails.length, 0);
   const msgs = sentToRelay.filter((x) => x.url.includes('/messages/'));
   assert.equal(msgs.length, 1);
-  assert.deepEqual(msgs[0].body.variables, { body: ['Ana', 'Casa · Luque', '50'], buttons: [{ index: 0, text: 'abc-123' }] });
+  assert.deepEqual(msgs[0].body.variables, { body: ['Ana', 'Casa · Luque', '50'], buttons: [{ index: 0, text: 'abc-123?utm_source=whatsapp&utm_medium=whatsapp&utm_campaign=cl_visitas' }] });
   assert.equal(msgs[0].body.to, '+595981123456');
   const row = db.log[0];
   assert.equal(row.channel, 'whatsapp');
@@ -104,7 +104,7 @@ test('a Relay failure falls back to email and frees the WhatsApp claim', async (
 
 test('variables: a missing value means no WhatsApp; marketing needs consent', () => {
   assert.equal(waVariables('cl_visitas', { ...vars, views: '' }), null);
-  assert.deepEqual(waVariables('cl_publicacion_vence', { name: 'Ana', property_title: 'Casa', listing_until: '10 de enero', free_days: '30', price: 'US$5', extend_url: 'https://casa-libre.com.py/cuenta/publicaciones?extend=p-9' }).buttons, [{ index: 0, text: 'p-9' }]);
+  assert.deepEqual(waVariables('cl_publicacion_vence', { name: 'Ana', property_title: 'Casa', listing_until: '10 de enero', free_days: '30', price: 'US$5', extend_url: 'https://casa-libre.com.py/cuenta/publicaciones?extend=p-9' }).buttons, [{ index: 0, text: 'p-9&utm_source=whatsapp&utm_medium=whatsapp&utm_campaign=cl_publicacion_vence' }]);
   assert.equal(waAllowed({ phone: '0981 123 456' }, 'marketing'), true);    // no consent box: a number is enough
   assert.equal(waAllowed({ phone: '0981 123 456', whatsapp_opted_out_at: 'y' }, 'utility'), false);
   assert.equal(waAllowed(null, 'utility'), false);

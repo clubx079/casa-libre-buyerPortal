@@ -12,7 +12,7 @@ import { relayConfigured, checkWhatsAppCode } from '@/lib/relay';
 import { loadRelayOtp, deleteOtpRow } from '@/lib/otp';
 import { findUserByEmail, findUserByVerifiedPhone, createUser, verifyExistingUser, markPhoneVerified, touchLogin, publicUser } from '@/lib/users';
 import { setSessionCookie } from '@/lib/auth';
-import { sendWelcomeEmail } from '@/lib/email';
+import { sendWelcomeConfirmEmail } from '@/lib/email';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -67,7 +67,8 @@ export async function POST(req) {
       : await createUser({ email, password: null, fullName, phone, ip });
     if (!base) return fail('create_failed', 500);
     user = (await markPhoneVerified(base.id, phone).catch(() => null)) || base;
-    await sendWelcomeEmail(email, user.full_name || fullName).catch(() => {});
+    // The WhatsApp code proved the number, not the email: welcome + "confirm your email".
+    await sendWelcomeConfirmEmail({ id: user.id, email, full_name: user.full_name || fullName }).catch(() => {});
   }
 
   setSessionCookie(user);
