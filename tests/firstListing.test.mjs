@@ -331,3 +331,20 @@ test('claim mode: a failed offer email is retried on the next tick', async () =>
   assert.equal(r.retried, 1);
   assert.equal(s.sent.length, 1);
 });
+
+test('claim mode: a re-sent offer promises the days the seller earns (tier), same as the claim', async () => {
+  const s = setup();
+  await s.db.update('automations', `id=eq.${AUTOMATION_ID}`, { free_tiers: [{ sellers: 1, days: 30 }], later_free_days: 7 });
+  s.db.seed('email_templates', [{ id: 'tg', key: 'first-listing-gift', name: 'Gift', subject: 's', heading: 'h', body: 'dias={{free_days}}', button_label: 'Verificar', button_url: '{{claim_url}}' }]);
+  s.db.seed('properties', [listing('p0', 'u2', T0 + 0.5 * DAY), listing('p1', 'u1', T0 + DAY)]);   // u1 is seller #2 → 7 days
+  let fail = true;
+  const deliver = async (m) => { if (fail && m.to === 'ana@x.com') return { ok: false, error: 'down' }; s.sent.push(m); return { ok: true, id: 're' }; };
+  await s.run(T0 + 3.5 * DAY, { claimUrl, deliver });
+  fail = false;
+  await s.run(T0 + 3.6 * DAY, { claimUrl, deliver });
+  const ana = s.sent.filter((m) => m.to === 'ana@x.com');
+  assert.equal(ana.length, 1);
+  assert.match(ana[0].html, /dias=7/);
+  const r = await claimGift({ db: s.db, userId: 'u1', propertyId: 'p1', grant: s.deps.grant, now: new Date(T0 + 4 * DAY) });
+  assert.equal(r.days, 7);
+});
