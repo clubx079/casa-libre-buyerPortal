@@ -1,6 +1,7 @@
-// POST /api/account/whatsapp — a signed-in account ADDS its WhatsApp (Settings →
-// "Agregar WhatsApp"), so one person keeps ONE account and can then sign in with either
-// the email or the number:
+// POST /api/account/whatsapp — a signed-in account ADDS or CHANGES its WhatsApp (Settings →
+// "Agregar WhatsApp" / "Cambiar WhatsApp"), so one person keeps ONE account and can sign
+// in with either the email or the number. A change works the same way: the code goes to
+// the NEW number, and only once it is verified does it replace the old one:
 //   { phone }        → send a 6-digit code to that WhatsApp (Relay)
 //   { phone, code }  → check it and attach the number (users.phone + phone_verified_at)
 // A number already verified on another account is refused (409 number_taken): that is

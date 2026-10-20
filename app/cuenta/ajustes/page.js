@@ -11,7 +11,8 @@ const T = {
     emailRow: 'Email', waRow: 'WhatsApp', confirmed: 'Confirmado', notConfirmed: 'Sin confirmar', resend: 'Reenviar confirmación', resent: 'Te enviamos el enlace. Revisá tu email.',
     confirmedNow: '¡Listo! Tu email quedó confirmado.', confirmBad: 'El enlace no es válido o venció. Pedí uno nuevo.',
     addWa: 'Agregar WhatsApp', waHint: 'Así entrás también con tu número, en la misma cuenta.', waPh: '+595 981 123 456', waSend: 'Enviar código', waCode: 'Código de WhatsApp', waVerify: 'Verificar', waAdded: 'WhatsApp agregado ✓',
-    waTaken: 'Ese número ya está verificado en otra cuenta. Entrá con ese número o escribinos.', waBad: 'Número inválido.', waCodeBad: 'Código incorrecto o vencido.', waLocked: 'Tu WhatsApp verificado es tu forma de entrar: no se cambia acá.',
+    waTaken: 'Ese número ya está verificado en otra cuenta. Entrá con ese número o escribinos.', waBad: 'Número inválido.', waCodeBad: 'Código incorrecto o vencido.', waLocked: 'Es tu WhatsApp verificado: para cambiarlo usá "Cambiar WhatsApp" en Cómo ingresás.',
+    changeWa: 'Cambiar WhatsApp', changeHint: 'Te enviamos un código al número nuevo. Cuando lo verifiques, reemplaza al anterior.', waChanged: 'WhatsApp cambiado ✓', cancel: 'Cancelar',
     err: 'Algo salió mal. Intentá de nuevo.', errEmail: 'Ingresá un email válido', errTaken: 'Ese email ya está en uso.', errCode: 'Código incorrecto o vencido.',
     delSec: 'Eliminar cuenta', delText: 'Elimina tu cuenta y tus datos personales. No se puede deshacer.', delBtn: 'Eliminar mi cuenta',
   },
@@ -22,7 +23,8 @@ const T = {
     emailRow: 'Email', waRow: 'WhatsApp', confirmed: 'Confirmed', notConfirmed: 'Not confirmed', resend: 'Resend confirmation', resent: 'We sent the link. Check your email.',
     confirmedNow: 'Done! Your email is confirmed.', confirmBad: 'The link is invalid or expired. Ask for a new one.',
     addWa: 'Add WhatsApp', waHint: 'Then you can also sign in with your number, in this same account.', waPh: '+595 981 123 456', waSend: 'Send code', waCode: 'WhatsApp code', waVerify: 'Verify', waAdded: 'WhatsApp added ✓',
-    waTaken: 'That number is already verified on another account. Sign in with that number or contact us.', waBad: 'Invalid number.', waCodeBad: 'Wrong or expired code.', waLocked: 'Your verified WhatsApp is how you sign in: it is not changed here.',
+    waTaken: 'That number is already verified on another account. Sign in with that number or contact us.', waBad: 'Invalid number.', waCodeBad: 'Wrong or expired code.', waLocked: 'This is your verified WhatsApp: to change it use "Change WhatsApp" under How you sign in.',
+    changeWa: 'Change WhatsApp', changeHint: 'We send a code to the new number. Once verified, it replaces the old one.', waChanged: 'WhatsApp changed ✓', cancel: 'Cancel',
     err: 'Something went wrong. Try again.', errEmail: 'Enter a valid email', errTaken: 'That email is already in use.', errCode: 'Wrong or expired code.',
     delSec: 'Delete account', delText: 'Deletes your account and your personal data. This cannot be undone.', delBtn: 'Delete my account',
   },
@@ -89,8 +91,9 @@ export default function SettingsPage() {
       if (r.status === 409) { setWa((w) => ({ ...w, busy: false, msg: { text: t.waTaken } })); return; }
       if (!r.ok) { setWa((w) => ({ ...w, busy: false, msg: { text: j.error === 'invalid_phone' ? t.waBad : wa.stage === 'code' ? t.waCodeBad : t.err } })); return; }
       if (wa.stage === 'code' || j.already) {
+        const changed = prof.phone_verified;
         setProf((p) => ({ ...p, phone: j.phone || p.phone, phone_verified: true }));
-        setWa({ open: false, phone: '', code: '', stage: 'phone', busy: false, msg: { text: t.waAdded, ok: true }, dev: '' });
+        setWa({ open: false, phone: '', code: '', stage: 'phone', busy: false, msg: { text: changed && !j.already ? t.waChanged : t.waAdded, ok: true }, dev: '' });
         return;
       }
       setWa((w) => ({ ...w, busy: false, stage: 'code', phone: j.phone || w.phone, dev: j.devCode || '' }));
@@ -164,13 +167,16 @@ export default function SettingsPage() {
                 <div className="text-[13px] font-semibold">{t.waRow}</div>
                 <div className="font-mono text-[12.5px] text-ink/55">{prof.phone_verified ? prof.phone : '—'}</div>
               </div>
-              {prof.phone_verified
-                ? <span className="shrink-0 text-[12px] font-bold text-green-800 bg-green-50 border border-green-200 rounded-pill px-3 py-1">✓ {t.confirmed}</span>
-                : !wa.open && <button type="button" onClick={() => setWa((w) => ({ ...w, open: true, phone: prof.phone || '', msg: null }))} className="shrink-0 px-4 py-2 rounded-pill border-[1.5px] border-ink text-[13px] font-bold hover:bg-ink hover:text-paper">{t.addWa}</button>}
+              {prof.phone_verified ? (
+                <div className="shrink-0 flex items-center gap-2">
+                  <span className="text-[12px] font-bold text-green-800 bg-green-50 border border-green-200 rounded-pill px-3 py-1">✓ {t.confirmed}</span>
+                  {!wa.open && <button type="button" onClick={() => setWa((w) => ({ ...w, open: true, phone: '', code: '', stage: 'phone', msg: null }))} className="text-[12.5px] font-semibold underline">{t.changeWa}</button>}
+                </div>
+              ) : !wa.open && <button type="button" onClick={() => setWa((w) => ({ ...w, open: true, phone: prof.phone || '', msg: null }))} className="shrink-0 px-4 py-2 rounded-pill border-[1.5px] border-ink text-[13px] font-bold hover:bg-ink hover:text-paper">{t.addWa}</button>}
             </div>
-            {!prof.phone_verified && wa.open && (
-              <form onSubmit={waStep} className="flex flex-col gap-3 mt-3" data-testid="add-whatsapp">
-                <p className="text-[12.5px] text-ink/55">{t.waHint}</p>
+            {wa.open && (
+              <form onSubmit={waStep} className="flex flex-col gap-3 mt-3" data-testid={prof.phone_verified ? 'change-whatsapp' : 'add-whatsapp'}>
+                <p className="text-[12.5px] text-ink/55">{prof.phone_verified ? t.changeHint : t.waHint}</p>
                 <input value={wa.phone} onChange={(e) => setWa((w) => ({ ...w, phone: e.target.value }))} placeholder={t.waPh} inputMode="tel" className={inputCls} disabled={wa.stage === 'code'} />
                 {wa.stage === 'code' && (
                   <div>
@@ -179,7 +185,10 @@ export default function SettingsPage() {
                     {wa.dev && <p className="text-[11px] text-ink/40 mt-1 font-mono">test: {wa.dev}</p>}
                   </div>
                 )}
-                <div><button type="submit" disabled={wa.busy} className={btn}>{wa.stage === 'code' ? t.waVerify : t.waSend}</button></div>
+                <div className="flex items-center gap-3">
+                  <button type="submit" disabled={wa.busy} className={btn}>{wa.stage === 'code' ? t.waVerify : t.waSend}</button>
+                  <button type="button" onClick={() => setWa({ open: false, phone: '', code: '', stage: 'phone', busy: false, msg: null, dev: '' })} className="text-[13px] font-semibold text-ink/60">{t.cancel}</button>
+                </div>
               </form>
             )}
             <Msg {...(wa.msg || {})} text={wa.msg?.text} />
