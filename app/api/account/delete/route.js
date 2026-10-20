@@ -10,6 +10,7 @@ import { deletePosthogPerson } from '@/lib/posthogPerson';
 import { listDrafts, draftPhotoKeys } from '@/lib/drafts';
 import { claimGuestDrafts } from '@/lib/guestDrafts';
 import { removeDraftPhotos } from '@/lib/draftPhotos';
+import { revokeAppleAuthorization } from '@/lib/appleSignIn';
 
 // Remove the saved card(s) from Stripe too, so nothing can be charged again.
 // Best-effort: a Stripe hiccup never blocks deleting the account (we also clear
@@ -52,6 +53,12 @@ export async function POST(req) {
   // the account itself is already deleted.
   const ph = await deletePosthogPerson(s.uid);
   if (!ph.ok) console.error('[account/delete] PostHog person not deleted', s.uid, ph.error);
+  // Signed in with Apple: the app sends a fresh authorization code so we can revoke
+  // it (App Review 5.1.1(v)). Best-effort, after the account is already gone.
+  if (body.appleAuthorizationCode) {
+    const ar = await revokeAppleAuthorization(body.appleAuthorizationCode).catch((e) => ({ ok: false, error: e?.message }));
+    if (!ar.ok) console.error('[account/delete] Apple revoke', s.uid, ar.skipped || ar.error);
+  }
   try { clearSessionCookie(); } catch {}
   return NextResponse.json({ ok: true });
 }
