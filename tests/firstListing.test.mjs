@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createStore, AUTOMATION_SCHEMA } from './support/fakePostgrest.mjs';
-import { runFirstListing, AUTOMATION_ID } from '../lib/automations/firstListing.js';
+import { runFirstListing, claimGift, AUTOMATION_ID, OFFER_DAYS } from '../lib/automations/firstListing.js';
 
 const DAY = 86400000;
 const T0 = Date.parse('2026-10-01T12:00:00Z');       // automation switched on
@@ -238,4 +238,96 @@ test('tier list end to end: 3rd seller lands in the 2nd tier', async () => {
   db.seed('properties', [listing('p1', 'u1', T0 + DAY), listing('p2', 'u2', T0 + DAY + 1000), listing('p3', 'u3', T0 + DAY + 2000)]);
   await run(T0 + 4 * DAY);
   assert.deepEqual(grants, [['p1', 30], ['p2', 20], ['p3', 3]]);
+});
+
+// ── claim mode: the gift is only granted when the seller clicks the email's button ──
+const claimUrl = (run) => `https://casa-libre.com.py/api/gift/claim?token=tok-${run.user_id}-${run.property_id}`;
+
+test('claim mode: the email offers the gift with the verify button, nothing is granted yet', async () => {
+  const s = setup();
+  s.db.seed('email_templates', [{ id: 'tg', key: 'first-listing-gift', name: 'Gift', subject: '{{name}}, regalo', heading: 'Regalo', body: '{{property_title}} {{free_days}} días', button_label: 'Verificar mi publicación', button_url: '{{claim_url}}' }]);
+  s.db.seed('properties', [listing('p1', 'u1', T0 + DAY)]);
+  const r = await s.run(T0 + 3.5 * DAY, { claimUrl });
+  assert.equal(r.offered, 1);
+  assert.equal(r.gifted, 0);
+  assert.deepEqual(s.grants, []);
+  assert.equal(s.sent.length, 1);
+  assert.match(s.sent[0].html, /href="https:\/\/casa-libre\.com\.py\/api\/gift\/claim\?token=tok-u1-p1"/);
+  assert.match(s.sent[0].html, /Verificar mi publicación/);
+  assert.match(s.sent[0].html, /30 días/);
+  const [run] = await s.db.select('automation_runs', '');
+  assert.equal(run.status, 'skipped');
+  assert.equal(run.skip_reason, 'offered');
+  const p = (await s.db.select('properties', 'id=eq.p1'))[0];
+  assert.equal(p.promotion_plan, null);
+  await s.run(T0 + 4 * DAY, { claimUrl });          // no second offer email
+  assert.equal(s.sent.length, 1);
+});
+
+test('claim mode: clicking grants the gift once, on any number of clicks', async () => {
+  const s = setup();
+  s.db.seed('properties', [listing('p1', 'u1', T0 + DAY)]);
+  await s.run(T0 + 3.5 * DAY, { claimUrl });
+  const grant = s.deps.grant;
+  const now = new Date(T0 + 4 * DAY);
+  const r1 = await claimGift({ db: s.db, userId: 'u1', propertyId: 'p1', grant, now });
+  assert.equal(r1.ok, true);
+  assert.equal(r1.days, 30);
+  assert.deepEqual(s.grants, [['p1', 30]]);
+  const [run] = await s.db.select('automation_runs', '');
+  assert.equal(run.status, 'gifted');
+  assert.equal(run.skip_reason, null);
+  assert.equal(run.free_until, iso(now.getTime() + 30 * DAY));
+  const p = (await s.db.select('properties', 'id=eq.p1'))[0];
+  assert.equal(p.promotion_plan, 'home');
+  const r2 = await claimGift({ db: s.db, userId: 'u1', propertyId: 'p1', grant, now });
+  assert.equal(r2.ok, true);
+  assert.equal(r2.already, true);
+  assert.equal(s.grants.length, 1);
+  // afterwards it is a normal gift: ending-soon reminder 3 days before the end
+  await s.run(now.getTime() + 27.5 * DAY, { claimUrl });
+  assert.equal(s.sent.length, 2);
+  assert.match(s.sent[1].subject, /^Termina/);
+});
+
+test('claim mode: wrong user / wrong listing / inactive listing are refused', async () => {
+  const s = setup();
+  s.db.seed('properties', [listing('p1', 'u1', T0 + DAY)]);
+  await s.run(T0 + 3.5 * DAY, { claimUrl });
+  const grant = s.deps.grant;
+  const now = new Date(T0 + 4 * DAY);
+  assert.deepEqual(await claimGift({ db: s.db, userId: 'u2', propertyId: 'p1', grant, now }), { ok: false, reason: 'invalid' });
+  assert.deepEqual(await claimGift({ db: s.db, userId: 'u1', propertyId: 'other', grant, now }), { ok: false, reason: 'invalid' });
+  await s.db.update('properties', 'id=eq.p1', { admin_status: 'inactive' });
+  assert.deepEqual(await claimGift({ db: s.db, userId: 'u1', propertyId: 'p1', grant, now }), { ok: false, reason: 'inactive' });
+  assert.deepEqual(s.grants, []);
+});
+
+test('claim mode: an offer not claimed within OFFER_DAYS expires and can no longer be claimed', async () => {
+  const s = setup();
+  s.db.seed('properties', [listing('p1', 'u1', T0 + DAY)]);
+  const offeredAt = T0 + 3.5 * DAY;
+  await s.run(offeredAt, { claimUrl });
+  const [run0] = await s.db.select('automation_runs', '');
+  await s.db.update('automation_runs', `id=eq.${run0.id}`, { created_at: iso(offeredAt) });
+  const late = offeredAt + (OFFER_DAYS + 1) * DAY;
+  const r = await s.run(late, { claimUrl });
+  assert.equal(r.expired, 1);
+  const [run] = await s.db.select('automation_runs', '');
+  assert.equal(run.skip_reason, 'not_claimed');
+  assert.deepEqual(await claimGift({ db: s.db, userId: 'u1', propertyId: 'p1', grant: s.deps.grant, now: new Date(late) }), { ok: false, reason: 'expired' });
+  assert.deepEqual(s.grants, []);
+});
+
+test('claim mode: a failed offer email is retried on the next tick', async () => {
+  const s = setup();
+  s.db.seed('properties', [listing('p1', 'u1', T0 + DAY)]);
+  let fail = true;
+  const deliver = async (m) => { if (fail) return { ok: false, error: 'resend down' }; s.sent.push(m); return { ok: true, id: 're_x' }; };
+  await s.run(T0 + 3.5 * DAY, { claimUrl, deliver });
+  assert.equal(s.sent.length, 0);
+  fail = false;
+  const r = await s.run(T0 + 3.6 * DAY, { claimUrl, deliver });
+  assert.equal(r.retried, 1);
+  assert.equal(s.sent.length, 1);
 });

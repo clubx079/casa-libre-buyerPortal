@@ -11,10 +11,34 @@ import FixPhotosModal from '@/components/account/FixPhotosModal';
 import { CardGridSkeleton } from '@/components/account/Skeletons';
 import { useSellFlow } from '@/components/SellFlow';
 import { draftMissing } from '@/lib/drafts';
+import { track } from '@/lib/analytics';
 
 const T = {
   es: { title: 'Mis publicaciones', sub: (n) => `${n} ${n === 1 ? 'propiedad publicada' : 'propiedades publicadas'}`, empty: 'Todavía no publicaste ninguna propiedad.', publish: 'Publicar propiedad', del: 'Eliminar', confirmT: 'Eliminar publicación', confirm: 'Esta acción no se puede deshacer. ¿Querés eliminar esta propiedad?', cancel: 'Cancelar', deleting: 'Eliminando…', view: 'Ver', loading: 'Cargando…', promoteVerify: 'Verificar · US$5', promoteHome: 'Portada · US$20', renew: 'Renovar', verifiedChip: 'Verificada', homeChip: 'En portada', upgradeHome: 'Subir a portada · US$20', paying: 'Procesando…', daysLeft: (n) => `faltan ${n} ${n === 1 ? 'día' : 'días'}` },
   en: { title: 'My listings', sub: (n) => `${n} published ${n === 1 ? 'property' : 'properties'}`, empty: "You haven't published any properties yet.", publish: 'List a property', del: 'Delete', confirmT: 'Delete listing', confirm: "This can't be undone. Delete this property?", cancel: 'Cancel', deleting: 'Deleting…', view: 'View', loading: 'Loading…', promoteVerify: 'Verify · US$5', promoteHome: 'Landing · US$20', renew: 'Renew', verifiedChip: 'Verified', homeChip: 'On landing', upgradeHome: 'Move to Landing · US$20', paying: 'Processing…', daysLeft: (n) => `${n} ${n === 1 ? 'day' : 'days'} left` },
+};
+
+// The first-listing gift email's "Verificar mi publicación" button lands here
+// (/api/gift/claim → ?gift=claimed&p=<id>, or ?gift=<reason> when it couldn't be granted).
+const GIFT = {
+  es: {
+    claimedT: 'Publicación verificada',
+    claimed: (d) => `Listo: tu propiedad ya está verificada y destacada en la portada de Casa Libre${d ? ` hasta el ${d}` : ''}, gratis. Así la ven más compradores.`,
+    expired: 'Este regalo ya no está disponible: el enlace venció.',
+    inactive: 'No pudimos activar el regalo porque la publicación no está activa en este momento.',
+    invalid: 'El enlace no es válido para esta cuenta.',
+    error: 'No pudimos activar el regalo. Probá de nuevo en un rato.',
+    seeHome: 'Ver la portada', close: 'Cerrar',
+  },
+  en: {
+    claimedT: 'Listing verified',
+    claimed: (d) => `Done: your property is now verified and featured on the Casa Libre home page${d ? ` until ${d}` : ''}, for free. More buyers will see it.`,
+    expired: 'This gift is no longer available: the link has expired.',
+    inactive: "We couldn't activate the gift because the listing isn't live right now.",
+    invalid: "This link isn't valid for this account.",
+    error: "We couldn't activate the gift. Please try again later.",
+    seeHome: 'See the home page', close: 'Close',
+  },
 };
 
 const daysLeft = (iso) => { try { return Math.max(1, Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000)); } catch { return 0; } };
@@ -107,6 +131,7 @@ export default function MyListingsPage() {
   const [promo, setPromo] = useState(null);     // { id, plan } — open the payment modal (no card / 3DS)
   const [payingId, setPayingId] = useState(null); // id being charged silently on a saved card
   const [autoPay, setAutoPay] = useState(false);  // one-shot: honor a ?pay=&plan= deep link once
+  const [gift, setGift] = useState(null);         // { state, id } from the gift email's verify link
   const [lpay, setLpay] = useState(null);         // { id, kind: 'publish' | 'extend' } — the paid-listing pop-up
 
   const load = () => {
@@ -192,6 +217,16 @@ export default function MyListingsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listings, autoPay]);
 
+  useEffect(() => {
+    let state = null, id = null;
+    try { const sp = new URLSearchParams(window.location.search); state = sp.get('gift'); id = sp.get('p'); } catch {}
+    if (!state) return;
+    setGift({ state, id });
+    if (state === 'claimed') { setTab('active'); track('gift_claimed', { property_id: id }); }
+    else track('gift_claim_failed', { reason: state });
+    try { const u = new URL(window.location.href); u.searchParams.delete('gift'); u.searchParams.delete('p'); window.history.replaceState(null, '', u.toString()); } catch {}
+  }, []);
+
   const del = async () => {
     const id = confirmId;
     if (!id) return;
@@ -216,6 +251,25 @@ export default function MyListingsPage() {
           <Link href="/publicar" className="shrink-0 px-5 py-3 rounded-pill bg-ink text-paper font-semibold text-[14px] shadow-hard-soft">{t.publish}</Link>
         )}
       </div>
+
+      {gift && (() => {
+        const g = GIFT[lang] || GIFT.es;
+        const ok = gift.state === 'claimed';
+        const l = ok && listings ? listings.find((x) => x.id === gift.id) : null;
+        let until = '';
+        try { if (l?.promotion_expires_at) until = new Date(l.promotion_expires_at).toLocaleDateString(lang === 'en' ? 'en-US' : 'es-PY', { day: 'numeric', month: 'long' }); } catch {}
+        return (
+          <div data-testid="gift-banner" className={`mb-6 rounded-card border-[1.5px] p-4 sm:p-5 flex items-start gap-3 ${ok ? 'border-ink bg-card shadow-hard-soft' : 'border-red-300 bg-red-50'}`}>
+            {ok && <span aria-hidden className="shrink-0 w-9 h-9 rounded-full bg-ink text-paper inline-flex items-center justify-center text-[18px] font-bold">✓</span>}
+            <div className="flex-1 min-w-0">
+              {ok && <p className="font-bold text-[16px] leading-tight">{g.claimedT}</p>}
+              <p className={`text-[14px] leading-snug ${ok ? 'text-ink/70 mt-1' : 'text-red-800'}`}>{ok ? g.claimed(until) : (g[gift.state] || g.error)}</p>
+              {ok && <Link href="/" className="inline-block mt-3 px-4 py-2 rounded-pill bg-ink text-paper text-[13px] font-semibold">{g.seeHome}</Link>}
+            </div>
+            <button onClick={() => setGift(null)} aria-label={g.close} className="shrink-0 text-ink/40 hover:text-ink text-[20px] leading-none">×</button>
+          </div>
+        );
+      })()}
 
       {/* Tabs: published listings (and ones being checked) / rejected / unfinished drafts */}
       <div role="tablist" className="inline-flex items-center border-[1.5px] border-ink rounded-pill p-[3px] bg-card mb-6">

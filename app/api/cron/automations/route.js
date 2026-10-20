@@ -14,7 +14,7 @@ import { sendRenderedEmail, templateFrame, siteUrl } from '@/lib/email';
 import { signRenewToken } from '@/lib/promoToken';
 import { promoUsd } from '@/lib/stripe';
 import { COUNTRY } from '@/lib/country';
-import { runFirstListing, AUTOMATION_ID } from '@/lib/automations/firstListing';
+import { runFirstListing, AUTOMATION_ID, OFFER_DAYS } from '@/lib/automations/firstListing';
 import { runViewsMilestone, VIEWS_AUTOMATION_ID } from '@/lib/automations/viewsMilestone';
 import { runDraftReminders, DRAFTS_AUTOMATION_ID } from '@/lib/automations/draftReminders';
 import { runPaidListings, PAID_AUTOMATION_ID } from '@/lib/automations/paidListings';
@@ -68,6 +68,8 @@ async function handle(req) {
       frame: templateFrame(),
       siteUrl: site,
       extendUrl: (run) => `${site}/api/promo/extend?token=${encodeURIComponent(signRenewToken({ pid: run.property_id, uid: run.user_id, plan: 'home', purpose: 'extend' }))}`,
+      // The gift is granted only when the seller clicks "Verificar mi publicación" (/api/gift/claim).
+      claimUrl: (run) => `${site}/api/gift/claim?token=${encodeURIComponent(signRenewToken({ pid: run.property_id, uid: run.user_id, plan: 'home', purpose: 'gift_claim' }, OFFER_DAYS * 86400000))}`,
       formatDate: (s) => { try { return new Date(s).toLocaleDateString(COUNTRY.locale, { day: 'numeric', month: 'long' }); } catch { return s; } },
       price: `US$${promoUsd('home')}`,
       emailOverride: process.env.AUTOMATION_EMAIL_OVERRIDE || '',
