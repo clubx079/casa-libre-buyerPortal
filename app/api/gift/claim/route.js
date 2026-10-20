@@ -4,6 +4,7 @@
 // clicked), signs the seller in (the link was sent to their own inbox) and lands on My
 // listings, which shows the listing as verified and on the home page.
 import { NextResponse } from 'next/server';
+import { publicOrigin } from '@/lib/publicOrigin';
 import { revalidateTag } from 'next/cache';
 import { verifyRenewToken } from '@/lib/promoToken';
 import { getSession, setSessionCookie } from '@/lib/auth';
@@ -16,7 +17,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(req) {
   const url = new URL(req.url);
-  const back = (q) => NextResponse.redirect(new URL(`/cuenta/publicaciones?${q}`, url.origin));
+  const back = (q) => NextResponse.redirect(new URL(`/cuenta/publicaciones?${q}`, publicOrigin(req)));
   const claim = verifyRenewToken(url.searchParams.get('token'));
   if (!claim || claim.purpose !== 'gift_claim') return back('gift=invalid');
 

@@ -2,6 +2,7 @@
 // email of a WhatsApp sign-up (lib/emailConfirm.js). Marks the email as confirmed when
 // the account still has that email, then lands on Settings.
 import { NextResponse } from 'next/server';
+import { publicOrigin } from '@/lib/publicOrigin';
 import { verifyEmailConfirm, UNCONFIRMED, CONFIRMED } from '@/lib/emailConfirm';
 import { select, update } from '@/lib/db';
 
@@ -10,7 +11,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(req) {
   const url = new URL(req.url);
-  const back = (state) => NextResponse.redirect(new URL(`/cuenta/ajustes?email=${state}`, url.origin));
+  const back = (state) => NextResponse.redirect(new URL(`/cuenta/ajustes?email=${state}`, publicOrigin(req)));
   const claim = verifyEmailConfirm(url.searchParams.get('token'));
   if (!claim) return back('invalid');
   let user;

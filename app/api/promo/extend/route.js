@@ -5,6 +5,7 @@
 // one click or opens the card form. Paying adds 30 days after the free period.
 // It never charges by itself.
 import { NextResponse } from 'next/server';
+import { publicOrigin } from '@/lib/publicOrigin';
 import { verifyRenewToken } from '@/lib/promoToken';
 import { getSession, setSessionCookie } from '@/lib/auth';
 import { select } from '@/lib/db';
@@ -14,7 +15,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(req) {
   const url = new URL(req.url);
-  const back = (path) => NextResponse.redirect(new URL(path, url.origin));
+  const back = (path) => NextResponse.redirect(new URL(path, publicOrigin(req)));
   const claim = verifyRenewToken(url.searchParams.get('token'));
   if (!claim || claim.purpose !== 'extend') return back('/cuenta/publicaciones?extend=invalid');
 
