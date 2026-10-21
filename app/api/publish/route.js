@@ -8,6 +8,7 @@ import { normalizeTypeKey, dbType, isLandType, areaRange } from '@/lib/propertyT
 import { NextResponse } from 'next/server';
 import { insert, update } from '@/lib/db';
 import * as dbApi from '@/lib/db';
+import { saveListingPhoneToProfile } from '@/lib/profilePhone';
 import { deleteDraft, getDraft, draftPhotoKeys, orderedPhotoSources } from '@/lib/drafts';
 import { ownerFolders, draftPhotoBytes, removeDraftPhotos } from '@/lib/draftPhotos';
 import { claimGuestDrafts } from '@/lib/guestDrafts';
@@ -236,6 +237,8 @@ export async function POST(req) {
     return NextResponse.json({ error: 'insert_failed', detail: e?.message || String(e) }, { status: 500 });
   }
   const propertyId = created?.id;
+  // The listing's phone becomes the profile phone when the profile has none (lib/profilePhone.js).
+  await saveListingPhoneToProfile(dbApi, session.uid, contactPhone, COUNTRY.phonePrefix).catch(() => {});
 
   // Upload photos to B2 and link them — CONCURRENTLY (was one-at-a-time, the main
   // cause of slow publishes). Non-fatal: a listing publishes even if a photo fails.
