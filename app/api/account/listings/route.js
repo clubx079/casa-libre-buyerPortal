@@ -4,6 +4,8 @@ import { getSession } from '@/lib/auth';
 import { getUserListings } from '@/lib/listings';
 import { select, remove } from '@/lib/db';
 import { releaseFromQuarantine } from '@/lib/listingScan';
+import { saveCounts } from '@/lib/favorites';
+import { fetchListingViews } from '@/lib/posthogViews';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -12,7 +14,21 @@ export async function GET() {
   const s = getSession();
   if (!s) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   const { listings } = await getUserListings(s.uid);
-  return NextResponse.json({ listings });
+  // What buyers did with each listing: how many saved it (accounts + visitors without an
+  // account, lib/favorites.js) and views (PostHog, the same count as the views email).
+  // Each fails on its own — the page still loads without them.
+  const ids = listings.map((l) => l.id);
+  const [saves, views] = await Promise.all([
+    saveCounts(ids).catch(() => null),
+    Promise.race([fetchListingViews(ids), new Promise((r) => setTimeout(() => r(null), 4000))]).catch(() => null),
+  ]);
+  return NextResponse.json({
+    listings: listings.map((l) => ({
+      ...l,
+      saves: saves ? saves.get(String(l.id)) || 0 : null,
+      views: views ? Number(views.get(String(l.id)) || 0) : null,
+    })),
+  });
 }
 
 // Delete one of the user's own listings.

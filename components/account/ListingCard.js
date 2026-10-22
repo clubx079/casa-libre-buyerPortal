@@ -51,6 +51,13 @@ export default function ListingCard({ l, action }) {
           <div className="text-[12px] text-ink/55 line-clamp-1">{place}</div>
           {meta && <div className="font-mono text-[11px] text-ink/45 mt-1">{meta}</div>}
         </Box>
+        {/* What buyers did with it (app/api/account/listings): saves incl. visitors without an account, and views */}
+        {(l.saves != null || l.views != null) && !scan && (
+          <div className="flex items-center gap-3 mt-2 text-[12px] font-medium text-ink/70" data-testid="listing-stats">
+            {l.saves != null && <span>♥ {l.saves.toLocaleString(lang === 'es' ? 'es-PY' : 'en-US')} {lang === 'es' ? (l.saves === 1 ? 'persona la guardó' : 'personas la guardaron') : (l.saves === 1 ? 'person saved it' : 'people saved it')}</span>}
+            {l.views != null && <span>👁 {l.views.toLocaleString(lang === 'es' ? 'es-PY' : 'en-US')} {lang === 'es' ? 'visitas' : 'views'}</span>}
+          </div>
+        )}
         {action && <div className="mt-3 pt-3 border-t border-ink/10">{action}</div>}
       </div>
     </div>
