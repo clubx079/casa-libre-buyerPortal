@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useAuth } from './AuthProvider';
 import { useLang } from '@/lib/useLang';
 import ConfirmModal from './ConfirmModal';
+import { useFavorites } from './FavoritesProvider';
 
 const T = {
   es: { login: 'Ingresar', logout: 'Salir', account: 'Mi panel', saved: 'Guardadas', mine: 'Mis publicaciones', payments: 'Pagos', settings: 'Ajustes', logoutT: 'Cerrar sesión', logoutMsg: '¿Querés cerrar tu sesión?', cancel: 'Cancelar' },
@@ -14,7 +15,34 @@ const T = {
 // Signed out → a small "Ingresar" / "Log in" pill. A placeholder holds the slot
 // while the session loads, so the header never jumps.
 
-export default function AuthButton({ variant = 'light', compact = false }) {
+// The ♥ Guardadas link sits just before "Ingresar" in every header — only for people who
+// are NOT logged in (this browser's saves on /guardadas). Signed in, it's gone: Guardadas
+// is in the account menu. Shown on phones too (the compact headers).
+function SavedLink({ variant, compact }) {
+  const { user } = useAuth();
+  const { count } = useFavorites();
+  const [lang] = useLang();
+  if (user) return null;              // signed in: Guardadas is in the account menu
+  const label = lang === 'en' ? 'Saved' : 'Guardadas';
+  const dark = variant === 'dark';
+  return (
+    <Link href={user ? '/cuenta/guardadas' : '/guardadas'} aria-label={label} title={label} data-testid="nav-saved"
+      className={`relative shrink-0 inline-flex items-center justify-center rounded-pill ${compact ? 'w-8 h-8' : 'h-[40px] w-[40px]'} ${dark ? 'text-paper hover:bg-paper/10' : 'text-ink hover:bg-ink/5'}`}>
+      <svg width={compact ? 18 : 20} height={compact ? 18 : 20} viewBox="0 0 24 24" fill={count ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.9" strokeLinejoin="round" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-9.3-9.2C1.5 8.1 3.6 4.5 7.2 4.5c2 0 3.6 1.1 4.8 2.8 1.2-1.7 2.8-2.8 4.8-2.8 3.6 0 5.7 3.6 4.5 6.8-1.8 4.6-9.3 9.2-9.3 9.2z"/></svg>
+    </Link>
+  );
+}
+
+export default function AuthButton(props) {
+  return (
+    <span className="inline-flex items-center gap-1.5 sm:gap-2">
+      <SavedLink variant={props.variant} compact={props.compact} />
+      <AccountButton {...props} />
+    </span>
+  );
+}
+
+function AccountButton({ variant = 'light', compact = false }) {
   const { user, loading, openAuth, logout } = useAuth();
   const [lang] = useLang();
   const [menu, setMenu] = useState(false);

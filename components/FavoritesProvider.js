@@ -7,13 +7,19 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 import { useAuth } from './AuthProvider';
 import { track } from '@/lib/analytics';
 import { deviceId } from '@/lib/deviceSignals';
+import { useLang } from '@/lib/useLang';
+import Link from 'next/link';
+
+const HINT_KEY = 'cl_saved_hint';   // the "Guardada → Ver mis guardadas" hint, shown once per browser
 
 const Ctx = createContext(null);
 export const useFavorites = () => useContext(Ctx) || { isSaved: () => false, toggle: () => {}, count: 0, ids: new Set() };
 
 export default function FavoritesProvider({ children }) {
   const { user } = useAuth();
+  const [lang] = useLang();
   const [ids, setIds] = useState(() => new Set());
+  const [hint, setHint] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -33,10 +39,28 @@ export default function FavoritesProvider({ children }) {
     try {
       const r = await fetch('/api/favorites', { method: wasSaved ? 'DELETE' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ property_id: id }) });
       if (!r.ok) throw new Error('save_failed');
+      // The first save on this browser: show where saves live (once).
+      if (!wasSaved) {
+        let seen = true;
+        try { seen = localStorage.getItem(HINT_KEY) === '1'; localStorage.setItem(HINT_KEY, '1'); } catch { /* private mode */ }
+        if (!seen) { setHint(true); setTimeout(() => setHint(false), 6000); }
+      }
     } catch {
       setIds((prev) => { const n = new Set(prev); wasSaved ? n.add(id) : n.delete(id); return n; });
     }
   }, [user, ids]);
 
-  return <Ctx.Provider value={{ ids, isSaved, toggle, count: ids.size }}>{children}</Ctx.Provider>;
+  return (
+    <Ctx.Provider value={{ ids, isSaved, toggle, count: ids.size }}>
+      {children}
+      {hint && (
+        <div role="status" className="fixed left-1/2 -translate-x-1/2 bottom-[calc(96px+env(safe-area-inset-bottom))] z-[700] flex items-center gap-3 bg-ink text-paper rounded-pill pl-5 pr-2 py-2 shadow-hard-soft text-[14px] font-medium" data-testid="saved-hint">
+          <span>{lang === 'en' ? 'Saved' : 'Guardada'}</span>
+          <Link href={user ? '/cuenta/guardadas' : '/guardadas'} onClick={() => setHint(false)} className="rounded-pill bg-paper text-ink px-3.5 py-1.5 text-[13px] font-semibold whitespace-nowrap">
+            {lang === 'en' ? 'See your saved homes →' : 'Ver mis guardadas →'}
+          </Link>
+        </div>
+      )}
+    </Ctx.Provider>
+  );
 }
