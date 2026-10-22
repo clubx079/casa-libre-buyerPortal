@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
 import { CITIES, COMPETITORS } from '@/lib/site';
 import { COUNTRY } from '@/lib/country';
+import { displayPhone, supportWhatsAppUrl, supportEmail } from '@/lib/support';
 
 // Site-wide footer. The dense internal linking here is the main signal Google
 // uses to choose sitelinks, so every marketing page links to every other.
@@ -43,6 +44,11 @@ export default function Footer() {
           <div className="col-span-2 md:col-span-1">
             <Link href="/" className="text-[22px] font-bold tracking-head">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></Link>
             <p className="text-[13px] text-paper/60 mt-3 leading-relaxed max-w-[220px]">{t.tagline}</p>
+            {/* How to reach us (lib/support.js): WhatsApp → admin Inbox, and the support email */}
+            <div className="mt-4 flex flex-col gap-1.5 text-[13px]">
+              {supportWhatsAppUrl(lang) && <a href={supportWhatsAppUrl(lang)} target="_blank" rel="noopener noreferrer" className="text-paper/80 hover:text-paper">WhatsApp {displayPhone()}</a>}
+              {supportEmail() && <a href={`mailto:${supportEmail()}`} className="text-paper/80 hover:text-paper">{supportEmail()}</a>}
+            </div>
           </div>
           {sections.map((s) => (
             <div key={s.title}>

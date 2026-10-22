@@ -38,7 +38,9 @@ const Play = ({ s = 15 }) => (
   </svg>
 );
 
-function Badge({ store, big, xl, placement = '' }) {
+// Exported for the app pop-up (components/AppPromo.js). href overrides the Play link
+// (the pop-up adds an install referrer so Play Console can count its installs).
+export function Badge({ store, big, xl, placement = '', href }) {
   const isApple = store === 'apple';
   const top = isApple ? 'Download on the' : 'GET IT ON';
   const name = isApple ? 'App Store' : 'Google Play';
@@ -54,7 +56,7 @@ function Badge({ store, big, xl, placement = '' }) {
   );
   const onClick = () => track('app_badge_clicked', { store: isApple ? 'app_store' : 'google_play', placement });
   if (!isApple) {
-    return <a href={PLAY_STORE_URL} target="_blank" rel="noopener noreferrer" aria-label={name} className={cls} onClick={onClick}>{inner}</a>;
+    return <a href={href || PLAY_STORE_URL} target="_blank" rel="noopener noreferrer" aria-label={name} className={cls} onClick={onClick}>{inner}</a>;
   }
   return <Link href="/descargar" aria-label={name} className={cls} onClick={onClick}>{inner}</Link>;
 }

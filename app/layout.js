@@ -4,6 +4,7 @@ import AuthProvider from '@/components/AuthProvider';
 import FavoritesProvider from '@/components/FavoritesProvider';
 import SellFlowProvider from '@/components/SellFlow';
 import { GlobalAppBar } from '@/components/AppBadges';
+import AppPromo from '@/components/AppPromo';
 import { SITE, SITE_NAME, SITE_DESC, INDEXABLE } from '@/lib/site';
 import { COUNTRY } from '@/lib/country';
 import { GTM_ID } from '@/lib/dataLayer';
@@ -94,6 +95,8 @@ export default function RootLayout({ children }) {
               <FavoritesProvider>{children}</FavoritesProvider>
               {/* "Get the app" bar at the bottom of every page (components/AppBadges.js) */}
               <GlobalAppBar />
+              {/* "Get the app" pop-up on Android phones (components/AppPromo.js) */}
+              <AppPromo />
             </SellFlowProvider>
           </AuthProvider>
         </PostHogProvider>

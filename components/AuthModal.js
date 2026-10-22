@@ -219,12 +219,18 @@ export default function AuthModal({ onAuthed, onClose, next = null }) {
             {mode === 'signup' && (
               <div className="flex flex-col gap-3 mb-3">
                 <div>
-                  <label className="block text-[13px] font-semibold mb-1.5">{t.name}</label>
-                  <input ref={firstField} value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder={t.namePh} className={inputCls} autoComplete="name" />
+                  <label htmlFor="auth-name" className="block text-[13px] font-semibold mb-1.5">{t.name} <span className="text-[#B23A3A]" aria-hidden>*</span></label>
+                  <input
+                    id="auth-name" ref={firstField} value={fullName}
+                    onChange={(e) => { setFullName(e.target.value); if (err === t.errName) setErr(''); }}
+                    placeholder={t.namePh} className={`${inputCls}${err === t.errName ? ' !border-[#B23A3A]' : ''}`} autoComplete="name"
+                    aria-required="true" aria-invalid={err === t.errName} aria-describedby={err === t.errName ? 'auth-name-err' : undefined} data-testid="auth-name"
+                  />
+                  {err === t.errName && <p id="auth-name-err" role="alert" className="text-[12.5px] font-medium text-[#B23A3A] mt-1.5">{t.errName}</p>}
                 </div>
                 {method === 'whatsapp' ? (
                   <div>
-                    <label className="block text-[13px] font-semibold mb-1.5">{t.email}</label>
+                    <label className="block text-[13px] font-semibold mb-1.5">{t.email} <span className="text-[#B23A3A]" aria-hidden>*</span></label>
                     <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t.emailPh} className={inputCls} autoComplete="email" />
                   </div>
                 ) : (
@@ -252,7 +258,7 @@ export default function AuthModal({ onAuthed, onClose, next = null }) {
           </form>
         )}
 
-        {err && <div className="mt-4 text-[13px] font-medium text-red-700 bg-red-50 border border-red-200 rounded-[12px] px-3.5 py-2.5">{err}</div>}
+        {err && err !== t.errName && <div className="mt-4 text-[13px] font-medium text-red-700 bg-red-50 border border-red-200 rounded-[12px] px-3.5 py-2.5">{err}</div>}
       </div>
     </div>
   );
