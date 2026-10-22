@@ -11,6 +11,9 @@ import { listDrafts, draftPhotoKeys } from '@/lib/drafts';
 import { claimGuestDrafts } from '@/lib/guestDrafts';
 import { removeDraftPhotos } from '@/lib/draftPhotos';
 import { revokeAppleAuthorization } from '@/lib/appleSignIn';
+import { getUserById } from '@/lib/users';
+import { sendAccountDeleted } from '@/lib/automations/accountDeleted';
+import { sendRenderedEmail, templateFrame, siteUrl } from '@/lib/email';
 
 // Remove the saved card(s) from Stripe too, so nothing can be charged again.
 // Best-effort: a Stripe hiccup never blocks deleting the account (we also clear
@@ -36,6 +39,8 @@ export async function POST(req) {
   const body = await req.json().catch(() => ({}));
   if (body?.confirm !== true) return NextResponse.json({ error: 'confirm_required' }, { status: 400 });
 
+  // Who they are, read now: the goodbye email goes out after the account is erased.
+  const me = await getUserById(s.uid).catch(() => null);
   await removeSavedCards(s.uid);
   // Their drafts' photos (files in storage) — drafts saved before they signed in are
   // claimed first, so deleteAccount removes those rows too.
@@ -58,6 +63,13 @@ export async function POST(req) {
   if (body.appleAuthorizationCode) {
     const ar = await revokeAppleAuthorization(body.appleAuthorizationCode).catch((e) => ({ ok: false, error: e?.message }));
     if (!ar.ok) console.error('[account/delete] Apple revoke', s.uid, ar.skipped || ar.error);
+  }
+  // Goodbye email with a "tell us why" button (lib/automations/accountDeleted.js). Not to
+  // Apple 'Hide my email' addresses (relay not set up for our domain — it would bounce).
+  const to = String(me?.email || s.email || '').toLowerCase();
+  if (to && !/@deleted\.invalid$|privaterelay\.appleid\.com$/.test(to)) {
+    await sendAccountDeleted({ db, uid: s.uid, email: to, name: me?.full_name, deliver: sendRenderedEmail, frame: templateFrame(), siteUrl: siteUrl() })
+      .catch((e) => console.error('[account/delete] goodbye email', s.uid, e?.message || e));
   }
   try { clearSessionCookie(); } catch {}
   return NextResponse.json({ ok: true });
