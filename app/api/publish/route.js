@@ -118,7 +118,8 @@ export async function POST(req) {
   const hasCoords = !!coordsIn;
   const latIn = coordsIn?.lat;
   const lngIn = coordsIn?.lng;
-  // Street + number (optional). Without it the address is the neighborhood, as before.
+  // Street + number — required: a city or neighborhood alone is not an address (every owner
+  // listing used to have its barrio as the address, and its map pin in the town centre).
   const street = cleanStreet(get('address'), { neighborhood, city });
   // Bedrooms / bathrooms for houses and apartments (optional).
   const bedrooms = hasRooms(ptype) ? roomCount(get('bedrooms')) : null;
@@ -129,6 +130,7 @@ export async function POST(req) {
   // "incomplete" and then hidden / 404'd on its own detail page.
   if (!ptype) return NextResponse.json({ error: 'missing_type' }, { status: 400 });
   if (!neighborhood) return NextResponse.json({ error: 'missing_neighborhood' }, { status: 400 });
+  if (!street) return NextResponse.json({ error: 'missing_street' }, { status: 400 });
   if (!city) return NextResponse.json({ error: 'missing_city' }, { status: 400 });
   if (!Number.isFinite(price) || price <= 0) return NextResponse.json({ error: 'missing_price' }, { status: 400 });
   if (String(contactPhone || '').replace(/\D/g, '').length < 6) return NextResponse.json({ error: 'missing_contact' }, { status: 400 });

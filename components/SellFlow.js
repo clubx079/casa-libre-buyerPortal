@@ -18,7 +18,7 @@ import { useRouter } from 'next/navigation';
 import { useLang } from '@/lib/useLang';
 import { useAuth } from '@/components/AuthProvider';
 import { track } from '@/lib/analytics';
-import { hasRooms } from '@/lib/listingInput';
+import { hasRooms, cleanStreet } from '@/lib/listingInput';
 import { parsePrice, priceShown, nextPriceInput } from '@/lib/priceInput';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import HighlightModal from '@/components/HighlightModal';
@@ -43,9 +43,10 @@ const DICT = {
     q2: '¿Sos el propietario o un agente?', owner: 'Propietario', agent: 'Agente',
     name: 'Tu nombre', namePh: 'Ana Giménez', email: 'Tu correo electrónico', emailPh: 'ana@correo.com',
     termsPre: 'Acepto los ', termsLink: 'Términos y Condiciones', termsMid: ' y la ', privacyLink: 'Política de Privacidad', errTerms: 'Para continuar, aceptá los Términos y Condiciones.',
-    q3: '¿Dónde está la propiedad?', addrPh: 'Escribí la dirección…', addrHint: 'Elegí una dirección de la lista para estandarizarla.',
+    q3: '¿Dónde está la propiedad?', addrPh: 'Ej.: Mcal. López 1234, Asunción', addrHint: 'Escribí la calle y el número, y elegí la dirección de la lista.',
     barrio: 'Barrio', ciudad: 'Ciudad',
     barrioPh: 'Ej.: Villa Morra', errBarrio: 'Escribí el barrio',
+    errStreet: 'Empezá a escribir con la calle y el número (ej.: Mcal. López 1234) y elegí la dirección de la lista.',
     beds: 'Dormitorios', baths: 'Baños',
     verifyTitle: 'Confirmá tu cuenta', verifySub: (e) => `Para publicar, continuá con Google o te enviamos un código de 6 dígitos a ${e} o por WhatsApp.`, sendCode: 'Enviar código',
     sendByEmail: 'Enviar código por email', sendByWa: 'Enviar código por WhatsApp',
@@ -95,9 +96,10 @@ const DICT = {
     q2: 'Are you the owner or an agent?', owner: 'Owner', agent: 'Agent',
     name: 'Your name', namePh: 'Ana Giménez', email: 'Your email', emailPh: 'ana@email.com',
     termsPre: 'I agree to the ', termsLink: 'Terms of Service', termsMid: ' and the ', privacyLink: 'Privacy Policy', errTerms: 'To continue, please accept the Terms of Service.',
-    q3: 'Where is the property?', addrPh: 'Type the address…', addrHint: 'Pick an address from the list to standardize it.',
+    q3: 'Where is the property?', addrPh: 'e.g. Mcal. López 1234, Asunción', addrHint: 'Type the street and number, and pick the address from the list.',
     barrio: 'Neighborhood', ciudad: 'City',
     barrioPh: 'e.g. Villa Morra', errBarrio: 'Enter the neighborhood',
+    errStreet: 'Start typing with the street and number (e.g. Mcal. López 1234) and pick the address from the list.',
     beds: 'Bedrooms', baths: 'Bathrooms',
     verifyTitle: 'Confirm your account', verifySub: (e) => `To publish, continue with Google or we'll send a 6-digit code to ${e} or on WhatsApp.`, sendCode: 'Send code',
     sendByEmail: 'Send code by email', sendByWa: 'Send code on WhatsApp',
@@ -588,6 +590,9 @@ export default function SellFlowProvider({ children }) {
   const set = (k, v) => setF((s) => ({ ...s, [k]: v }));
   // the neighborhood box: shown only when Google found no neighborhood for the address
   const [editBarrio, setEditBarrio] = useState(false);
+  // the street + number only come from the address picked in Google's list (so the map pin is
+  // right); a city or neighborhood alone is not enough — the seller picks a street address
+  const streetOk = !!cleanStreet(f.street, { neighborhood: f.neighborhood, city: f.city });
   // a resumed draft with a city but no neighborhood → the box too (else nothing to type in)
   useEffect(() => { if (f.city && !f.neighborhood) setEditBarrio(true); }, [f.city, f.neighborhood]);
   const setField = (k) => (e) => { const v = e.target.value; setF((s) => ({ ...s, [k]: v })); setErrs((er) => (er[k] ? { ...er, [k]: undefined } : er)); };
@@ -612,12 +617,12 @@ export default function SellFlowProvider({ children }) {
   // ---- step navigation ----
   const collectValid = () => {
     if (step === 1) return !!f.seller_type && (!!user || (f.contact_name.trim() && emailOk(f.email))) && phoneOk(f.contact_phone) && termsOk;
-    if (step === 2) return !!f.neighborhood && !!f.ptype;
+    if (step === 2) return !!f.neighborhood && streetOk && !!f.ptype;   // a real street, not just the city / neighborhood
     return true;
   };
   const collectErr = () => (step === 1
     ? (!f.seller_type ? t.errSeller : !user && !f.contact_name.trim() ? t.errName : !user && !emailOk(f.email) ? t.errEmail : !phoneOk(f.contact_phone) ? t.errPhone : t.errTerms)
-    : !f.neighborhood ? (f.city ? t.errBarrio : t.errAddr) : t.errType);
+    : !f.neighborhood ? (f.city ? t.errBarrio : t.errAddr) : !streetOk ? '' : t.errType);   // no street: the message already shows under the address
   // A signed-in visitor never sees the email-confirm step: their email is already verified.
   const next = async () => {
     // after the details → confirm the email (Google / code), then the confirm screen
@@ -633,7 +638,7 @@ export default function SellFlowProvider({ children }) {
     }
     if (!collectValid()) {
       // Only the type missing → the message goes under the type field, not twice.
-      if (step === 2 && f.neighborhood && !f.ptype) { setErr(''); setErrs((er) => ({ ...er, ptype: t.errType })); return; }
+      if (step === 2 && f.neighborhood && streetOk && !f.ptype) { setErr(''); setErrs((er) => ({ ...er, ptype: t.errType })); return; }
       setErr(collectErr());
       return;
     }
@@ -837,7 +842,10 @@ export default function SellFlowProvider({ children }) {
       if (j.duplicate) return;   // held as a possible duplicate — nothing to pay or promote
       if (j.payment) { setListingPay(true); return; }   // over the free listings of the month → pay to publish (a picked plan follows the payment)
       if (openHighlightAfter) await payWithPlan(openHighlightAfter, j.id);
-    } catch { setErr(t.errSubmit); } finally { setBusy(false); }
+    } catch (e) {
+      // a page opened before the street became required: back to the address step
+      if (e?.message === 'missing_street') { setStep(2); setErr(t.errStreet); } else setErr(t.errSubmit);
+    } finally { setBusy(false); }
   };
 
   const fieldCls = (k) => `w-full px-4 py-[13px] border-[1.5px] rounded-input bg-card font-medium text-[15px] outline-none ${errs[k] ? 'border-red-500 focus:border-red-600' : 'border-ink/30 focus:border-ink'}`;
@@ -1036,6 +1044,9 @@ export default function SellFlowProvider({ children }) {
                       <div className="mt-3 flex gap-2 text-[13px]">
                         <span className="px-3 py-1.5 rounded-pill bg-card border border-ink/20 font-medium">{t.ciudad}: <b>{f.city}</b></span>
                       </div>
+                    ) : null}
+                    {(f.city || f.neighborhood) && !streetOk ? (
+                      <p className="mt-2 text-[13px] font-medium text-red-600" data-testid="sell-street-error">{t.errStreet}</p>
                     ) : null}
                     {(f.city || f.neighborhood) && editBarrio ? (
                       <label className="block mt-4"><span className={labelCls}>{t.barrio}</span>
