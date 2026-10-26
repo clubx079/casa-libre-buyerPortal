@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { safeReturnPath } from '@/lib/returnPath';
 import { findOrCreateGoogleUser } from '@/lib/users';
 import { makeToken, COOKIE_NAME } from '@/lib/auth';
+import { recordSignup, FIRST_TOUCH } from '@/lib/signupAttribution';
 import { getClientIP } from '@/lib/ip';
 import { sendWelcomeEmail } from '@/lib/email';
 import { SIGNUP_COOKIE } from '@/lib/signupSignal';
@@ -70,6 +71,8 @@ export async function GET(req) {
     // Welcome email for brand-new Google signups — awaited (serverless kills
     // fire-and-forget work after the redirect). Wrapped so it never blocks login.
     if (user._isNew) await sendWelcomeEmail(g.email, fullName).catch(() => {});
+    // where the new account came from + PostHog account_created (lib/signupAttribution.js)
+    if (user._isNew) await recordSignup(user, { cookieValue: req.cookies.get(FIRST_TOUCH)?.value, method: 'google' }).catch(() => {});
 
     const res = NextResponse.redirect(`${base}${dest}`);
     res.cookies.set(COOKIE_NAME, makeToken(user), {

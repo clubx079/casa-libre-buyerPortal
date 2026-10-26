@@ -4,6 +4,8 @@
 //   message.sent / delivered / read / failed → the automation's email_log row (by
 //     relay_message_id) moves forward: sent → delivered → read (never backwards;
 //     events can arrive late or twice).
+//     A failed one that has an email version waiting (lib/automations/waFallback.js) → that
+//     email is sent once; delivered / read → the waiting email is dropped.
 //   contact.opted_out, or a reply like "No recibir más" / STOP / BAJA → that person's
 //     WhatsApp consent is withdrawn (users.whatsapp_opted_out_at) — no more automation
 //     WhatsApps (lib/whatsappTemplates.js waAllowed).
@@ -13,6 +15,10 @@ import { select, update } from '@/lib/db';
 import { toE164 } from '@/lib/whatsappPhone';
 import { COUNTRY } from '@/lib/country';
 import { verifyRelaySignature } from '@/lib/relaySignature';
+import * as db from '@/lib/db';
+import { takeFallback } from '@/lib/automations/waFallback';
+import { sendEmailFallback } from '@/lib/automations/sendOnce';
+import { templateFrame, sendRenderedEmail } from '@/lib/email';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -57,7 +63,20 @@ export async function POST(req) {
           .then(() => true).catch(() => false);
       }
     }
-    return NextResponse.json({ ok: true, found: !!row, updated });
+    // WhatsApp didn't arrive → the email version; it arrived → nothing more to send.
+    let fallback = null;
+    if (row && status === 'failed' && updated) {
+      const entry = await takeFallback(db, d.id).catch(() => null);
+      if (entry) {
+        const [tpl] = await select('email_templates', `select=*&id=eq.${encodeURIComponent(entry.templateId)}&limit=1`).catch(() => []);
+        fallback = tpl && tpl.is_active !== false
+          ? await sendEmailFallback({ db, entry, tpl, frame: templateFrame(), deliver: sendRenderedEmail }).catch(() => 'failed')
+          : 'no_template';
+      }
+    } else if (row && (status === 'delivered' || status === 'read')) {
+      await takeFallback(db, d.id).catch(() => null);
+    }
+    return NextResponse.json({ ok: true, found: !!row, updated, ...(fallback ? { emailFallback: fallback } : {}) });
   }
   if (type === 'contact.opted_out') {
     return NextResponse.json({ ok: true, optedOut: await optOut(d.phone || d.contact?.phone) });

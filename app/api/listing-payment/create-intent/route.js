@@ -8,6 +8,7 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { stripe } from '@/lib/stripe';
 import { checkPayable, applyListingPayment, recordListingFailure, getUserBillingRow, ensureStripeCustomer } from '@/lib/listingPayments';
+import { recordCheckoutStarted } from '@/lib/billing';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -42,6 +43,7 @@ export async function POST(req) {
   const metadata = { user_id: String(session.uid), property_id: propertyId, product: 'casa-libre-listing', kind };
   const description = kind === 'extend' ? 'Casa Libre — extender publicación' : 'Casa Libre — publicación adicional';
   const card = user.card_last4 ? { brand: user.card_brand, last4: user.card_last4 } : null;
+  const started = (pi) => recordCheckoutStarted({ userId: session.uid, propertyId, kind: kind === 'extend' ? 'listing_extend' : 'listing', amountUsd: cents / 100, pi });
 
   if (body.useSavedCard && user.card_pm_id) {
     try {
@@ -51,6 +53,7 @@ export async function POST(req) {
         return NextResponse.json({ status: 'succeeded', kind, until, card });
       }
       if (pi.status === 'requires_action' || pi.status === 'requires_confirmation') {
+        await started(pi);
         return NextResponse.json({ status: 'requires_action', clientSecret: pi.client_secret, paymentIntentId: pi.id, kind });
       }
       await recordListingFailure({ uid: session.uid, propertyId, kind, cents, pi, card, reason: pi.status });
@@ -58,6 +61,7 @@ export async function POST(req) {
     } catch (e) {
       const pi = e?.raw?.payment_intent || e?.payment_intent;
       if ((e?.code === 'authentication_required' || e?.raw?.code === 'authentication_required') && pi?.client_secret) {
+        await started(pi);
         return NextResponse.json({ status: 'requires_action', clientSecret: pi.client_secret, paymentIntentId: pi.id, kind });
       }
       await recordListingFailure({ uid: session.uid, propertyId, kind, cents, pi, card, reason: e?.decline_code || e?.code || 'error' });
@@ -67,6 +71,7 @@ export async function POST(req) {
 
   try {
     const pi = await stripe.paymentIntents.create({ amount: cents, currency: 'usd', customer: customerId, setup_future_usage: 'off_session', payment_method_types: ['card'], metadata, description });
+    await started(pi);   // the card form opens: a checkout that may be abandoned
     return NextResponse.json({ status: 'requires_payment', clientSecret: pi.client_secret, paymentIntentId: pi.id, amountCents: cents, kind });
   } catch (e) {
     return NextResponse.json({ error: 'stripe_error', detail: e?.message }, { status: 502 });

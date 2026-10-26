@@ -4,6 +4,7 @@
 import { useEffect, Suspense } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import posthog from 'posthog-js';
+import { firstTouch, FIRST_TOUCH_COOKIE, FIRST_TOUCH_DAYS } from '@/lib/attribution';
 import { POSTHOG_KEY, POSTHOG_HOST, track, capture, flushQueued } from '@/lib/analytics';
 import { consumeSignupSignal } from '@/lib/signupSignal';
 import { COUNTRY } from '@/lib/country';
@@ -22,7 +23,18 @@ function PageviewTracker() {
   return null;
 }
 
+// The first visit's source, kept 90 days (lib/attribution.js); saved on the account at sign-up.
+function keepFirstTouch() {
+  try {
+    if (document.cookie.split('; ').some((c) => c.startsWith(`${FIRST_TOUCH_COOKIE}=`))) return;
+    const ft = firstTouch(window.location.href, document.referrer, window.location.hostname);
+    if (!ft) return;
+    document.cookie = `${FIRST_TOUCH_COOKIE}=${encodeURIComponent(JSON.stringify(ft))}; path=/; max-age=${FIRST_TOUCH_DAYS * 86400}; samesite=lax`;
+  } catch { /* never break the page */ }
+}
+
 export default function PostHogProvider({ children }) {
+  useEffect(() => { keepFirstTouch(); }, []);
   useEffect(() => {
     // Runs after PostHog init below (same effect), so the event reaches both PostHog
     // and the dataLayer. Google sign-ups complete server-side — see lib/signupSignal.js.

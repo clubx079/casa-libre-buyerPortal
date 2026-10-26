@@ -18,6 +18,8 @@ import { useRouter } from 'next/navigation';
 import { useLang } from '@/lib/useLang';
 import { useAuth } from '@/components/AuthProvider';
 import { track } from '@/lib/analytics';
+import { hasRooms } from '@/lib/listingInput';
+import { parsePrice, priceShown, nextPriceInput } from '@/lib/priceInput';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import HighlightModal from '@/components/HighlightModal';
 import ListingPaymentModal from '@/components/ListingPaymentModal';
@@ -43,6 +45,8 @@ const DICT = {
     termsPre: 'Acepto los ', termsLink: 'Términos y Condiciones', termsMid: ' y la ', privacyLink: 'Política de Privacidad', errTerms: 'Para continuar, aceptá los Términos y Condiciones.',
     q3: '¿Dónde está la propiedad?', addrPh: 'Escribí la dirección…', addrHint: 'Elegí una dirección de la lista para estandarizarla.',
     barrio: 'Barrio', ciudad: 'Ciudad',
+    barrioPh: 'Ej.: Villa Morra', errBarrio: 'Escribí el barrio',
+    beds: 'Dormitorios', baths: 'Baños',
     verifyTitle: 'Confirmá tu cuenta', verifySub: (e) => `Para publicar, continuá con Google o te enviamos un código de 6 dígitos a ${e} o por WhatsApp.`, sendCode: 'Enviar código',
     sendByEmail: 'Enviar código por email', sendByWa: 'Enviar código por WhatsApp',
     waOtpSub: (p) => `Ingresá el código que enviamos por WhatsApp al ${p}.`, waTest: (c) => `Modo de prueba (no se envía WhatsApp): el código es ${c}`,
@@ -55,7 +59,7 @@ const DICT = {
     cTitle: 'Confirmá los datos', cSub: 'Revisá tu propiedad antes de publicarla.', cCheck: 'Confirmo que los datos son correctos', errConfirm: 'Confirmá que los datos son correctos para publicar.',
     cOp: 'Operación', cAddr: 'Dirección', cPhone: 'WhatsApp', cContact: 'Contacto', cPhotos: (n) => `${n} foto${n === 1 ? '' : 's'}`,
     fType: 'Tipo de propiedad', typePh: 'Seleccioná el tipo', types: typeOptions('es'),
-    fPrice: (m) => (m === 'venta' ? 'Precio' : 'Alquiler mensual'), fPricePh: (m) => (m === 'venta' ? '145.000' : '4.500.000'),
+    fPrice: (m) => (m === 'venta' ? 'Precio' : 'Alquiler mensual'), fPricePh: (m) => (m === 'venta' ? '145,000' : '4,500,000'),
     fArea: 'Superficie (m²)', fDesc: 'Descripción', fDescPh: 'Depto luminoso con balcón, a 2 cuadras del Shopping del Sol…',
     fPhone: 'WhatsApp / teléfono (para compradores)', fPhonePh: '0981 123 456',
     fPhotos: 'Arrastrá o elegí tus fotos', fPhotosSub: 'mín. 1 foto · JPG o PNG', photosChosen: (n) => `${n} foto${n === 1 ? '' : 's'} seleccionada${n === 1 ? '' : 's'}`,
@@ -93,6 +97,8 @@ const DICT = {
     termsPre: 'I agree to the ', termsLink: 'Terms of Service', termsMid: ' and the ', privacyLink: 'Privacy Policy', errTerms: 'To continue, please accept the Terms of Service.',
     q3: 'Where is the property?', addrPh: 'Type the address…', addrHint: 'Pick an address from the list to standardize it.',
     barrio: 'Neighborhood', ciudad: 'City',
+    barrioPh: 'e.g. Villa Morra', errBarrio: 'Enter the neighborhood',
+    beds: 'Bedrooms', baths: 'Bathrooms',
     verifyTitle: 'Confirm your account', verifySub: (e) => `To publish, continue with Google or we'll send a 6-digit code to ${e} or on WhatsApp.`, sendCode: 'Send code',
     sendByEmail: 'Send code by email', sendByWa: 'Send code on WhatsApp',
     waOtpSub: (p) => `Enter the code we sent on WhatsApp to ${p}.`, waTest: (c) => `Test mode (no WhatsApp is sent): the code is ${c}`,
@@ -280,7 +286,7 @@ export default function SellFlowProvider({ children }) {
   const openedLoggedInRef = useRef(false);        // wizard was opened by a signed-in user
   const [fromApp, setFromApp] = useState(false);  // arrived from the mobile app (?app=1)
   const [appReturn, setAppReturn] = useState('');  // the app's own deep-link URL (?ret=…)
-  const BLANK = { mode: '', seller_type: '', neighborhood: '', city: '', addressText: '', contact_name: '', email: '', ptype: '', price: '', currency: '', area: '', description: '', contact_phone: '' };
+  const BLANK = { mode: '', seller_type: '', neighborhood: '', city: '', addressText: '', street: '', lat: '', lng: '', bedrooms: '', bathrooms: '', contact_name: '', email: '', ptype: '', price: '', currency: '', area: '', description: '', contact_phone: '' };
   const [f, setF] = useState(BLANK);
   // Draft ("Borrador"): created once a signed-in user has picked the address, then
   // autosaved on every change until the listing is published (the server deletes it).
@@ -580,6 +586,10 @@ export default function SellFlowProvider({ children }) {
   }, [open, user, authLoading, result, f.email, draftJson]);
 
   const set = (k, v) => setF((s) => ({ ...s, [k]: v }));
+  // the neighborhood box: shown only when Google found no neighborhood for the address
+  const [editBarrio, setEditBarrio] = useState(false);
+  // a resumed draft with a city but no neighborhood → the box too (else nothing to type in)
+  useEffect(() => { if (f.city && !f.neighborhood) setEditBarrio(true); }, [f.city, f.neighborhood]);
   const setField = (k) => (e) => { const v = e.target.value; setF((s) => ({ ...s, [k]: v })); setErrs((er) => (er[k] ? { ...er, [k]: undefined } : er)); };
   // No default: the seller chooses US$ or this country's currency.
   // Venezuela's bolívares are converted to US$ on publish (COUNTRY.storeLocalAsUsd).
@@ -607,7 +617,7 @@ export default function SellFlowProvider({ children }) {
   };
   const collectErr = () => (step === 1
     ? (!f.seller_type ? t.errSeller : !user && !f.contact_name.trim() ? t.errName : !user && !emailOk(f.email) ? t.errEmail : !phoneOk(f.contact_phone) ? t.errPhone : t.errTerms)
-    : !f.neighborhood ? t.errAddr : t.errType);
+    : !f.neighborhood ? (f.city ? t.errBarrio : t.errAddr) : t.errType);
   // A signed-in visitor never sees the email-confirm step: their email is already verified.
   const next = async () => {
     // after the details → confirm the email (Google / code), then the confirm screen
@@ -713,7 +723,7 @@ export default function SellFlowProvider({ children }) {
       // Stash what the guest entered (details + photo files), then come back to THIS
       // page with ?sell=resume: the wizard reopens at confirm, signed in — same as the
       // code path.
-      await savePendingSell({ fields: { mode: f.mode, seller_type: f.seller_type, contact_name: f.contact_name, email: f.email, neighborhood: f.neighborhood, city: f.city, addressText: f.addressText, ptype: f.ptype, price: f.price, currency: f.currency, area: f.area, description: f.description, contact_phone: f.contact_phone }, photos: photoStash(), fromApp, appReturn, savedAt: Date.now() });
+      await savePendingSell({ fields: { mode: f.mode, seller_type: f.seller_type, contact_name: f.contact_name, email: f.email, neighborhood: f.neighborhood, city: f.city, addressText: f.addressText, street: f.street, lat: f.lat, lng: f.lng, ptype: f.ptype, price: f.price, currency: f.currency, area: f.area, bedrooms: f.bedrooms, bathrooms: f.bathrooms, description: f.description, contact_phone: f.contact_phone }, photos: photoStash(), fromApp, appReturn, savedAt: Date.now() });
       const here = /^\/[A-Za-z0-9/_-]*$/.test(window.location.pathname) ? window.location.pathname : '/';
       const r = await fetch('/api/auth/google', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ next: `${here}?sell=resume` }) });
       const j = await r.json().catch(() => ({}));
@@ -766,7 +776,7 @@ export default function SellFlowProvider({ children }) {
   const validateDetails = () => {
     const e = {};
     if (!f.ptype) e.ptype = t.errType;
-    const p = numOf(f.price);
+    const p = parsePrice(f.price);   // whole number: dots / commas are thousands marks (lib/priceInput.js)
     if (!priceCurrency) e.currency = t.errCurrency;   // no default: the seller picks US$ or the local currency
     if (!Number.isFinite(p) || p <= 0) e.price = t.errPrice;
     else if (!priceCurrency) { /* floors need the currency */ }
@@ -803,8 +813,12 @@ export default function SellFlowProvider({ children }) {
     try {
       const fd = new FormData();
       fd.set('mode', f.mode); fd.set('ptype', f.ptype); fd.set('neighborhood', f.neighborhood); fd.set('city', f.city);
-      fd.set('price', f.price); fd.set('currency', priceCurrency); fd.set('area', f.area); fd.set('description', f.description);
+      fd.set('price', String(parsePrice(f.price))); fd.set('currency', priceCurrency); fd.set('area', f.area); fd.set('description', f.description);
       fd.set('contact_name', f.contact_name); fd.set('contact_phone', f.contact_phone); fd.set('seller_type', f.seller_type);
+      // the street + number and the map position of the address picked from the list
+      if (f.street) fd.set('address', f.street);
+      if (f.lat !== '' && f.lng !== '') { fd.set('latitude', String(f.lat)); fd.set('longitude', String(f.lng)); }
+      if (hasRooms(f.ptype)) { fd.set('bedrooms', f.bedrooms); fd.set('bathrooms', f.bathrooms); }
       // In order: photos already in the draft by their key (reused, not sent again),
       // the rest as files.
       const order = []; let nFiles = 0;
@@ -818,7 +832,7 @@ export default function SellFlowProvider({ children }) {
       setDraftId(null);
       writeProgress({ owner: me, fresh: true, dismissed: readProgress().dismissed || [] }); clearProgressPhotos();   // published: the next listing starts empty
       window.dispatchEvent(new Event('cl:listings-changed'));   // My listings refreshes its tabs
-      track('listing_created', { property_id: j.id, slug: j.slug, ref: j.ref, operation: f.mode, property_type: f.ptype, city: f.city, neighborhood: f.neighborhood, price: f.price ? Number(f.price) : null, currency: priceCurrency, photos: photos.length });
+      track('listing_created', { property_id: j.id, slug: j.slug, ref: j.ref, operation: f.mode, property_type: f.ptype, city: f.city, neighborhood: f.neighborhood, price: Number.isFinite(parsePrice(f.price)) ? parsePrice(f.price) : null, currency: priceCurrency, photos: photos.length });
       setResult({ id: j.id, ref: j.ref, scanning: !!j.scanning, payment: j.payment || null, duplicate: !!j.duplicate });   // scanning: the AI photo check publishes it (lib/listingScan.js)
       if (j.duplicate) return;   // held as a possible duplicate — nothing to pay or promote
       if (j.payment) { setListingPay(true); return; }   // over the free listings of the month → pay to publish (a picked plan follows the payment)
@@ -1013,12 +1027,20 @@ export default function SellFlowProvider({ children }) {
                   <div>
                     <h2 className="text-[22px] font-bold tracking-head mb-1">{t.q3}</h2>
                     <p className="text-[13px] text-ink/50 mb-4">{t.addrHint}</p>
-                    <AddressAutocomplete value={f.addressText} onChange={(v) => set('addressText', v)} onSelect={({ neighborhood, city }) => setF((s) => ({ ...s, neighborhood, city }))} placeholder={t.addrPh} className={inputCls} />
-                    {f.neighborhood ? (
+                    <AddressAutocomplete value={f.addressText} onChange={(v) => setF((s) => ({ ...s, addressText: v, lat: '', lng: '' }))} onSelect={({ neighborhood, city, street, lat, lng }) => { setEditBarrio(!neighborhood); setF((s) => ({ ...s, neighborhood, city, street: street || '', lat: lat ?? '', lng: lng ?? '' })); }} placeholder={t.addrPh} className={inputCls} />
+                    {/* after an address is picked: the city. The street + number and the neighborhood
+                        Google found (from the address, or from its map position — AddressAutocomplete)
+                        are saved without being shown; the box to type the neighborhood appears only
+                        when Google has none there */}
+                    {f.city || f.neighborhood ? (
                       <div className="mt-3 flex gap-2 text-[13px]">
-                        <span className="px-3 py-1.5 rounded-pill bg-card border border-ink/20 font-medium">{t.barrio}: <b>{f.neighborhood}</b></span>
                         <span className="px-3 py-1.5 rounded-pill bg-card border border-ink/20 font-medium">{t.ciudad}: <b>{f.city}</b></span>
                       </div>
+                    ) : null}
+                    {(f.city || f.neighborhood) && editBarrio ? (
+                      <label className="block mt-4"><span className={labelCls}>{t.barrio}</span>
+                        <input value={f.neighborhood} onChange={setField('neighborhood')} placeholder={t.barrioPh} className={inputCls} data-testid="sell-barrio" />
+                      </label>
                     ) : null}
                     <div className="mt-4"><span className={labelCls}>{t.fType}</span>
                       <TypePicker value={f.ptype} options={t.types} placeholder={t.typePh} invalid={!!errs.ptype}
@@ -1039,7 +1061,7 @@ export default function SellFlowProvider({ children }) {
                       <div className="flex gap-3">
                         <label className="flex-1 min-w-0"><span className={labelCls}>{t.fPrice(f.mode)}</span>
                           <div className="flex gap-2">
-                            <input value={f.price} onChange={setField('price')} inputMode="numeric" placeholder={t.fPricePh(f.mode)} className={`${fieldCls('price')} flex-1 min-w-0`} />
+                            <input value={priceShown(f.price)} onChange={(e) => { const v = e.target.value; setF((s) => ({ ...s, price: nextPriceInput(priceShown(s.price), v) })); setErrs((er) => (er.price ? { ...er, price: undefined } : er)); }} inputMode="numeric" data-testid="sell-price" placeholder={t.fPricePh(f.mode)} className={`${fieldCls('price')} flex-1 min-w-0`} />
                             <select value={priceCurrency} onChange={setField('currency')} data-testid="sell-currency"
                               className={`px-2.5 py-[13px] border-[1.5px] rounded-input bg-card font-medium text-[15px] outline-none cursor-pointer w-[96px] sm:w-[104px] shrink-0 ${errs.currency ? 'border-red-500 focus:border-red-600' : 'border-ink/30 focus:border-ink'} ${priceCurrency ? '' : 'text-ink/45'}`}>
                               <option value="" disabled>{t.currencyPh}</option>
@@ -1055,7 +1077,17 @@ export default function SellFlowProvider({ children }) {
                           <input value={f.area} onChange={setField('area')} inputMode="numeric" placeholder="120" className={fieldCls('area')} /><FErr k="area" />
                         </label>
                       </div>
-                      <label className="sm:col-span-2"><span className={labelCls}>{t.fDesc}</span>
+                      {hasRooms(f.ptype) ? (
+                        <div className="flex gap-3">
+                          <label className="flex-1"><span className={labelCls}>{t.beds}</span>
+                            <input value={f.bedrooms} onChange={setField('bedrooms')} inputMode="numeric" maxLength={2} placeholder="3" className={inputCls} data-testid="sell-bedrooms" />
+                          </label>
+                          <label className="flex-1"><span className={labelCls}>{t.baths}</span>
+                            <input value={f.bathrooms} onChange={setField('bathrooms')} inputMode="numeric" maxLength={2} placeholder="2" className={inputCls} data-testid="sell-bathrooms" />
+                          </label>
+                        </div>
+                      ) : null}
+                      <label className="col-span-full"><span className={labelCls}>{t.fDesc}</span>
                         <textarea value={f.description} onChange={setField('description')} rows={3} placeholder={t.fDescPh} className={`${inputCls} resize-y`} />
                       </label>
                     </div>
@@ -1098,8 +1130,8 @@ export default function SellFlowProvider({ children }) {
                       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-[13px]">
                         {[
                           [t.cOp, `${f.mode === 'venta' ? t.sell : t.rent} · ${(t.types.find(([v]) => v === f.ptype) || [])[1] || ''}`],
-                          [t.cAddr, [f.addressText || f.neighborhood, f.city].filter(Boolean).join(' · ')],
-                          [t.fPrice(f.mode), `${curSymbol(priceCurrency)} ${f.price}${f.area ? ` · ${f.area} m²` : ''}`],
+                          [t.cAddr, [f.street, f.neighborhood, f.city].filter(Boolean).join(' · ')],
+                          [t.fPrice(f.mode), `${curSymbol(priceCurrency)} ${priceShown(f.price)}${f.area ? ` · ${f.area} m²` : ''}`],
                           [t.cPhone, f.contact_phone],
                           [t.cContact, [f.seller_type === 'agent' ? t.agent : t.owner, f.contact_name, f.email].filter(Boolean).join(' · ')],
                           ...(f.description.trim() ? [[t.fDesc, f.description.trim().length > 110 ? `${f.description.trim().slice(0, 110)}…` : f.description.trim()]] : []),

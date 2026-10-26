@@ -51,8 +51,8 @@ test('emails once when a new listing reaches the view number, with the real coun
   assert.equal(r.sent, 1);
   assert.equal(s.sent[0].to, 'ana@x.com');
   assert.equal(s.sent[0].subject, 'Casa · Villa Morra ya tiene 62 visitas');
-  assert.match(s.sent[0].html, /href="https:\/\/casa-libre\.com\.py\/propiedad\/p1"[^>]*>Casa · Villa Morra<\/a>/);
-  assert.match(s.sent[0].html, /href="https:\/\/casa-libre\.com\.py\/publicar"[^>]*>Publicar otra propiedad</);
+  assert.match(s.sent[0].html, /href="https:\/\/casa-libre\.com\.py\/propiedad\/p1(?:(?:\?|&amp;)utm_[^"]*)?"[^>]*>Casa · Villa Morra<\/a>/);
+  assert.match(s.sent[0].html, /href="https:\/\/casa-libre\.com\.py\/publicar(?:(?:\?|&amp;)utm_[^"]*)?"[^>]*>Publicar otra propiedad</);
   await s.run(T0 + 4 * DAY);
   assert.equal(s.sent.length, 1);
   const [st] = await s.db.select('listing_view_milestones', '');

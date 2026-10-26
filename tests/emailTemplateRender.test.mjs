@@ -99,3 +99,26 @@ test('templateVars: the draft reminder variables, with samples the preview can s
   assert.match(byKey.draft_url.sample, /^https:\/\/.+\/cuenta\/publicaciones\?tab=borradores&draft=/);
   assert.match(byKey.photo_url.sample, /^https:\/\//);
 });
+
+// ── UTM tags on our own links ──
+import { withUtm, tagLinks, renderTemplate as renderUtm } from '../lib/emailTemplateRender.js';
+
+test('withUtm: tags our sites, leaves others and already-tagged links alone', () => {
+  const u = withUtm('https://casa-libre.com.py/cuenta/publicaciones?tab=borradores', { campaign: 'draft_reminders', content: 'reminder_1' });
+  assert.equal(u, 'https://casa-libre.com.py/cuenta/publicaciones?tab=borradores&utm_source=email&utm_medium=automation&utm_campaign=draft_reminders&utm_content=reminder_1');
+  assert.match(withUtm('https://uy.casa-libre.com/x', { campaign: 'c' }), /utm_campaign=c/);
+  assert.equal(withUtm('https://play.google.com/store/apps/details?id=x', { campaign: 'c' }), 'https://play.google.com/store/apps/details?id=x');
+  assert.equal(withUtm('https://casa-libre.com.py/publicar?utm_source=email&utm_campaign=no_listing', { campaign: 'c' }), 'https://casa-libre.com.py/publicar?utm_source=email&utm_campaign=no_listing');
+  assert.equal(withUtm('not a url', { campaign: 'c' }), 'not a url');
+});
+
+test('rendered email: button and body links tagged, images untouched', () => {
+  const tpl = { subject: 'Hola', heading: 'H', body: 'Mirá [tu publicación](https://casa-libre.com.py/propiedad/abc).\n\n![foto](https://casa-libre.com.py/img.jpg)', button_label: 'Ver', button_url: 'https://casa-libre.com.py/cuenta/publicaciones' };
+  const { html, text } = renderUtm(tpl, {}, { utm: { campaign: 'listing_views_milestone' } });
+  assert.match(html, /href="https:\/\/casa-libre\.com\.py\/propiedad\/abc\?utm_source=email&amp;utm_medium=automation&amp;utm_campaign=listing_views_milestone"/);
+  assert.match(html, /href="https:\/\/casa-libre\.com\.py\/cuenta\/publicaciones\?utm_source=email/);
+  assert.match(html, /src="https:\/\/casa-libre\.com\.py\/img\.jpg"/);
+  assert.match(text, /publicaciones\?utm_source=email/);
+  // no utm in the frame → unchanged (admin previews, test sends)
+  assert.doesNotMatch(renderUtm(tpl, {}, {}).html, /utm_source/);
+});

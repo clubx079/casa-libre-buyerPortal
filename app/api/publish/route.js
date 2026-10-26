@@ -6,6 +6,8 @@
 // Multipart/form-data.
 import { normalizeTypeKey, dbType, isLandType, areaRange } from '@/lib/propertyTypeOptions';
 import { NextResponse } from 'next/server';
+import { cleanStreet, roomCount, cleanCoords, hasRooms } from '@/lib/listingInput';
+import { parsePrice } from '@/lib/priceInput';
 import { insert, update } from '@/lib/db';
 import * as dbApi from '@/lib/db';
 import { saveListingPhoneToProfile } from '@/lib/profilePhone';
@@ -64,8 +66,8 @@ async function geocodeOne(q) {
   } catch {}
   return null;
 }
-async function geocode(neighborhood, city) {
-  const queries = [`${neighborhood}, ${city}, ${COUNTRY.name}`, `${city}, ${COUNTRY.name}`];
+async function geocode(neighborhood, city, street = null) {
+  const queries = [...(street ? [`${street}, ${city}, ${COUNTRY.name}`] : []), `${neighborhood}, ${city}, ${COUNTRY.name}`, `${city}, ${COUNTRY.name}`];
   for (const q of queries) { const hit = await geocodeOne(q); if (hit) return hit; }
   return null;
 }
@@ -83,8 +85,9 @@ export async function POST(req) {
   const ptype = normalizeTypeKey(get('ptype'));
   const neighborhood = get('neighborhood');
   const city = get('city') || 'Asunción';
-  const priceRaw = get('price').replace(/[^\d.]/g, '');
-  let price = Number(priceRaw);
+  // a whole number: dots / commas are thousands marks, never decimals (lib/priceInput.js) —
+  // "290.000" used to be read as 290 and rejected as too low
+  let price = parsePrice(get('price'));
   // The currency the seller chose (US$ or this country's). It used to be forced to the
   // local currency for every rental, so a rent entered in US$ was stored as local.
   // Nothing chosen (an older client) → sale in US$, rent in the local currency.
@@ -110,9 +113,16 @@ export async function POST(req) {
   // Precise coordinates from the mobile map picker (optional). When present we use
   // them directly and skip geocoding (the picked pin is more accurate than a
   // neighborhood/city text lookup).
-  const latIn = Number(get('latitude'));
-  const lngIn = Number(get('longitude'));
-  const hasCoords = Number.isFinite(latIn) && Number.isFinite(lngIn) && Math.abs(latIn) <= 90 && Math.abs(lngIn) <= 180 && !(latIn === 0 && lngIn === 0);
+  // The web form sends the position of the address picked from the list the same way.
+  const coordsIn = cleanCoords(get('latitude'), get('longitude'));
+  const hasCoords = !!coordsIn;
+  const latIn = coordsIn?.lat;
+  const lngIn = coordsIn?.lng;
+  // Street + number (optional). Without it the address is the neighborhood, as before.
+  const street = cleanStreet(get('address'), { neighborhood, city });
+  // Bedrooms / bathrooms for houses and apartments (optional).
+  const bedrooms = hasRooms(ptype) ? roomCount(get('bedrooms')) : null;
+  const bathrooms = hasRooms(ptype) ? roomCount(get('bathrooms')) : null;
 
   // Completeness validation — a published listing must clear the same bar the
   // marketplace gate uses to SHOW it, so a user's listing is never created
@@ -183,7 +193,7 @@ export async function POST(req) {
   // Geocode runs in PARALLEL with the DB insert + photo uploads below (it's the
   // slowest external call), and its result is patched onto the row once ready — so
   // it no longer blocks publish start-to-finish.
-  const geocodePromise = hasCoords ? Promise.resolve({ lat: latIn, lng: lngIn }) : geocode(neighborhood, city).catch(() => null);
+  const geocodePromise = hasCoords ? Promise.resolve({ lat: latIn, lng: lngIn }) : geocode(neighborhood, city, street).catch(() => null);
 
   const row = {
     slug,
@@ -193,8 +203,10 @@ export async function POST(req) {
     currency,
     price_usd,
     price_period: mode === 'alquiler' ? 'monthly' : null,
-    address: neighborhood,
+    address: street || neighborhood,
     neighborhood,
+    bedrooms,
+    bathrooms,
     city,
     province: COUNTRY.defaultProvince,
     country: COUNTRY.name,

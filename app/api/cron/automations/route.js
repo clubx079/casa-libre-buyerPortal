@@ -15,6 +15,7 @@ import { sendRenderedEmail, templateFrame, siteUrl } from '@/lib/email';
 import { signRenewToken } from '@/lib/promoToken';
 import { promoUsd } from '@/lib/stripe';
 import { COUNTRY } from '@/lib/country';
+import { inSendWindow } from '@/lib/sendWindow';
 import { runFirstListing, AUTOMATION_ID, OFFER_DAYS } from '@/lib/automations/firstListing';
 import { runViewsMilestone, VIEWS_AUTOMATION_ID } from '@/lib/automations/viewsMilestone';
 import { runDraftReminders, DRAFTS_AUTOMATION_ID } from '@/lib/automations/draftReminders';
@@ -60,6 +61,9 @@ async function handle(req) {
   }
 
   const site = siteUrl();
+  // Messages only 09:00–19:00 local (lib/sendWindow.js): at night every automation still
+  // runs (grants, endings, state) but holds its messages until the first daytime run.
+  const frame = { ...templateFrame(), quiet: !inSendWindow(new Date(), COUNTRY.code) && process.env.AUTOMATION_SEND_ANYTIME !== '1' };
   try {
     const result = await runFirstListing({
       db,
@@ -68,7 +72,7 @@ async function handle(req) {
       now: new Date(),
       deliver: sendRenderedEmail,
       grant: (propertyId, days) => grantPromotion(propertyId, 'home', { days }),
-      frame: templateFrame(),
+      frame,
       siteUrl: site,
       extendUrl: (run) => `${site}/api/promo/extend?token=${encodeURIComponent(signRenewToken({ pid: run.property_id, uid: run.user_id, plan: 'home', purpose: 'extend' }))}`,
       // The gift is granted only when the seller clicks "Verificar mi publicación" (/api/gift/claim).
@@ -86,7 +90,7 @@ async function handle(req) {
         ? { skippedReason: 'posthog_not_configured' }
         : await runViewsMilestone({
           db, automation: viewsAutomation, templates, now: new Date(),
-          fetchViews: fetchListingViews, deliver: sendRenderedEmail, frame: templateFrame(), siteUrl: site,
+          fetchViews: fetchListingViews, deliver: sendRenderedEmail, frame, siteUrl: site,
           emailOverride: process.env.AUTOMATION_EMAIL_OVERRIDE || '',
         }).catch((e) => ({ error: e?.message || 'views_failed' }));
     }
@@ -96,7 +100,7 @@ async function handle(req) {
       ? { skippedReason: 'not_set_up' }
       : await runDraftReminders({
         db, automation: draftsAutomation, templates, now: new Date(),
-        deliver: sendRenderedEmail, frame: templateFrame(), siteUrl: site,
+        deliver: sendRenderedEmail, frame, siteUrl: site,
         emailOverride: process.env.AUTOMATION_EMAIL_OVERRIDE || '',
       }).catch((e) => ({ error: e?.message || 'drafts_failed' }));
     // Same property listed twice: checked INSTANTLY when a listing is published
@@ -108,7 +112,7 @@ async function handle(req) {
     const paid = !paidAutomation
       ? { skippedReason: 'not_set_up' }
       : await runPaidListings({
-        db, automation: paidAutomation, templates, now: new Date(), deliver: sendRenderedEmail, frame: templateFrame(), siteUrl: site,
+        db, automation: paidAutomation, templates, now: new Date(), deliver: sendRenderedEmail, frame, siteUrl: site,
         emailOverride: process.env.AUTOMATION_EMAIL_OVERRIDE || '',
         formatDate: (s) => { try { return new Date(s).toLocaleDateString(COUNTRY.locale, { day: 'numeric', month: 'long' }); } catch { return String(s).slice(0, 10); } },
       }).catch((e) => ({ error: e?.message || 'paid_failed' }));
@@ -118,7 +122,7 @@ async function handle(req) {
     const noListing = !noListingAutomation
       ? { skippedReason: 'not_set_up' }
       : await runNoListingNudge({
-        db, automation: noListingAutomation, templates, now: new Date(), deliver: sendRenderedEmail, frame: templateFrame(), siteUrl: site,
+        db, automation: noListingAutomation, templates, now: new Date(), deliver: sendRenderedEmail, frame, siteUrl: site,
         countryCode: COUNTRY.code, emailOverride: process.env.AUTOMATION_EMAIL_OVERRIDE || '',
       }).catch((e) => ({ error: e?.message || 'no_listing_failed' }));
     // A user listing held off the site (waiting for payment, photos rejected, paused,
@@ -126,17 +130,17 @@ async function handle(req) {
     const held = !heldAutomation
       ? { skippedReason: 'not_set_up' }
       : await runListingHeld({
-        db, automation: heldAutomation, templates, now: new Date(), deliver: sendRenderedEmail, frame: templateFrame(), siteUrl: site,
+        db, automation: heldAutomation, templates, now: new Date(), deliver: sendRenderedEmail, frame, siteUrl: site,
         countryCode: COUNTRY.code, emailOverride: process.env.AUTOMATION_EMAIL_OVERRIDE || '',
       }).catch((e) => ({ error: e?.message || 'held_failed' }));
     // A listing reached a number of saves (accounts + visitors) → tell the seller once per number.
     const saves = !savesAutomation
       ? { skippedReason: 'not_set_up' }
       : await runSavesMilestone({
-        db, automation: savesAutomation, templates, deliver: sendRenderedEmail, frame: templateFrame(), siteUrl: site,
+        db, automation: savesAutomation, templates, deliver: sendRenderedEmail, frame, siteUrl: site,
         emailOverride: process.env.AUTOMATION_EMAIL_OVERRIDE || '',
       }).catch((e) => ({ error: e?.message || 'saves_failed' }));
-    return NextResponse.json({ ok: true, ...result, views, drafts, duplicates, paid, noListing, held, saves, pushes, at: new Date().toISOString() });
+    return NextResponse.json({ ok: true, quietHours: frame.quiet, ...result, views, drafts, duplicates, paid, noListing, held, saves, pushes, at: new Date().toISOString() });
   } catch (e) {
     return NextResponse.json({ error: 'automation_failed', detail: e?.message }, { status: 500 });
   }

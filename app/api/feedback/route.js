@@ -1,13 +1,17 @@
 // POST /api/feedback — user feedback (1–5 stars + message) from /feedback.
 // Attributes the logged-in buyer from the session when present; otherwise takes
 // the name/email typed in the form. Persists to public.feedback for the admin
-// Feedbacks page. Anonymous allowed.
+// Feedbacks page. Anonymous allowed. Feedback from the team's test accounts
+// (@airosofts.com, @ableman.co — signed in or typed) is answered ok but never saved.
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { insert } from '@/lib/db';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+const TEST_DOMAINS = ['airosofts.com', 'ableman.co'];
+const isTestEmail = (e) => TEST_DOMAINS.includes(String(e || '').trim().toLowerCase().split('@')[1] || '');
 
 const clean = (v, n) => (v == null ? null : String(v).slice(0, n).trim() || null);
 
@@ -25,6 +29,7 @@ export async function POST(req) {
     message: clean(b.message, 2000),
     source: clean(b.source, 40) || 'site',
   };
+  if (isTestEmail(s?.email) || isTestEmail(row.email)) return NextResponse.json({ ok: true });
   try {
     await insert('feedback', [row], { returning: 'minimal' });
   } catch (e) {

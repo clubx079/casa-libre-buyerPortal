@@ -9,7 +9,7 @@ import { revalidateTag } from 'next/cache';
 import { getSession } from '@/lib/auth';
 import { select } from '@/lib/db';
 import { stripe, promoPlan, promoCents, promoUsd, PROMO } from '@/lib/stripe';
-import { getUserBillingRow, ensureStripeCustomer, grantPromotion, recordPayment } from '@/lib/billing';
+import { getUserBillingRow, ensureStripeCustomer, grantPromotion, recordPayment, recordCheckoutStarted } from '@/lib/billing';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -76,6 +76,7 @@ export async function POST(req) {
         return NextResponse.json({ status: 'succeeded', plan, promotionUntil: until, card: { brand: user.card_brand, last4: user.card_last4 } });
       }
       if (pi.status === 'requires_action' || pi.status === 'requires_confirmation') {
+        await recordCheckoutStarted({ userId: session.uid, propertyId, kind: 'highlight', plan, amountUsd: usd, pi });
         return NextResponse.json({ status: 'requires_action', clientSecret: pi.client_secret, paymentIntentId: pi.id, plan });
       }
       await recordPayment({ user_id: session.uid, property_id: propertyId, kind: 'highlight', plan, amount_usd: usd, currency: 'usd', status: 'failed', stripe_payment_intent_id: pi.id, card_brand: user.card_brand, card_last4: user.card_last4, failure_reason: pi.status });
@@ -83,6 +84,7 @@ export async function POST(req) {
     } catch (e) {
       const pi = e?.raw?.payment_intent || e?.payment_intent;
       if ((e?.code === 'authentication_required' || e?.raw?.code === 'authentication_required') && pi?.client_secret) {
+        await recordCheckoutStarted({ userId: session.uid, propertyId, kind: 'highlight', plan, amountUsd: usd, pi });
         return NextResponse.json({ status: 'requires_action', clientSecret: pi.client_secret, paymentIntentId: pi.id, plan });
       }
       await recordPayment({ user_id: session.uid, property_id: propertyId, kind: 'highlight', plan, amount_usd: usd, currency: 'usd', status: 'failed', stripe_payment_intent_id: pi?.id || null, card_brand: user.card_brand, card_last4: user.card_last4, failure_reason: (e?.decline_code || e?.code || 'error') });
@@ -98,6 +100,7 @@ export async function POST(req) {
       setup_future_usage: 'off_session', payment_method_types: ['card'],
       metadata, description,
     });
+    await recordCheckoutStarted({ userId: session.uid, propertyId, kind: 'highlight', plan, amountUsd: usd, pi });   // the card form opens
     return NextResponse.json({ status: 'requires_payment', clientSecret: pi.client_secret, paymentIntentId: pi.id, amount: usd, plan });
   } catch (e) {
     return NextResponse.json({ error: 'stripe_error', detail: e?.message }, { status: 502 });

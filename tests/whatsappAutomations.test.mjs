@@ -145,3 +145,12 @@ test('a DB without migration 017 (live today): plain email, the channel lookup a
   assert.equal(asked, 1);
   assert.ok(db.log.every((r) => !('channel' in r)));   // email rows look exactly as before
 });
+
+test('quiet hours: held (deferred) — nothing claimed, sent, or counted failed; sent later', async () => {
+  emails.length = 0;
+  const db = fakeDb({ channel: 'whatsapp', user: { whatsapp_opt_in_at: '2026-10-19T00:00:00Z' } });
+  assert.equal(await sendOnce({ ...base(db), frame: { quiet: true } }), 'deferred');
+  assert.equal(db.log.length, 0);
+  assert.equal(emails.length + sentToRelay.length, 0);
+  assert.equal(await sendOnce(base(db)), 'sent');   // the next daytime run
+});

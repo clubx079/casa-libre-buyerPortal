@@ -142,7 +142,9 @@ test('the email: subject, what they started, first photo and the button that ope
   assert.match(m.html, /Hola Ana,/);
   assert.match(m.html, /<strong>Casa en venta · Villa Morra, Asunción<\/strong>/);
   assert.match(m.html, new RegExp(`<img src="${SITE}/api/media/drafts/${U1}/${D1}/[^"]+\\.webp" alt="Casa en venta · Villa Morra, Asunción"`));
-  assert.match(m.html, new RegExp(`<a href="${SITE.replace(/\./g, '\\.')}/cuenta/publicaciones\\?tab=borradores&amp;draft=${D1}"[^>]*>Continuar mi publicación</a>`));
+  assert.match(m.html, new RegExp(`<a href="${SITE.replace(/\./g, '\\.')}/cuenta/publicaciones\\?tab=borradores&amp;draft=${D1}(?:&amp;utm_[^"]*)?"[^>]*>Continuar mi publicación</a>`));
+  // the button is tagged as this email in analytics
+  assert.match(m.html, /draft=[^"]*&amp;utm_source=email&amp;utm_medium=automation&amp;utm_campaign=draft_reminders/);
   assert.match(m.text, new RegExp(`Continuar mi publicación: ${SITE}/cuenta/publicaciones\\?tab=borradores&draft=${D1}`));
   assert.ok(!m.text.includes('!['), 'no image markup in the text part');
 });

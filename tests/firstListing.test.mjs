@@ -63,7 +63,7 @@ test('gifts a first listing once it is wait_days old, and only once', async () =
   assert.equal(s.sent[0].to, 'ana@x.com');
   assert.equal(s.sent[0].subject, 'Ana, regalo');
   assert.match(s.sent[0].html, /Casa · Villa Morra/);
-  assert.match(s.sent[0].html, /href="https:\/\/casa-libre\.com\.py\/propiedad\/p1"/);
+  assert.match(s.sent[0].html, /href="https:\/\/casa-libre\.com\.py\/propiedad\/p1(?:(?:\?|&amp;)utm_[^"]*)?"/);
   const runs = await s.db.select('automation_runs', '');
   assert.equal(runs.length, 1);
   assert.equal(runs[0].status, 'gifted');
@@ -110,7 +110,7 @@ test('reminder goes out remind_days_before the end, once, with the extend link',
   const r = await s.run(giftAt + 27.5 * DAY); // 2.5 days left → remind
   assert.equal(r.reminded, 1);
   assert.equal(s.sent.length, 2);
-  assert.match(s.sent[1].html, /href="https:\/\/casa-libre\.com\.py\/api\/promo\/extend\?token=tok-p1"/);
+  assert.match(s.sent[1].html, /href="https:\/\/casa-libre\.com\.py\/api\/promo\/extend\?token=tok-p1(?:(?:\?|&amp;)utm_[^"]*)?"/);
   assert.match(s.sent[1].html, /Extender por US\$20/);
   assert.match(s.sent[1].subject, /^Termina /);
   await s.run(giftAt + 28 * DAY);
@@ -252,7 +252,7 @@ test('claim mode: the email offers the gift with the verify button, nothing is g
   assert.equal(r.gifted, 0);
   assert.deepEqual(s.grants, []);
   assert.equal(s.sent.length, 1);
-  assert.match(s.sent[0].html, /href="https:\/\/casa-libre\.com\.py\/api\/gift\/claim\?token=tok-u1-p1"/);
+  assert.match(s.sent[0].html, /href="https:\/\/casa-libre\.com\.py\/api\/gift\/claim\?token=tok-u1-p1(?:(?:\?|&amp;)utm_[^"]*)?"/);
   assert.match(s.sent[0].html, /Verificar mi publicación/);
   assert.match(s.sent[0].html, /30 días/);
   const [run] = await s.db.select('automation_runs', '');

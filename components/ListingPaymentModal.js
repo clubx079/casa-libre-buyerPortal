@@ -12,6 +12,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import { getStripePromise } from '@/lib/stripeClient';
+import { track } from '@/lib/analytics';
 
 const appearance = {
   theme: 'flat',
@@ -94,6 +95,9 @@ export default function ListingPaymentModal({ propertyId, kind = 'publish', lang
   const [stripeObj, setStripeObj] = useState(undefined);
   const stripeRef = useRef(null);
 
+  // the payment funnel in PostHog: pay screen opened → payment started → succeeded
+  useEffect(() => { track('payment_screen_opened', { property_id: propertyId, kind }); }, [propertyId, kind]);
+
   useEffect(() => {
     let alive = true;
     Promise.resolve(getStripePromise()).then((s) => { if (alive) { stripeRef.current = s || null; setStripeObj(s || null); } }).catch(() => { if (alive) setStripeObj(null); });
@@ -105,7 +109,7 @@ export default function ListingPaymentModal({ propertyId, kind = 'publish', lang
   }, []);
 
   const price = kind === 'extend' ? offer?.extendPrice : offer?.price;
-  const ok = (u) => { setUntil(u || ''); setPhase('success'); onSuccess && onSuccess(u); };
+  const ok = (u) => { track('payment_succeeded', { property_id: propertyId, kind }); setUntil(u || ''); setPhase('success'); onSuccess && onSuccess(u); };
 
   const serverConfirm = useCallback(async (piId) => {
     setPhase('processing');
@@ -118,6 +122,7 @@ export default function ListingPaymentModal({ propertyId, kind = 'publish', lang
   }, [propertyId, t]);
 
   const start = useCallback(async (useSavedCard) => {
+    track('payment_started', { property_id: propertyId, kind, saved_card: !!useSavedCard });
     setError(''); setPhase('processing');
     try {
       const r = await fetch('/api/listing-payment/create-intent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ propertyId, kind, useSavedCard }) });
