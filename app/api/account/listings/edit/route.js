@@ -71,6 +71,8 @@ export async function GET(req) {
       description: p.description || '', contact_name: p.contact_name || '', contact_phone: p.contact_phone || '',
     },
     photos: imgs.map((i) => ({ key: i.storage_key, url: i.storage_url })),
+    // its paid plan while active — the form offers only what it doesn't have yet
+    promo: p.promotion_plan && p.promotion_expires_at && Date.parse(p.promotion_expires_at) > Date.now() ? { plan: p.promotion_plan, until: p.promotion_expires_at } : null,
   });
 }
 

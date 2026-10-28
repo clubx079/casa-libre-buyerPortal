@@ -51,7 +51,8 @@ const DICT = {
     verifyTitle: 'Confirmá tu cuenta', verifySub: (e) => `Para publicar, continuá con Google o te enviamos un código de 6 dígitos a ${e} o por WhatsApp.`, sendCode: 'Enviar código',
     sendByEmail: 'Enviar código por email', sendByWa: 'Enviar código por WhatsApp',
     waOtpSub: (p) => `Ingresá el código que enviamos por WhatsApp al ${p}.`, waTest: (c) => `Modo de prueba (no se envía WhatsApp): el código es ${c}`,
-    saveEdit: 'Guardar cambios', savingEdit: 'Guardando…', editedTitle: '¡Cambios guardados!',
+    saveEdit: 'Guardar cambios', savingEdit: 'Guardando…', saveVerified: 'Guardar y verificar por US$5', saveHome: 'Guardar y poner en la portada por US$20',
+    activePlan: (home, d) => `${home ? 'En la portada' : 'Verificada'} hasta el ${d}.`, editedTitle: '¡Cambios guardados!',
     editedLive: 'Tu propiedad ya muestra los cambios.', editedChecking: 'Estamos revisando las fotos nuevas. Vuelve a estar visible apenas terminemos, en unos minutos.',
     editedDup: 'Quedó igual a otra de tus publicaciones, así que la revisamos antes de mostrarla. Te avisamos por email.',
     editLock: { checking: 'Todavía estamos revisando sus fotos. Probá de nuevo en unos minutos.', taken_down: 'Esta publicación no está visible por una revisión de nuestro equipo. Escribinos para cambiarla.', held_duplicate: 'Esta publicación está en revisión. Escribinos para cambiarla.', payment_pending: 'Primero completá el pago de esta publicación.', locked: 'Esta publicación no se puede editar.' },
@@ -112,7 +113,8 @@ const DICT = {
     verifyTitle: 'Confirm your account', verifySub: (e) => `To publish, continue with Google or we'll send a 6-digit code to ${e} or on WhatsApp.`, sendCode: 'Send code',
     sendByEmail: 'Send code by email', sendByWa: 'Send code on WhatsApp',
     waOtpSub: (p) => `Enter the code we sent on WhatsApp to ${p}.`, waTest: (c) => `Test mode (no WhatsApp is sent): the code is ${c}`,
-    saveEdit: 'Save changes', savingEdit: 'Saving…', editedTitle: 'Changes saved!',
+    saveEdit: 'Save changes', savingEdit: 'Saving…', saveVerified: 'Save and verify for US$5', saveHome: 'Save and show on the home page for US$20',
+    activePlan: (home, d) => `${home ? 'On the home page' : 'Verified'} until ${d}.`, editedTitle: 'Changes saved!',
     editedLive: 'Your listing now shows the changes.', editedChecking: "We're checking the new photos. It's visible again as soon as we finish, in a few minutes.",
     editedDup: "It's now the same as another of your listings, so we'll review it before showing it. We'll email you.",
     editLock: { checking: "We're still checking its photos. Try again in a few minutes.", taken_down: "This listing isn't visible because our team is reviewing it. Write to us to change it.", held_duplicate: 'This listing is under review. Write to us to change it.', payment_pending: 'Complete the payment for this listing first.', locked: "This listing can't be edited." },
@@ -300,6 +302,7 @@ export default function SellFlowProvider({ children }) {
   // the code is asked only when that number changes. No drafts, no plans, no quota.
   const [editId, setEditId] = useState(null);
   const [editPhone, setEditPhone] = useState('');
+  const [editPromo, setEditPromo] = useState(null);   // { plan, until } of the listing being edited
   const [sendingWa, setSendingWa] = useState(false); // spinner on the WhatsApp button, not the email one
   const [loginCode, setLoginCode] = useState('');   // sign-in code for an email that already has an account
   const [codeSent, setCodeSent] = useState(false);  // the visitor clicked "Send code" on the confirm-email screen
@@ -335,7 +338,7 @@ export default function SellFlowProvider({ children }) {
   }, [open, step, user, phase, f.contact_phone]);   // eslint-disable-line react-hooks/exhaustive-deps
   const reset = () => {
     setStep(0); setPhase(''); setErr(''); setErrs({}); setBusy(false); setCode(''); setVerified(false); setEmailTaken(false); setLoginCode(''); setCodeSent(false); setPhotos([]); setResult(null); setShowHi(false); setHighlighted(false); setPaying(false); setPlan(null); setConfirmOk(false); setTermsOk(false); setResumed(false); setQuota(null); setListingPay(false);
-    setF(BLANK); setDraftId(null); creatingDraftRef.current = false; setEditId(null); setEditPhone('');
+    setF(BLANK); setDraftId(null); creatingDraftRef.current = false; setEditId(null); setEditPhone(''); setEditPromo(null);
   };
   const close = () => { setOpen(false); reset(); };
 
@@ -454,7 +457,7 @@ export default function SellFlowProvider({ children }) {
       setVerified(true); setTermsOk(true);
       setF({ ...BLANK, ...j.fields, email: user?.email || '' });
       restorePhotos(j.photos.map((x) => ({ key: x.key, url: x.url })));
-      setEditId(j.id); setEditPhone(j.fields.contact_phone || '');
+      setEditId(j.id); setEditPhone(j.fields.contact_phone || ''); setEditPromo(j.promo || null);
       setStep(3); setOpen(true);
       track('listing_edit_opened', { property_id: j.id });
       return;
@@ -927,6 +930,7 @@ export default function SellFlowProvider({ children }) {
       window.dispatchEvent(new Event('cl:listings-changed'));   // My listings refreshes
       track('listing_edited', { property_id: j.id, outcome: j.outcome, new_photos: j.newPhotos });
       setResult({ id: j.id, edited: j.outcome });
+      if (plan) await payWithPlan(plan, j.id);
     } catch (er) {
       const code = er?.message;
       if (code === 'missing_street') { setStep(2); setErr(t.errStreet); }
@@ -1019,7 +1023,22 @@ export default function SellFlowProvider({ children }) {
                 <img src="/mascot.png" alt="" className="w-[120px] object-contain mx-auto mb-2" />
                 <h2 className="text-[24px] font-bold tracking-head mb-1.5">{t.editedTitle}</h2>
                 <p className="text-[14px] text-ink/60 mb-5">{result.edited === 'checking' ? t.editedChecking : result.edited === 'duplicate' ? t.editedDup : t.editedLive}</p>
+                {highlighted ? (
+                  <div className="mb-5 rounded-[16px] border-[1.5px] border-ink bg-card px-4 py-3 text-[13px] font-bold text-ink">{plan === 'home' ? t.hiDoneHome : t.hiDoneVerified}</div>
+                ) : paying ? (
+                  <div className="mb-5 rounded-[16px] border-[1.5px] border-ink bg-card px-4 py-3 text-[13px] font-bold text-ink flex items-center justify-center gap-2"><Spinner />{t.payingMsg}</div>
+                ) : null}
                 <button onClick={close} className="px-7 py-3 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft">{t.close}</button>
+                {showHi && result?.id && (
+                  <HighlightModal
+                    propertyId={result.id}
+                    plan={plan || 'verified'}
+                    lang={lang}
+                    propertyLabel={[(t.types.find(([v]) => v === f.ptype) || [])[1], f.neighborhood].filter(Boolean).join(' · ')}
+                    onClose={() => setShowHi(false)}
+                    onSuccess={() => { setHighlighted(true); setShowHi(false); window.dispatchEvent(new Event('cl:listings-changed')); }}
+                  />
+                )}
               </div>
             ) : result ? (
               <div className="text-center py-4">
@@ -1344,10 +1363,13 @@ export default function SellFlowProvider({ children }) {
 
                     {/* Promotion plans — two prominent, mutually-exclusive boxes. On a paid
                         listing the plan is charged right after the listing's own payment. */}
-                    {!editId && <div className="mt-4">
+                    {editId && editPromo && (
+                      <div className="mt-4 rounded-[14px] border-[1.5px] border-ink/30 bg-card px-4 py-3 text-[13px] font-semibold flex items-center gap-2"><VerifiedIcon className="w-4 h-4" />{t.activePlan(editPromo.plan === 'home', new Date(editPromo.until).toLocaleDateString(lang === 'es' ? 'es-PY' : 'en-US', { day: 'numeric', month: 'long' }))}</div>
+                    )}
+                    {(!editId || editPromo?.plan !== 'home') && <div className="mt-4">
                       <div className="text-[13px] font-semibold mb-2">{t.planTitle}</div>
                       <div className="grid gap-2.5">
-                        <PlanBox on={plan === 'verified'} onClick={() => setPlan((p) => (p === 'verified' ? null : 'verified'))} title={t.v5Title} price={t.v5Price} benefits={[]} icon={<VerifiedIcon className="w-4 h-4" />} />
+                        {!(editId && editPromo?.plan === 'verified') && <PlanBox on={plan === 'verified'} onClick={() => setPlan((p) => (p === 'verified' ? null : 'verified'))} title={t.v5Title} price={t.v5Price} benefits={[]} icon={<VerifiedIcon className="w-4 h-4" />} />}
                         <PlanBox on={plan === 'home'} onClick={() => setPlan((p) => (p === 'home' ? null : 'home'))} title={t.v20Title} price={t.v20Price} benefits={[]} icon={<VerifiedIcon className="w-4 h-4" />} badge={<RecommendedTag lang={lang} className="text-[8px] px-1.5 py-0.5" />} />
                       </div>
                     </div>}
@@ -1364,7 +1386,7 @@ export default function SellFlowProvider({ children }) {
                       <button onClick={next} disabled={busy} className="px-7 py-3 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60 inline-flex items-center justify-center min-w-[108px]">{busy ? <Spinner /> : t.next}</button>
                     ) : (
                       editId ? (
-                        <button onClick={() => saveEdit()} disabled={busy} data-testid="sell-save-edit" className="px-7 py-3 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60">{busy ? t.savingEdit : t.saveEdit}</button>
+                        <button onClick={() => saveEdit()} disabled={busy} data-testid="sell-save-edit" className="px-7 py-3 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60">{busy ? t.savingEdit : plan === 'home' ? t.saveHome : plan === 'verified' ? t.saveVerified : t.saveEdit}</button>
                       ) : <button onClick={() => publish(plan)} disabled={busy} data-testid="sell-publish" className="px-7 py-3 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60">{busy ? t.publishing : quota?.enabled && quota.paymentRequired ? t.publishPaid(quota.price, plan) : (plan === 'home' ? t.publishHome : plan === 'verified' ? t.publishVerified : t.publishBtn)}</button>
                     )}
                   </div>
