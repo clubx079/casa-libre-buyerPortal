@@ -4,10 +4,7 @@
 // runs in the background (lib/listingScan.js) and publishes it, or rejects it, without
 // the seller waiting. A listing without photos is published straight away.
 // Multipart/form-data.
-import { normalizeTypeKey, dbType, isLandType, areaRange } from '@/lib/propertyTypeOptions';
 import { NextResponse } from 'next/server';
-import { cleanStreet, roomCount, cleanCoords, hasRooms } from '@/lib/listingInput';
-import { parsePrice } from '@/lib/priceInput';
 import { insert, update } from '@/lib/db';
 import * as dbApi from '@/lib/db';
 import { saveListingPhoneToProfile } from '@/lib/profilePhone';
@@ -17,7 +14,6 @@ import { claimGuestDrafts } from '@/lib/guestDrafts';
 import { zoneCanonical, dedupeKey } from '@/lib/dedupe';
 import { put } from '@/lib/b2';
 import { stampLogo } from '@/lib/stampLogo';
-import { getUsdToPyg, getUsdTo } from '@/lib/fx';
 import { getSession } from '@/lib/auth';
 import { startListingScan, publishListing, listingRef } from '@/lib/listingScan';
 import { SCAN_STATUS } from '@/lib/scanVerdict';
@@ -35,6 +31,8 @@ import { getBytes } from '@/lib/b2';
 import { findDuplicateOf, DUPLICATE_STATUS } from '@/lib/duplicateCheck';
 import { holdInQuarantine } from '@/lib/listingScan';
 import { sendDuplicateNotice } from '@/lib/duplicateNotice';
+import { readListingFields } from '@/lib/listingFields';
+import { geocode } from '@/lib/geocodeListing';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -48,29 +46,6 @@ const slugify = (s) =>
     .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
     .slice(0, 40);
 
-// Best-effort geocode via OpenStreetMap Nominatim so the listing gets a map pin.
-// Never throws — a listing without coords still shows in the list. Tries the
-// most specific query first, then falls back to the city.
-async function geocodeOne(q) {
-  try {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 4000);
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=${COUNTRY.geoCountryCode}&q=${encodeURIComponent(q)}`,
-      { signal: ctrl.signal, cache: 'no-store', headers: { 'User-Agent': `CasaLibre/1.0 (listings@casalibre${COUNTRY.tld})` } }
-    );
-    clearTimeout(timer);
-    if (!res.ok) return null;
-    const j = await res.json();
-    if (Array.isArray(j) && j[0]) return { lat: Number(j[0].lat), lng: Number(j[0].lon) };
-  } catch {}
-  return null;
-}
-async function geocode(neighborhood, city, street = null) {
-  const queries = [...(street ? [`${street}, ${city}, ${COUNTRY.name}`] : []), `${neighborhood}, ${city}, ${COUNTRY.name}`, `${city}, ${COUNTRY.name}`];
-  for (const q of queries) { const hit = await geocodeOne(q); if (hit) return hit; }
-  return null;
-}
 
 export async function POST(req) {
   // Require login so every published deal has a known owner.
@@ -81,78 +56,15 @@ export async function POST(req) {
   try { form = await req.formData(); } catch { return NextResponse.json({ error: 'invalid_form' }, { status: 400 }); }
 
   const get = (k) => { const v = form.get(k); return v == null ? '' : String(v).trim(); };
-  const mode = get('mode') === 'alquiler' ? 'alquiler' : 'venta';
-  const ptype = normalizeTypeKey(get('ptype'));
-  const neighborhood = get('neighborhood');
-  const city = get('city') || 'Asunción';
-  // a whole number: dots / commas are thousands marks, never decimals (lib/priceInput.js) —
-  // "290.000" used to be read as 290 and rejected as too low
-  let price = parsePrice(get('price'));
-  // The currency the seller chose (US$ or this country's). It used to be forced to the
-  // local currency for every rental, so a rent entered in US$ was stored as local.
-  // Nothing chosen (an older client) → sale in US$, rent in the local currency.
-  const wanted = get('currency').toUpperCase();
-  let currency = wanted === 'USD' || wanted === COUNTRY.currencyCode ? wanted : (mode === 'alquiler' ? COUNTRY.currencyCode : 'USD');
-  // Venezuela (storeLocalAsUsd): a price in bolívares is converted to US$ at the live
-  // rate; the amount the seller typed is kept in raw_data.
-  let entered = null;
-  if (COUNTRY.storeLocalAsUsd && wanted === COUNTRY.currencyCode && Number.isFinite(price) && price > 0) {
-    const perUsd = await getUsdTo(wanted);
-    if (!perUsd) return NextResponse.json({ error: 'fx_unavailable' }, { status: 503 });
-    entered = { price, currency: wanted, per_usd: perUsd };
-    price = Math.round(price / perUsd);
-    currency = 'USD';
-  }
-  const area = Number(get('area').replace(/[^\d.]/g, '')) || null;
-  const description = get('description');
-  // Default the public contact to the logged-in user's name/email when not given.
-  const contactName = get('contact_name') || session.name || null;
-  const contactPhone = get('contact_phone') || null;
-  // Who is publishing — owner vs. agent. Saved for data quality; not shown publicly.
-  const sellerType = get('seller_type') === 'agent' ? 'agent' : 'owner';
-  // Precise coordinates from the mobile map picker (optional). When present we use
-  // them directly and skip geocoding (the picked pin is more accurate than a
-  // neighborhood/city text lookup).
-  // The web form sends the position of the address picked from the list the same way.
-  const coordsIn = cleanCoords(get('latitude'), get('longitude'));
-  const hasCoords = !!coordsIn;
-  const latIn = coordsIn?.lat;
-  const lngIn = coordsIn?.lng;
-  // Street + number — required: a city or neighborhood alone is not an address (every owner
-  // listing used to have its barrio as the address, and its map pin in the town centre).
-  const street = cleanStreet(get('address'), { neighborhood, city });
-  // Bedrooms / bathrooms for houses and apartments (optional).
-  const bedrooms = hasRooms(ptype) ? roomCount(get('bedrooms')) : null;
-  const bathrooms = hasRooms(ptype) ? roomCount(get('bathrooms')) : null;
-
-  // Completeness validation — a published listing must clear the same bar the
-  // marketplace gate uses to SHOW it, so a user's listing is never created
-  // "incomplete" and then hidden / 404'd on its own detail page.
-  if (!ptype) return NextResponse.json({ error: 'missing_type' }, { status: 400 });
-  if (!neighborhood) return NextResponse.json({ error: 'missing_neighborhood' }, { status: 400 });
-  if (!street) return NextResponse.json({ error: 'missing_street' }, { status: 400 });
-  if (!city) return NextResponse.json({ error: 'missing_city' }, { status: 400 });
-  if (!Number.isFinite(price) || price <= 0) return NextResponse.json({ error: 'missing_price' }, { status: 400 });
-  if (String(contactPhone || '').replace(/\D/g, '').length < 6) return NextResponse.json({ error: 'missing_contact' }, { status: 400 });
-
-  const property_type = dbType(ptype);
-  const isLand = isLandType(ptype);
-  const rate = await getUsdToPyg().catch(() => Number(process.env[`${COUNTRY.fxTarget}_PER_USD`]) || COUNTRY.fxFallback);
-  const price_usd = currency === 'USD' ? Math.round(price) : rate ? Math.round(price / rate) : null;
-
-  // Area required + plausible for buildings (land has no upper cap); price floors
-  // match the gate (sale ≥ US$5.000, rent ≥ ₲300.000/mes).
-  const range = areaRange(ptype); // null for land (any size)
-  if (range) {
-    if (!(Number(area) > 0)) return NextResponse.json({ error: 'missing_area' }, { status: 400 });
-    if (Number(area) < range[0] || Number(area) > range[1]) return NextResponse.json({ error: 'bad_area' }, { status: 400 });
-  }
-  if (mode === 'venta') {
-    if (!(Number(price_usd) >= 5000)) return NextResponse.json({ error: 'price_too_low' }, { status: 400 });
-  } else {
-    const pygVal = currency === COUNTRY.currencyCode ? price : Math.round(price * rate);
-    if (!(pygVal >= COUNTRY.rentFloorLocal)) return NextResponse.json({ error: 'price_too_low' }, { status: 400 });
-  }
+  // Every field, read and checked the same way as an edit (lib/listingFields.js): type,
+  // street address, price + floors, area range, rooms, the WhatsApp proof (web form only).
+  const fields = await readListingFields(get, session);
+  if (fields.error) return NextResponse.json({ error: fields.error }, { status: fields.status });
+  const { mode, ptype, property_type, isLand, neighborhood, city, price, currency, price_usd, entered, area, description,
+    contactName, contactPhone, sellerType, street, bedrooms, bathrooms } = fields.v;
+  const hasCoords = !!fields.v.coords;
+  const latIn = fields.v.coords?.lat;
+  const lngIn = fields.v.coords?.lng;
 
   // The photos, read once: in the seller's order (photo_order) — photos already uploaded
   // to their draft (reused from storage, never sent again) and/or new files. Clients

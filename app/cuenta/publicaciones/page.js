@@ -52,7 +52,7 @@ const D = {
     pendingNote: 'Guardada, pero no está en el sitio: ya usaste tus publicaciones gratis del mes. Pagala para publicarla.', payPublish: 'Pagar y publicar',
     endedNote: (d) => `Terminó${d ? ` el ${d}` : ''} y ya no está en el sitio. Extendela para volver a publicarla.`, extend: 'Extender', paidChip: 'Publicación paga',
     rejectedNote: 'No la publicamos: algunas fotos pueden tener contenido para adultos (+18), dañino, ofensivo o sin relación con la propiedad. Cambialas y enviala de nuevo.',
-    fix: 'Cambiar fotos',
+    fix: 'Cambiar fotos', edit: 'Editar',
     emptyDrafts: 'No tenés borradores. Si empezás a publicar y no terminás, lo guardamos acá.',
     saved: (s) => `Guardado ${s}`, missing: 'Falta', miss: { price: 'precio', area: 'superficie', phone: 'teléfono', photos: 'fotos' },
     confirmT: 'Eliminar borrador', confirm: '¿Querés eliminar este borrador?',
@@ -66,7 +66,7 @@ const D = {
     pendingNote: "Saved, but not on the site: you've used this month's free listings. Pay to publish it.", payPublish: 'Pay and publish',
     endedNote: (d) => `It ended${d ? ` on ${d}` : ''} and is off the site. Extend it to bring it back.`, extend: 'Extend', paidChip: 'Paid listing',
     rejectedNote: "We didn't publish it: some photos may show 18+, harmful, abusive or unrelated content. Replace them and submit again.",
-    fix: 'Fix photos',
+    fix: 'Fix photos', edit: 'Edit',
     emptyDrafts: "No drafts. If you start a listing and don't finish, we keep it here.",
     saved: (s) => `Saved ${s}`, missing: 'Missing', miss: { price: 'price', area: 'area', phone: 'phone', photos: 'photos' },
     confirmT: 'Delete draft', confirm: 'Delete this draft?',
@@ -313,6 +313,7 @@ export default function MyListingsPage() {
                   )}
                   <div className="flex gap-2">
                     <button onClick={() => setFix({ id: l.id, label: [l.type, l.neighborhood, l.city].filter(Boolean).join(' · ') })} className="flex-[2] py-2 rounded-pill bg-ink text-paper text-[13px] font-bold hover:bg-ink/90">{x.fix}</button>
+                    <button onClick={() => openSell({ edit: l.id })} className="flex-1 py-2 rounded-pill border-[1.5px] border-ink text-[13px] font-semibold" data-testid="edit-listing">{x.edit}</button>
                     <button onClick={() => setConfirmId(l.id)} className="flex-1 py-2 rounded-pill border-[1.5px] border-red-300 text-red-700 text-[13px] font-semibold">{t.del}</button>
                   </div>
                 </div>
@@ -377,6 +378,9 @@ export default function MyListingsPage() {
                 )}
                 <div className="flex gap-2">
                   <Link href={`/propiedad/${l.id}`} className="flex-1 text-center py-2 rounded-pill border-[1.5px] border-ink text-[13px] font-semibold">{t.view}</Link>
+                  {(!l.admin_status || l.admin_status === 'active') && (
+                    <button onClick={() => openSell({ edit: l.id })} className="flex-1 py-2 rounded-pill bg-ink text-paper text-[13px] font-bold hover:bg-ink/90" data-testid="edit-listing">{x.edit}</button>
+                  )}
                   <button onClick={() => setConfirmId(l.id)} className="flex-1 py-2 rounded-pill border-[1.5px] border-red-300 text-red-700 text-[13px] font-semibold">{t.del}</button>
                 </div>
               </div>

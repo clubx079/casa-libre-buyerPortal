@@ -51,6 +51,14 @@ const DICT = {
     verifyTitle: 'Confirmá tu cuenta', verifySub: (e) => `Para publicar, continuá con Google o te enviamos un código de 6 dígitos a ${e} o por WhatsApp.`, sendCode: 'Enviar código',
     sendByEmail: 'Enviar código por email', sendByWa: 'Enviar código por WhatsApp',
     waOtpSub: (p) => `Ingresá el código que enviamos por WhatsApp al ${p}.`, waTest: (c) => `Modo de prueba (no se envía WhatsApp): el código es ${c}`,
+    saveEdit: 'Guardar cambios', savingEdit: 'Guardando…', editedTitle: '¡Cambios guardados!',
+    editedLive: 'Tu propiedad ya muestra los cambios.', editedChecking: 'Estamos revisando las fotos nuevas. Vuelve a estar visible apenas terminemos, en unos minutos.',
+    editedDup: 'Quedó igual a otra de tus publicaciones, así que la revisamos antes de mostrarla. Te avisamos por email.',
+    editLock: { checking: 'Todavía estamos revisando sus fotos. Probá de nuevo en unos minutos.', taken_down: 'Esta publicación no está visible por una revisión de nuestro equipo. Escribinos para cambiarla.', held_duplicate: 'Esta publicación está en revisión. Escribinos para cambiarla.', payment_pending: 'Primero completá el pago de esta publicación.', locked: 'Esta publicación no se puede editar.' },
+    errEditLoad: 'No pudimos abrir la publicación. Intentá de nuevo.', errPhotosMin: 'Agregá al menos una foto',
+    waCheckTitle: 'Confirmá tu WhatsApp', waCheckSub: (p) => `Los compradores te van a escribir al ${p}. Para que les llegue bien, te enviamos un código de 6 dígitos por WhatsApp a ese número.`,
+    waCheckSend: 'Enviar código por WhatsApp', waCheckCode: (p) => `Ingresá el código que enviamos por WhatsApp al ${p}.`, waCheckChange: 'Cambiar el número',
+    errWaCheck: 'No se pudo enviar el código. Revisá el número e intentá de nuevo.', errWaCode: 'El código no es correcto.', errWaExpired: 'El código venció. Pedí uno nuevo.',
     errWaSend: 'No se pudo enviar el código por WhatsApp. Probá por email.', errWaNotLinked: 'Ese WhatsApp todavía no está vinculado a la cuenta de este email. Usá el código por email.',
     fWa: 'Tu WhatsApp (para compradores)',
     otpTitle: 'Código de confirmación enviado', otpSub: (e) => `Ingresá el código que enviamos a ${e} para verificar tu correo.`,
@@ -104,6 +112,14 @@ const DICT = {
     verifyTitle: 'Confirm your account', verifySub: (e) => `To publish, continue with Google or we'll send a 6-digit code to ${e} or on WhatsApp.`, sendCode: 'Send code',
     sendByEmail: 'Send code by email', sendByWa: 'Send code on WhatsApp',
     waOtpSub: (p) => `Enter the code we sent on WhatsApp to ${p}.`, waTest: (c) => `Test mode (no WhatsApp is sent): the code is ${c}`,
+    saveEdit: 'Save changes', savingEdit: 'Saving…', editedTitle: 'Changes saved!',
+    editedLive: 'Your listing now shows the changes.', editedChecking: "We're checking the new photos. It's visible again as soon as we finish, in a few minutes.",
+    editedDup: "It's now the same as another of your listings, so we'll review it before showing it. We'll email you.",
+    editLock: { checking: "We're still checking its photos. Try again in a few minutes.", taken_down: "This listing isn't visible because our team is reviewing it. Write to us to change it.", held_duplicate: 'This listing is under review. Write to us to change it.', payment_pending: 'Complete the payment for this listing first.', locked: "This listing can't be edited." },
+    errEditLoad: "We couldn't open the listing. Try again.", errPhotosMin: 'Add at least one photo',
+    waCheckTitle: 'Confirm your WhatsApp', waCheckSub: (p) => `Buyers will message you at ${p}. To make sure it reaches you, we'll send a 6-digit code on WhatsApp to that number.`,
+    waCheckSend: 'Send code on WhatsApp', waCheckCode: (p) => `Enter the code we sent on WhatsApp to ${p}.`, waCheckChange: 'Change the number',
+    errWaCheck: "Couldn't send the code. Check the number and try again.", errWaCode: "That code isn't right.", errWaExpired: 'The code expired. Ask for a new one.',
     errWaSend: 'Could not send the WhatsApp code. Try by email.', errWaNotLinked: "That WhatsApp isn't linked to this email's account yet. Use the email code.",
     fWa: 'Your WhatsApp (for buyers)',
     otpTitle: 'Confirmation code sent', otpSub: (e) => `Enter the code we emailed to ${e} to verify your email.`,
@@ -150,6 +166,8 @@ const pickCls = (on) => `flex-1 px-5 py-3.5 rounded-pill border-[1.5px] text-[15
 const emailOk = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || ''));
 // The seller's WhatsApp (step 1): country code + number. 8+ digits = more than the bare prefix.
 const phoneOk = (p) => String(p || '').replace(/\D/g, '').length >= 8;
+const BEFORE_CONFIRM = 'before-confirm';   // "Confirmá tu WhatsApp" opened on the way to the confirm screen
+const EDIT_SAVE = 'edit-save';             // …opened by saving an edit (a changed number)
 const WHATSAPP_LOGIN = process.env.NEXT_PUBLIC_WHATSAPP_LOGIN === '1';
 // This country's currency per US$ (offline fallback; the server checks with the live rate).
 const APPROX_RATE = COUNTRY.fxFallback || 7300;
@@ -250,7 +268,7 @@ export default function SellFlowProvider({ children }) {
   const resumedAtRef = useRef(null);
   // The confirm step shows whether this listing is free or paid this month.
   useEffect(() => {
-    if (!open || step !== 4) return;
+    if (!open || step !== 4 || editId) return;
     let alive = true;
     const qs = new URLSearchParams();
     try { const id = deviceId(); const fp = deviceFingerprint(); if (id) qs.set('device_id', id); if (fp) qs.set('fp', fp); } catch {}
@@ -273,6 +291,15 @@ export default function SellFlowProvider({ children }) {
   const [waPhone, setWaPhone] = useState('');        // E.164 the WhatsApp code went to
   const [waCode, setWaCode] = useState('');
   const [waDev, setWaDev] = useState('');            // test key only: the code itself
+  // The listing's WhatsApp must be proven before publishing (lib/listingPhone.js): the account's
+  // own verified number, or a code sent to it → phoneProof (sent to /api/publish).
+  const [phoneProof, setPhoneProof] = useState({ phone: '', proof: '' });
+  const [lp, setLp] = useState({ sent: false, code: '', dev: '', phone: '' });   // phase 'wacheck'
+  const pendingPublishRef = useRef(false);   // the publish (with its plan) waiting for the code
+  // Editing a published listing (My listings → Editar): its id and the WhatsApp it had —
+  // the code is asked only when that number changes. No drafts, no plans, no quota.
+  const [editId, setEditId] = useState(null);
+  const [editPhone, setEditPhone] = useState('');
   const [sendingWa, setSendingWa] = useState(false); // spinner on the WhatsApp button, not the email one
   const [loginCode, setLoginCode] = useState('');   // sign-in code for an email that already has an account
   const [codeSent, setCodeSent] = useState(false);  // the visitor clicked "Send code" on the confirm-email screen
@@ -295,9 +322,20 @@ export default function SellFlowProvider({ children }) {
   const [draftId, setDraftId] = useState(null);
   const creatingDraftRef = useRef(false);
 
+  // "Confirmá tu WhatsApp" comes BEFORE the confirm screen: on reaching step 4 (from the details,
+  // or right after signing in), a number that isn't the account's proven WhatsApp opens the step.
+  useEffect(() => {
+    if (!open || step !== 4 || !user || phase || result) return;
+    if (phoneProof.phone === f.contact_phone && phoneProof.proof) return;
+    if (editId && f.contact_phone === editPhone) return;   // editing, number unchanged
+    let alive = true;
+    fetch(`/api/account/listing-phone?phone=${encodeURIComponent(f.contact_phone)}`).then((r) => r.json()).catch(() => ({}))
+      .then((st) => { if (alive && st && st.ok && !st.verified) { askWhatsApp(BEFORE_CONFIRM); setStep(3); } });
+    return () => { alive = false; };
+  }, [open, step, user, phase, f.contact_phone]);   // eslint-disable-line react-hooks/exhaustive-deps
   const reset = () => {
     setStep(0); setPhase(''); setErr(''); setErrs({}); setBusy(false); setCode(''); setVerified(false); setEmailTaken(false); setLoginCode(''); setCodeSent(false); setPhotos([]); setResult(null); setShowHi(false); setHighlighted(false); setPaying(false); setPlan(null); setConfirmOk(false); setTermsOk(false); setResumed(false); setQuota(null); setListingPay(false);
-    setF(BLANK); setDraftId(null); creatingDraftRef.current = false;
+    setF(BLANK); setDraftId(null); creatingDraftRef.current = false; setEditId(null); setEditPhone('');
   };
   const close = () => { setOpen(false); reset(); };
 
@@ -407,6 +445,20 @@ export default function SellFlowProvider({ children }) {
   // openSell({ draft }) resumes one of the user's drafts at the details step.
   // (Also used directly as an onClick handler, so ignore anything that isn't options.)
   const openSell = useCallback(async (opts) => {
+    if (opts && typeof opts === 'object' && opts.edit) {   // My listings → Editar
+      const j = await fetch(`/api/account/listings/edit?id=${encodeURIComponent(opts.edit)}`).then((r) => r.json()).catch(() => null);
+      if (!j?.ok) { window.alert(t.errEditLoad); return; }
+      if (j.lock) { window.alert(t.editLock[j.lock] || t.editLock.locked); return; }
+      reset();
+      openedLoggedInRef.current = true;
+      setVerified(true); setTermsOk(true);
+      setF({ ...BLANK, ...j.fields, email: user?.email || '' });
+      restorePhotos(j.photos.map((x) => ({ key: x.key, url: x.url })));
+      setEditId(j.id); setEditPhone(j.fields.contact_phone || '');
+      setStep(3); setOpen(true);
+      track('listing_edit_opened', { property_id: j.id });
+      return;
+    }
     const draft = opts && typeof opts === 'object' && opts.draft ? opts.draft : null;
     if (draft && user) {
       openAtDetails(draft.data || {}, draft.id);
@@ -427,12 +479,12 @@ export default function SellFlowProvider({ children }) {
 
   // Remember the progress on every change while the wizard is open (until published)…
   useEffect(() => {
-    if (!open || result || (step === 0 && !f.mode)) return;
+    if (!open || result || editId || (step === 0 && !f.mode)) return;
     writeProgress({ owner: me, step, f, draftId, termsOk, at: Date.now(), dismissed: readProgress().dismissed || [] });
   }, [open, result, step, f, draftId, termsOk, me]);
   // …and its photos (IndexedDB — files don't fit in localStorage).
   useEffect(() => {
-    if (!open || result) return;
+    if (!open || result || editId) return;
     saveProgressPhotos({ owner: me, files: photoStash() });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, result, photos, me]);
@@ -542,7 +594,7 @@ export default function SellFlowProvider({ children }) {
 
   // Create the draft as soon as a signed-in user has chosen the address…
   useEffect(() => {
-    if (!open || !user || result || draftId || creatingDraftRef.current || !draftReady(f)) return;
+    if (!open || !user || result || editId || draftId || creatingDraftRef.current || !draftReady(f)) return;
     creatingDraftRef.current = true;
     (async () => {
       try {
@@ -645,7 +697,7 @@ export default function SellFlowProvider({ children }) {
     setErr('');
     setStep((s) => s + 1);
   };
-  const back = () => { setErr(''); setEmailTaken(false); setCodeSent(false); setChannel('email'); if (phase === 'otp') { setPhase(''); return; } setStep((s) => Math.max(s - 1, 0)); };
+  const back = () => { setErr(''); setEmailTaken(false); setCodeSent(false); setChannel('email'); if (phase === 'otp') { setPhase(''); return; } if (phase === 'wacheck') { setPhase(''); if (pendingPublishRef.current === BEFORE_CONFIRM) setStep(3); return; } setStep((s) => Math.max(s - 1, 0)); };
 
   // Does the email already have an account? Only decides what the confirm screen says
   // (nothing is sent). Unknown / slow → treated as new; Send code still finds out.
@@ -809,17 +861,101 @@ export default function SellFlowProvider({ children }) {
     } catch { setPaying(false); setShowHi(true); }
   };
 
-  const publish = async (openHighlightAfter = false) => {
+  // Open the "Confirmá tu WhatsApp" step; the publish carries on once the code is right.
+  const askWhatsApp = (openHighlightAfter) => {
+    pendingPublishRef.current = openHighlightAfter;   // BEFORE_CONFIRM: on the way to the confirm screen
+    setLp({ sent: false, code: '', dev: '', phone: '' }); setErr(''); setPhase('wacheck');
+  };
+  // number confirmed → show the confirm screen (normal path) or carry on publishing (safety net)
+  const afterWhatsApp = (proof) => {
+    setPhase('');
+    if (pendingPublishRef.current === BEFORE_CONFIRM) { setStep(4); return; }
+    if (pendingPublishRef.current === EDIT_SAVE) { saveEdit(proof); return; }
+    publish(pendingPublishRef.current, proof);
+  };
+  const sendLpCode = async () => {
+    setBusy(true); setErr('');
+    try {
+      const res = await fetch('/api/account/listing-phone', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: f.contact_phone }) });
+      const j = await res.json().catch(() => ({}));
+      if (j.proof) { setPhoneProof({ phone: f.contact_phone, proof: j.proof }); afterWhatsApp(j.proof); return; }   // already the account's own number
+      if (!res.ok || !j.sent) { setErr(t.errWaCheck); return; }
+      setLp({ sent: true, code: '', dev: j.devCode || '', phone: j.phone });
+      track('sell_wa_check_sent', {});
+    } catch { setErr(t.errWaCheck); } finally { setBusy(false); }
+  };
+  const verifyLpCode = async () => {
+    if (lp.code.length < 4) { setErr(t.errCode); return; }
+    setBusy(true); setErr('');
+    try {
+      const res = await fetch('/api/account/listing-phone', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: f.contact_phone, code: lp.code }) });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j.proof) { setErr(j.error === 'expired' || j.error === 'too_many_attempts' ? t.errWaExpired : t.errWaCode); return; }
+      track('sell_wa_check_verified', { linked: !!j.linked });
+      if (j.linked) refreshUser?.();
+      setPhoneProof({ phone: f.contact_phone, proof: j.proof });
+      setBusy(false);
+      afterWhatsApp(j.proof);
+    } catch { setErr(t.errWaCode); } finally { setBusy(false); }
+  };
+
+  const saveEdit = async (proofNow = '') => {
+    const e = validateDetails();
+    if (Object.keys(e).length) { setErrs(e); setErr(''); setStep(e.ptype ? 2 : 3); return; }
+    if (!phoneOk(f.contact_phone)) { setErr(t.errPhone); setStep(1); return; }
+    if (!photos.length) { setErr(t.errPhotosMin); setStep(3); return; }
+    if (!confirmOk) { setErr(t.errConfirm); return; }
+    const proof = proofNow || (phoneProof.phone === f.contact_phone ? phoneProof.proof : '');
+    setErrs({}); setBusy(true); setErr('');
+    try {
+      const fd = new FormData();
+      fd.set('id', editId);
+      fd.set('mode', f.mode); fd.set('ptype', f.ptype); fd.set('neighborhood', f.neighborhood); fd.set('city', f.city);
+      fd.set('price', String(parsePrice(f.price))); fd.set('currency', priceCurrency); fd.set('area', f.area); fd.set('description', f.description);
+      fd.set('contact_name', f.contact_name); fd.set('contact_phone', f.contact_phone); fd.set('seller_type', f.seller_type);
+      if (proof) fd.set('phone_proof', proof);
+      if (f.street) fd.set('address', f.street);
+      if (f.lat !== '' && f.lng !== '') { fd.set('latitude', String(f.lat)); fd.set('longitude', String(f.lng)); }
+      if (hasRooms(f.ptype)) { fd.set('bedrooms', f.bedrooms); fd.set('bathrooms', f.bathrooms); }
+      // photos it keeps (by key) and new files, in the seller's order
+      const order = []; let nFiles = 0;
+      photos.forEach((ph) => { if (ph.key) order.push({ k: ph.key }); else if (ph.file) { order.push({ f: nFiles++ }); fd.append('photos', ph.file); } });
+      fd.set('photo_order', JSON.stringify(order));
+      const res = await fetch('/api/account/listings/edit', { method: 'POST', body: fd });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j.ok) throw new Error(j.error || 'failed');
+      window.dispatchEvent(new Event('cl:listings-changed'));   // My listings refreshes
+      track('listing_edited', { property_id: j.id, outcome: j.outcome, new_photos: j.newPhotos });
+      setResult({ id: j.id, edited: j.outcome });
+    } catch (er) {
+      const code = er?.message;
+      if (code === 'missing_street') { setStep(2); setErr(t.errStreet); }
+      else if (code === 'phone_unverified') askWhatsApp(EDIT_SAVE);
+      else if (t.editLock[code]) setErr(t.editLock[code]);
+      else setErr(t.errSubmit);
+    } finally { setBusy(false); }
+  };
+
+  const publish = async (openHighlightAfter = false, proofNow = '') => {
     const e = validateDetails();
     if (Object.keys(e).length) { setErrs(e); setErr(''); setStep(e.ptype ? 2 : 3); return; }
     if (!phoneOk(f.contact_phone)) { setErr(t.errPhone); setStep(1); return; }
     if (!confirmOk) { setErr(t.errConfirm); return; }
+    // the WhatsApp number buyers will use must be proven (a code to it) unless it is the account's own
+    const proof = proofNow || (phoneProof.phone === f.contact_phone ? phoneProof.proof : '');
+    if (!proof) {
+      setBusy(true); setErr('');
+      const st = await fetch(`/api/account/listing-phone?phone=${encodeURIComponent(f.contact_phone)}`).then((r) => r.json()).catch(() => ({}));
+      setBusy(false);
+      if (!st.verified) { askWhatsApp(openHighlightAfter); return; }
+    }
     setErrs({}); setBusy(true); setErr('');
     try {
       const fd = new FormData();
       fd.set('mode', f.mode); fd.set('ptype', f.ptype); fd.set('neighborhood', f.neighborhood); fd.set('city', f.city);
       fd.set('price', String(parsePrice(f.price))); fd.set('currency', priceCurrency); fd.set('area', f.area); fd.set('description', f.description);
       fd.set('contact_name', f.contact_name); fd.set('contact_phone', f.contact_phone); fd.set('seller_type', f.seller_type);
+      fd.set('wa_check', '1'); if (proof) fd.set('phone_proof', proof);   // the WhatsApp number is proven (lib/listingPhone.js)
       // the street + number and the map position of the address picked from the list
       if (f.street) fd.set('address', f.street);
       if (f.lat !== '' && f.lng !== '') { fd.set('latitude', String(f.lat)); fd.set('longitude', String(f.lng)); }
@@ -844,7 +980,9 @@ export default function SellFlowProvider({ children }) {
       if (openHighlightAfter) await payWithPlan(openHighlightAfter, j.id);
     } catch (e) {
       // a page opened before the street became required: back to the address step
-      if (e?.message === 'missing_street') { setStep(2); setErr(t.errStreet); } else setErr(t.errSubmit);
+      if (e?.message === 'missing_street') { setStep(2); setErr(t.errStreet); }
+      else if (e?.message === 'phone_unverified') askWhatsApp(openHighlightAfter);
+      else setErr(t.errSubmit);
     } finally { setBusy(false); }
   };
 
@@ -875,7 +1013,15 @@ export default function SellFlowProvider({ children }) {
             )}
 
             {/* ---- SUCCESS ---- */}
-            {result ? (
+            {result?.edited ? (
+              <div className="text-center py-4" data-testid="sell-edited">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/mascot.png" alt="" className="w-[120px] object-contain mx-auto mb-2" />
+                <h2 className="text-[24px] font-bold tracking-head mb-1.5">{t.editedTitle}</h2>
+                <p className="text-[14px] text-ink/60 mb-5">{result.edited === 'checking' ? t.editedChecking : result.edited === 'duplicate' ? t.editedDup : t.editedLive}</p>
+                <button onClick={close} className="px-7 py-3 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft">{t.close}</button>
+              </div>
+            ) : result ? (
               <div className="text-center py-4">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/mascot.png" alt="" className="w-[120px] object-contain mx-auto mb-2" />
@@ -928,6 +1074,32 @@ export default function SellFlowProvider({ children }) {
                     onSuccess={() => { setHighlighted(true); setShowHi(false); }}
                   />
                 )}
+              </div>
+            ) : phase === 'wacheck' ? (
+              /* ---- CONFIRM THE LISTING'S WHATSAPP (a code to the number buyers will use) ---- */
+              <div data-testid="sell-wa-check">
+                <h2 className="text-[22px] font-bold tracking-head mb-1">{t.waCheckTitle}</h2>
+                {!lp.sent ? (
+                  <>
+                    <p className="text-[14px] text-ink/55 mb-4">{t.waCheckSub(f.contact_phone)}</p>
+                    <button onClick={sendLpCode} disabled={busy} className="w-full px-7 py-3.5 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60 inline-flex items-center justify-center gap-2 min-h-[48px]" data-testid="sell-wa-check-send">
+                      {busy ? <Spinner /> : t.waCheckSend}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-[14px] text-ink/55 mb-4">{t.waCheckCode(lp.phone)}</p>
+                    {lp.dev && <div className="mb-3 text-[12.5px] font-medium bg-amber-50 border border-amber-200 rounded-[12px] px-3.5 py-2.5">{t.waTest(lp.dev)}</div>}
+                    <input value={lp.code} onChange={(e) => setLp((x) => ({ ...x, code: e.target.value.replace(/\D/g, '').slice(0, 6) }))} placeholder={t.codePh} inputMode="numeric" autoComplete="one-time-code" className={`${inputCls} text-center tracking-[0.3em] text-[18px] font-semibold`} onKeyDown={(e) => { if (e.key === 'Enter') verifyLpCode(); }} data-testid="sell-wa-check-code" autoFocus />
+                    <button onClick={verifyLpCode} disabled={busy} className="w-full mt-4 px-7 py-3.5 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60 inline-flex items-center justify-center min-h-[48px]" data-testid="sell-wa-check-verify">{busy ? <Spinner /> : t.verify}</button>
+                    <button type="button" onClick={sendLpCode} disabled={busy} className="w-full mt-2 text-[13px] font-medium text-ink/55 hover:text-ink">{t.resend}</button>
+                  </>
+                )}
+                {err && <div className="mt-4 text-[13px] font-medium text-red-700 bg-red-50 border border-red-200 rounded-[12px] px-3.5 py-2.5">{err}</div>}
+                <div className="mt-5 flex items-center justify-between">
+                  <button type="button" onClick={back} className="text-[13px] font-medium text-ink/55 hover:text-ink">{t.back}</button>
+                  <button type="button" onClick={() => { setPhase(''); setErr(''); setStep(1); }} className="text-[13px] font-semibold underline">{t.waCheckChange}</button>
+                </div>
               </div>
             ) : phase === 'otp' ? (
               /* ---- OTP VERIFY overlay ---- */
@@ -1157,7 +1329,7 @@ export default function SellFlowProvider({ children }) {
                     </label>
 
                     {/* Free listings per month (lib/paidListings.js): the price, before publishing. */}
-                    {quota?.enabled && quota.paymentRequired && (
+                    {!editId && quota?.enabled && quota.paymentRequired && (
                       <div className="mt-4 rounded-[16px] border-[1.5px] border-ink bg-card px-4 py-3.5" data-testid="sell-paid-note">
                         <div className="text-[13px] font-semibold mb-1.5">{t.paidNote(quota.freePerMonth)}</div>
                         <div className="flex items-center gap-2 flex-wrap">
@@ -1172,13 +1344,13 @@ export default function SellFlowProvider({ children }) {
 
                     {/* Promotion plans — two prominent, mutually-exclusive boxes. On a paid
                         listing the plan is charged right after the listing's own payment. */}
-                    <div className="mt-4">
+                    {!editId && <div className="mt-4">
                       <div className="text-[13px] font-semibold mb-2">{t.planTitle}</div>
                       <div className="grid gap-2.5">
                         <PlanBox on={plan === 'verified'} onClick={() => setPlan((p) => (p === 'verified' ? null : 'verified'))} title={t.v5Title} price={t.v5Price} benefits={[]} icon={<VerifiedIcon className="w-4 h-4" />} />
                         <PlanBox on={plan === 'home'} onClick={() => setPlan((p) => (p === 'home' ? null : 'home'))} title={t.v20Title} price={t.v20Price} benefits={[]} icon={<VerifiedIcon className="w-4 h-4" />} badge={<RecommendedTag lang={lang} className="text-[8px] px-1.5 py-0.5" />} />
                       </div>
-                    </div>
+                    </div>}
                   </div>
                 )}
 
@@ -1191,7 +1363,9 @@ export default function SellFlowProvider({ children }) {
                     {step < 4 ? (
                       <button onClick={next} disabled={busy} className="px-7 py-3 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60 inline-flex items-center justify-center min-w-[108px]">{busy ? <Spinner /> : t.next}</button>
                     ) : (
-                      <button onClick={() => publish(plan)} disabled={busy} data-testid="sell-publish" className="px-7 py-3 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60">{busy ? t.publishing : quota?.enabled && quota.paymentRequired ? t.publishPaid(quota.price, plan) : (plan === 'home' ? t.publishHome : plan === 'verified' ? t.publishVerified : t.publishBtn)}</button>
+                      editId ? (
+                        <button onClick={() => saveEdit()} disabled={busy} data-testid="sell-save-edit" className="px-7 py-3 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60">{busy ? t.savingEdit : t.saveEdit}</button>
+                      ) : <button onClick={() => publish(plan)} disabled={busy} data-testid="sell-publish" className="px-7 py-3 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60">{busy ? t.publishing : quota?.enabled && quota.paymentRequired ? t.publishPaid(quota.price, plan) : (plan === 'home' ? t.publishHome : plan === 'verified' ? t.publishVerified : t.publishBtn)}</button>
                     )}
                   </div>
                 )}
