@@ -23,6 +23,7 @@ import { runPaidListings, PAID_AUTOMATION_ID } from '@/lib/automations/paidListi
 import { runNoListingNudge, NO_LISTING_AUTOMATION_ID } from '@/lib/automations/noListingNudge';
 import { runListingHeld, LISTING_HELD_ID } from '@/lib/automations/listingHeld';
 import { runSavesMilestone, SAVES_AUTOMATION_ID } from '@/lib/automations/savesMilestone';
+import { runPaymentFollowup, PAYMENT_FOLLOWUP_ID, paymentFollowupConfig, OFFER_DAYS as GIFT_OFFER_DAYS } from '@/lib/automations/paymentFollowup';
 import { fetchListingViews, viewsConfigured } from '@/lib/posthogViews';
 import { sendPush } from '@/lib/push';
 import { runOwnerPushes } from '@/lib/ownerPushes';
@@ -45,7 +46,7 @@ async function handle(req) {
     ? { skipped: 'off' }
     : await runOwnerPushes(db, (o) => sendPush(db, o), { now: new Date(), countryCode: COUNTRY.code }).catch((e) => ({ error: e?.message || 'push_failed' }));
 
-  let automation, viewsAutomation, draftsAutomation, paidAutomation, noListingAutomation, heldAutomation, savesAutomation, templates;
+  let automation, viewsAutomation, draftsAutomation, paidAutomation, noListingAutomation, heldAutomation, savesAutomation, payFollowAutomation, templates;
   try {
     [automation] = await db.select('automations', `id=eq.${AUTOMATION_ID}&limit=1`);
     [viewsAutomation] = await db.select('automations', `id=eq.${VIEWS_AUTOMATION_ID}&limit=1`).catch(() => []);
@@ -54,6 +55,7 @@ async function handle(req) {
     [noListingAutomation] = await db.select('automations', `id=eq.${NO_LISTING_AUTOMATION_ID}&limit=1`).catch(() => []);
     [heldAutomation] = await db.select('automations', `id=eq.${LISTING_HELD_ID}&limit=1`).catch(() => []);
     [savesAutomation] = await db.select('automations', `id=eq.${SAVES_AUTOMATION_ID}&limit=1`).catch(() => []);
+    [payFollowAutomation] = await db.select('automations', `id=eq.${PAYMENT_FOLLOWUP_ID}&limit=1`).catch(() => []);
     templates = await db.select('email_templates', 'select=*');
   } catch (e) {
     // Migration 005 not applied on this country's DB yet.
@@ -132,7 +134,18 @@ async function handle(req) {
       : await runListingHeld({
         db, automation: heldAutomation, templates, now: new Date(), deliver: sendRenderedEmail, frame, siteUrl: site,
         countryCode: COUNTRY.code, emailOverride: process.env.AUTOMATION_EMAIL_OVERRIDE || '',
+        skipReasons: paymentFollowupConfig(payFollowAutomation || null).enabled ? ['payment'] : [],
       }).catch((e) => ({ error: e?.message || 'held_failed' }));
+    // Waiting for payment: its own reminders, then a one-time "this listing is on us" gift
+    // (lib/automations/paymentFollowup.js; the link → /api/listing-gift/claim).
+    const payFollow = !payFollowAutomation
+      ? { skippedReason: 'not_set_up' }
+      : await runPaymentFollowup({
+        db, automation: payFollowAutomation, templates, now: new Date(), deliver: sendRenderedEmail, frame, siteUrl: site,
+        phonePrefix: COUNTRY.phonePrefix || '', emailOverride: process.env.AUTOMATION_EMAIL_OVERRIDE || '',
+        claimUrl: (p) => `${site}/api/listing-gift/claim?token=${encodeURIComponent(signRenewToken({ pid: p.id, uid: p.created_by, plan: 'listing', purpose: 'listing_gift' }, GIFT_OFFER_DAYS * 86400000))}`,
+        formatDate: (s) => { try { return new Date(s).toLocaleDateString(COUNTRY.locale, { day: 'numeric', month: 'long' }); } catch { return String(s).slice(0, 10); } },
+      }).catch((e) => ({ error: e?.message || 'payment_followup_failed' }));
     // A listing reached a number of saves (accounts + visitors) → tell the seller once per number.
     const saves = !savesAutomation
       ? { skippedReason: 'not_set_up' }
@@ -140,7 +153,7 @@ async function handle(req) {
         db, automation: savesAutomation, templates, deliver: sendRenderedEmail, frame, siteUrl: site,
         emailOverride: process.env.AUTOMATION_EMAIL_OVERRIDE || '',
       }).catch((e) => ({ error: e?.message || 'saves_failed' }));
-    return NextResponse.json({ ok: true, quietHours: frame.quiet, ...result, views, drafts, duplicates, paid, noListing, held, saves, pushes, at: new Date().toISOString() });
+    return NextResponse.json({ ok: true, quietHours: frame.quiet, ...result, views, drafts, duplicates, paid, noListing, held, payFollow, saves, pushes, at: new Date().toISOString() });
   } catch (e) {
     return NextResponse.json({ error: 'automation_failed', detail: e?.message }, { status: 500 });
   }

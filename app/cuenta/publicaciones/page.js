@@ -41,6 +41,36 @@ const GIFT = {
   },
 };
 
+// The "this listing is on us" gift for a listing waiting for payment (lib/automations/
+// paymentFollowup.js): the email button → /api/listing-gift/claim → ?listing_gift=claimed&p=<id>,
+// or the "Publicar gratis" button on the card.
+const LGIFT = {
+  es: {
+    note: (d) => `Esta va por nuestra cuenta: publicala gratis${d ? ` hasta el ${d}` : ''}.`,
+    btn: 'Publicar gratis', busy: 'Publicando…',
+    claimedT: '¡Listo, va por nuestra cuenta!',
+    claimed: 'Tu publicación se está publicando gratis: revisamos las fotos y queda visible en un momento.',
+    expired: 'Este regalo ya venció. Podés pagarla para publicarla.',
+    paid: 'Esta publicación ya está paga.',
+    unavailable: 'Esta publicación ya no está esperando el pago.',
+    invalid: 'El enlace no es válido para esta cuenta.',
+    error: 'No pudimos publicarla. Probá de nuevo en un rato.',
+    close: 'Cerrar',
+  },
+  en: {
+    note: (d) => `This one is on us: publish it for free${d ? ` until ${d}` : ''}.`,
+    btn: 'Publish for free', busy: 'Publishing…',
+    claimedT: 'Done, this one is on us!',
+    claimed: "Your listing is being published for free: we're checking the photos and it goes live in a moment.",
+    expired: 'This gift has expired. You can pay to publish it.',
+    paid: 'This listing is already paid.',
+    unavailable: 'This listing is no longer waiting for payment.',
+    invalid: "This link isn't valid for this account.",
+    error: "We couldn't publish it. Please try again later.",
+    close: 'Close',
+  },
+};
+
 const daysLeft = (iso) => { try { return Math.max(1, Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000)); } catch { return 0; } };
 
 const D = {
@@ -133,6 +163,8 @@ export default function MyListingsPage() {
   const [autoPay, setAutoPay] = useState(false);  // one-shot: honor a ?pay=&plan= deep link once
   const [gift, setGift] = useState(null);         // { state, id } from the gift email's verify link
   const [lpay, setLpay] = useState(null);         // { id, kind: 'publish' | 'extend' } — the paid-listing pop-up
+  const [lgift, setLgift] = useState(null);       // { state, id } — the "on us" gift result
+  const [claimingId, setClaimingId] = useState(null);
 
   const load = () => {
     fetch('/api/account/listings').then((r) => r.json()).then((j) => setListings(j.listings || [])).catch(() => setListings([]));
@@ -227,6 +259,28 @@ export default function MyListingsPage() {
     try { const u = new URL(window.location.href); u.searchParams.delete('gift'); u.searchParams.delete('p'); window.history.replaceState(null, '', u.toString()); } catch {}
   }, []);
 
+  useEffect(() => {
+    let state = null, id = null;
+    try { const sp = new URLSearchParams(window.location.search); state = sp.get('listing_gift'); id = sp.get('p'); } catch {}
+    if (!state) return;
+    setLgift({ state, id });
+    if (state === 'claimed') { setTab('active'); polls.current = 0; }
+    track(state === 'claimed' ? 'listing_gift_claimed' : 'listing_gift_failed', { property_id: id, reason: state === 'claimed' ? undefined : state, via: 'email' });
+    try { const u = new URL(window.location.href); u.searchParams.delete('listing_gift'); u.searchParams.delete('p'); window.history.replaceState(null, '', u.toString()); } catch {}
+  }, []);
+
+  const claimGift = async (id) => {
+    setClaimingId(id);
+    try {
+      const r = await fetch('/api/listing-gift/claim', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ propertyId: id }) });
+      const j = await r.json().catch(() => ({}));
+      const state = j.ok ? 'claimed' : j.reason || 'error';
+      setLgift({ state, id });
+      track(j.ok ? 'listing_gift_claimed' : 'listing_gift_failed', { property_id: id, reason: j.ok ? undefined : state, via: 'my_listings' });
+      polls.current = 0; load();
+    } catch { setLgift({ state: 'error', id }); } finally { setClaimingId(null); }
+  };
+
   const del = async () => {
     const id = confirmId;
     if (!id) return;
@@ -267,6 +321,21 @@ export default function MyListingsPage() {
               {ok && <Link href="/" className="inline-block mt-3 px-4 py-2 rounded-pill bg-ink text-paper text-[13px] font-semibold">{g.seeHome}</Link>}
             </div>
             <button onClick={() => setGift(null)} aria-label={g.close} className="shrink-0 text-ink/40 hover:text-ink text-[20px] leading-none">×</button>
+          </div>
+        );
+      })()}
+
+      {lgift && (() => {
+        const g = LGIFT[lang] || LGIFT.es;
+        const ok = lgift.state === 'claimed';
+        return (
+          <div data-testid="listing-gift-banner" className={`mb-6 rounded-card border-[1.5px] p-4 sm:p-5 flex items-start gap-3 ${ok ? 'border-ink bg-card shadow-hard-soft' : 'border-red-300 bg-red-50'}`}>
+            {ok && <span aria-hidden className="shrink-0 w-9 h-9 rounded-full bg-ink text-paper inline-flex items-center justify-center text-[18px] font-bold">✓</span>}
+            <div className="flex-1 min-w-0">
+              {ok && <p className="font-bold text-[16px] leading-tight">{g.claimedT}</p>}
+              <p className={`text-[14px] leading-snug ${ok ? 'text-ink/70 mt-1' : 'text-red-800'}`}>{ok ? g.claimed : (g[lgift.state] || g.error)}</p>
+            </div>
+            <button onClick={() => setLgift(null)} aria-label={g.close} className="shrink-0 text-ink/40 hover:text-ink text-[20px] leading-none">×</button>
           </div>
         );
       })()}
@@ -340,6 +409,17 @@ export default function MyListingsPage() {
             ) : l.payState ? (
               <div className="flex flex-col gap-2.5" data-testid={`pay-card-${l.payState}`}>
                 <p className="text-[12.5px] leading-snug text-ink/70">{l.payState === 'payment_pending' ? x.pendingNote : x.endedNote(l.paid?.until ? new Date(l.paid.until).toLocaleDateString(lang === 'es' ? 'es' : 'en-US', { day: 'numeric', month: 'long' }) : '')}</p>
+                {l.payState === 'payment_pending' && l.paid?.gift?.open && (() => {
+                  const g = LGIFT[lang] || LGIFT.es;
+                  let d = '';
+                  try { d = new Date(l.paid.gift.expires_at).toLocaleDateString(lang === 'es' ? 'es' : 'en-US', { day: 'numeric', month: 'long' }); } catch {}
+                  return (
+                    <div className="rounded-[12px] border-[1.5px] border-ink bg-card p-3 flex flex-col gap-2" data-testid="listing-gift-offer">
+                      <p className="text-[12.5px] leading-snug font-semibold">{g.note(d)}</p>
+                      <button onClick={() => claimGift(l.id)} disabled={claimingId === l.id} className="py-2 rounded-pill bg-ink text-paper text-[13px] font-bold hover:bg-ink/90 disabled:opacity-60" data-testid="listing-gift-claim">{claimingId === l.id ? g.busy : g.btn}</button>
+                    </div>
+                  );
+                })()}
                 <div className="flex gap-2">
                   <button onClick={() => setLpay({ id: l.id, kind: l.payState === 'payment_pending' ? 'publish' : 'extend' })} className="flex-[2] py-2 rounded-pill bg-ink text-paper text-[13px] font-bold hover:bg-ink/90">{l.payState === 'payment_pending' ? x.payPublish : x.extend}</button>
                   <button onClick={() => setConfirmId(l.id)} className="flex-1 py-2 rounded-pill border-[1.5px] border-red-300 text-red-700 text-[13px] font-semibold">{t.del}</button>
