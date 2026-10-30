@@ -23,6 +23,11 @@ const T = {
     needRating: 'Elegí una calificación de 1 a 5 estrellas.',
     sentH: '¡Gracias por tu opinión!', sentSub: 'La recibimos y nos ayuda a mejorar Casa Libre.',
     back: 'Volver al inicio',
+    // from the "Listing deleted → ask why" email (?src=listing_deleted)
+    delH1: <>¿Por qué eliminaste tu <em>publicación</em>?</>,
+    delSub: 'Tu respuesta nos ayuda a mejorar Casa Libre. Toma menos de un minuto.',
+    delReasons: ['Ya la vendí o alquilé', 'No recibí contactos', 'Me pidieron pagar para publicar', 'La publiqué mal', 'La publiqué en otro sitio', 'Otro motivo'],
+    delPh: 'Contanos un poco más (opcional)…',
   },
   en: {
     cta: 'List for free',
@@ -37,6 +42,10 @@ const T = {
     needRating: 'Pick a rating from 1 to 5 stars.',
     sentH: 'Thanks for your feedback!', sentSub: 'We got it — it helps us make Casa Libre better.',
     back: 'Back to home',
+    delH1: <>Why did you delete your <em>listing</em>?</>,
+    delSub: 'Your answer helps us improve Casa Libre. Takes under a minute.',
+    delReasons: ['I sold or rented it', 'I got no contacts', 'I was asked to pay to publish', 'I listed it wrong', 'I listed it somewhere else', 'Something else'],
+    delPh: 'Tell us a bit more (optional)…',
   },
 };
 
@@ -93,6 +102,10 @@ export default function FeedbackClient() {
   };
 
   const shown = hover || rating;
+  // opened from the "you deleted a listing" email: ask why, with one-tap reasons
+  const deleted = src === 'listing_deleted';
+  const [reason, setReason] = useState('');
+  const pickReason = (r) => { setReason(r); setMessage((m) => { const rest = m.replace(/^\[[^\]]*\]\s*/, ''); return `[${r}] ${rest}`.trim(); }); };
 
   return (
     <div className="bg-paper text-ink min-h-screen">
@@ -113,8 +126,8 @@ export default function FeedbackClient() {
 
       <section className="max-w-[620px] mx-auto px-5 md:px-9 pt-12 md:pt-16 pb-20">
         <p className="font-mono text-[12px] tracking-[.12em] uppercase text-ink/55 mb-3">{t.kicker}</p>
-        <h1 className="text-[clamp(28px,4vw,42px)] leading-[1.08] tracking-head font-bold mb-3 [&_em]:font-serif [&_em]:italic [&_em]:font-normal">{t.h1}</h1>
-        <p className="text-[16px] text-ink/70 mb-8">{t.sub}</p>
+        <h1 className="text-[clamp(28px,4vw,42px)] leading-[1.08] tracking-head font-bold mb-3 [&_em]:font-serif [&_em]:italic [&_em]:font-normal">{deleted ? t.delH1 : t.h1}</h1>
+        <p className="text-[16px] text-ink/70 mb-8">{deleted ? t.delSub : t.sub}</p>
 
         {status === 'sent' ? (
           <div className="bg-white border-[1.5px] border-ink rounded-[20px] shadow-[5px_4px_0_#111] p-8 text-center">
@@ -137,9 +150,17 @@ export default function FeedbackClient() {
               {rating > 0 && <span className="ml-2 font-mono text-[13px] text-ink/55">{rating}/5</span>}
             </div>
 
+            {deleted && (
+              <div className="flex flex-wrap gap-2 mb-5" data-testid="delete-reasons">
+                {t.delReasons.map((r) => (
+                  <button key={r} type="button" onClick={() => pickReason(r)}
+                    className={`px-3.5 py-2 rounded-pill text-[13.5px] border-[1.5px] ${reason === r ? 'bg-ink text-paper border-ink' : 'border-ink/35 text-ink'}`}>{r}</button>
+                ))}
+              </div>
+            )}
             <label className="block mb-4">
               <span className="font-mono text-[11px] tracking-[.08em] uppercase text-ink/55">{t.msgLabel}</span>
-              <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={4} placeholder={t.msgPh} maxLength={2000}
+              <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={4} placeholder={deleted ? t.delPh : t.msgPh} maxLength={2000}
                 className="mt-1.5 w-full px-3.5 py-3 text-[15px] rounded-[12px] bg-paper text-ink border border-ink/45 outline-none focus:border-ink resize-y min-h-[100px] placeholder:text-ink/40" />
             </label>
 

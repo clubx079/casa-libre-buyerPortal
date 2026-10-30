@@ -6,6 +6,7 @@ import { select, remove } from '@/lib/db';
 import { releaseFromQuarantine } from '@/lib/listingScan';
 import { saveCounts } from '@/lib/favorites';
 import { fetchListingViews } from '@/lib/posthogViews';
+import { recordDeletion, askWhy } from '@/lib/listingDeleted';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -31,14 +32,16 @@ export async function GET() {
   });
 }
 
-// Delete one of the user's own listings.
+// Delete one of the user's own listings. The row is gone after this, so a record of it is
+// kept first (lib/listingDeleted.js: the admin activity page shows it and counts it), and the
+// "Listing deleted → ask why" email goes out when that automation is on.
 export async function DELETE(req) {
   const s = getSession();
   if (!s) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   const { id } = await req.json().catch(() => ({}));
   if (!id) return NextResponse.json({ error: 'missing_id' }, { status: 400 });
   // Verify ownership before deleting.
-  const rows = await select('properties', `select=id,created_by&id=eq.${encodeURIComponent(id)}&limit=1`).catch(() => []);
+  const rows = await select('properties', `select=id,created_by,created_at,status,raw_data,property_type,listing_type,neighborhood,city&id=eq.${encodeURIComponent(id)}&limit=1`).catch(() => []);
   const prop = Array.isArray(rows) && rows[0];
   if (!prop) return NextResponse.json({ error: 'not_found' }, { status: 404 });
   if (String(prop.created_by) !== String(s.uid)) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
@@ -50,5 +53,8 @@ export async function DELETE(req) {
   }
   await releaseFromQuarantine(id).catch(() => {});   // a held copy (rejected photos / possible duplicate) leaves the admin Quarantine too
   try { revalidateTag('listings'); } catch {}   // deleted listing drops off home/marketplace now
+  const views = await Promise.race([fetchListingViews([id]), new Promise((r) => setTimeout(() => r(null), 3000))]).catch(() => null);
+  await recordDeletion(prop, { email: s.email, views: views ? views.get(String(id)) || 0 : null }).catch((e) => console.error('[listings] deletion record', e?.message || e));
+  await askWhy(prop, { email: s.email, name: s.name }).catch(() => {});
   return NextResponse.json({ ok: true });
 }
