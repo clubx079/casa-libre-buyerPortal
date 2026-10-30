@@ -37,3 +37,8 @@ test('WhatsApp campaign batches: /r/wa?b=<batch>&sell=1 → that batch as utm_ca
   assert.equal(batchOf('WC-Lote 1<script>'), 'wc-lote1script');
   assert.equal(batchOf('x'.repeat(200)).length, 80);
 });
+
+test('a batch link can carry the person (r → utm_content); without a batch r is ignored', () => {
+  assert.equal(campaignUrl(O, 'wa', { batch: 'wc-lote-1', sell: true, ref: 'k3x9ab12' }), `${O}/?sell=1&utm_source=whatsapp&utm_medium=outreach&utm_campaign=wc-lote-1&utm_content=k3x9ab12`);
+  assert.equal(campaignUrl(O, 'wa', { ref: 'k3x9ab12' }), `${O}/?utm_source=whatsapp&utm_medium=outreach&utm_campaign=whatsapp`);
+});
