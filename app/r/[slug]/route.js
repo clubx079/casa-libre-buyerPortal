@@ -3,13 +3,15 @@
 // Redirects to the home page with the channel's utm tags, so the visit shows up in
 // analytics with a source instead of landing in "direct". Older links (/r/rda,
 // /r/igs…) resolve to their channel; any ?t=… on them is ignored.
+// WhatsApp campaign batches: /r/wa?b=<batch>&sell=1 — the click is recorded under that
+// batch, utm_campaign becomes the batch, and sell=1 opens the sell wizard on arrival.
 //
 // It also records the CLICK itself, server-side, as a `link_click` event under the
 // channel's slug — the admin's "UTM Links" page counts these as "opened". That is a
 // different number from the page view that follows ("landed"): a click is counted
 // even when the person leaves before the page loads or JavaScript is blocked.
 import { NextResponse } from 'next/server';
-import { campaignUrl, resolveSlug, CAMPAIGNS } from '@/lib/campaigns';
+import { campaignUrl, resolveSlug, batchOf, CAMPAIGNS } from '@/lib/campaigns';
 import { SITE } from '@/lib/site';
 import { COUNTRY_CODE } from '@/lib/country';
 
@@ -22,7 +24,7 @@ const PH_HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.co
 // Fire-and-forget: analytics must never delay or break the redirect.
 // slug = the channel's slug (an old alias like 'rda' is recorded as 'rd');
 // via = the slug actually in the link, kept for reference.
-function recordClick(req, slug, campaign, via) {
+function recordClick(req, slug, campaign, via, batch) {
   if (!PH_KEY) return;
   const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || undefined;
   const ua = req.headers.get('user-agent') || '';
@@ -46,7 +48,8 @@ function recordClick(req, slug, campaign, via) {
           slug,
           utm_source: campaign?.source,
           utm_medium: campaign?.medium,
-          utm_campaign: campaign?.name,
+          utm_campaign: batch || campaign?.name,
+          batch: batch || undefined,
           via: via !== slug ? via : undefined,
           $ip: ip,
           $useragent: ua.slice(0, 200),
@@ -60,9 +63,11 @@ export function GET(req, { params }) {
   const base = SITE.replace(/\/$/, '');
   const asked = String(params?.slug || '').toLowerCase();
   const slug = resolveSlug(asked); // 'rda' → 'rd'; unknown → null
-  const url = slug ? campaignUrl(base, slug) : null;
+  const sp = new URL(req.url).searchParams;
+  const batch = slug === 'wa' ? batchOf(sp.get('b')) : '';
+  const url = slug ? campaignUrl(base, slug, { batch, sell: sp.get('sell') === '1' }) : null;
 
-  if (url) recordClick(req, slug, CAMPAIGNS[slug], asked);
+  if (url) recordClick(req, slug, CAMPAIGNS[slug], asked, batch);
 
   // Unknown slug → the site, rather than a 404 on a link already in the wild.
   return NextResponse.redirect(url || `${base}/`, 302);

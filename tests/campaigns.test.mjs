@@ -28,3 +28,12 @@ test('every link goes to the home page with its channel tags', () => {
   assert.equal(campaignUrl(O, 'meta'), `${O}/?utm_source=meta&utm_medium=cpc&utm_campaign=meta_ads`);
   assert.equal(campaignUrl(O, 'nope'), null);
 });
+
+test('WhatsApp campaign batches: /r/wa?b=<batch>&sell=1 → that batch as utm_campaign, sell wizard open', async () => {
+  const { batchOf } = await import('../lib/campaigns.js');
+  assert.equal(campaignUrl(O, 'wa', { batch: 'wc-agentes-lote-1-x7k2', sell: true }), `${O}/?sell=1&utm_source=whatsapp&utm_medium=outreach&utm_campaign=wc-agentes-lote-1-x7k2`);
+  assert.equal(campaignUrl(O, 'wa'), `${O}/?utm_source=whatsapp&utm_medium=outreach&utm_campaign=whatsapp`);   // plain /r/wa unchanged
+  assert.equal(campaignUrl(O, 'rd', { batch: 'x' }), `${O}/?utm_source=reddit&utm_medium=social&utm_campaign=reddit`);   // batches are WhatsApp only
+  assert.equal(batchOf('WC-Lote 1<script>'), 'wc-lote1script');
+  assert.equal(batchOf('x'.repeat(200)).length, 80);
+});
