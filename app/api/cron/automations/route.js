@@ -26,6 +26,7 @@ import { runSavesMilestone, SAVES_AUTOMATION_ID } from '@/lib/automations/savesM
 import { runPaymentFollowup, PAYMENT_FOLLOWUP_ID, paymentFollowupConfig, OFFER_DAYS as GIFT_OFFER_DAYS } from '@/lib/automations/paymentFollowup';
 import { fetchListingViews, viewsConfigured } from '@/lib/posthogViews';
 import { sendPush } from '@/lib/push';
+import { runDeletedAsk } from '@/lib/listingDeleted';
 import { runOwnerPushes } from '@/lib/ownerPushes';
 
 export const runtime = 'nodejs';
@@ -153,7 +154,9 @@ async function handle(req) {
         db, automation: savesAutomation, templates, deliver: sendRenderedEmail, frame, siteUrl: site,
         emailOverride: process.env.AUTOMATION_EMAIL_OVERRIDE || '',
       }).catch((e) => ({ error: e?.message || 'saves_failed' }));
-    return NextResponse.json({ ok: true, quietHours: frame.quiet, ...result, views, drafts, duplicates, paid, noListing, held, payFollow, saves, pushes, at: new Date().toISOString() });
+    // "Listing deleted → ask why": the deletions that haven't had their email yet (lib/listingDeleted.js).
+    const deletedAsk = await runDeletedAsk({ frame }).catch((e) => ({ error: e?.message || 'deleted_ask_failed' }));
+    return NextResponse.json({ ok: true, quietHours: frame.quiet, ...result, views, drafts, duplicates, paid, noListing, held, payFollow, saves, deletedAsk, pushes, at: new Date().toISOString() });
   } catch (e) {
     return NextResponse.json({ error: 'automation_failed', detail: e?.message }, { status: 500 });
   }
