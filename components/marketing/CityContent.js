@@ -14,7 +14,7 @@ export default function CityContent({ name, others }) {
     ? {
         eyebrow: `${COUNTRY.name} · ${name}`, title: 'Propiedades en', sub: `Casas, departamentos y locales en venta y alquiler en ${name}. Mirá todo en el mapa, con precio en ${COUNTRY.currencyName} y dólares.`,
         all: `Ver propiedades en ${name} →`, sale: 'En venta', rent: 'En alquiler',
-        p1: `¿Buscás una propiedad en <strong>${name}</strong>? Casa Libre reúne los avisos de casas, departamentos, dúplex y locales disponibles en ${name} y sus alrededores. Filtrá por precio, dormitorios y tipo, y compará cada opción en el mapa con fotos reales.`,
+        p1: `¿Buscás una propiedad en <strong>${name}</strong>? En Casa Libre encontrás casas, departamentos, dúplex y locales en ${name} y sus alrededores. Filtrá por precio, dormitorios y tipo, y compará cada opción en el mapa con fotos reales.`,
         p2pre: `Publicar tu propiedad en ${name} también es gratis: `, p2link: 'publicá en minutos', p2post: ' y llegá a miles de personas que buscan en la zona.',
         h2: 'Otras ciudades', chip: (n) => `Propiedades en ${n}`,
         ctaTitle: `Tu próximo lugar en ${name}`, ctaSub: 'Buscá o publicá gratis en Casa Libre.', ctaPrimary: [`Ver en ${name}`, `/propiedades?q=${q}`], ctaSecondary: ['Publicar gratis', '/publicar'],
@@ -22,7 +22,7 @@ export default function CityContent({ name, others }) {
     : {
         eyebrow: `${COUNTRY.name} · ${name}`, title: 'Properties in', sub: `Houses, apartments and commercial spaces for sale and rent in ${name}. See everything on the map, with prices in ${COUNTRY.currencyName} and dollars.`,
         all: `View properties in ${name} →`, sale: 'For sale', rent: 'For rent',
-        p1: `Looking for a property in <strong>${name}</strong>? Casa Libre gathers listings of houses, apartments, duplexes and commercial spaces available in ${name} and its surroundings. Filter by price, bedrooms and type, and compare each option on the map with real photos.`,
+        p1: `Looking for a property in <strong>${name}</strong>? On Casa Libre you'll find houses, apartments, duplexes and commercial spaces in ${name} and its surroundings. Filter by price, bedrooms and type, and compare each option on the map with real photos.`,
         p2pre: `Listing your property in ${name} is free too: `, p2link: 'list in minutes', p2post: ' and reach thousands of people searching in the area.',
         h2: 'Other cities', chip: (n) => `Properties in ${n}`,
         ctaTitle: `Your next place in ${name}`, ctaSub: 'Search or list for free on Casa Libre.', ctaPrimary: [`View in ${name}`, `/propiedades?q=${q}`], ctaSecondary: ['List for free', '/publicar'],

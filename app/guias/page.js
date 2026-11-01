@@ -63,7 +63,7 @@ export default function Page() {
         <section className="bg-ink text-paper rounded-card p-7 mt-10">
           <h2 className="text-[22px] font-bold tracking-head mb-2"><Bi es="Mirá lo que hay en tu zona" en="See what's available in your area" /></h2>
           <p className="text-[15px] text-paper/70 mb-4">
-            <Bi es={`Todas las propiedades de ${COUNTRY.name} en un solo mapa: de inmobiliarias y de dueños particulares.`} en={`Every property in ${COUNTRY.name} on one map: from agencies and from private owners.`} />
+            <Bi es={`Casas, departamentos y terrenos de ${COUNTRY.name} en el mapa, con contacto directo por WhatsApp.`} en={`Houses, apartments and land in ${COUNTRY.name} on the map, with direct WhatsApp contact.`} />
           </p>
           <Link href="/propiedades" className="inline-block px-6 py-3 bg-paper text-ink rounded-pill font-bold text-[15px]"><Bi es="Ver propiedades" en="See properties" /></Link>
         </section>

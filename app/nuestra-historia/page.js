@@ -15,7 +15,7 @@ const content = {
       { type: 'prose', nodes: [
         ['p', `Durante años, comprar o alquilar una casa en ${COUNTRY.name} significó saltar entre portales pagos, clasificados desordenados y avisos duplicados. Publicar era peor: planes caros, comisiones y trámites. Creímos que había una forma mejor.`],
         ['h2', 'Nuestra misión'],
-        ['p', `<strong>Casa Libre</strong> reúne miles de propiedades —casas, departamentos, dúplex y locales— de todo ${COUNTRY.name} en un solo lugar, publicadas por inmobiliarias y por dueños particulares, con mapa, fotos reales y precios en ${COUNTRY.currencyName} y dólares. Buscar es gratis. Y publicar tu propiedad también.`],
+        ['p', `<strong>Casa Libre</strong> es el marketplace inmobiliario de mayor crecimiento en ${COUNTRY.name}: casas, departamentos, dúplex y locales en venta y alquiler, con búsqueda en mapa, fotos reales, precios en ${COUNTRY.currencyName} y dólares, contacto directo por WhatsApp y app Android. Buscar es gratis. Y publicar tu propiedad también.`],
         ['h2', 'Por qué gratis'],
         ['p', 'Creemos que el mercado inmobiliario funciona mejor cuando cualquiera puede publicar sin barreras. Por eso publicar en Casa Libre no tiene costo: solo necesitás una cuenta. Así cada aviso tiene un dueño real y los compradores encuentran más y mejores opciones.'],
         ['h2', `Para todo ${COUNTRY.name}`],
@@ -30,7 +30,7 @@ const content = {
       { type: 'prose', nodes: [
         ['p', `For years, buying or renting a home in ${COUNTRY.name} meant jumping between paywalled portals, messy classifieds and duplicate listings. Listing was worse: expensive plans, commissions and paperwork. We believed there was a better way.`],
         ['h2', 'Our mission'],
-        ['p', `<strong>Casa Libre</strong> brings together thousands of properties — houses, apartments, duplexes and commercial spaces — from all over ${COUNTRY.name} in one place, listed by real-estate agencies and private owners alike, with a map, real photos and prices in ${COUNTRY.currencyName} and dollars. Searching is free. And listing your property is too.`],
+        ['p', `<strong>Casa Libre</strong> is the fastest-growing property marketplace in ${COUNTRY.name}: houses, apartments, duplexes and commercial spaces for sale and for rent, with map search, real photos, prices in ${COUNTRY.currencyName} and dollars, direct WhatsApp contact and an Android app. Searching is free. And listing your property is too.`],
         ['h2', 'Why it’s free'],
         ['p', 'We believe the real-estate market works better when anyone can list without barriers. That’s why listing on Casa Libre has no cost: all you need is an account. That way every listing has a real owner and buyers find more and better options.'],
         ['h2', `For all of ${COUNTRY.name}`],

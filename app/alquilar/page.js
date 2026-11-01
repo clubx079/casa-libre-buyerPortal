@@ -6,13 +6,13 @@ import { breadcrumbLd } from '@/lib/schema';
 
 export const metadata = {
   title: `Alquilar propiedades en ${COUNTRY.name} — Casas y departamentos en alquiler`,
-  description: `Alquilá casas y departamentos en ${COUNTRY.name}. Todas las propiedades en alquiler en una sola app: de inmobiliarias y de dueños particulares, con precio mensual en ${COUNTRY.currencyName} y dólares.`,
+  description: `Alquilá casas y departamentos en ${COUNTRY.name}. Casas y departamentos en alquiler con precio mensual en ${COUNTRY.currencyName} y dólares, búsqueda en mapa y contacto directo por WhatsApp.`,
   alternates: { canonical: '/alquilar' },
 };
 
 const content = {
   es: {
-    hero: { eyebrow: 'Alquilar', title: 'Propiedades en alquiler', titleSerif: `en ${COUNTRY.name}.`, sub: 'Todas las propiedades en alquiler del país en una sola app — de inmobiliarias y de dueños particulares — con precio mensual claro y ubicación en el mapa.' },
+    hero: { eyebrow: 'Alquilar', title: 'Propiedades en alquiler', titleSerif: `en ${COUNTRY.name}.`, sub: 'Casas y departamentos en alquiler en todo el país, con precio mensual claro, ubicación en el mapa y contacto directo por WhatsApp.' },
     blocks: [
       { type: 'ctaButton', label: 'Ver propiedades en alquiler →', href: '/propiedades?op=alquiler' },
       { type: 'prose', nodes: [

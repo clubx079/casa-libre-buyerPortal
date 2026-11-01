@@ -20,7 +20,7 @@ const T = {
     home: 'Volver al inicio',
     featTitle: 'Lo que vas a tener en la app',
     feats: [
-      ['Todo el mercado en tu bolsillo', `Las propiedades de todo ${COUNTRY.name}, en un solo lugar.`],
+      ['Casa Libre en tu bolsillo', `Casas, departamentos y terrenos de todo ${COUNTRY.name}, en el mapa.`],
       ['Favoritos y alertas', 'Guardá propiedades y recibí avisos cuando aparezca algo nuevo.'],
       ['Mapa y cerca de mí', 'Buscá por zona y encontrá lo que está cerca tuyo.'],
       ['WhatsApp directo', 'Contactá a quien publica, inmobiliaria o dueño, sin comisiones.'],
@@ -36,7 +36,7 @@ const T = {
     home: 'Back to home',
     featTitle: "What you'll get in the app",
     feats: [
-      ['The whole market in your pocket', `Every property across ${COUNTRY.name}, in one place.`],
+      ['Casa Libre in your pocket', `Houses, apartments and land across ${COUNTRY.name}, on the map.`],
       ['Favorites and alerts', 'Save properties and get notified when something new appears.'],
       ['Map and near me', 'Search by area and find what’s close to you.'],
       ['Direct WhatsApp', 'Contact whoever posted, no middlemen.'],
