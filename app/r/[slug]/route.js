@@ -70,8 +70,9 @@ export function GET(req, { params }) {
   // the SÍ auto-reply's short links (/r/si-ag …) → /publicar with Roland's full UTM tags
   if (SHORT_LINKS[asked]) {
     const aud = SHORT_LINKS[asked];
-    recordClick(req, asked, { source: 'whatsapp', medium: 'mensaje', name: `${aud}_lanzamiento` }, asked, '', '');
-    return NextResponse.redirect(publishLink(aud, base), 302);
+    const who = refOf(new URL(req.url).searchParams.get('r'));   // the person's code
+    recordClick(req, asked, { source: 'whatsapp', medium: 'mensaje', name: `${aud}_lanzamiento` }, asked, '', who);
+    return NextResponse.redirect(publishLink(aud, base, who), 302);
   }
   const slug = resolveSlug(asked); // 'rda' → 'rd'; unknown → null
   const sp = new URL(req.url).searchParams;

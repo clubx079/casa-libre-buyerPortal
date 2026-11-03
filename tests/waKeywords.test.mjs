@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { isYes, isBaja, publishLink, yesReply, formulaContext, FORMULA_TEMPLATES, SHORT_LINKS, shortLink } from '../lib/waKeywords.js';
+import { isYes, isBaja, publishLink, yesReply, formulaContext, FORMULA_TEMPLATES, SHORT_LINKS, shortLink, recipientRef } from '../lib/waKeywords.js';
 
 test('SÍ / BAJA are recognised however they arrive (button text or typed)', () => {
   for (const s of ['SÍ', 'Sí', 'si', 'SI!', ' sí. ']) assert.equal(isYes(s), true, s);
@@ -46,4 +46,14 @@ test('only answers a reply to a formula template, recent, and only once', () => 
   assert.equal(formulaContext([other, yes, tpl], { now }), null);
   // too old
   assert.equal(formulaContext([tpl], { now: Date.parse('2026-11-20T00:00:00Z') }), null);
+});
+
+test("the person's code: same as the admin's recipientRef, on the short link and as utm_term", () => {
+  // admin lib/waCampaigns.js recipientRef('lead:42') — the two must match
+  const ref = recipientRef('lead:42');
+  assert.match(ref, /^[0-9a-z]{7,8}$/);
+  assert.equal(recipientRef('lead:42'), ref);
+  assert.equal(shortLink('agentes', ref), `https://casa-libre.com.py/r/si-ag?r=${ref}`);
+  assert.equal(new URL(publishLink('agentes', undefined, ref)).searchParams.get('utm_term'), ref);
+  assert.match(yesReply('agentes', ref), new RegExp(`/r/si-ag\\?r=${ref}`));
 });
