@@ -9,6 +9,9 @@
 //   contact.opted_out, or a reply like "No recibir más" / STOP / BAJA → that person's
 //     WhatsApp consent is withdrawn (users.whatsapp_opted_out_at) — no more automation
 //     WhatsApps (lib/whatsappTemplates.js waAllowed).
+//   message.inbound "SÍ" / "BAJA" answering a formula campaign template (the two quick-reply
+//     buttons) → the instant reply: SÍ = the /publicar link with UTM tags + chat tagged for a
+//     person; BAJA = the confirmation (lib/waKeywordReply.js).
 // Always answers 2xx quickly for events it doesn't use.
 import { NextResponse } from 'next/server';
 import { select, update } from '@/lib/db';
@@ -19,6 +22,7 @@ import * as db from '@/lib/db';
 import { takeFallback } from '@/lib/automations/waFallback';
 import { sendEmailFallback } from '@/lib/automations/sendOnce';
 import { templateFrame, sendRenderedEmail } from '@/lib/email';
+import { answerKeyword } from '@/lib/waKeywordReply';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -83,7 +87,9 @@ export async function POST(req) {
   }
   if (type === 'message.inbound') {
     const text = String(d.text || d.button?.text || d.interactive?.title || '');
-    if (OPT_OUT.test(text)) return NextResponse.json({ ok: true, optedOut: await optOut(d.from || d.phone) });
+    const keyword = await answerKeyword(d.from || d.phone, text).catch(() => null);
+    if (OPT_OUT.test(text)) return NextResponse.json({ ok: true, optedOut: await optOut(d.from || d.phone), ...(keyword ? { keyword } : {}) });
+    if (keyword) return NextResponse.json({ ok: true, keyword });
   }
   return NextResponse.json({ ok: true, ignored: type });
 }
