@@ -1,4 +1,5 @@
-// /r/<slug> — a channel's UTM link (lib/campaigns.js: one per channel).
+// /r/<slug> — a channel's UTM link (lib/campaigns.js: one per channel). Also the SÍ
+// auto-reply's short links /r/si-ag, si-in, si-de, si-du (lib/waKeywords.js SHORT_LINKS).
 //
 // Redirects to the home page with the channel's utm tags, so the visit shows up in
 // analytics with a source instead of landing in "direct". Older links (/r/rda,
@@ -15,6 +16,7 @@ import { NextResponse } from 'next/server';
 import { campaignUrl, resolveSlug, batchOf, refOf, CAMPAIGNS } from '@/lib/campaigns';
 import { SITE } from '@/lib/site';
 import { COUNTRY_CODE } from '@/lib/country';
+import { SHORT_LINKS, publishLink } from '@/lib/waKeywords';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -65,6 +67,12 @@ function recordClick(req, slug, campaign, via, batch, ref) {
 export function GET(req, { params }) {
   const base = SITE.replace(/\/$/, '');
   const asked = String(params?.slug || '').toLowerCase();
+  // the SÍ auto-reply's short links (/r/si-ag …) → /publicar with Roland's full UTM tags
+  if (SHORT_LINKS[asked]) {
+    const aud = SHORT_LINKS[asked];
+    recordClick(req, asked, { source: 'whatsapp', medium: 'mensaje', name: `${aud}_lanzamiento` }, asked, '', '');
+    return NextResponse.redirect(publishLink(aud, base), 302);
+  }
   const slug = resolveSlug(asked); // 'rda' → 'rd'; unknown → null
   const sp = new URL(req.url).searchParams;
   const batch = slug === 'wa' ? batchOf(sp.get('b')) : '';
