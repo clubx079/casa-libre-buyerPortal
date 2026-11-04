@@ -30,6 +30,7 @@ import { findDuplicateOf, DUPLICATE_STATUS } from '@/lib/duplicateCheck';
 import { dHash } from '@/lib/photoHash';
 import { COUNTRY } from '@/lib/country';
 import { lockReason } from '@/lib/listingEdit';
+import { cleanPinSource } from '@/lib/pinLocate';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -65,6 +66,7 @@ export async function GET(req) {
       addressText: [p.address && p.address !== p.neighborhood ? p.address : '', p.city].filter(Boolean).join(', '),
       neighborhood: p.neighborhood || '', city: p.city || '',
       lat: p.latitude ?? '', lng: p.longitude ?? '',
+      pin_source: p.raw_data?.pin_source || '',   // google | owner | approx (lib/pinLocate.js)
       price: String(entered?.price ?? p.price ?? ''), currency: entered?.currency || p.currency || '',
       area: String(p.covered_area ?? p.land_area ?? ''),
       bedrooms: p.bedrooms ?? '', bathrooms: p.bathrooms ?? '',
@@ -160,6 +162,10 @@ export async function POST(req) {
   const now = new Date().toISOString();
   const editLog = [...(p.raw_data?.edits || []), { at: now, fields: Object.keys(changes).filter((k) => JSON.stringify(changes[k]) !== JSON.stringify(p[k]) && !['updated_at', 'zone_canonical', 'dedupe_key', 'feature_image_url'].includes(k)), new_photos: newPhotos, removed_photos: current.length - (next.length - newPhotos) }].slice(-20);
   const raw = { ...(p.raw_data || {}), edits: editLog, photo_hashes: hashes.filter(Boolean) };
+  // where the pin came from: a moved listing with a position from the form → what the form says
+  // (google / owner / approx); moved without one → the server looked it up → approx
+  if (moved) raw.pin_source = v.coords ? (cleanPinSource(get('pin_source')) || 'google') : 'approx';
+  else if (cleanPinSource(get('pin_source'))) raw.pin_source = cleanPinSource(get('pin_source'));
   let outcome = 'saved';
   if (dup) {
     outcome = 'duplicate';

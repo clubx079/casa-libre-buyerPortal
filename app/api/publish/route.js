@@ -4,6 +4,7 @@
 // runs in the background (lib/listingScan.js) and publishes it, or rejects it, without
 // the seller waiting. A listing without photos is published straight away.
 // Multipart/form-data.
+import { cleanPinSource } from '@/lib/pinLocate';
 import { NextResponse } from 'next/server';
 import { insert, update } from '@/lib/db';
 import * as dbApi from '@/lib/db';
@@ -65,6 +66,9 @@ export async function POST(req) {
   const hasCoords = !!fields.v.coords;
   const latIn = fields.v.coords?.lat;
   const lngIn = fields.v.coords?.lng;
+  // where the pin came from (lib/pinLocate.js): google | owner (placed on the map) | approx;
+  // no position from the form → the server looks it up (OpenStreetMap) → approx
+  const pinSource = hasCoords ? (cleanPinSource(get('pin_source')) || 'google') : 'approx';
 
   // The photos, read once: in the seller's order (photo_order) — photos already uploaded
   // to their draft (reused from storage, never sent again) and/or new files. Clients
@@ -141,7 +145,7 @@ export async function POST(req) {
     is_delisted: false,
     created_by: session.uid,   // who published this deal
     posted_by: session.uid,
-    raw_data: { published_via: 'buyer-portal', user_id: session.uid, user_email: session.email, ...(entered ? { entered_price: entered } : {}), signals,
+    raw_data: { published_via: 'buyer-portal', user_id: session.uid, user_email: session.email, pin_source: pinSource, ...(entered ? { entered_price: entered } : {}), signals,
       photo_hashes: photoHashes.filter(Boolean),
       ...(dup ? { duplicate_of: dup.id } : {}),
       ...(payFirst ? { paid_listing: { state: 'pending', price_cents: quota.priceCents, list_cents: quota.listCents, discount_pct: quota.discountPct, days: quota.days } } : {}),

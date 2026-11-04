@@ -21,6 +21,9 @@ import { track } from '@/lib/analytics';
 import { hasRooms, cleanStreet } from '@/lib/listingInput';
 import { parsePrice, priceShown, nextPriceInput } from '@/lib/priceInput';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
+import PinPickerModal from '@/components/PinPickerModal';
+import { locatePin } from '@/components/pinGeocode';
+import { changedFromGoogle, zoomFor } from '@/lib/pinLocate';
 import HighlightModal from '@/components/HighlightModal';
 import ListingPaymentModal from '@/components/ListingPaymentModal';
 import StrikePrice from '@/components/StrikePrice';
@@ -47,6 +50,12 @@ const DICT = {
     barrio: 'Barrio', ciudad: 'Ciudad',
     barrioPh: 'Ej.: Villa Morra', errBarrio: 'Escribí el barrio',
     errStreet: 'Empezá a escribir con la calle y el número (ej.: Mcal. López 1234) y elegí la dirección de la lista.',
+    pinLocating: 'Buscando la ubicación…',
+    pinApprox: 'No encontramos la dirección exacta en esa ciudad. Marcá tu propiedad en el mapa.',
+    pinOpen: 'Marcar en el mapa', pinAdjust: 'Ajustar en el mapa', pinOk: 'Ubicación marcada en el mapa.',
+    pinTitle: 'Confirmá la ubicación', pinHelp: 'Mové el pin hasta tu propiedad, o tocá el mapa donde está.',
+    pinConfirm: 'Confirmar ubicación', pinCancel: 'Cancelar', pinMapError: 'No pudimos cargar el mapa. Probá de nuevo en un momento.',
+    pinFar: (city) => `El pin quedó lejos de ${city || 'la ciudad'}. ¿Seguro que la propiedad está ahí?`,
     beds: 'Dormitorios', baths: 'Baños',
     verifyTitle: 'Confirmá tu cuenta', verifySub: (e) => `Para publicar, continuá con Google o te enviamos un código de 6 dígitos a ${e} o por WhatsApp.`, sendCode: 'Enviar código',
     sendByEmail: 'Enviar código por email', sendByWa: 'Enviar código por WhatsApp',
@@ -109,6 +118,12 @@ const DICT = {
     barrio: 'Neighborhood', ciudad: 'City',
     barrioPh: 'e.g. Villa Morra', errBarrio: 'Enter the neighborhood',
     errStreet: 'Start typing with the street and number (e.g. Mcal. López 1234) and pick the address from the list.',
+    pinLocating: 'Finding the location…',
+    pinApprox: "We couldn't find the exact address in that city. Mark your property on the map.",
+    pinOpen: 'Mark on the map', pinAdjust: 'Adjust on the map', pinOk: 'Location marked on the map.',
+    pinTitle: 'Confirm the location', pinHelp: 'Drag the pin to your property, or tap the map where it is.',
+    pinConfirm: 'Confirm location', pinCancel: 'Cancel', pinMapError: "We couldn't load the map. Try again in a moment.",
+    pinFar: (city) => `The pin is far from ${city || 'the city'}. Are you sure the property is there?`,
     beds: 'Bedrooms', baths: 'Bathrooms',
     verifyTitle: 'Confirm your account', verifySub: (e) => `To publish, continue with Google or we'll send a 6-digit code to ${e} or on WhatsApp.`, sendCode: 'Send code',
     sendByEmail: 'Send code by email', sendByWa: 'Send code on WhatsApp',
@@ -318,7 +333,7 @@ export default function SellFlowProvider({ children }) {
   const openedLoggedInRef = useRef(false);        // wizard was opened by a signed-in user
   const [fromApp, setFromApp] = useState(false);  // arrived from the mobile app (?app=1)
   const [appReturn, setAppReturn] = useState('');  // the app's own deep-link URL (?ret=…)
-  const BLANK = { mode: '', seller_type: '', neighborhood: '', city: '', addressText: '', street: '', lat: '', lng: '', bedrooms: '', bathrooms: '', contact_name: '', email: '', ptype: '', price: '', currency: '', area: '', description: '', contact_phone: '' };
+  const BLANK = { mode: '', seller_type: '', neighborhood: '', city: '', addressText: '', street: '', lat: '', lng: '', pinSource: '', bedrooms: '', bathrooms: '', contact_name: '', email: '', ptype: '', price: '', currency: '', area: '', description: '', contact_phone: '' };
   const [f, setF] = useState(BLANK);
   // Draft ("Borrador"): created once a signed-in user has picked the address, then
   // autosaved on every change until the listing is published (the server deletes it).
@@ -455,7 +470,8 @@ export default function SellFlowProvider({ children }) {
       reset();
       openedLoggedInRef.current = true;
       setVerified(true); setTermsOk(true);
-      setF({ ...BLANK, ...j.fields, email: user?.email || '' });
+      setF({ ...BLANK, ...j.fields, pinSource: j.fields.pin_source || (j.fields.lat !== '' ? 'google' : ''), email: user?.email || '' });
+      setGeo({ neighborhood: j.fields.neighborhood, city: j.fields.city, lat: j.fields.lat, lng: j.fields.lng, source: j.fields.pin_source || 'google' });
       restorePhotos(j.photos.map((x) => ({ key: x.key, url: x.url })));
       setEditId(j.id); setEditPhone(j.fields.contact_phone || ''); setEditPromo(j.promo || null);
       setStep(3); setOpen(true);
@@ -643,13 +659,36 @@ export default function SellFlowProvider({ children }) {
   }, [open, user, authLoading, result, f.email, draftJson]);
 
   const set = (k, v) => setF((s) => ({ ...s, [k]: v }));
-  // the neighborhood box: shown only when Google found no neighborhood for the address
-  const [editBarrio, setEditBarrio] = useState(false);
+  // The map pin (lib/pinLocate.js). geo = what Google gave for the picked address (or the saved
+  // listing when editing); the seller can change the Barrio / Ciudad Google filled in. If they do,
+  // the pin is looked up again for what they typed: found as a real street in that city → used;
+  // else the map opens at our best guess (their barrio / city centre) and they place it.
+  const [geo, setGeo] = useState(null);
+  const [pinBusy, setPinBusy] = useState(false);
+  const [picker, setPicker] = useState(null);   // { start, zoom, expected } while the map is open
+  const locDirty = useRef(false);
+  const fallbackCenter = () => ({ lat: (COUNTRY.bounds.latMin + COUNTRY.bounds.latMax) / 2, lng: (COUNTRY.bounds.lngMin + COUNTRY.bounds.lngMax) / 2 });
+  const openPicker = (start, level) => setPicker({ start, zoom: zoomFor(level), expected: level === 'area' || level === 'city' ? start : null });
+  const relocate = async () => {
+    if (!locDirty.current) return;
+    locDirty.current = false;
+    const vals = f;
+    if (!vals.city) return;
+    // back to what Google gave → its pin again
+    if (geo && geo.lat !== '' && geo.lat != null && !changedFromGoogle(geo, vals)) { setF((x) => ({ ...x, lat: geo.lat, lng: geo.lng, pinSource: geo.source || 'google' })); return; }
+    setPinBusy(true);
+    const hit = await locatePin({ street: vals.street, neighborhood: vals.neighborhood, city: vals.city }).catch(() => null);
+    setPinBusy(false);
+    if (hit?.exact) { setF((x) => ({ ...x, lat: hit.lat, lng: hit.lng, pinSource: 'google' })); return; }
+    const start = hit ? { lat: hit.lat, lng: hit.lng } : (vals.lat !== '' ? { lat: Number(vals.lat), lng: Number(vals.lng) } : fallbackCenter());
+    setF((x) => ({ ...x, lat: start.lat, lng: start.lng, pinSource: 'approx' }));
+    openPicker(start, hit ? hit.level : vals.lat !== '' ? 'area' : 'country');
+    track('sell_pin_needed', { level: hit?.level || 'none', edit: !!editId });
+  };
+  const setLocField = (k) => (e) => { locDirty.current = true; setField(k)(e); };
   // the street + number only come from the address picked in Google's list (so the map pin is
   // right); a city or neighborhood alone is not enough — the seller picks a street address
   const streetOk = !!cleanStreet(f.street, { neighborhood: f.neighborhood, city: f.city });
-  // a resumed draft with a city but no neighborhood → the box too (else nothing to type in)
-  useEffect(() => { if (f.city && !f.neighborhood) setEditBarrio(true); }, [f.city, f.neighborhood]);
   const setField = (k) => (e) => { const v = e.target.value; setF((s) => ({ ...s, [k]: v })); setErrs((er) => (er[k] ? { ...er, [k]: undefined } : er)); };
   // No default: the seller chooses US$ or this country's currency.
   // Venezuela's bolívares are converted to US$ on publish (COUNTRY.storeLocalAsUsd).
@@ -680,6 +719,7 @@ export default function SellFlowProvider({ children }) {
     : !f.neighborhood ? (f.city ? t.errBarrio : t.errAddr) : !streetOk ? '' : t.errType);   // no street: the message already shows under the address
   // A signed-in visitor never sees the email-confirm step: their email is already verified.
   const next = async () => {
+    if (step === 2 && pinBusy) return;
     // after the details → confirm the email (Google / code), then the confirm screen
     if (step === 3) {
       const e = validateDetails();
@@ -783,7 +823,7 @@ export default function SellFlowProvider({ children }) {
       // Stash what the guest entered (details + photo files), then come back to THIS
       // page with ?sell=resume: the wizard reopens at confirm, signed in — same as the
       // code path.
-      await savePendingSell({ fields: { mode: f.mode, seller_type: f.seller_type, contact_name: f.contact_name, email: f.email, neighborhood: f.neighborhood, city: f.city, addressText: f.addressText, street: f.street, lat: f.lat, lng: f.lng, ptype: f.ptype, price: f.price, currency: f.currency, area: f.area, bedrooms: f.bedrooms, bathrooms: f.bathrooms, description: f.description, contact_phone: f.contact_phone }, photos: photoStash(), fromApp, appReturn, savedAt: Date.now() });
+      await savePendingSell({ fields: { mode: f.mode, seller_type: f.seller_type, contact_name: f.contact_name, email: f.email, neighborhood: f.neighborhood, city: f.city, addressText: f.addressText, street: f.street, lat: f.lat, lng: f.lng, pinSource: f.pinSource, ptype: f.ptype, price: f.price, currency: f.currency, area: f.area, bedrooms: f.bedrooms, bathrooms: f.bathrooms, description: f.description, contact_phone: f.contact_phone }, photos: photoStash(), fromApp, appReturn, savedAt: Date.now() });
       const here = /^\/[A-Za-z0-9/_-]*$/.test(window.location.pathname) ? window.location.pathname : '/';
       const r = await fetch('/api/auth/google', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ next: `${here}?sell=resume` }) });
       const j = await r.json().catch(() => ({}));
@@ -918,7 +958,7 @@ export default function SellFlowProvider({ children }) {
       fd.set('contact_name', f.contact_name); fd.set('contact_phone', f.contact_phone); fd.set('seller_type', f.seller_type);
       if (proof) fd.set('phone_proof', proof);
       if (f.street) fd.set('address', f.street);
-      if (f.lat !== '' && f.lng !== '') { fd.set('latitude', String(f.lat)); fd.set('longitude', String(f.lng)); }
+      if (f.lat !== '' && f.lng !== '') { fd.set('latitude', String(f.lat)); fd.set('longitude', String(f.lng)); fd.set('pin_source', f.pinSource || 'google'); }
       if (hasRooms(f.ptype)) { fd.set('bedrooms', f.bedrooms); fd.set('bathrooms', f.bathrooms); }
       // photos it keeps (by key) and new files, in the seller's order
       const order = []; let nFiles = 0;
@@ -962,7 +1002,7 @@ export default function SellFlowProvider({ children }) {
       fd.set('wa_check', '1'); if (proof) fd.set('phone_proof', proof);   // the WhatsApp number is proven (lib/listingPhone.js)
       // the street + number and the map position of the address picked from the list
       if (f.street) fd.set('address', f.street);
-      if (f.lat !== '' && f.lng !== '') { fd.set('latitude', String(f.lat)); fd.set('longitude', String(f.lng)); }
+      if (f.lat !== '' && f.lng !== '') { fd.set('latitude', String(f.lat)); fd.set('longitude', String(f.lng)); fd.set('pin_source', f.pinSource || 'google'); }
       if (hasRooms(f.ptype)) { fd.set('bedrooms', f.bedrooms); fd.set('bathrooms', f.bathrooms); }
       // In order: photos already in the draft by their key (reused, not sent again),
       // the rest as files.
@@ -1226,23 +1266,41 @@ export default function SellFlowProvider({ children }) {
                   <div>
                     <h2 className="text-[22px] font-bold tracking-head mb-1">{t.q3}</h2>
                     <p className="text-[13px] text-ink/50 mb-4">{t.addrHint}</p>
-                    <AddressAutocomplete value={f.addressText} onChange={(v) => setF((s) => ({ ...s, addressText: v, lat: '', lng: '' }))} onSelect={({ neighborhood, city, street, lat, lng }) => { setEditBarrio(!neighborhood); setF((s) => ({ ...s, neighborhood, city, street: street || '', lat: lat ?? '', lng: lng ?? '' })); }} placeholder={t.addrPh} className={inputCls} />
-                    {/* after an address is picked: the city. The street + number and the neighborhood
-                        Google found (from the address, or from its map position — AddressAutocomplete)
-                        are saved without being shown; the box to type the neighborhood appears only
-                        when Google has none there */}
-                    {f.city || f.neighborhood ? (
-                      <div className="mt-3 flex gap-2 text-[13px]">
-                        <span className="px-3 py-1.5 rounded-pill bg-card border border-ink/20 font-medium">{t.ciudad}: <b>{f.city}</b></span>
-                      </div>
-                    ) : null}
+                    <AddressAutocomplete value={f.addressText} onChange={(v) => setF((s) => ({ ...s, addressText: v, lat: '', lng: '' }))} onSelect={({ neighborhood, city, street, lat, lng }) => { locDirty.current = false; setPicker(null); setGeo({ neighborhood, city, lat: lat ?? '', lng: lng ?? '', source: 'google' }); setF((s) => ({ ...s, neighborhood, city, street: street || '', lat: lat ?? '', lng: lng ?? '', pinSource: lat != null ? 'google' : '' })); }} placeholder={t.addrPh} className={inputCls} />
+                    {/* after an address is picked: the Barrio and Ciudad Google found, both editable.
+                        Changing one looks the pin up again (relocate); not found exactly in that
+                        city → the map opens to place it (PinPickerModal) */}
                     {(f.city || f.neighborhood) && !streetOk ? (
                       <p className="mt-2 text-[13px] font-medium text-red-600" data-testid="sell-street-error">{t.errStreet}</p>
                     ) : null}
-                    {(f.city || f.neighborhood) && editBarrio ? (
-                      <label className="block mt-4"><span className={labelCls}>{t.barrio}</span>
-                        <input value={f.neighborhood} onChange={setField('neighborhood')} placeholder={t.barrioPh} className={inputCls} data-testid="sell-barrio" />
-                      </label>
+                    {f.city || f.neighborhood ? (
+                      <>
+                        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <label className="block"><span className={labelCls}>{t.barrio}</span>
+                            <input value={f.neighborhood} onChange={setLocField('neighborhood')} onBlur={relocate} placeholder={t.barrioPh} className={inputCls} data-testid="sell-barrio" />
+                          </label>
+                          <label className="block"><span className={labelCls}>{t.ciudad}</span>
+                            <input value={f.city} onChange={setLocField('city')} onBlur={relocate} className={inputCls} data-testid="sell-city" />
+                          </label>
+                        </div>
+                        <div className="mt-2 text-[13px]" data-testid="sell-pin-status">
+                          {pinBusy ? <span className="text-ink/55">{t.pinLocating}</span>
+                            : f.pinSource === 'approx' ? (
+                              <div className="rounded-[14px] border-[1.5px] border-amber-500/60 bg-amber-50 px-4 py-3">
+                                <p className="font-medium text-ink/80">{t.pinApprox}</p>
+                                <button type="button" onClick={() => openPicker({ lat: Number(f.lat), lng: Number(f.lng) }, 'area')} className="mt-2 font-bold underline" data-testid="sell-pin-open">{t.pinOpen}</button>
+                              </div>
+                            ) : f.lat !== '' ? (
+                              <span className="text-ink/55">
+                                {f.pinSource === 'owner' ? `${t.pinOk} ` : ''}
+                                <button type="button" onClick={() => openPicker({ lat: Number(f.lat), lng: Number(f.lng) }, 'street')} className="font-semibold underline text-ink/70" data-testid="sell-pin-adjust">{t.pinAdjust}</button>
+                              </span>
+                            ) : null}
+                        </div>
+                        <PinPickerModal open={!!picker} start={picker?.start} zoom={picker?.zoom} expected={picker?.expected} city={f.city} t={t}
+                          onClose={() => setPicker(null)}
+                          onConfirm={(p) => { setPicker(null); if (p) { setF((x) => ({ ...x, lat: p.lat, lng: p.lng, pinSource: 'owner' })); track('sell_pin_placed', { edit: !!editId }); } }} />
+                      </>
                     ) : null}
                     <div className="mt-4"><span className={labelCls}>{t.fType}</span>
                       <TypePicker value={f.ptype} options={t.types} placeholder={t.typePh} invalid={!!errs.ptype}
