@@ -27,7 +27,7 @@ function page({ title, body, cta }) {
         <div style="font-size:14px;color:rgba(17,17,17,.65);margin-top:10px;line-height:1.6">${body}</div>
         ${cta ? `<div style="margin-top:20px"><a href="${cta.href}" style="display:inline-block;background:#111;color:#f9f4ee;text-decoration:none;font-size:14px;font-weight:600;padding:12px 22px;border-radius:999px">${cta.label}</a></div>` : ''}
       </div>
-      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:rgba(17,17,17,.4);margin-top:16px">${COUNTRY.brand} — ${COUNTRY.name}</div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:rgba(17,17,17,.4);margin-top:16px">Casa-Libre — ${COUNTRY.name}</div>
     </div>
   </body></html>`;
 }
@@ -79,7 +79,7 @@ export async function GET(req) {
       amount: promoCents(plan), currency: 'usd', customer: customerId,
       payment_method: user.card_pm_id, off_session: true, confirm: true,
       metadata: { user_id: String(uid), property_id: String(pid), product: 'casa-libre-promo', plan, kind: 'renewal' },
-      description: plan === 'home' ? 'Casa Libre — renovar portada (30 días)' : 'Casa Libre — renovar verificación (30 días)',
+      description: plan === 'home' ? 'Casa-Libre — renovar portada (30 días)' : 'Casa-Libre — renovar verificación (30 días)',
     });
     if (pi.status === 'succeeded') {
       const until = await grantPromotion(pid, plan, { extendFrom: prop.promotion_expires_at });
