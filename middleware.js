@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { blockedCountries, isBlocked, BLOCK_HTML } from './lib/geoBlock';
 
 // Tier-2 API protection. The marketplace DATA endpoints only answer a request
 // that carries a short-lived signed token, which we mint into a cookie on every
@@ -38,8 +39,31 @@ async function valid(tok) {
   catch { return false; }
 }
 
-export async function middleware(req) {
+// Region block (lib/geoBlock.js): visitors from blocked countries get a 403 page; each blocked
+// request is recorded in PostHog ('geo_blocked') for the Admin Manager's security watch.
+const BLOCKED = blockedCountries(process.env.GEO_BLOCK);
+const PH_KEY = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+const PH_HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
+const SITE_COUNTRY = (process.env.NEXT_PUBLIC_COUNTRY || process.env.COUNTRY || 'py').toLowerCase();
+function recordBlocked(req, country, pathname, event) {
+  if (!PH_KEY) return;
+  const ip = (req.headers.get('cf-connecting-ip') || (req.headers.get('x-forwarded-for') || '').split(',')[0] || '').trim() || undefined;
+  const send = fetch(`${PH_HOST}/capture/`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ api_key: PH_KEY, event: 'geo_blocked', distinct_id: ip || `geo:${country}`, properties: { site_country: SITE_COUNTRY, blocked_country: country, path: String(pathname).slice(0, 200), $ip: ip, $useragent: (req.headers.get('user-agent') || '').slice(0, 200) } }),
+  }).catch(() => {});
+  try { event?.waitUntil?.(send); } catch { /* fire and forget */ }
+}
+
+export async function middleware(req, event) {
   const { pathname } = req.nextUrl;
+  const country = req.headers.get('cf-ipcountry') || '';
+  if (BLOCKED.size && isBlocked({ country, pathname, blocked: BLOCKED })) {
+    recordBlocked(req, country.toUpperCase(), pathname, event);
+    return pathname.startsWith('/api/')
+      ? new NextResponse(JSON.stringify({ error: 'region_blocked' }), { status: 403, headers: { 'content-type': 'application/json' } })
+      : new NextResponse(BLOCK_HTML, { status: 403, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } });
+  }
   if (GATED.some((g) => pathname.startsWith(g))) {
     if (!(await valid(req.cookies.get(COOKIE)?.value))) {
       return new NextResponse(JSON.stringify({ error: 'forbidden' }), { status: 403, headers: { 'content-type': 'application/json' } });

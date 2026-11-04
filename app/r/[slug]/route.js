@@ -1,5 +1,5 @@
 // /r/<slug> — a channel's UTM link (lib/campaigns.js: one per channel). Also the SÍ
-// auto-reply's short links /r/si-ag, si-in, si-de, si-du (lib/waKeywords.js SHORT_LINKS).
+// auto-reply's short links /r/si-ag, si-in, si-de, si-du, /r/cartera, /r/proyecto (lib/waKeywords.js SHORT_LINKS).
 //
 // Redirects to the home page with the channel's utm tags, so the visit shows up in
 // analytics with a source instead of landing in "direct". Older links (/r/rda,
@@ -16,7 +16,7 @@ import { NextResponse } from 'next/server';
 import { campaignUrl, resolveSlug, batchOf, refOf, CAMPAIGNS } from '@/lib/campaigns';
 import { SITE } from '@/lib/site';
 import { COUNTRY_CODE } from '@/lib/country';
-import { SHORT_LINKS, publishLink } from '@/lib/waKeywords';
+import { SHORT_LINKS, SHORT_CONTENT, publishLink } from '@/lib/waKeywords';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -27,7 +27,7 @@ const PH_HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.co
 // Fire-and-forget: analytics must never delay or break the redirect.
 // slug = the channel's slug (an old alias like 'rda' is recorded as 'rd');
 // via = the slug actually in the link, kept for reference.
-function recordClick(req, slug, campaign, via, batch, ref) {
+function recordClick(req, slug, campaign, via, batch, ref, extra = {}) {
   if (!PH_KEY) return;
   const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || undefined;
   const ua = req.headers.get('user-agent') || '';
@@ -56,6 +56,7 @@ function recordClick(req, slug, campaign, via, batch, ref) {
           recipient: ref || undefined,
           utm_content: ref || undefined,
           via: via !== slug ? via : undefined,
+          ...extra,
           $ip: ip,
           $useragent: ua.slice(0, 200),
         },
@@ -64,15 +65,37 @@ function recordClick(req, slug, campaign, via, batch, ref) {
   } catch { /* never block the redirect */ }
 }
 
+// The Inbox assistant's links: /r/ai?u=<same-site path>&r=<person>&a=<reply> → the click is recorded
+// (link_click, slug 'ai', recipient, answer, path) and the page opens with utm_source=whatsapp,
+// utm_medium=assistant, utm_content=<reply>, utm_term=<person> (admin lib/aiLinks.js).
+export function aiTarget(base, sp) {
+  const u = String(sp.get('u') || '/');
+  const path = u.startsWith('/') && !u.startsWith('//') && /^\/[A-Za-z0-9\-_/.?=&%]*$/.test(u) ? u : '/';
+  const ref = refOf(sp.get('r'));
+  const answer = refOf(sp.get('a'));
+  const target = new URL(`${base}${path}`);
+  target.searchParams.set('utm_source', 'whatsapp');
+  target.searchParams.set('utm_medium', 'assistant');
+  target.searchParams.set('utm_campaign', 'ai_reply');
+  if (answer) target.searchParams.set('utm_content', answer);
+  if (ref) target.searchParams.set('utm_term', ref);
+  return { url: target.toString(), path, ref, answer };
+}
+
 export function GET(req, { params }) {
   const base = SITE.replace(/\/$/, '');
   const asked = String(params?.slug || '').toLowerCase();
+  if (asked === 'ai') {
+    const t = aiTarget(base, new URL(req.url).searchParams);
+    recordClick(req, 'ai', { source: 'whatsapp', medium: 'assistant', name: 'ai_reply' }, 'ai', '', t.ref, { answer: t.answer || undefined, path: t.path });
+    return NextResponse.redirect(t.url, 302);
+  }
   // the SÍ auto-reply's short links (/r/si-ag …) → /publicar with Roland's full UTM tags
   if (SHORT_LINKS[asked]) {
     const aud = SHORT_LINKS[asked];
     const who = refOf(new URL(req.url).searchParams.get('r'));   // the person's code
     recordClick(req, asked, { source: 'whatsapp', medium: 'mensaje', name: `${aud}_lanzamiento` }, asked, '', who);
-    return NextResponse.redirect(publishLink(aud, base, who), 302);
+    return NextResponse.redirect(publishLink(aud, base, who, SHORT_CONTENT[asked] || 'respuesta_si'), 302);
   }
   const slug = resolveSlug(asked); // 'rda' → 'rd'; unknown → null
   const sp = new URL(req.url).searchParams;

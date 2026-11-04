@@ -9,9 +9,9 @@
 //   contact.opted_out, or a reply like "No recibir más" / STOP / BAJA → that person's
 //     WhatsApp consent is withdrawn (users.whatsapp_opted_out_at) — no more automation
 //     WhatsApps (lib/whatsappTemplates.js waAllowed).
-//   message.inbound "SÍ" / "BAJA" answering a formula campaign template (the two quick-reply
-//     buttons) → the instant reply: SÍ = the /publicar link with UTM tags + chat tagged for a
-//     person; BAJA = the confirmation (lib/waKeywordReply.js).
+//   message.inbound "SÍ" / "CARTERA" / "PROYECTO" / "BAJA" answering a formula campaign template
+//     (the quick-reply buttons) → the instant reply with the tracked link + the chat tagged for a
+//     person (CARTERA / PROYECTO also email the team); BAJA = the confirmation (lib/waKeywordReply.js).
 // Always answers 2xx quickly for events it doesn't use.
 import { NextResponse } from 'next/server';
 import { select, update } from '@/lib/db';
@@ -22,7 +22,8 @@ import * as db from '@/lib/db';
 import { takeFallback } from '@/lib/automations/waFallback';
 import { sendEmailFallback } from '@/lib/automations/sendOnce';
 import { templateFrame, sendRenderedEmail } from '@/lib/email';
-import { answerKeyword } from '@/lib/waKeywordReply';
+import { answerKeyword, answerPlanInterest } from '@/lib/waKeywordReply';
+import { logReply, keywordOf } from '@/lib/waReplyLog';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -30,14 +31,17 @@ export const dynamic = 'force-dynamic';
 const RANK = { sending: 0, sent: 1, delivered: 2, read: 3 };
 const OPT_OUT = /^\s*(no recibir m[aá]s|no me interesa|stop|baja|parar|cancelar)\s*[.!]*\s*$/i;
 
+// the accounts with this WhatsApp number. users.phone is free text (spaces, dashes, a leading
+// 0): find the rows ending in the same last 3 digits, then keep only the ones that are really it.
+async function usersByPhone(e164) {
+  if (!e164) return [];
+  const rows = await select('users', `select=id,email,phone&phone=like.${encodeURIComponent(`%${e164.slice(-3)}`)}&limit=2000`).catch(() => []);
+  return rows.filter((u) => toE164(u.phone, COUNTRY.phonePrefix) === e164);
+}
 async function optOut(phone) {
   const e164 = toE164(phone, COUNTRY.phonePrefix);
   if (!e164) return 0;
-  // users.phone is free text (spaces, dashes, a leading 0): find the rows ending in the
-  // same last 3 digits, then keep only the ones that are really this number.
-  const tail = e164.slice(-3);
-  const rows = await select('users', `select=id,phone&phone=like.${encodeURIComponent(`%${tail}`)}&limit=2000`).catch(() => []);
-  const ids = rows.filter((u) => toE164(u.phone, COUNTRY.phonePrefix) === e164).map((u) => u.id);
+  const ids = (await usersByPhone(e164)).map((u) => u.id);
   for (const id of ids) {
     await update('users', `id=eq.${encodeURIComponent(id)}`, { whatsapp_opted_out_at: new Date().toISOString(), whatsapp_opt_in_at: null }, { returning: 'minimal' }).catch(() => {});
   }
@@ -83,11 +87,19 @@ export async function POST(req) {
     return NextResponse.json({ ok: true, found: !!row, updated, ...(fallback ? { emailFallback: fallback } : {}) });
   }
   if (type === 'contact.opted_out') {
+    const ph = toE164(d.phone || d.contact?.phone, COUNTRY.phonePrefix);
+    await logReply(db, { phone: ph, users: await usersByPhone(ph), keyword: 'contact_optout', how: 'relay', messageId: evt.id || null });
     return NextResponse.json({ ok: true, optedOut: await optOut(d.phone || d.contact?.phone) });
   }
   if (type === 'message.inbound') {
     const text = String(d.text || d.button?.text || d.interactive?.title || '');
-    const keyword = await answerKeyword(d.from || d.phone, text).catch(() => null);
+    const keyword = (await answerKeyword(d.from || d.phone, text).catch(() => null)) || (await answerPlanInterest(d.from || d.phone, text, d.contact?.name || d.name || '').catch(() => null));
+    // every tap / reply word and every opt-out goes into the person's history (lib/waReplyLog.js)
+    const kw = keywordOf(keyword) || (OPT_OUT.test(text) ? 'optout' : null);
+    if (kw) {
+      const ph = toE164(d.from || d.phone, COUNTRY.phonePrefix);
+      await logReply(db, { phone: ph, users: await usersByPhone(ph), keyword: kw, text, how: d.button || d.interactive || String(d.type || '') === 'button' ? 'button' : 'typed', messageId: d.id || null });
+    }
     if (OPT_OUT.test(text)) return NextResponse.json({ ok: true, optedOut: await optOut(d.from || d.phone), ...(keyword ? { keyword } : {}) });
     if (keyword) return NextResponse.json({ ok: true, keyword });
   }
