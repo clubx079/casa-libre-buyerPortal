@@ -9,11 +9,12 @@ test('SÍ / BAJA are recognised however they arrive (button text or typed)', () 
   assert.equal(isBaja('bajar precio'), false);
 });
 
-test("the message shows a short link; it opens /publicar with Roland's UTM tags", () => {
+test("the message shows a short link; it opens the home page with the sell form open, with Roland's UTM tags", () => {
   assert.equal(shortLink('agentes'), 'https://casa-libre.com.py/r/si-ag');
   assert.equal(shortLink('duenos'), 'https://casa-libre.com.py/r/si-du');
   const u = new URL(publishLink('agentes'));
-  assert.equal(u.origin + u.pathname, 'https://casa-libre.com.py/publicar');
+  assert.equal(u.origin + u.pathname, 'https://casa-libre.com.py/');
+  assert.equal(u.searchParams.get('sell'), '1');
   assert.equal(u.searchParams.get('utm_source'), 'whatsapp');
   assert.equal(u.searchParams.get('utm_medium'), 'mensaje');
   assert.equal(u.searchParams.get('utm_campaign'), 'agentes_lanzamiento');
