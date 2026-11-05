@@ -110,3 +110,10 @@ test("the assistant's tracked links: same-site only, UTM-tagged with the person 
   assert.equal(t.url, 'https://casa-libre.com.py/publicar?utm_source=whatsapp&utm_medium=assistant&utm_campaign=ai_reply&utm_content=be88dceaee&utm_term=abc123');
   assert.equal(aiTarget('https://casa-libre.com.py', new URLSearchParams('u=//evil.com')).url.startsWith('https://casa-libre.com.py/?'), true);
 });
+
+test('the Nov 2026 mascot / analytics templates get the same replies as their audience', async () => {
+  const { FORMULA_TEMPLATES } = await import('../lib/waKeywords.js');
+  for (const [name, aud] of [['cl_agentes_mascota', 'agentes'], ['cl_agentes_estadisticas', 'agentes'], ['cl_inmobiliarias_mascota', 'inmobiliarias'], ['cl_inmobiliarias_estadisticas', 'inmobiliarias'], ['cl_desarrolladoras_mascota', 'desarrolladoras'], ['cl_desarrolladoras_estadisticas', 'desarrolladoras']]) {
+    assert.equal(FORMULA_TEMPLATES[name], aud, name);
+  }
+});
