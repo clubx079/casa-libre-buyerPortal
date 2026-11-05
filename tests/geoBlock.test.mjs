@@ -2,8 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { blockedCountries, isBlocked, isOpenPath, AFRICA, BLOCK_HTML } from '../lib/geoBlock.js';
 
-test('GEO_BLOCK: unset = Africa, off = nothing, a list mixes codes and "africa"', () => {
-  const def = blockedCountries(undefined);
+test('GEO_BLOCK: unset = nothing (Africa lifted Nov 6 2026), "africa" = the 58 codes, a list mixes codes and "africa"', () => {
+  assert.equal(blockedCountries(undefined).size, 0);
+  const def = blockedCountries('africa');
   for (const c of ['NG', 'UG', 'AO', 'CF', 'ZA', 'EG']) assert.equal(def.has(c), true, c);
   assert.equal(def.has('PY'), false);
   assert.equal(def.has('BR'), false);
@@ -16,7 +17,7 @@ test('GEO_BLOCK: unset = Africa, off = nothing, a list mixes codes and "africa"'
 });
 
 test('blocked visitors, but never webhooks, crons or unknown countries', () => {
-  const blocked = blockedCountries(undefined);
+  const blocked = blockedCountries('africa');
   assert.equal(isBlocked({ country: 'NG', pathname: '/', blocked }), true);
   assert.equal(isBlocked({ country: 'ng', pathname: '/api/listings/search', blocked }), true);
   assert.equal(isBlocked({ country: 'PY', pathname: '/', blocked }), false);
