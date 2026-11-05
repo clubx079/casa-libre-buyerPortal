@@ -108,7 +108,7 @@ test("the assistant's tracked links: same-site only, UTM-tagged with the person 
   const { aiTarget } = await import('../app/r/[slug]/route.js').catch(() => ({}));
   if (!aiTarget) return;   // the route imports Next — covered by the build
   const t = aiTarget('https://casa-libre.com.py', new URLSearchParams('u=/publicar&r=Abc123&a=be88dceaee'));
-  assert.equal(t.url, 'https://casa-libre.com.py/publicar?utm_source=whatsapp&utm_medium=assistant&utm_campaign=ai_reply&utm_content=be88dceaee&utm_term=abc123');
+  assert.equal(t.url, 'https://casa-libre.com.py/?sell=1&utm_source=whatsapp&utm_medium=assistant&utm_campaign=ai_reply&utm_content=be88dceaee&utm_term=abc123');
   assert.equal(aiTarget('https://casa-libre.com.py', new URLSearchParams('u=//evil.com')).url.startsWith('https://casa-libre.com.py/?'), true);
 });
 

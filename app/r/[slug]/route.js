@@ -73,7 +73,10 @@ export function aiTarget(base, sp) {
   const path = u.startsWith('/') && !u.startsWith('//') && /^\/[A-Za-z0-9\-_/.?=&%]*$/.test(u) ? u : '/';
   const ref = refOf(sp.get('r'));
   const answer = refOf(sp.get('a'));
-  const target = new URL(`${base}${path}`);
+  // "publish your property" → straight to the home page with the sell form open (no /publicar hop)
+  const toSell = /^\/publicar\/?(\?|$)/.test(path);
+  const target = new URL(`${base}${toSell ? '/' : path}`);
+  if (toSell) target.searchParams.set('sell', '1');
   target.searchParams.set('utm_source', 'whatsapp');
   target.searchParams.set('utm_medium', 'assistant');
   target.searchParams.set('utm_campaign', 'ai_reply');
