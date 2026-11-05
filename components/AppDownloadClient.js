@@ -1,24 +1,24 @@
 'use client';
-// "iPhone app coming soon" landing — where the App Store badges point to (from the
-// home page and every marketplace page). Branded ink/paper, ES default + EN toggle.
-// The Android app is live (Google Play badges link straight to the store), so this
-// page only talks about the iPhone app and points people to the web meanwhile.
+// "Get the app" page (/descargar, the footer link): both apps are live — the store badges
+// on top, then what the app does. A phone opening /descargar goes straight to its own store
+// (app/descargar/page.js); this page is what a computer sees. ES default + EN toggle.
 import { useState } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
 import { COUNTRY } from '@/lib/country';
 import AuthButton from '@/components/AuthButton';
+import { Badge } from '@/components/AppBadges';
 
 const T = {
   es: {
     tabs: [['Comprar', '/propiedades?op=venta'], ['Alquilar', '/propiedades?op=alquiler'], ['Vender', '/publicar']],
     cta: 'Publicar gratis',
-    kicker: 'App para iPhone',
-    h1: <>La app para iPhone está <em>en camino.</em></>,
-    lede: `Estamos terminando la app de Casa Libre para iPhone. Muy pronto vas a poder buscar, guardar favoritos y hablar directo por WhatsApp desde tu iPhone. Mientras tanto, todo funciona igual desde la web.`,
+    kicker: 'App para iPhone y Android',
+    h1: <>Casa-Libre, <em>en tu celular.</em></>,
+    lede: `Buscá en el mapa, guardá favoritos y hablá directo por WhatsApp con quien publica. Gratis en el App Store y en Google Play.`,
     browse: 'Explorar propiedades en la web',
     home: 'Volver al inicio',
-    featTitle: 'Lo que vas a tener en la app',
+    featTitle: 'Lo que tenés en la app',
     feats: [
       ['Casa Libre en tu bolsillo', `Casas, departamentos y terrenos de todo ${COUNTRY.name}, en el mapa.`],
       ['Favoritos y alertas', 'Guardá propiedades y recibí avisos cuando aparezca algo nuevo.'],
@@ -29,12 +29,12 @@ const T = {
   en: {
     tabs: [['Buy', '/propiedades?op=venta'], ['Rent', '/propiedades?op=alquiler'], ['Sell', '/publicar']],
     cta: 'List for free',
-    kicker: 'iPhone app',
-    h1: <>The iPhone app is <em>on its way.</em></>,
-    lede: `We're finishing the Casa Libre app for iPhone. Very soon you'll be able to search, save favorites and chat directly on WhatsApp from your iPhone. In the meantime, everything works the same on the web.`,
+    kicker: 'App for iPhone and Android',
+    h1: <>Casa-Libre, <em>on your phone.</em></>,
+    lede: `Search on the map, save favorites and chat directly on WhatsApp with whoever posted. Free on the App Store and Google Play.`,
     browse: 'Browse properties on the web',
     home: 'Back to home',
-    featTitle: "What you'll get in the app",
+    featTitle: 'What you get in the app',
     feats: [
       ['Casa Libre in your pocket', `Houses, apartments and land across ${COUNTRY.name}, on the map.`],
       ['Favorites and alerts', 'Save properties and get notified when something new appears.'],
@@ -82,6 +82,10 @@ export default function AppDownloadClient({ tickerData = [] }) {
         <h1 className="text-[clamp(38px,6vw,68px)] leading-[1.02] tracking-head font-bold mb-4 [&_em]:font-serif [&_em]:italic [&_em]:font-normal">{t.h1}</h1>
         <p className="text-[clamp(16px,1.8vw,19px)] leading-[1.6] text-ink/70 max-w-[58ch] mx-auto mb-8">{t.lede}</p>
 
+        <div className="flex items-center justify-center gap-3 flex-wrap mb-6">
+          <Badge store="apple" xl placement="descargar" where="page" />
+          <Badge store="play" xl placement="descargar" where="page" />
+        </div>
         <div className="flex items-center justify-center gap-3 flex-wrap">
           <Link href="/propiedades" className="inline-flex items-center justify-center px-6 py-3.5 rounded-pill font-semibold text-[15px] bg-ink text-paper border-[1.5px] border-ink shadow-[4px_4px_0_rgba(17,17,17,.85)] active:translate-x-[2px] active:translate-y-[2px]">{t.browse}</Link>
           <Link href="/" className="inline-flex items-center justify-center px-6 py-3.5 rounded-pill font-semibold text-[15px] bg-white text-ink border-[1.5px] border-ink shadow-[4px_4px_0_rgba(17,17,17,.18)] active:translate-x-[2px] active:translate-y-[2px]">{t.home}</Link>

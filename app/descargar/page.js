@@ -4,17 +4,23 @@ import { getLandingListings } from '@/lib/listings';
 import { typeLabel } from '@/lib/propertyType';
 import { fmtUsd } from '@/lib/ui';
 import { COUNTRY } from '@/lib/country';
+import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { storeForUserAgent } from '@/lib/appStoreFor';
 
 export const dynamic = 'force-dynamic';
 
 export const metadata = {
-  title: 'La app de Casa Libre para iPhone — muy pronto',
+  title: 'Descargá la app de Casa-Libre — iPhone y Android',
   description:
-    'La app de Casa Libre para iPhone está en camino: buscá propiedades, guardá favoritos y hablá directo por WhatsApp desde tu iPhone. Mientras tanto, usá la web — gratis.',
+    'La app de Casa-Libre, gratis en el App Store y en Google Play: buscá propiedades en el mapa, guardá favoritos y hablá directo por WhatsApp con quien publica.',
   alternates: { canonical: '/descargar' },
 };
 
 export default async function DescargarPage() {
+  // a phone goes straight to its own store; a computer sees the page with both badges
+  const store = storeForUserAgent(headers().get('user-agent'));
+  if (store) redirect(store);
   // Same running-strip data as the home page.
   let ticker = [];
   try {

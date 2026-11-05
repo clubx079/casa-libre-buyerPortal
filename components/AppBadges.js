@@ -5,19 +5,19 @@
 //  - variant="default" (marketplace): mobile = caption on top + badges row;
 //    desktop = badge · caption · badge on one line, slightly larger.
 //  - variant="row" (home, below the search bar): just the two badges side by side.
-// Google Play opens the app's store page; App Store opens /descargar (no iPhone app yet).
+// Each badge opens its store page: Google Play and the App Store (iPhone app live since 2026-11-04).
 //  - GlobalAppBar (app/layout.js): the bar pinned to the bottom of EVERY page. A page with
 //    its own bottom bar (property page on phones: the WhatsApp bar) sets the CSS variable
 //    --cl-bottom-bar to that bar's height, and the app bar sits right above it.
 //  - StickyAppBadges `inline`: the same bar as the last row of a full-height page (desktop
 //    listings, phone map) — while one is on screen the global bar steps aside.
-// Every badge tap is tracked: 'app_badge_clicked' { store, placement } (PostHog + GTM),
-// shown in the admin Analytics user funnel as "Clicked an app button".
+// Every badge tap is tracked: 'app_badge_clicked' { store: app_store | google_play, placement,
+// where: popup | bar | page } (PostHog + GTM), shown in the admin Analytics user funnel as
+// "Clicked an app button", split into Android / iPhone.
 import { useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useLang } from '@/lib/useLang';
-import { PLAY_STORE_URL } from '@/lib/appLinks';
+import { PLAY_STORE_URL, APP_STORE_URL } from '@/lib/appLinks';
 import { track } from '@/lib/analytics';
 
 const T = { es: 'Funciona mejor en la app', en: 'It works better on the app', pt: 'Funciona melhor no app' };
@@ -40,7 +40,8 @@ const Play = ({ s = 15 }) => (
 
 // Exported for the app pop-up (components/AppPromo.js). href overrides the Play link
 // (the pop-up adds an install referrer so Play Console can count its installs).
-export function Badge({ store, big, xl, placement = '', href }) {
+// where: 'popup' (components/AppPromo.js) | 'bar' (the bottom bar) | 'page' (badges in a page).
+export function Badge({ store, big, xl, placement = '', href, where }) {
   const isApple = store === 'apple';
   const top = isApple ? 'Download on the' : 'GET IT ON';
   const name = isApple ? 'App Store' : 'Google Play';
@@ -54,11 +55,8 @@ export function Badge({ store, big, xl, placement = '', href }) {
       </span>
     </>
   );
-  const onClick = () => track('app_badge_clicked', { store: isApple ? 'app_store' : 'google_play', placement });
-  if (!isApple) {
-    return <a href={href || PLAY_STORE_URL} target="_blank" rel="noopener noreferrer" aria-label={name} className={cls} onClick={onClick}>{inner}</a>;
-  }
-  return <Link href="/descargar" aria-label={name} className={cls} onClick={onClick}>{inner}</Link>;
+  const onClick = () => track('app_badge_clicked', { store: isApple ? 'app_store' : 'google_play', placement, where: where || (String(placement).startsWith('promo') ? 'popup' : 'page') });
+  return <a href={href || (isApple ? APP_STORE_URL : PLAY_STORE_URL)} target="_blank" rel="noopener noreferrer" aria-label={name} className={cls} onClick={onClick}>{inner}</a>;
 }
 
 export default function AppBadges({ className = '', variant = 'default', placement = '' }) {
@@ -141,8 +139,8 @@ export function StickyAppBadges({ placement = 'bar', inline = false }) {
     <div className="flex items-center justify-center gap-x-5 gap-y-2 flex-wrap">
       <span className="text-[14px] md:text-[15px] font-semibold text-ink/75 w-full sm:w-auto text-center">{label}</span>
       <div className="flex items-center gap-3">
-        <Badge store="apple" xl placement={placement} />
-        <Badge store="play" xl placement={placement} />
+        <Badge store="apple" xl placement={placement} where="bar" />
+        <Badge store="play" xl placement={placement} where="bar" />
       </div>
     </div>
   );

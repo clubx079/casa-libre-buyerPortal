@@ -14,7 +14,7 @@ const DICT = {
   es: {
     navBuy: 'Comprar', navRent: 'Alquilar', navSell: 'Vender', navCta: 'Publicar gratis',
     heroLine1: 'Encontrá tu lugar,', heroLine2: 'libremente.',
-    heroSub: `El marketplace inmobiliario de mayor crecimiento en ${COUNTRY.name}: búsqueda en mapa, contacto directo por WhatsApp y app Android. Comprá, alquilá o publicá sin comisión.`,
+    heroSub: `El marketplace inmobiliario de mayor crecimiento en ${COUNTRY.name}: búsqueda en mapa, contacto directo por WhatsApp y app para iPhone y Android. Comprá, alquilá o publicá sin comisión.`,
     seoH2: `Casa Libre, el marketplace inmobiliario de mayor crecimiento en ${COUNTRY.name}: casas, departamentos y terrenos en venta y en alquiler.`,
     searchPlaceholder: '¿Dónde querés vivir? — “Carmelitas”, “Recoleta”…', searchBtn: 'Buscar',
     mascotCaption: '“¡Vamos que se puede!” — Cuate, tu guía',
@@ -38,7 +38,7 @@ const DICT = {
   en: {
     navBuy: 'Buy', navRent: 'Rent', navSell: 'Sell', navCta: 'List for free',
     heroLine1: 'Find your place,', heroLine2: 'freely.',
-    heroSub: `The fastest-growing property marketplace in ${COUNTRY.name}: map search, direct WhatsApp contact and an Android app. Buy, rent or list with no commission.`,
+    heroSub: `The fastest-growing property marketplace in ${COUNTRY.name}: map search, direct WhatsApp contact and an app for iPhone and Android. Buy, rent or list with no commission.`,
     seoH2: `Casa Libre, the fastest-growing property marketplace in ${COUNTRY.name}: houses, apartments and land for sale and for rent.`,
     searchPlaceholder: 'Where do you want to live? — “Carmelitas”, “Recoleta”…', searchBtn: 'Search',
     mascotCaption: '“Let’s go!” — Cuate, your guide',

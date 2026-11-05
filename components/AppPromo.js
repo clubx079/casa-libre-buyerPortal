@@ -87,8 +87,8 @@ export default function AppPromo() {
         <p className="text-[30px] sm:text-[40px] font-bold tracking-head leading-[1.08] mt-6 max-w-[14ch]">{t.line}</p>
         <p className="text-[16px] sm:text-[18px] text-ink/60 mt-3">{t.sub}</p>
         <div className="mt-8 flex flex-col sm:flex-row items-center gap-3" onClick={downloaded}>
-          <Badge store="apple" xl placement={`promo_${moment}`} />
-          <Badge store="play" xl placement={`promo_${moment}`} href={playHref(moment)} />
+          <Badge store="apple" xl placement={`promo_${moment}`} where="popup" />
+          <Badge store="play" xl placement={`promo_${moment}`} where="popup" href={playHref(moment)} />
         </div>
       </div>
       <style>{'@keyframes clPromoIn{from{transform:translateY(16px) scale(.97);opacity:0}to{transform:none;opacity:1}}'}</style>
