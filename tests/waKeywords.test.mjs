@@ -70,8 +70,9 @@ test('CARTERA / PROYECTO: recognised, each with its own reply, link and utm_cont
   assert.equal(keywordLink('si', 'duenos', 'x'), 'https://casa-libre.com.py/r/si-du?r=x');
   assert.equal(SHORT_LINKS.cartera, 'inmobiliarias');
   assert.equal(new URL(publishLink('inmobiliarias', undefined, 'abc', SHORT_CONTENT.cartera)).searchParams.get('utm_content'), 'respuesta_cartera');
-  assert.match(carteraReply('abc'), /cuántas propiedades tenés/);
-  assert.match(carteraReply('abc'), /\/r\/cartera\?r=abc/);
+  // Roland, Nov 5 2026: ask the size first — no offer, no "publish one listing" link
+  assert.match(carteraReply('abc'), /cuántas propiedades tenés hoy y dónde las publicás/);
+  assert.doesNotMatch(carteraReply('abc'), /https?:\/\/|gratis|sin costo|lanzamiento/);
   assert.match(proyectoReply(), /cómo se llama el proyecto/);
   assert.equal(keywordReply('cartera', 'inmobiliarias', 'z'), carteraReply('z'));
   assert.equal(keywordReply('si', 'agentes', 'z'), yesReply('agentes', 'z'));
@@ -90,6 +91,9 @@ test('a warm agent can tap SÍ and then CARTERA: each answered once', () => {
   assert.equal(ctx.answered.has('cartera'), false);
   const ca = msg('outbound', 'text', '2026-11-03T10:06:02Z', { text: carteraReply('q') });
   assert.equal(formulaContext([ca, si, tpl], { now }).answered.has('cartera'), true);
+  // the old CARTERA reply (with its /r/cartera link) still counts as answered
+  const old = msg('outbound', 'text', '2026-11-03T10:06:02Z', { text: '¡Genial! … acá:\nhttps://casa-libre.com.py/r/cartera?r=q' });
+  assert.equal(formulaContext([old, si, tpl], { now }).answered.has('cartera'), true);
 });
 
 test('"Sí, avisame" on the plan-for-agents template: recognised, confirmed once, no emojis', () => {
