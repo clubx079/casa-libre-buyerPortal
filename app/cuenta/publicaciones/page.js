@@ -205,6 +205,19 @@ export default function MyListingsPage() {
     openSell({ draft: d });
   }, [drafts, openSell]);
 
+  // Deep link from the mobile app's "Editar" (the app has no edit form of its own):
+  // /cuenta/publicaciones?edit=<id> → open that listing in the edit form once the listings
+  // have loaded (once). Only the person's own listings (the list comes from their account).
+  const editOpened = useRef(false);
+  useEffect(() => {
+    if (editOpened.current || !listings) return;
+    let id = null;
+    try { id = new URLSearchParams(window.location.search).get('edit'); } catch {}
+    if (!id || !listings.some((l) => l.id === id)) return;
+    editOpened.current = true;
+    openSell({ edit: id });
+  }, [listings, openSell]);
+
   const delDraft = async () => {
     const id = confirmDraft;
     if (!id) return;
