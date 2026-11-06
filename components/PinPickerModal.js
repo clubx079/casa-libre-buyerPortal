@@ -4,19 +4,25 @@
 // edit wizard (components/SellFlow.js) when Google couldn't find the exact address in the city
 // they typed, and from the "Ajustar en el mapa" link. Only the pin changes — never the
 // neighbourhood or city the seller typed.
+// A search box on top (Google Places, this country only, favouring what's on the map): pick a
+// street, a place or a landmark and the map + pin jump there; the seller can still drag the pin
+// or tap the map to fine-tune it.
 import { useEffect, useRef, useState } from 'react';
 import { loadGoogleMapsAPI, mapOptions } from '@/utils/gmap';
 import { km, FAR_KM } from '@/lib/pinLocate';
+import { COUNTRY } from '@/lib/country';
 
 export default function PinPickerModal({ open, start, zoom = 16, expected, city, t, onConfirm, onClose }) {
   const box = useRef(null);
+  const search = useRef(null);
   const [pos, setPos] = useState(start);
+  const [q, setQ] = useState('');
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     if (!open || !start) return undefined;
-    setPos(start); setFailed(false);
-    let marker; let map; let alive = true;
+    setPos(start); setFailed(false); setQ('');
+    let marker; let map; let ac; let alive = true;
     loadGoogleMapsAPI().then(() => {
       if (!alive || !box.current || !window.google?.maps) return;
       const g = window.google;
@@ -25,8 +31,30 @@ export default function PinPickerModal({ open, start, zoom = 16, expected, city,
       const move = (ll) => { const p = { lat: ll.lat(), lng: ll.lng() }; marker.setPosition(p); setPos(p); };
       marker.addListener('dragend', (e) => move(e.latLng));
       map.addListener('click', (e) => move(e.latLng));
+      // search: the place's spot becomes the pin (then drag to fine-tune)
+      if (search.current && g.maps.places) {
+        ac = new g.maps.places.Autocomplete(search.current, {
+          componentRestrictions: { country: COUNTRY.geoCountryCode },
+          fields: ['geometry', 'name', 'formatted_address'],
+        });
+        ac.bindTo('bounds', map);   // favour places near what the map shows
+        ac.addListener('place_changed', () => {
+          const place = ac.getPlace() || {};
+          const loc = place.geometry?.location;
+          if (!loc) return;
+          if (place.geometry.viewport && !place.geometry.viewport.isEmpty?.()) map.fitBounds(place.geometry.viewport);
+          map.setCenter(loc);
+          if (map.getZoom() < 16 || map.getZoom() > 18) map.setZoom(17);
+          move(loc);
+          setQ(place.name || place.formatted_address || '');   // the place's name (no plus codes)
+        });
+      }
     }).catch(() => setFailed(true));
-    return () => { alive = false; if (marker) marker.setMap(null); };
+    return () => {
+      alive = false;
+      if (marker) marker.setMap(null);
+      if (ac && window.google?.maps?.event) window.google.maps.event.clearInstanceListeners(ac);
+    };
   }, [open, start?.lat, start?.lng, zoom]);
 
   if (!open) return null;
@@ -37,6 +65,13 @@ export default function PinPickerModal({ open, start, zoom = 16, expected, city,
         <div className="px-5 pt-5 pb-3">
           <h3 className="text-[19px] font-bold tracking-head">{t.pinTitle}</h3>
           <p className="text-[13px] text-ink/60 mt-1">{t.pinHelp}</p>
+          <div className="relative mt-3">
+            <svg aria-hidden="true" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink/45" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+            <input ref={search} value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }}
+              placeholder={t.pinSearchPh || 'Buscá una dirección o un lugar'} autoComplete="off" enterKeyHint="search"
+              className="w-full pl-10 pr-9 py-2.5 rounded-input border border-ink/20 bg-card text-[14px] outline-none focus:border-ink/60" data-testid="pin-search" />
+            {q ? <button type="button" onClick={() => { setQ(''); search.current?.focus(); }} aria-label="Borrar" className="absolute right-2.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full text-ink/50 hover:bg-ink/5">×</button> : null}
+          </div>
         </div>
         <div className="relative flex-1 bg-card">
           <div ref={box} className="absolute inset-0" />

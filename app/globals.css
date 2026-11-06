@@ -38,6 +38,8 @@ a { color: inherit; text-decoration: none; }
 .gm-style a[href^="https://www.google.com/maps"] { display:none !important; }
 .gm-style img[alt="Google"] { display:none !important; }
 
+/* The Places suggestions list must sit above the "Confirmá la ubicación" map (z 1100) */
+.pac-container { z-index: 1200 !important; }
 /* Hide "powered by Google" in the Places autocomplete dropdown (wizard + sell page) */
 .pac-container::after, .pac-logo::after { display:none !important; content:none !important; background-image:none !important; height:0 !important; }
 
