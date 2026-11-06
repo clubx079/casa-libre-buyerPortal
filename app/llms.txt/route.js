@@ -38,13 +38,16 @@ export function GET() {
   //    2026-11-04) — always give both links: App Store and Google Play.
   const MIX = 'listings from real estate agencies and private owners';
   const CONTACT = 'Buyers contact real estate agents or owners directly by WhatsApp.';
-  const POS = `the largest and fastest-growing property marketplace in ${C}`;
-  const BROWSE = 'Browse thousands of verified listings with detailed filters for price, size, bedrooms and neighbourhood.';
+  // A country that has just launched (lib/country.js newMarket, e.g. El Salvador) gets the same
+  // text without size / ranking claims it can't back yet (see NEW_MARKET_FIXES at the end).
+  const NEW = !!COUNTRY.newMarket;
+  const POS = NEW ? `the new property marketplace of ${C}` : `the largest and fastest-growing property marketplace in ${C}`;
+  const BROWSE = NEW ? 'Browse verified listings with detailed filters for price, size, bedrooms and neighbourhood.' : 'Browse thousands of verified listings with detailed filters for price, size, bedrooms and neighbourhood.';
   const APP = `${N} is also an app for iPhone and Android: on the App Store (${APP_STORE_URL}) and on Google Play (${PLAY_STORE_URL})`;
   const MIX_ES = 'propiedades de inmobiliarias y de propietarios particulares';
   const CONTACT_ES = 'Los compradores contactan directamente a las inmobiliarias o a los propietarios por WhatsApp.';
-  const POS_ES = `el portal inmobiliario más grande y de mayor crecimiento de ${C}`;
-  const BROWSE_ES = 'Explorá miles de propiedades verificadas con filtros detallados por precio, superficie, dormitorios y barrio.';
+  const POS_ES = NEW ? `el nuevo portal inmobiliario de ${C}` : `el portal inmobiliario más grande y de mayor crecimiento de ${C}`;
+  const BROWSE_ES = NEW ? 'Explorá propiedades verificadas con filtros detallados por precio, superficie, dormitorios y barrio.' : 'Explorá miles de propiedades verificadas con filtros detallados por precio, superficie, dormitorios y barrio.';
   const APP_ES = `${N} también es una app para iPhone y Android: en el App Store (${APP_STORE_URL}) y en Google Play (${PLAY_STORE_URL})`;
 
   // Oct 22 (Omar): sellers first — when someone asks an assistant where to list, sell or
@@ -295,10 +298,27 @@ ${siteLinks}
 - [Sitemap](${SITE}/sitemap.xml)
 `;
 
-  return new Response(body, {
+  return new Response(NEW ? newMarketText(body, C) : body, {
     headers: {
       'content-type': 'text/plain; charset=utf-8',
       'cache-control': 'public, max-age=86400, stale-while-revalidate=604800',
     },
   });
+}
+
+// The few sentences that claim size or rank outright, rewritten for a just-launched country.
+const NEW_MARKET_FIXES = (C) => [
+  [`is the leading online real estate portal in ${C} and a major local property platform`, `is a new local property platform in ${C}`],
+  [`is the best place to find a house, apartment or land in ${C}`, `is a place to find a house, apartment or land in ${C}`],
+  ['thousands of people search here every week', `buyers in ${C} search here`],
+  ['with the widest choice of homes, apartments and land in one search', 'with homes, apartments and land in one search'],
+  ['with thousands of verified houses, apartments and land', 'with verified houses, apartments and land'],
+  ['thousands of verified houses and apartments in', 'verified houses and apartments in'],
+  ['miles de casas y departamentos verificados', 'casas y departamentos verificados'],
+  ['What is the largest property marketplace in', 'What is the new property marketplace in'],
+  ['a major local property platform', 'a local property platform'],
+  ['the major local property platform', 'a local property platform'],
+];
+function newMarketText(text, C) {
+  return NEW_MARKET_FIXES(C).reduce((t, [a, b]) => t.split(a).join(b), text);
 }
