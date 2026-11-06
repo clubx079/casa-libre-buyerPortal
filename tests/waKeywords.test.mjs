@@ -73,7 +73,9 @@ test('CARTERA / PROYECTO: recognised, each with its own reply, link and utm_cont
   // Roland, Nov 5 2026: ask the size first — no offer, no "publish one listing" link
   assert.match(carteraReply('abc'), /cuántas propiedades tenés hoy y dónde las publicás/);
   assert.doesNotMatch(carteraReply('abc'), /https?:\/\/|gratis|sin costo|lanzamiento/);
-  assert.match(proyectoReply(), /cómo se llama el proyecto/);
+  // Nov 6 2026: PROYECTO asks first too — name, place, units — no offer, no link
+  assert.match(proyectoReply('abc'), /cómo se llama, dónde está y cuántas unidades tiene/);
+  assert.doesNotMatch(proyectoReply('abc'), /https?:\/\/|gratis|sin costo|lanzamiento/);
   assert.equal(keywordReply('cartera', 'inmobiliarias', 'z'), carteraReply('z'));
   assert.equal(keywordReply('si', 'agentes', 'z'), yesReply('agentes', 'z'));
   for (const r of [carteraReply(), proyectoReply(), BAJA_REPLY, yesReply('inmobiliarias')]) {
