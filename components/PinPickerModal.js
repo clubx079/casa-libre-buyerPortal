@@ -7,6 +7,8 @@
 // A search box on top (Google Places, this country only, favouring what's on the map): pick a
 // street, a place or a landmark and the map + pin jump there; the seller can still drag the pin
 // or tap the map to fine-tune it.
+// So nobody misses that the pin moves: it bounces and a hint says "drag the red pin" until the
+// seller drags it, taps the map or searches (no bounce for people who turned motion off).
 import { useEffect, useRef, useState } from 'react';
 import { loadGoogleMapsAPI, mapOptions } from '@/utils/gmap';
 import { km, FAR_KM } from '@/lib/pinLocate';
@@ -17,20 +19,24 @@ export default function PinPickerModal({ open, start, zoom = 16, expected, city,
   const search = useRef(null);
   const [pos, setPos] = useState(start);
   const [q, setQ] = useState('');
+  const [touched, setTouched] = useState(false);   // the seller moved the pin (drag / tap / search)
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     if (!open || !start) return undefined;
-    setPos(start); setFailed(false); setQ('');
+    setPos(start); setFailed(false); setQ(''); setTouched(false);
     let marker; let map; let ac; let alive = true;
     loadGoogleMapsAPI().then(() => {
       if (!alive || !box.current || !window.google?.maps) return;
       const g = window.google;
       map = new g.maps.Map(box.current, mapOptions(g, { center: start, zoom, gestureHandling: 'greedy', mapTypeControl: false, streetViewControl: false }));
-      marker = new g.maps.Marker({ position: start, map, draggable: true });
+      const calm = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      marker = new g.maps.Marker({ position: start, map, draggable: true, animation: calm ? null : g.maps.Animation.BOUNCE, title: t.pinDragHint || '' });
+      const settle = () => { marker.setAnimation(null); setTouched(true); };
       const move = (ll) => { const p = { lat: ll.lat(), lng: ll.lng() }; marker.setPosition(p); setPos(p); };
+      marker.addListener('dragstart', settle);
       marker.addListener('dragend', (e) => move(e.latLng));
-      map.addListener('click', (e) => move(e.latLng));
+      map.addListener('click', (e) => { settle(); move(e.latLng); });
       // search: the place's spot becomes the pin (then drag to fine-tune)
       if (search.current && g.maps.places) {
         ac = new g.maps.places.Autocomplete(search.current, {
@@ -46,6 +52,9 @@ export default function PinPickerModal({ open, start, zoom = 16, expected, city,
           map.setCenter(loc);
           if (map.getZoom() < 16 || map.getZoom() > 18) map.setZoom(17);
           move(loc);
+          // a short bounce where the pin landed, so the eye finds it
+          setTouched(true);
+          if (!calm) { marker.setAnimation(g.maps.Animation.BOUNCE); setTimeout(() => marker?.setAnimation(null), 1400); }
           setQ(place.name || place.formatted_address || '');   // the place's name (no plus codes)
         });
       }
@@ -75,6 +84,14 @@ export default function PinPickerModal({ open, start, zoom = 16, expected, city,
         </div>
         <div className="relative flex-1 bg-card">
           <div ref={box} className="absolute inset-0" />
+          {!touched && !failed ? (
+            <div className="absolute top-3 inset-x-0 flex justify-center pointer-events-none" data-testid="pin-hint">
+              <span className="inline-flex items-center gap-2 rounded-pill bg-ink text-paper text-[13px] font-semibold px-3.5 py-2 shadow-lg">
+                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M2 12h20M12 2l-3 3M12 2l3 3M12 22l-3-3M12 22l3-3M2 12l3-3M2 12l3 3M22 12l-3-3M22 12l-3 3" /></svg>
+                {t.pinDragHint || 'Arrastrá el pin rojo hasta tu propiedad'}
+              </span>
+            </div>
+          ) : null}
           {failed ? <p className="absolute inset-0 flex items-center justify-center text-[13px] text-ink/60 px-6 text-center">{t.pinMapError}</p> : null}
         </div>
         <div className="px-5 py-4 border-t border-ink/10">

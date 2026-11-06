@@ -53,7 +53,7 @@ const DICT = {
     pinLocating: 'Buscando la ubicación…',
     pinApprox: 'No encontramos la dirección exacta en esa ciudad. Marcá tu propiedad en el mapa.',
     pinOpen: 'Marcar en el mapa', pinAdjust: 'Ajustar en el mapa', pinOk: 'Ubicación marcada en el mapa.',
-    pinTitle: 'Confirmá la ubicación', pinHelp: 'Buscá la dirección o un lugar cercano, después mové el pin hasta tu propiedad o tocá el mapa donde está.', pinSearchPh: 'Buscá una dirección o un lugar',
+    pinTitle: 'Confirmá la ubicación', pinHelp: 'Buscá la dirección o un lugar cercano, después mové el pin hasta tu propiedad o tocá el mapa donde está.', pinSearchPh: 'Buscá una dirección o un lugar', pinDragHint: 'Arrastrá el pin rojo hasta tu propiedad', pinCheck: 'Revisá que el pin quede justo en tu propiedad.',
     pinConfirm: 'Confirmar ubicación', pinCancel: 'Cancelar', pinMapError: 'No pudimos cargar el mapa. Probá de nuevo en un momento.',
     pinFar: (city) => `El pin quedó lejos de ${city || 'la ciudad'}. ¿Seguro que la propiedad está ahí?`,
     beds: 'Dormitorios', baths: 'Baños',
@@ -121,7 +121,7 @@ const DICT = {
     pinLocating: 'Finding the location…',
     pinApprox: "We couldn't find the exact address in that city. Mark your property on the map.",
     pinOpen: 'Mark on the map', pinAdjust: 'Adjust on the map', pinOk: 'Location marked on the map.',
-    pinTitle: 'Confirm the location', pinHelp: 'Search the address or a place nearby, then drag the pin to your property or tap the map where it is.', pinSearchPh: 'Search an address or place',
+    pinTitle: 'Confirm the location', pinHelp: 'Search the address or a place nearby, then drag the pin to your property or tap the map where it is.', pinSearchPh: 'Search an address or place', pinDragHint: 'Drag the red pin onto your property', pinCheck: 'Check that the pin is right on your property.',
     pinConfirm: 'Confirm location', pinCancel: 'Cancel', pinMapError: "We couldn't load the map. Try again in a moment.",
     pinFar: (city) => `The pin is far from ${city || 'the city'}. Are you sure the property is there?`,
     beds: 'Bedrooms', baths: 'Bathrooms',
@@ -1291,10 +1291,15 @@ export default function SellFlowProvider({ children }) {
                                 <button type="button" onClick={() => openPicker({ lat: Number(f.lat), lng: Number(f.lng) }, 'area')} className="mt-2 font-bold underline" data-testid="sell-pin-open">{t.pinOpen}</button>
                               </div>
                             ) : f.lat !== '' ? (
-                              <span className="text-ink/55">
-                                {f.pinSource === 'owner' ? `${t.pinOk} ` : ''}
-                                <button type="button" onClick={() => openPicker({ lat: Number(f.lat), lng: Number(f.lng) }, 'street')} className="font-semibold underline text-ink/70" data-testid="sell-pin-adjust">{t.pinAdjust}</button>
-                              </span>
+                              // always offered once there's an address — even when Google found it exactly,
+                              // the seller checks the pin is on their property and can move it
+                              <div className="rounded-[14px] border-[1.5px] border-ink/15 bg-white px-4 py-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                                <p className="text-ink/70">{f.pinSource === 'owner' ? t.pinOk : t.pinCheck}</p>
+                                <button type="button" onClick={() => openPicker({ lat: Number(f.lat), lng: Number(f.lng) }, 'street')} className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-pill border-[1.5px] border-ink font-semibold text-ink hover:bg-ink/5" data-testid="sell-pin-adjust">
+                                  <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="#E53935"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" /></svg>
+                                  {t.pinAdjust}
+                                </button>
+                              </div>
                             ) : null}
                         </div>
                         <PinPickerModal open={!!picker} start={picker?.start} zoom={picker?.zoom} expected={picker?.expected} city={f.city} t={t}
