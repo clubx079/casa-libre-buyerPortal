@@ -9,6 +9,7 @@ import { getSession } from '@/lib/auth';
 import * as db from '@/lib/db';
 import { COUNTRY_CODE } from '@/lib/country';
 import { createdInApp } from '@/lib/appInstall';
+import { clientIp } from '@/lib/ipBlock';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -32,6 +33,8 @@ export async function POST(req) {
   let user = null;
   if (s?.uid) [user] = await db.select('users', `select=id,created_at,auth_provider&id=eq.${encodeURIComponent(s.uid)}&limit=1`).catch(() => []);
   if (!PH_KEY) return NextResponse.json({ ok: true, recorded: false }, { headers: HEADERS });
+  // This request is sent from here, so without $ip PostHog would record this server's address.
+  const ip = clientIp(req.headers);
   const recorded = await fetch(`${PH_HOST}/capture/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -42,6 +45,7 @@ export async function POST(req) {
       distinct_id: user ? String(user.id) : `install:${installId}`,
       properties: {
         site_country: COUNTRY_CODE,
+        ...(ip ? { $ip: ip, ip_source: 'phone' } : {}),
         install_id: installId,
         installed_at: installedAt,
         platform,
