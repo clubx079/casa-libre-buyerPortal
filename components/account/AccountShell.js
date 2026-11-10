@@ -9,8 +9,8 @@ import { COUNTRY } from '@/lib/country';
 import AuthButton from '@/components/AuthButton';
 
 const NAV = {
-  es: [['/cuenta', 'Panel', 'dash'], ['/cuenta/guardadas', 'Guardadas', 'heart'], ['/cuenta/publicaciones', 'Mis publicaciones', 'home'], ['/cuenta/pagos', 'Pagos', 'card'], ['/cuenta/ajustes', 'Ajustes', 'gear']],
-  en: [['/cuenta', 'Dashboard', 'dash'], ['/cuenta/guardadas', 'Saved', 'heart'], ['/cuenta/publicaciones', 'My listings', 'home'], ['/cuenta/pagos', 'Payments', 'card'], ['/cuenta/ajustes', 'Settings', 'gear']],
+  es: [['/cuenta', 'Panel', 'dash'], ['/cuenta/guardadas', 'Guardadas', 'heart'], ['/cuenta/publicaciones', 'Mis publicaciones', 'home'], ['/cuenta/referidos', 'Referidos', 'gift'], ['/cuenta/pagos', 'Pagos', 'card'], ['/cuenta/ajustes', 'Ajustes', 'gear']],
+  en: [['/cuenta', 'Dashboard', 'dash'], ['/cuenta/guardadas', 'Saved', 'heart'], ['/cuenta/publicaciones', 'My listings', 'home'], ['/cuenta/referidos', 'Referrals', 'gift'], ['/cuenta/pagos', 'Payments', 'card'], ['/cuenta/ajustes', 'Settings', 'gear']],
 };
 const T = {
   es: { browse: 'Ver propiedades', publish: 'Publicar propiedad', logout: 'Cerrar sesión', logoutMsg: '¿Querés cerrar tu sesión?', cancel: 'Cancelar' },
@@ -22,6 +22,7 @@ function Icon({ name }) {
   if (name === 'dash') return <svg {...p}><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></svg>;
   if (name === 'heart') return <svg {...p}><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 1 0-7.8 7.8l1.1 1L12 21l7.7-7.5 1.1-1a5.5 5.5 0 0 0 0-7.9z" /></svg>;
   if (name === 'home') return <svg {...p}><path d="M3 10.5 12 3l9 7.5" /><path d="M5 9.5V21h14V9.5" /><path d="M9.5 21v-6h5v6" /></svg>;
+  if (name === 'gift') return <svg {...p}><rect x="3" y="8" width="18" height="4" rx="1" /><path d="M5 12v8h14v-8" /><path d="M12 8v12" /><path d="M12 8c-1.5-3-5-3.5-5-1.2C7 8 9.5 8 12 8z" /><path d="M12 8c1.5-3 5-3.5 5-1.2C17 8 14.5 8 12 8z" /></svg>;
   if (name === 'card') return <svg {...p}><rect x="2.5" y="5" width="19" height="14" rx="2.5" /><line x1="2.5" y1="9.5" x2="21.5" y2="9.5" /></svg>;
   // settings — clean sliders (the Lucide cog renders as a cluttered blob at 18px)
   return <svg {...p}><line x1="4" y1="6" x2="20" y2="6" /><circle cx="10" cy="6" r="2.3" /><line x1="4" y1="12" x2="20" y2="12" /><circle cx="15" cy="12" r="2.3" /><line x1="4" y1="18" x2="20" y2="18" /><circle cx="9" cy="18" r="2.3" /></svg>;

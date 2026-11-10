@@ -30,5 +30,7 @@ export async function GET(req) {
 
   const session = getSession();
   if (!session || String(session.uid) !== String(user.id)) setSessionCookie(user);
-  return back(`/cuenta/publicaciones?pay=${encodeURIComponent(prop.id)}&plan=home`);
+  // the plan the token was made for (a referral reward can be 'verified'); older tokens → home
+  const plan = claim.plan === 'verified' ? 'verified' : 'home';
+  return back(`/cuenta/publicaciones?pay=${encodeURIComponent(prop.id)}&plan=${plan}`);
 }

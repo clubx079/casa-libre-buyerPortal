@@ -28,6 +28,7 @@ import { fetchListingViews, viewsConfigured } from '@/lib/posthogViews';
 import { sendPush } from '@/lib/push';
 import { runDeletedAsk } from '@/lib/listingDeleted';
 import { runOwnerPushes } from '@/lib/ownerPushes';
+import { runReferralsCron } from '@/lib/referrals/run';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -156,7 +157,11 @@ async function handle(req) {
       }).catch((e) => ({ error: e?.message || 'saves_failed' }));
     // "Listing deleted → ask why": the deletions that haven't had their email yet (lib/listingDeleted.js).
     const deletedAsk = await runDeletedAsk({ frame }).catch((e) => ({ error: e?.message || 'deleted_ask_failed' }));
-    return NextResponse.json({ ok: true, quietHours: frame.quiet, ...result, views, drafts, duplicates, paid, noListing, held, payFollow, saves, deletedAsk, pushes, at: new Date().toISOString() });
+    // Referral program (lib/referrals/): referrals whose listing went live → rewards,
+    // reward emails, "ends soon" reminders, expiry. Off until switched on in the admin.
+    const referrals = await runReferralsCron({ frame }).catch((e) => ({ error: e?.message || 'referrals_failed' }));
+    if (referrals.rewardsGranted || referrals.expired) revalidateTag('listings');
+    return NextResponse.json({ ok: true, quietHours: frame.quiet, ...result, views, drafts, duplicates, paid, noListing, held, payFollow, saves, deletedAsk, referrals, pushes, at: new Date().toISOString() });
   } catch (e) {
     return NextResponse.json({ error: 'automation_failed', detail: e?.message }, { status: 500 });
   }

@@ -8,6 +8,7 @@ import { select, update } from '@/lib/db';
 import { sendPromotionRenewalEmail } from '@/lib/email';
 import { COUNTRY } from '@/lib/country';
 import { getFreeHomeIdsRaw } from '@/lib/listings';
+import { rewardEnds } from '@/lib/referrals/store';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -40,7 +41,11 @@ async function handle(req) {
   // Free first-listing gifts get their own ending-soon email from the automation
   // (with a pay link, not a one-click charge) — never this paid-renewal reminder.
   const freeIds = new Set(await getFreeHomeIdsRaw());
-  rows = rows.filter((r) => !freeIds.has(String(r.id)));
+  // Same for a promotion that ends because of a referral reward: the referral program sends
+  // its own "ends soon" email (lib/referrals/engine.js).
+  const rewardEnd = await rewardEnds({ select }).catch(() => new Map());
+  const endsWithReward = (r) => rewardEnd.has(String(r.id)) && Math.abs(Date.parse(rewardEnd.get(String(r.id))) - Date.parse(r.promotion_expires_at)) <= 3600000;
+  rows = rows.filter((r) => !freeIds.has(String(r.id)) && !endsWithReward(r));
 
   // Resolve owner emails in one shot.
   const ownerIds = [...new Set(rows.map((r) => r.created_by).filter(Boolean))];
