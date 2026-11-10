@@ -123,7 +123,7 @@ try {
   ok(/Hola Ana,/.test(m1?.text || '') && m1.html.includes(`/ref/${codeFor(ana.id)}`), 'greets by name + carries their own referral link');
   const settings = before.referralPromo ? (await A('/api/referrals')).settings : null;
   ok(settings && m1.text.includes(`durante ${settings.referrer.days} días`) && m1.text.includes(`${settings.milestone.every} invitados`) && m1.text.includes(`recibe ${settings.newUser.days} días`), `uses the real program settings (${settings?.referrer.days} days · ${settings?.milestone.every} people)`);
-  ok(/referral-promo\/stop\?token=/.test(m1?.html || '') && /cuenta\/referidos/.test(m1?.html || ''), 'opt-out link + Referrals-page button');
+  ok(!/referral-promo\/stop/.test(m1?.html || '') && !/Para no recibir/.test(m1?.text || '') && /cuenta\/referidos/.test(m1?.html || ''), 'Referrals-page button, no opt-out link');
   const code = await rest(`email_log?select=subject&dedupe_key=eq.${q(`ref:code:${ana.id}:ev`)}`);
   ok(code[0]?.subject === codeFor(ana.id), 'the link works (code recorded)');
   const click = await fetch(`${WEB}/ref/${codeFor(ana.id)}`, { redirect: 'manual', headers: { 'User-Agent': 'Mozilla/5.0 (E2E)' } });
@@ -155,24 +155,6 @@ try {
   ok(ver.ok && String(person?.run_id) === beto.id, 'someone signed up with Beto’s link (real sign-up by email code)');
   await age(beto.id, 4 * DAY); r = await cron();
   ok((await sendsOf(beto.id)).length === 1, `no email #2 after the referral (referred: ${r.counts?.referred})`);
-
-  console.log('\n5. Unsubscribe link');
-  const caro = await makeUser('caro', 3 * DAY);
-  await cron();
-  const cm = await mailFor(caro.id);
-  const stopUrl = (cm?.html.match(/href="([^"]*referral-promo\/stop\?token=[^"]+)"/) || [])[1]?.replace(/&amp;/g, '&');
-  ok(!!stopUrl && stopUrl.startsWith(WEB), 'email #1 carries the opt-out link');
-  const page = await fetch(stopUrl).then((x) => x.text());
-  ok(/No recibir más estos correos/.test(page) && (await stopOf(caro.id)) === null, 'opening the link only asks to confirm (a link scanner changes nothing)');
-  const token = new URL(stopUrl).searchParams.get('token');
-  const done = await fetch(`${WEB}/api/referral-promo/stop`, { method: 'POST', body: new URLSearchParams({ token }) }).then((x) => x.text());
-  ok(/Listo/.test(done) && (await stopOf(caro.id)) === 'unsubscribed', 'confirmed: opt-out recorded');
-  const again = await fetch(`${WEB}/api/referral-promo/stop`, { method: 'POST', body: new URLSearchParams({ token }) });
-  ok(again.ok, 'confirming twice is harmless');
-  const forged = await fetch(`${WEB}/api/referral-promo/stop?token=${q(`${token.split('.')[0]}.AAAA`)}`);
-  ok(forged.status === 400, 'a forged token is refused');
-  await age(caro.id, 4 * DAY); await cron();
-  ok((await sendsOf(caro.id)).length === 1, 'no email #2 after unsubscribing');
 
   console.log('\n6. Bounce, closed account, BAJA on WhatsApp');
   const dani = await makeUser('dani', 3 * DAY);
@@ -231,7 +213,7 @@ try {
   console.log('\n10. Admin shows it');
   const page2 = await A('/api/automations');
   const p = page2.referralPromo;
-  ok(p.sent >= 14 && p.perStep['1'] >= 12 && p.perStep['3'] >= 1 && p.optedOut === 1 && p.bounced === 1, `Automations card: ${p.sent} sent to ${p.people} · per email ${JSON.stringify(p.perStep)} · ${p.optedOut} unsubscribed · ${p.bounced} bounced`);
+  ok(p.sent >= 14 && p.perStep['1'] >= 12 && p.perStep['3'] >= 1 && p.bounced === 1, `Automations card: ${p.sent} sent to ${p.people} · per email ${JSON.stringify(p.perStep)} · ${p.bounced} bounced`);
   const ref = await A('/api/referrals');
   ok(ref.promo?.enabled && /after sign-up/.test(ref.promo.schedule), `Referrals page line: ${ref.promo?.schedule}`);
   const tpl = page2.templates.find((t) => t.key === 'referral-promo');

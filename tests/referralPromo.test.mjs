@@ -6,7 +6,7 @@ import { createStore, AUTOMATION_SCHEMA } from './support/fakePostgrest.mjs';
 import {
   PROMO_ID, PROMO_TEMPLATE, PROMO_DEFAULTS, promoConfig, promoNext, promoProgress, promoKey, promoStopKey, roundDownProof, promoScheduleText,
 } from '../lib/referrals/promo.js';
-import { runReferralPromo, pickPromo, stopPromo } from '../lib/automations/referralPromo.js';
+import { runReferralPromo, pickPromo } from '../lib/automations/referralPromo.js';
 import { codeFor } from '../lib/referrals/core.js';
 import { renderTemplate, templateVars } from '../lib/emailTemplateRender.js';
 
@@ -87,7 +87,7 @@ test('roundDownProof + schedule text', () => {
   assert.equal(promoScheduleText({ firstAfterHours: 6, everyDays: 3, maxSends: 1 }), 'one email 6 hours after sign-up');
 });
 
-test('the default email: every {{variable}} it uses exists, it renders the real settings, opt-out line, no banned phrases', () => {
+test('the default email: every {{variable}} it uses exists, it renders the real settings, no opt-out line, no banned phrases', () => {
   const known = new Set(templateVars.map((v) => v.key));
   for (const f of ['subject', 'heading', 'body', 'button_label', 'button_url']) {
     for (const m of String(PROMO_TEMPLATE[f] || '').matchAll(/\{\{\s*([a-z_]+)\s*\}\}/g)) assert.ok(known.has(m[1]), `${f}: {{${m[1]}}}`);
@@ -97,7 +97,7 @@ test('the default email: every {{variable}} it uses exists, it renders the real 
   assert.doesNotMatch(all, /Casa Libre/, 'brand is written with the hyphen');
   for (const banned of [/de mayor crecimiento/i, /tecnolog[ií]a l[ií]der/i, /por fin lleg[oó]/i, /recl[aá]m[aá] tu aviso/i, /gratis para siempre/i, /sin l[ií]mite/i]) assert.doesNotMatch(all, banned);
   assert.doesNotMatch(all, /\b30 días\b|\b3 personas\b/, 'no hard-coded reward numbers');
-  assert.match(PROMO_TEMPLATE.body, /\{\{unsubscribe_url\}\}/);
+  assert.doesNotMatch(PROMO_TEMPLATE.body, /unsubscribe_url|Para no recibir/);
   assert.match(PROMO_TEMPLATE.subject, /Casa-Libre/, 'hook: benefit + brand in the subject');
 });
 
@@ -121,7 +121,7 @@ function world({ settings = {}, row = {}, referral = {}, referralRow = {}, users
     const [referralNow] = await db.select('automations', 'id=eq.referrals');
     return runReferralPromo({
       db, automation, referralRow: referralNow, templates: await db.select('email_templates', ''), now: new Date(atMs), deliver, frame: {}, siteUrl: SITE,
-      unsubscribeUrl: (u) => `${SITE}/api/referral-promo/stop?token=t-${u.id}`, ...extra,
+      ...extra,
     });
   };
   const sends = (uid) => db.tables.email_log?.filter((l) => String(l.run_id) === uid && /^refpromo:/.test(l.dedupe_key)) || [];
@@ -130,7 +130,7 @@ function world({ settings = {}, row = {}, referral = {}, referralRow = {}, users
   return { db, mails, run, sends, age, setFail: (v) => { fail = v; } };
 }
 
-test('first email 24 hours after sign-up — not before — with the real program settings, the link and the opt-out', async () => {
+test('first email 24 hours after sign-up — not before — with the real program settings and the link', async () => {
   const w = world({ users: [user('ana', T0 - 23 * H)] });
   assert.equal((await w.run(T0)).sent, 0, '23 hours after sign-up: nothing');
   assert.equal(w.mails.length, 0);
@@ -146,7 +146,7 @@ test('first email 24 hours after sign-up — not before — with the real progra
   assert.match(m.text, /durante 14 días/);
   assert.doesNotMatch(m.text, /propiedades activas/, 'no live-listings count line');
   assert.ok(m.text.includes(`/ref/${codeFor('ana')}`), 'their own referral link');
-  assert.match(m.html, /api\/referral-promo\/stop\?token=t-ana/);
+  assert.doesNotMatch(m.html, /referral-promo\/stop/);
   assert.match(m.html, /cuenta\/referidos/);
   // the link works: the code row exists
   assert.ok(w.db.tables.email_log.some((l) => l.dedupe_key === 'ref:code:ana:ev'));
@@ -169,23 +169,21 @@ test('repeats every N days up to the maximum; a retry never sends twice', async 
   assert.deepEqual(w.sends('bo').map((l) => l.dedupe_key).sort(), ['refpromo:bo:1', 'refpromo:bo:2', 'refpromo:bo:3']);
 });
 
-test('stops early: referred someone, unsubscribed, BAJA on WhatsApp, account closed or deleted', async () => {
-  const w = world({ users: [user('ref', T0 - 5 * D), user('uns', T0 - 5 * D), user('baja', T0 - 5 * D), user('gone', T0 - 5 * D), user('del', T0 - 5 * D), user('ok', T0 - 5 * D)] });
-  assert.equal((await w.run(T0)).sent, 6);
-  // after the first email: one referred somebody, one unsubscribed, one replied BAJA, one closed, one deleted
+test('stops early: referred someone, BAJA on WhatsApp, account closed or deleted', async () => {
+  const w = world({ users: [user('ref', T0 - 5 * D), user('baja', T0 - 5 * D), user('gone', T0 - 5 * D), user('del', T0 - 5 * D), user('ok', T0 - 5 * D)] });
+  assert.equal((await w.run(T0)).sent, 5);
+  // after the first email: one referred somebody, one replied BAJA, one closed, one deleted
   w.db.seed('email_log', [{ automation_id: 'referrals', template_key: 'ref_person', dedupe_key: 'ref:person:newbie:ev', run_id: 'ref', to_email: 'newbie@example.com', subject: 'signed_up', status: 'sent', channel: 'event' }]);
-  assert.equal(await stopPromo(w.db, { id: 'uns', email: 'uns@example.com' }), 'stopped');
-  assert.equal(await stopPromo(w.db, { id: 'uns', email: 'uns@example.com' }), 'already');
   const u = w.db.tables.users;
   u.find((x) => x.id === 'baja').whatsapp_opted_out_at = iso(T0);
   u.find((x) => x.id === 'gone').active = false;
   u.find((x) => x.id === 'del').email = 'deleted-del@deleted.invalid';
-  for (const id of ['ref', 'uns', 'baja', 'gone', 'del', 'ok']) w.age(id, 4 * D);
+  for (const id of ['ref', 'baja', 'gone', 'del', 'ok']) w.age(id, 4 * D);
   const r = await w.run(T0 + 60000);
   assert.equal(r.sent, 1, JSON.stringify(r));
   assert.equal(w.mails[w.mails.length - 1].to, 'ok@example.com');
   assert.equal(r.counts.referred, 1);
-  assert.equal(r.counts.optedOut, 2);
+  assert.equal(r.counts.optedOut, 1);
   assert.equal(r.counts.closed, 2);
 });
 
@@ -287,11 +285,11 @@ test('pickPromo: the test audience prefix limits who is considered', () => {
   assert.deepEqual(due.map((d) => d.user.id), ['e2e-a']);
 });
 
-test('the rendered default template (website renderer) puts the opt-out link and the button in the email', () => {
-  const vars = { name: 'Ana', referral_url: `${SITE}/ref/abcd2345`, referrals_url: `${SITE}/cuenta/referidos`, reward_plan: 'la insignia Verificada', reward_days: '30', new_user_days: '30', milestone_count: '3', milestone_days: '30', active_listings: '2.400', unsubscribe_url: `${SITE}/api/referral-promo/stop?token=x` };
+test('the rendered default template (website renderer) puts the button in the email and no opt-out link', () => {
+  const vars = { name: 'Ana', referral_url: `${SITE}/ref/abcd2345`, referrals_url: `${SITE}/cuenta/referidos`, reward_plan: 'la insignia Verificada', reward_days: '30', new_user_days: '30', milestone_count: '3', milestone_days: '30', active_listings: '2.400' };
   const m = renderTemplate(PROMO_TEMPLATE, vars, { tld: '.py', utm: { campaign: PROMO_ID, content: PROMO_TEMPLATE.key } });
   assert.match(m.html, /Compartir mi link/);
-  assert.match(m.html, /referral-promo\/stop\?token=x/);
-  assert.match(m.text, /Para no recibir más estos correos, tocá acá/);
+  assert.doesNotMatch(m.html, /referral-promo\/stop/);
+  assert.doesNotMatch(m.text, /Para no recibir/);
   assert.match(m.html, /utm_campaign=referral_promo/);
 });
