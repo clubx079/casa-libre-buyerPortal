@@ -144,7 +144,7 @@ test('first email 24 hours after sign-up — not before — with the real progra
   assert.match(m.text, /recibe 20 días/, 'new member days from the settings');
   assert.match(m.text, /5 invitados/);
   assert.match(m.text, /durante 14 días/);
-  assert.match(m.text, /más de 120 propiedades activas/, '123 live listings, rounded down');
+  assert.doesNotMatch(m.text, /propiedades activas/, 'no live-listings count line');
   assert.ok(m.text.includes(`/ref/${codeFor('ana')}`), 'their own referral link');
   assert.match(m.html, /api\/referral-promo\/stop\?token=t-ana/);
   assert.match(m.html, /cuenta\/referidos/);
