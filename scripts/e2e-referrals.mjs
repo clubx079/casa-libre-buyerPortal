@@ -129,7 +129,9 @@ ok(login.ok && adminCookie, 'admin login (env account; control DB not used)', lo
 const A = (path, opts = {}) => fetch(`${ADMIN}${path}`, { ...opts, headers: { 'Content-Type': 'application/json', Cookie: `${adminCookie}; cl_admin_country=py`, ...(opts.headers || {}) } }).then((r) => r.json());
 const saved = await A('/api/referrals', { method: 'PUT', body: JSON.stringify({ enabled: true, referrer: { enabled: true, plan: 'verified', days: 30 }, newUser: { enabled: true, plan: 'verified', days: 30 }, milestone: { enabled: true, every: 3, plan: 'home', days: 30, repeat: false }, remindDays: '3, 1' }) });
 ok(saved.ok, 'settings saved', JSON.stringify(saved));
-const tpls = await rest('email_templates?select=key&key=like.referral-%25');
+// the program's own five (the "promote the referral program" email, key referral-promo, is the promo automation's)
+const PROGRAM_KEYS = ['referral-invite', 'referral-reward-referrer', 'referral-reward-new', 'referral-milestone', 'referral-ending'];
+const tpls = (await rest('email_templates?select=key&key=like.referral-%25')).filter((t) => PROGRAM_KEYS.includes(t.key));
 ok(tpls.length === 5, `5 referral emails exist (${tpls.length})`);
 
 console.log('\n2. Referrer gets a link');
