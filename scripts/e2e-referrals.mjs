@@ -178,7 +178,8 @@ ok(pr.promotion_plan === 'verified', `referrer listing Verified until ${pr.promo
 
 console.log('\n5. Retries never double-grant');
 const refEmails = async () => (await rest(`email_log?select=id&automation_id=eq.referrals&channel=eq.email&status=eq.sent`)).length;
-await new Promise((r) => setTimeout(r, 3000));   // let the publish hook finish its emails
+// let the publish hook finish both reward emails before counting
+await waitFor(async () => (await rest(`email_log?select=id&dedupe_key=in.(${q(`ref-granted:${ninaR[0].id}`)},${q(`ref-granted:${ritaR[0].id}`)})&status=eq.sent`)).length === 2, 30000);
 const beforeMail = await refEmails();
 await cron(); await cron(); await cron();
 ok((await rewardsFor(nina.user.id)).length === 1 && (await rewardsFor(rita.id)).length === 1, 'still one reward each after 3 cron runs');
