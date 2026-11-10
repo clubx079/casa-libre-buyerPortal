@@ -3,7 +3,8 @@
 // "listing getting views" (lib/automations/viewsMilestone.js) and "unfinished draft
 // reminders" (lib/automations/draftReminders.js), paid listings (lib/automations/paidListings.js) and "signed up but
 // never listed" (lib/automations/noListingNudge.js) and "listing not published"
-// (lib/automations/listingHeld.js) and "listing getting saved" (lib/automations/savesMilestone.js).
+// (lib/automations/listingHeld.js) and "listing getting saved" (lib/automations/savesMilestone.js),
+// the referral program (lib/referrals/) and its promo emails (lib/automations/referralPromo.js).
 // Schedule hourly with the
 // CRON_SECRET, like the other crons; also callable manually with ?secret=.
 // Each does nothing until an admin switches it on (Automations page).
@@ -28,7 +29,7 @@ import { fetchListingViews, viewsConfigured } from '@/lib/posthogViews';
 import { sendPush } from '@/lib/push';
 import { runDeletedAsk } from '@/lib/listingDeleted';
 import { runOwnerPushes } from '@/lib/ownerPushes';
-import { runReferralsCron } from '@/lib/referrals/run';
+import { runReferralsCron, runReferralPromoCron } from '@/lib/referrals/run';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -161,7 +162,11 @@ async function handle(req) {
     // reward emails, "ends soon" reminders, expiry. Off until switched on in the admin.
     const referrals = await runReferralsCron({ frame }).catch((e) => ({ error: e?.message || 'referrals_failed' }));
     if (referrals.rewardsGranted || referrals.expired) revalidateTag('listings');
-    return NextResponse.json({ ok: true, quietHours: frame.quiet, ...result, views, drafts, duplicates, paid, noListing, held, payFollow, saves, deletedAsk, referrals, pushes, at: new Date().toISOString() });
+    // "Promote the referral program": invite-and-earn emails to members, with their link
+    // (lib/automations/referralPromo.js). Off until switched on in the admin, and only while
+    // the referral program itself is on.
+    const referralPromo = await runReferralPromoCron({ frame }).catch((e) => ({ error: e?.message || 'referral_promo_failed' }));
+    return NextResponse.json({ ok: true, quietHours: frame.quiet, ...result, views, drafts, duplicates, paid, noListing, held, payFollow, saves, deletedAsk, referrals, referralPromo, pushes, at: new Date().toISOString() });
   } catch (e) {
     return NextResponse.json({ error: 'automation_failed', detail: e?.message }, { status: 500 });
   }
