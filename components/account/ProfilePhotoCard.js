@@ -5,6 +5,7 @@
 // after it was rejected, the approved one (if any) keeps showing on the listings. While
 // checking, the card asks again every 4 s (like My listings' "Checking photos…" chip).
 import { useEffect, useRef, useState } from 'react';
+import ConfirmModal from '@/components/ConfirmModal';
 import { useLang } from '@/lib/useLang';
 
 const T = {
@@ -18,7 +19,8 @@ const T = {
     approved: 'Tu foto fue aprobada y ya se muestra en tus publicaciones',
     rejected: 'Tu foto no fue aprobada', rejectedKeep: 'Se sigue mostrando tu foto anterior.',
     none: 'Todavía no tenés foto de perfil.', current: 'Foto actual', newOne: 'Foto nueva', inReview: 'En revisión', notApproved: 'No aprobada',
-    confirmRemove: '¿Quitar tu foto? Deja de mostrarse en tus publicaciones.',
+    confirmRemove: 'Deja de mostrarse en tus publicaciones. Podés subir otra cuando quieras.',
+    removeTitle: '¿Quitar tu foto de perfil?', removeYes: 'Sí, quitar', cancel: 'Cancelar',
     errTooLarge: 'La foto es muy pesada (máximo 15 MB).', errType: 'Ese archivo no es una foto. Probá con JPG o PNG.',
     errMany: 'Subiste muchas fotos seguidas. Probá de nuevo en unos minutos.', errSetup: 'Esta función todavía no está disponible.',
     err: 'Algo salió mal. Intentá de nuevo.',
@@ -33,7 +35,8 @@ const T = {
     approved: 'Your photo was approved and now shows on your listings',
     rejected: 'Your photo was not approved', rejectedKeep: 'Your previous photo keeps showing.',
     none: "You don't have a profile photo yet.", current: 'Current photo', newOne: 'New photo', inReview: 'In review', notApproved: 'Not approved',
-    confirmRemove: 'Remove your photo? It will stop showing on your listings.',
+    confirmRemove: 'It will stop showing on your listings. You can upload another one any time.',
+    removeTitle: 'Remove your profile photo?', removeYes: 'Yes, remove', cancel: 'Cancel',
     errTooLarge: 'The photo is too large (15 MB max).', errType: "That file isn't a photo. Try a JPG or PNG.",
     errMany: 'You uploaded many photos in a row. Try again in a few minutes.', errSetup: 'This feature is not available yet.',
     err: 'Something went wrong. Try again.',
@@ -63,6 +66,7 @@ export default function ProfilePhotoCard() {
   const [busy, setBusy] = useState(null);  // 'upload' | 'remove'
   const [err, setErr] = useState(null);
   const [hidden, setHidden] = useState(false);
+  const [askRemove, setAskRemove] = useState(false);
   const fileRef = useRef(null);
   const polls = useRef(0);
 
@@ -98,14 +102,13 @@ export default function ProfilePhotoCard() {
     } catch { setErr(t.err); } finally { setBusy(null); }
   };
   const removePhoto = async () => {
-    if (!window.confirm(t.confirmRemove)) return;
     setBusy('remove'); setErr(null);
     try {
       const r = await fetch(`/api/account/profile-photo?lang=${lang}`, { method: 'DELETE' });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) { setErr(t.err); return; }
       setV(j);
-    } catch { setErr(t.err); } finally { setBusy(null); }
+    } catch { setErr(t.err); } finally { setBusy(null); setAskRemove(false); }
   };
 
   if (hidden) return null;
@@ -137,9 +140,6 @@ export default function ProfilePhotoCard() {
               <p className="text-[12.5px] text-ink/60 mt-1">{t.checkingSub}{v.photo ? ` ${t.checkingKeep}` : ''}</p>
             </div>
           )}
-          {st === 'approved' && v.photo && (
-            <div className="rounded-[12px] border-[1.5px] border-green-300 bg-green-50 px-4 py-3 text-[13.5px] font-semibold text-green-800" data-testid="profile-photo-approved">✓ {t.approved}</div>
-          )}
           {st === 'rejected' && (
             <div className="rounded-[12px] border-[1.5px] border-red-200 bg-red-50 px-4 py-3" data-testid="profile-photo-rejected">
               <div className="text-[14px] font-bold text-red-800">{t.rejected}</div>
@@ -149,14 +149,15 @@ export default function ProfilePhotoCard() {
           )}
           {!st && v && <p className="text-[13.5px] text-ink/60">{t.none}</p>}
 
-          <p className="text-[12px] text-ink/50 mt-3 max-w-[520px]">{t.rules}</p>
+          {/* Once the photo is approved the card stays clean: just the photo and the buttons. */}
+          {st !== 'approved' && <p className="text-[12px] text-ink/50 mt-3 max-w-[520px]">{t.rules}</p>}
 
           <div className="flex flex-wrap gap-2.5 mt-4">
             <button type="button" onClick={pick} disabled={!!busy || v === null} className="px-5 py-2.5 rounded-pill bg-ink text-paper text-[13.5px] font-bold shadow-hard-soft disabled:opacity-60" data-testid="profile-photo-upload">
               {busy === 'upload' ? t.uploading : st === 'rejected' ? t.another : hasAny ? t.replace : t.upload}
             </button>
             {hasAny && (
-              <button type="button" onClick={removePhoto} disabled={!!busy} className="px-5 py-2.5 rounded-pill border-[1.5px] border-red-300 text-red-700 text-[13.5px] font-semibold disabled:opacity-60" data-testid="profile-photo-remove">
+              <button type="button" onClick={() => { setErr(null); setAskRemove(true); }} disabled={!!busy} className="px-5 py-2.5 rounded-pill border-[1.5px] border-red-300 text-red-700 text-[13.5px] font-semibold disabled:opacity-60" data-testid="profile-photo-remove">
                 {busy === 'remove' ? t.removing : t.remove}
               </button>
             )}
@@ -165,6 +166,17 @@ export default function ProfilePhotoCard() {
           <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={onFile} />
         </div>
       </div>
+      <ConfirmModal
+        open={askRemove}
+        title={t.removeTitle}
+        message={t.confirmRemove}
+        confirmLabel={busy === 'remove' ? '…' : t.removeYes}
+        cancelLabel={t.cancel}
+        danger
+        busy={busy === 'remove'}
+        onConfirm={removePhoto}
+        onCancel={() => setAskRemove(false)}
+      />
     </section>
   );
 }
