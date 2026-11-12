@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
+import ProfilePhotoCard from '@/components/account/ProfilePhotoCard';
 
 const T = {
   es: {
@@ -121,6 +122,9 @@ export default function SettingsPage() {
   return (
     <div className="max-w-[560px]">
       <h1 className="text-[clamp(26px,4vw,36px)] font-bold tracking-display leading-tight mb-6">{t.title}</h1>
+
+      {/* The seller's face on their listings (AI-checked): first thing in Settings */}
+      <ProfilePhotoCard />
 
       <Card title={t.profile}>
         <form onSubmit={saveProfile} className="flex flex-col gap-3.5">
