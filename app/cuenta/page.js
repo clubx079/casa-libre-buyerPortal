@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useAuth } from '@/components/AuthProvider';
 import { useLang } from '@/lib/useLang';
 import ListingCard from '@/components/account/ListingCard';
+import ProfilePhotoCard from '@/components/account/ProfilePhotoCard';
 import { CardGridSkeleton, StatSkeleton } from '@/components/account/Skeletons';
 
 const T = {
@@ -47,6 +48,9 @@ export default function DashboardPage() {
     <div>
       <h1 className="text-[clamp(28px,4vw,40px)] font-bold tracking-display leading-tight">{t.greet}{firstName && <>, <span className="font-serif italic font-normal">{firstName}</span></>}</h1>
       <p className="text-[15px] text-ink/55 mt-1 mb-7">{t.sub}</p>
+
+      {/* The seller's face on their listings (AI-checked) — lib/profilePhoto.js */}
+      <ProfilePhotoCard />
 
       <div className="flex flex-wrap gap-4 mb-8">
         {stat(t.saved, savedCount, '/cuenta/guardadas')}

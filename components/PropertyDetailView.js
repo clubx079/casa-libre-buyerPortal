@@ -360,7 +360,7 @@ export default function PropertyDetailView({ l, url }) {
 
         {/* CONTACT CARD */}
         <div>
-          <PropertyContactCard sellerName={l.user_published ? l.contact_name : null} waDigits={waDigits || null} url={url} listingRef={listingRef} trackProps={trackProps} shortCode={l.short_code} />
+          <PropertyContactCard sellerName={l.user_published ? l.contact_name : null} sellerPhoto={l.user_published ? l.seller_photo || null : null} waDigits={waDigits || null} url={url} listingRef={listingRef} trackProps={trackProps} shortCode={l.short_code} />
           {/* Report + sell + partner funnels — one evenly-spaced column, no divider. */}
           <div className="mt-4 text-center flex flex-col items-center gap-3">
             <NoResponseReport propertyId={l.id} listingRef={listingRef} sellerName={l.contact_name} sellerPhone={l.contact_phone} />

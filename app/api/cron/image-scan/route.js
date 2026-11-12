@@ -4,6 +4,7 @@
 // Auth: CRON_SECRET (also callable manually with ?secret=<CRON_SECRET>).
 import { NextResponse } from 'next/server';
 import { scanPending } from '@/lib/listingScan';
+import { scanPendingProfilePhotos } from '@/lib/profilePhotoScan';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -18,7 +19,9 @@ async function handle(req) {
   }
   try {
     const out = await scanPending(60);
-    return NextResponse.json({ ok: true, ...out, at: new Date().toISOString() });
+    // Sellers' profile photos still 'checking' (lib/profilePhotoScan.js) — same rule: never approved unchecked.
+    const profilePhotos = await scanPendingProfilePhotos(30);
+    return NextResponse.json({ ok: true, ...out, profilePhotos, at: new Date().toISOString() });
   } catch (e) {
     return NextResponse.json({ ok: false, error: String(e?.message || e).slice(0, 200) }, { status: 500 });
   }
