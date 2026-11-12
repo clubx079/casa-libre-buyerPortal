@@ -46,7 +46,7 @@ test('first upload → checking, nothing shown to buyers yet', () => {
   assert.deepEqual(s.deleteKeys, []);
   const row = apply({}, s);
   assert.equal(publicPhoto(row), null);
-  assert.deepEqual(ownerView(row), { status: 'checking', photo: null, pending: A.url, category: null, reason: null, checked_at: null, updated_at: NOW.toISOString() });
+  assert.deepEqual(ownerView(row), { status: 'checking', photo: null, pending: A.url, category: null, reason: null, checked_at: null, updated_at: NOW.toISOString(), edit_src: null, edit_fallback: null });
 });
 
 test('checking → approved: the pending photo becomes the photo', () => {
@@ -162,4 +162,14 @@ test('profile photo checks count in the same daily quota, with their own source'
   assert.deepEqual(rows[0], { t: 'api_usage_log', api: SCAN_API, source: 'profile_photo_check', code_path: 'lib/profilePhotoScan.js#u1', calls: 1 });
   assert.equal(rows[1].source, 'listing_photo_check');   // listings unchanged
   assert.equal(rows[1].code_path, 'lib/listingScan.js#p9');
+});
+
+test('re-crop: the approved photo offers its original (same name + -orig) and the photo as fallback', async () => {
+  const { ownerView, origKeyOf } = await import('../lib/profilePhoto.js');
+  assert.equal(origKeyOf('avatars/u1/abc.jpg'), 'avatars/u1/abc-orig.jpg');
+  assert.equal(origKeyOf(null), null);
+  const v = ownerView({ profile_photo_url: 'https://x/api/media/avatars/u1/abc.jpg', profile_photo_key: 'avatars/u1/abc.jpg', profile_photo_status: 'approved' });
+  assert.equal(v.edit_src, '/api/media/avatars/u1/abc-orig.jpg');
+  assert.equal(v.edit_fallback, '/api/media/avatars/u1/abc.jpg');
+  assert.equal(ownerView({}).edit_src, null);
 });

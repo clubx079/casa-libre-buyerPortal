@@ -6,6 +6,7 @@
 // checking, the card asks again every 4 s (like My listings' "Checking photos…" chip).
 import { useEffect, useRef, useState } from 'react';
 import ConfirmModal from '@/components/ConfirmModal';
+import PhotoCropModal from './PhotoCropModal';
 import { useLang } from '@/lib/useLang';
 
 const T = {
@@ -21,6 +22,7 @@ const T = {
     none: 'Todavía no tenés foto de perfil.', current: 'Foto actual', newOne: 'Foto nueva', inReview: 'En revisión', notApproved: 'No aprobada',
     confirmRemove: 'Deja de mostrarse en tus publicaciones. Podés subir otra cuando quieras.',
     removeTitle: '¿Quitar tu foto de perfil?', removeYes: 'Sí, quitar', cancel: 'Cancelar',
+    cropTitle: 'Ajustá tu foto', cropHint: 'Arrastrá la foto y usá el zoom para que tu cara quede dentro del círculo.', cropSave: 'Guardar foto', zoom: 'Zoom', zoomIn: 'Acercar', zoomOut: 'Alejar', recrop: 'Ajustar el recorte de tu foto', recropShort: 'Ajustar',
     errTooLarge: 'La foto es muy pesada (máximo 15 MB).', errType: 'Ese archivo no es una foto. Probá con JPG o PNG.',
     errMany: 'Subiste muchas fotos seguidas. Probá de nuevo en unos minutos.', errSetup: 'Esta función todavía no está disponible.',
     err: 'Algo salió mal. Intentá de nuevo.',
@@ -37,6 +39,7 @@ const T = {
     none: "You don't have a profile photo yet.", current: 'Current photo', newOne: 'New photo', inReview: 'In review', notApproved: 'Not approved',
     confirmRemove: 'It will stop showing on your listings. You can upload another one any time.',
     removeTitle: 'Remove your profile photo?', removeYes: 'Yes, remove', cancel: 'Cancel',
+    cropTitle: 'Adjust your photo', cropHint: 'Drag the photo and use the zoom so your face sits inside the circle.', cropSave: 'Save photo', zoom: 'Zoom', zoomIn: 'Zoom in', zoomOut: 'Zoom out', recrop: 'Adjust your photo crop', recropShort: 'Adjust',
     errTooLarge: 'The photo is too large (15 MB max).', errType: "That file isn't a photo. Try a JPG or PNG.",
     errMany: 'You uploaded many photos in a row. Try again in a few minutes.', errSetup: 'This feature is not available yet.',
     err: 'Something went wrong. Try again.',
@@ -67,6 +70,9 @@ export default function ProfilePhotoCard() {
   const [err, setErr] = useState(null);
   const [hidden, setHidden] = useState(false);
   const [askRemove, setAskRemove] = useState(false);
+  // The crop dialog: { src, fallback, file } — file = a newly picked photo (sent as the original too);
+  // no file = re-cropping the current photo (the server reuses its stored original).
+  const [crop, setCrop] = useState(null);
   const fileRef = useRef(null);
   const polls = useRef(0);
 
@@ -86,20 +92,28 @@ export default function ProfilePhotoCard() {
   }, [v]);
 
   const pick = () => { setErr(null); fileRef.current?.click(); };
-  const onFile = async (e) => {
+  const closeCrop = () => { if (crop?.file && crop.src) URL.revokeObjectURL(crop.src); setCrop(null); };
+  const recrop = () => { if (v?.edit_src && !busy) { setErr(null); setCrop({ src: v.edit_src, fallback: v.edit_fallback, file: null }); } };
+  const onFile = (e) => {
     const f = e.target.files?.[0];
     e.target.value = '';
     if (!f) return;
     if (f.size > 15 * 1024 * 1024) { setErr(t.errTooLarge); return; }
+    if (!/^image\//.test(f.type || '')) { setErr(t.errType); return; }
+    setErr(null);
+    setCrop({ src: URL.createObjectURL(f), fallback: null, file: f });   // the upload happens on "Save photo"
+  };
+  const upload = async (blob) => {
     setBusy('upload'); setErr(null);
     try {
-      const fd = new FormData(); fd.set('photo', f);
+      const fd = new FormData(); fd.set('photo', new File([blob], 'profile.jpg', { type: 'image/jpeg' }));
+      if (crop?.file) fd.set('original', crop.file); else fd.set('reuse', '1');
       const r = await fetch(`/api/account/profile-photo?lang=${lang}`, { method: 'POST', body: fd });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) { setErr(t[ERR[j.error]] || t.err); return; }
       polls.current = 0;
       setV(j);
-    } catch { setErr(t.err); } finally { setBusy(null); }
+    } catch { setErr(t.err); } finally { setBusy(null); closeCrop(); }
   };
   const removePhoto = async () => {
     setBusy('remove'); setErr(null);
@@ -125,7 +139,12 @@ export default function ProfilePhotoCard() {
           {v === null
             ? <div className="w-24 h-24 rounded-full bg-ink/5 animate-pulse" />
             : <>
-                {(v.photo || !v.pending) && <Avatar src={v.photo} label={v.pending ? t.current : null} />}
+                {(v.photo || !v.pending) && (v.photo && v.edit_src
+                  ? <button type="button" onClick={recrop} disabled={!!busy} className="group relative rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2" title={t.recrop} aria-label={t.recrop} data-testid="profile-photo-recrop">
+                      <Avatar src={v.photo} label={v.pending ? t.current : null} />
+                      <span className="pointer-events-none absolute left-0 top-0 w-24 h-24 rounded-full bg-ink/45 text-paper text-[12px] font-bold flex items-center justify-center opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity">{t.recropShort}</span>
+                    </button>
+                  : <Avatar src={v.photo} label={v.pending ? t.current : null} />)}
                 {v.pending && <Avatar src={v.pending} label={st === 'rejected' ? t.notApproved : t.inReview} tone={st === 'rejected' ? 'bad' : 'wait'} />}
               </>}
         </div>
@@ -166,6 +185,7 @@ export default function ProfilePhotoCard() {
           <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={onFile} />
         </div>
       </div>
+      <PhotoCropModal open={!!crop} src={crop?.src} fallbackSrc={crop?.fallback} t={t} busy={busy === 'upload'} onCancel={closeCrop} onSave={upload} />
       <ConfirmModal
         open={askRemove}
         title={t.removeTitle}

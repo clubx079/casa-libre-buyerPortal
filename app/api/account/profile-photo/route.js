@@ -60,7 +60,14 @@ export async function POST(req) {
   if (tooMany(s.uid)) return NextResponse.json({ error: 'too_many' }, { status: 429 });
 
   let stored;
-  try { stored = await storeProfilePhoto(s.uid, file); } catch (e) {
+  const original = form.get('original');
+  const reuseKey = form.get('reuse') === '1' ? row.profile_photo_key || null : null;
+  try {
+    stored = await storeProfilePhoto(s.uid, file, {
+      original: original && typeof original.arrayBuffer === 'function' && original.size <= MAX_PROFILE_PHOTO_BYTES ? original : null,
+      reuseKey,
+    });
+  } catch (e) {
     if (e?.message === 'unreadable_image') return NextResponse.json({ error: 'unreadable_image' }, { status: 415 });
     console.error('[profile-photo] store', s.uid, e?.message || e);
     return NextResponse.json({ error: 'upload_failed' }, { status: 502 });
