@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server';
 import { getListing } from '@/lib/listings';
 import { getClientIP } from '@/lib/ip';
 import { TARGETS, cleanDescription, translateText, createCache, createLimiter } from '@/lib/translate';
+import { groqFetch } from '@/lib/aiUsage';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -32,7 +33,7 @@ export async function POST(req) {
   if (!process.env.GROQ_API_KEY) return reply({ error: 'not_configured' }, 503);
   if (!limiter.allow(getClientIP(req))) return reply({ error: 'rate_limited' }, 429);
 
-  const out = await translateText(text, target);
+  const out = await translateText(text, target, { fetchImpl: groqFetch({ feature: 'listing_translate', ref: `listing:${id}` }) });
   if (!out) return reply({ error: 'failed' }, 502);
   cache.set(text, target, out);
   return reply({ text: out });
