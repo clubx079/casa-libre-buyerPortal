@@ -5,7 +5,7 @@ import { CAMPAIGNS, ALIASES, resolveSlug, campaignUrl } from '../lib/campaigns.j
 const O = 'https://casa-libre.com.py';
 
 test('one link per channel', () => {
-  assert.deepEqual(Object.keys(CAMPAIGNS), ['rd', 'fb', 'ig', 'x', 'tt', 'meta', 'gads', 'wa', 'mail']);
+  assert.deepEqual(Object.keys(CAMPAIGNS), ['rd', 'fb', 'ig', 'x', 'tt', 'meta', 'gads', 'wa', 'mail', 'gbp']);
   const sources = Object.values(CAMPAIGNS).map((c) => c.source);
   assert.equal(new Set(sources).size, sources.length, 'each channel has its own utm_source');
   for (const c of Object.values(CAMPAIGNS)) assert.ok(c.label, 'every channel has a label for the admin');
@@ -41,4 +41,15 @@ test('WhatsApp campaign batches: /r/wa?b=<batch>&sell=1 → that batch as utm_ca
 test('a batch link can carry the person (r → utm_content); without a batch r is ignored', () => {
   assert.equal(campaignUrl(O, 'wa', { batch: 'wc-lote-1', sell: true, ref: 'k3x9ab12' }), `${O}/?sell=1&utm_source=whatsapp&utm_medium=outreach&utm_campaign=wc-lote-1&utm_content=k3x9ab12`);
   assert.equal(campaignUrl(O, 'wa', { ref: 'k3x9ab12' }), `${O}/?utm_source=whatsapp&utm_medium=outreach&utm_campaign=whatsapp`);
+});
+
+test('Google Business Profile link: /r/gbp lands on the home page tagged gbp', () => {
+  const u = new URL(campaignUrl('https://casa-libre.com.py', 'gbp'));
+  if (typeof expect === 'function') {
+    expect(u.searchParams.get('utm_source')).toBe('gbp');
+    expect(u.searchParams.get('utm_campaign')).toBe('google_business_profile');
+  } else {
+    assert.equal(u.searchParams.get('utm_source'), 'gbp');
+    assert.equal(u.searchParams.get('utm_campaign'), 'google_business_profile');
+  }
 });
