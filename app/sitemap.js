@@ -3,7 +3,9 @@ import { guideSlugs } from '@/lib/guias';
 import { select } from '@/lib/db';
 import { indexableCombos, indexableBarrioCombos } from '@/lib/matrix';
 
-export const revalidate = 3600;
+// Rendered on request from live data: the Docker build has no database, so a prerendered
+// sitemap would ship without listings/matrix pages.
+export const dynamic = 'force-dynamic';
 
 export default async function sitemap() {
   const now = new Date();
