@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 const cachedPins = unstable_cache(
   async (key, p) => getPins(p),
-  ['cl-listing-pins-v3'],
+  ['cl-listing-pins-v4'],
   { revalidate: 120, tags: ['listings'] },
 );
 
