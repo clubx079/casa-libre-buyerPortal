@@ -10,6 +10,12 @@ const nextConfig = {
   // #17 Canonical consolidation — permanent (301) redirects fold common English
   // aliases and legacy paths into the single canonical Spanish route per intent,
   // so external links and old URLs don't split ranking signals across duplicates.
+  // Private pages (account dashboard, saved, delete account): never in Google. Sent as a header so it
+  // covers client-rendered pages too; robots.txt no longer blocks /cuenta, so Google can read it.
+  async headers() {
+    const noindex = [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }];
+    return ['/cuenta', '/cuenta/:path*', '/eliminar-cuenta', '/guardadas'].map((source) => ({ source, headers: noindex }));
+  },
   async redirects() {
     return [
       { source: '/buy', destination: '/comprar', permanent: true },

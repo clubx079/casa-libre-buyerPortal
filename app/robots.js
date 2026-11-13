@@ -14,7 +14,7 @@ export default function robots() {
     return { rules: [{ userAgent: '*', disallow: '/' }] };
   }
   return {
-    rules: [{ userAgent: '*', allow: '/', disallow: ['/cuenta', '/api/'] }],
+    rules: [{ userAgent: '*', allow: '/', disallow: ['/api/'] }],
     sitemap: `${SITE}/sitemap.xml`,
     host: SITE,
   };
