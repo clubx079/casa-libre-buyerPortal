@@ -555,7 +555,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
               : <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor" style={{ transform: 'rotate(45deg)' }} aria-hidden="true"><path d="M12 2 4.5 20.3l.7.7L12 18l6.8 3 .7-.7z" /></svg>}
           </button>
           {zoningOn && <ZoningMapToggle on={showZoning} onToggle={() => setShowZoning((v) => !v)} height={heightF} loading={zoningLoading} lang={lang} className="absolute top-3 right-3 z-[400]" />}
-          <button onClick={() => setView('list')} className="absolute bottom-5 left-1/2 -translate-x-1/2 z-[400] flex items-center gap-2 bg-ink text-paper rounded-pill py-3 px-5 text-[15px] font-medium shadow-hard">☰ {X.list}</button>
+          <button onClick={() => setView('list')} className="absolute bottom-5 left-1/2 -translate-x-1/2 z-[400] flex items-center gap-2 bg-ink text-paper rounded-pill py-3 px-5 text-[15px] font-medium">☰ {X.list}</button>
         </div>
       ) : (
         <div key="list-view" className="px-4 pb-8 flex flex-col gap-4">
