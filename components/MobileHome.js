@@ -3,7 +3,8 @@
 // Buy/Rent/Sell segmented, search, chips, mascot, dark "just listed" + steps +
 // stats, CTA). Rendered only below `md`; the desktop LandingClient is untouched.
 // The site Footer is rendered by the page, not here.
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
+import SearchSpinner from '@/components/SearchSpinner';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useLang } from '@/lib/useLang';
@@ -58,7 +59,10 @@ export default function MobileHome({ featured = [], count = 0, tickerData = [] }
   const t = H[lang];
   const [q, setQ] = useState('');
   const [sel, setSel] = useState(null); // Buy/Rent/Sell — the tapped one stays black (one at a time)
-  const go = () => { const query = q.trim(); router.push(query ? `/propiedades?q=${encodeURIComponent(query)}` : '/propiedades'); };
+  // Typing only edits the box; the search runs on the arrow / Enter. The transition
+  // keeps the arrow busy (spinner) until /propiedades has loaded.
+  const [searching, startSearch] = useTransition();
+  const go = () => { if (searching) return; const query = q.trim(); startSearch(() => router.push(query ? `/propiedades?q=${encodeURIComponent(query)}` : '/propiedades')); };
   const ticker = tickerData.length ? tickerData : [`CASA LIBRE — PROPIEDADES EN ${(COUNTRY.name || 'Sudamérica').toUpperCase()}`];
   const price = (l) => (isUnverified(l, 'price') ? contactSellerFor('price', lang) : (fmtUsd(l.usd, lang) || '—') + (l.mode === 'alquiler' ? t.perMonth : ''));
   const fTitle = (l) => `${typeLabel(l.type, lang) || (lang === 'es' ? 'Propiedad' : 'Property')}${l.beds ? ` · ${l.beds} ${t.bd}` : ''}`;
@@ -110,9 +114,9 @@ export default function MobileHome({ featured = [], count = 0, tickerData = [] }
 
       {/* SEARCH */}
       <div className="px-4 mt-3">
-        <form onSubmit={(e) => { e.preventDefault(); go(); }} className="flex items-center bg-card border-2 border-ink rounded-pill h-[60px] pl-5 pr-[5px] shadow-hard">
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t.searchPh} className="flex-1 min-w-0 bg-transparent outline-none text-[16px] text-ink placeholder:text-ink/45" />
-          <button type="submit" aria-label="search" className="w-12 h-12 rounded-pill bg-ink text-paper flex items-center justify-center text-[22px]">→</button>
+        <form role="search" onSubmit={(e) => { e.preventDefault(); go(); }} className="flex items-center bg-card border-2 border-ink rounded-pill h-[60px] pl-5 pr-[5px] shadow-hard">
+          <input enterKeyHint="search" aria-label={t.searchPh} value={q} onChange={(e) => setQ(e.target.value)} placeholder={t.searchPh} className="flex-1 min-w-0 bg-transparent outline-none text-[16px] text-ink placeholder:text-ink/45" />
+          <button type="submit" aria-label={searching ? 'Buscando…' : 'Buscar'} disabled={searching} aria-busy={searching} className="w-12 h-12 flex-none rounded-pill bg-ink text-paper flex items-center justify-center text-[22px] touch-manipulation disabled:opacity-80">{searching ? <SearchSpinner className="w-5 h-5" /> : <span aria-hidden="true">→</span>}</button>
         </form>
       </div>
 

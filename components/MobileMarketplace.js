@@ -23,6 +23,7 @@ import { StickyAppBadges } from '@/components/AppBadges';
 import AuthButton from '@/components/AuthButton';
 import { track } from '@/lib/analytics';
 import { priceBand } from '@/lib/dataLayer';
+import SearchSpinner from '@/components/SearchSpinner';
 
 const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const PER_PAGE = 24;
@@ -61,7 +62,11 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
   const t = T[lang];
 
   const [mode, setMode] = useState(initialOp === 'alquiler' ? 'alquiler' : 'venta');
+  // `q` is the APPLIED search (drives the fetches); `qInput` is just the text box.
+  // Typing never searches — only the arrow button / Enter (or ✕) applies it.
   const [q, setQ] = useState(initialQuery || '');
+  const [qInput, setQInput] = useState(initialQuery || '');
+  const [searching, setSearching] = useState(false); // spinner in the arrow button
   const [typeF, setTypeF] = useState(initialType || 'all');
   const [priceF, setPriceF] = useState('all');
   const [bedF, setBedF] = useState('all');
@@ -174,6 +179,24 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [area]);
+
+  // Apply a search term. Unchanged text = nothing to fetch. The spinner clears when
+  // the list request it triggers settles (loadingList true -> false).
+  const applySearch = (raw) => {
+    const next = String(raw ?? '').trim();
+    setQInput(next);
+    if (next === q) return;
+    setSearching(true);
+    setQ(next);
+  };
+  const onSearchSubmit = (e) => {
+    e.preventDefault();
+    try { e.currentTarget.querySelector('input')?.blur(); } catch {} // close the phone keyboard
+    applySearch(qInput);
+  };
+  // ✕ is an explicit "remove my search": clears the box AND the applied term.
+  const clearSearch = () => applySearch('');
+  useEffect(() => { if (!loadingList) setSearching(false); }, [loadingList]);
 
   // Report the active search to analytics once the results have settled (after the
   // fetch above), debounced so typing doesn't fire per keystroke. Only while this
@@ -491,11 +514,11 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
 
       {/* SEARCH */}
       <div className="px-4 pb-3">
-        <div className="flex items-center bg-card border-[1.5px] border-ink/12 rounded-pill h-[54px] pl-[18px] pr-[5px]">
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={X.searchPh} className="flex-1 min-w-0 bg-transparent outline-none text-[15px] text-ink placeholder:text-ink/45" />
-          {q && <button onClick={() => setQ('')} className="mr-1.5 text-ink/30 text-[18px] leading-none">✕</button>}
-          <span className="w-11 h-11 rounded-pill bg-ink text-paper flex items-center justify-center text-[20px]">→</span>
-        </div>
+        <form role="search" onSubmit={onSearchSubmit} className="flex items-center bg-card border-[1.5px] border-ink/12 rounded-pill h-[54px] pl-[18px] pr-[5px]">
+          <input enterKeyHint="search" aria-label={X.searchPh} value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder={X.searchPh} className="flex-1 min-w-0 bg-transparent outline-none text-[15px] text-ink placeholder:text-ink/45" />
+          {qInput && <button type="button" onClick={clearSearch} aria-label={lang === 'en' ? 'Clear search' : 'Borrar búsqueda'} className="w-9 h-11 flex-none flex items-center justify-center text-ink/30 text-[18px] leading-none touch-manipulation">✕</button>}
+          <button type="submit" aria-label={searching ? (lang === 'en' ? 'Searching…' : 'Buscando…') : (lang === 'en' ? 'Search' : 'Buscar')} disabled={searching} aria-busy={searching} className="w-11 h-11 flex-none rounded-pill bg-ink text-paper flex items-center justify-center text-[20px] touch-manipulation disabled:opacity-80">{searching ? <SearchSpinner className="w-5 h-5" /> : <span aria-hidden="true">→</span>}</button>
+        </form>
       </div>
 
       {/* EN VENTA / EN ALQUILER */}

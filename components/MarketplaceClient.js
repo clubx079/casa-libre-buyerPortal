@@ -1,4 +1,5 @@
 'use client';
+import SearchSpinner from '@/components/SearchSpinner';
 import { roundArea } from '@/lib/mapArea';
 import { gatedFetch } from '@/lib/gatedFetch';
 import { typeOptions } from '@/lib/propertyTypeOptions';
@@ -64,7 +65,11 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
   const [lang, setLang] = useLang();
   const { openSell } = useSellFlow();
   const [filter, setFilter] = useState(['all', 'venta', 'alquiler'].includes(initialOp) ? initialOp : 'all');
+  // `query` is the APPLIED search (drives the fetches); `queryInput` is just the text
+  // box. Typing never searches — only the arrow button / Enter copies it over.
   const [query, setQuery] = useState(initialQuery || '');
+  const [queryInput, setQueryInput] = useState(initialQuery || '');
+  const [searching, setSearching] = useState(false); // spinner in the search button
   const [typeF, setTypeF] = useState(initialType || 'all');
   const [priceF, setPriceF] = useState('all');
   const [bedF, setBedF] = useState('all');
@@ -266,6 +271,18 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter, typeF, priceF, bedF, heightF, query, sortBy, loadingList]);
+
+  // Apply the typed search. Unchanged text = nothing to fetch. The spinner clears
+  // when the list request it triggers settles (loadingList true -> false).
+  const applySearch = (e) => {
+    e?.preventDefault?.();
+    const next = queryInput.trim();
+    if (next === query) { if (next !== queryInput) setQueryInput(next); return; }
+    setQueryInput(next);
+    setSearching(true);
+    setQuery(next);
+  };
+  useEffect(() => { if (!loadingList) setSearching(false); }, [loadingList]);
 
   // ---- display helpers ----
   const title = (l) => {
@@ -615,9 +632,9 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
 
       {/* FILTERS */}
       <div className="flex items-center gap-2.5 flex-wrap px-5 md:px-9 py-3 border-b border-ink/12">
-        <form onSubmit={(e) => e.preventDefault()} className="flex items-center gap-2 bg-card border-[1.5px] border-ink rounded-pill pl-4 pr-1 py-1 min-w-[min(300px,100%)]">
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={m.searchPh} className="flex-1 min-w-0 bg-transparent outline-none font-sans font-medium text-[14px] text-ink placeholder:text-[#757575] placeholder:font-normal" />
-          <button type="submit" aria-label="Buscar" className="w-[34px] h-[34px] flex-none flex items-center justify-center rounded-pill bg-ink text-paper" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: '15px', fontWeight: 600, lineHeight: 1 }}>→</button>
+        <form role="search" onSubmit={applySearch} className="flex items-center gap-2 bg-card border-[1.5px] border-ink rounded-pill pl-4 pr-1 py-1 min-w-[min(300px,100%)]">
+          <input enterKeyHint="search" aria-label={m.searchPh} value={queryInput} onChange={(e) => setQueryInput(e.target.value)} placeholder={m.searchPh} className="flex-1 min-w-0 bg-transparent outline-none font-sans font-medium text-[14px] text-ink placeholder:text-[#757575] placeholder:font-normal" />
+          <button type="submit" aria-label={searching ? (lang === 'en' ? 'Searching…' : 'Buscando…') : (lang === 'en' ? 'Search' : 'Buscar')} disabled={searching} aria-busy={searching} className="w-[34px] h-[34px] flex-none flex items-center justify-center rounded-pill bg-ink text-paper disabled:opacity-80 disabled:cursor-wait" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: '15px', fontWeight: 600, lineHeight: 1 }}>{searching ? <SearchSpinner className="w-4 h-4" /> : <span aria-hidden="true">→</span>}</button>
         </form>
         {['all', 'venta', 'alquiler'].map((f) => (
           <button key={f} onClick={() => setFilter(f)} className={chipCls(filter === f)}>{f === 'all' ? t.all : t[f]}</button>
