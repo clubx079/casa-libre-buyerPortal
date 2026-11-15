@@ -3,6 +3,7 @@
 import { NextResponse } from 'next/server';
 import { unstable_cache } from 'next/cache';
 import { searchListings } from '@/lib/marketplace';
+import { withSellerPhotosPage } from '@/lib/sellerPhotos';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,6 +25,7 @@ export async function POST(req) {
   // arbitrary from the body reaches the query builder).
   const p = {};
   for (const k of SEARCH_KEYS) if (b?.[k] !== undefined && b[k] !== null && b[k] !== '') p[k] = b[k];
-  const r = await cachedSearch(JSON.stringify(p), p);
+  // seller_photo (the owner's approved profile photo) is attached after the cache.
+  const r = await withSellerPhotosPage(await cachedSearch(JSON.stringify(p), p));
   return NextResponse.json(r);
 }

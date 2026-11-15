@@ -10,6 +10,7 @@ import { deletePosthogPerson } from '@/lib/posthogPerson';
 import { listDrafts, draftPhotoKeys } from '@/lib/drafts';
 import { claimGuestDrafts } from '@/lib/guestDrafts';
 import { removeDraftPhotos } from '@/lib/draftPhotos';
+import { deletePhotoFiles } from '@/lib/profilePhotoScan';
 import { revokeAppleAuthorization } from '@/lib/appleSignIn';
 import { getUserById } from '@/lib/users';
 import { sendAccountDeleted } from '@/lib/automations/accountDeleted';
@@ -49,6 +50,8 @@ export async function POST(req) {
     const drafts = await listDrafts(db, s.uid);
     await removeDraftPhotos(drafts.flatMap((d) => draftPhotoKeys(d.data)));
   } catch { /* best-effort */ }
+  // Their profile photo files (approved + pending), lib/profilePhoto.js.
+  await deletePhotoFiles([me?.profile_photo_key, me?.profile_photo_pending_key]).catch(() => {});
   const r = await deleteAccount(db, { uid: s.uid, email: s.email });
   if (!r.ok) {
     console.error('[account/delete] failed', s.uid, r.failed);

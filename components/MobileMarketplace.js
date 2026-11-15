@@ -473,6 +473,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
         ${priceSub(l) ? `<div style="font:500 11px 'Space Grotesk',sans-serif;color:rgba(17,17,17,.5)">${priceSub(l)}</div>` : ''}
         <div style="font:500 12px 'Space Grotesk',sans-serif;margin-top:2px">${title(l)}</div>
         <div style="font:400 11px 'Space Grotesk',sans-serif;color:rgba(17,17,17,.55);margin-top:1px">${meta(l)}</div>
+        ${(l.sp || l.seller_photo) ? `<div style="display:flex;align-items:center;gap:6px;margin-top:6px"><img src="${String(l.sp || l.seller_photo).replace(/["<>]/g, '')}" alt="" style="width:20px;height:20px;border-radius:50%;object-fit:cover;border:1px solid rgba(17,17,17,.25)" onerror="this.parentNode.style.display='none'"/><span style="font:500 11px 'Space Grotesk',sans-serif;color:rgba(17,17,17,.55)">${X.ownerDirect}</span></div>` : ''}
       </div></a>`;
   };
 
@@ -608,7 +609,16 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
                 {priceSub(l) && <div className="text-[13px] font-medium text-ink/50">{priceSub(l)}</div>}
                 <div className="text-[15px] font-bold mt-1.5 line-clamp-1">{title(l)}</div>
                 <div className="text-[13px] text-ink/55 mt-0.5 line-clamp-1">{meta(l)}</div>
-                {l.user_published && <span className="inline-block mt-2.5 text-[12px] font-medium text-ink/60 border border-ink/20 rounded-pill px-3 py-1">{X.ownerDirect}</span>}
+                {l.user_published && (l.seller_photo
+                  ? (
+                    // The seller's approved profile photo inside the same chip (lib/sellerPhotos.js).
+                    <span className="inline-flex items-center gap-1.5 mt-2.5 text-[12px] font-medium text-ink/60 border border-ink/20 rounded-pill pl-1 pr-3 py-1" data-testid="card-seller-photo">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={l.seller_photo} alt="" loading="lazy" width={20} height={20} className="w-5 h-5 rounded-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                      {X.ownerDirect}
+                    </span>
+                  )
+                  : <span className="inline-block mt-2.5 text-[12px] font-medium text-ink/60 border border-ink/20 rounded-pill px-3 py-1">{X.ownerDirect}</span>)}
               </div>
             </Link>
           ))}

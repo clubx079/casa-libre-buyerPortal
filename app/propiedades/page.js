@@ -1,6 +1,7 @@
 import { unstable_cache } from 'next/cache';
 import { getActiveCountCached } from '@/lib/listings';
 import { searchListings } from '@/lib/marketplace';
+import { withSellerPhotosPage } from '@/lib/sellerPhotos';
 import { SITE } from '@/lib/site';
 import { COUNTRY } from '@/lib/country';
 import { zoningEnabled } from '@/lib/zoning/categories';
@@ -38,10 +39,12 @@ export default async function PropiedadesPage({ searchParams }) {
   // starts on `initialOp`; mobile's segmented always starts on venta/alquiler.
   // SSR only the first LIST page (cached, indexed) — the map pins load client-side
   // right after mount (cached endpoint), so the visible content is instant.
-  const [{ dRes, mRes }, totalCount] = await Promise.all([
+  const [{ dRes: dCached, mRes: mCached }, totalCount] = await Promise.all([
     // ?type= (SEO pages link here) filters the first page too, not just the pins.
     getInitialPage(initialOp, initialQuery, initialType === 'all' ? undefined : initialType), getActiveCountCached(),
   ]);
+  // Sellers' approved profile photos, attached after the cache (lib/sellerPhotos.js).
+  const [dRes, mRes] = await Promise.all([withSellerPhotosPage(dCached), withSellerPhotosPage(mCached)]);
   // SEO: a keyword H1 (sr-only, so the search-first UI is unchanged) + CollectionPage
   // /ItemList schema for the listings this page SSRs. Invisible to users; gives the
   // main marketplace page the structured data it was missing.

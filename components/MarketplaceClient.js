@@ -37,6 +37,7 @@ const M = {
     geoDenied: 'No pudimos acceder a tu ubicación',
     inArea: 'Propiedades en el área del mapa', showAll: 'Ver todas', emptyArea: 'No hay propiedades en esta zona. Alejá o mové el mapa.',
     loadMore: 'Ver más propiedades', showing: (n, total) => `Mostrando ${n} de ${total}`,
+    ownerDirect: 'Dueño directo',
   },
   en: {
     searchPh: 'Search by neighborhood or type…',
@@ -51,6 +52,7 @@ const M = {
     geoDenied: "We couldn't access your location",
     inArea: 'Properties in the map area', showAll: 'Show all', emptyArea: 'No properties in this area. Zoom out or move the map.',
     loadMore: 'Load more properties', showing: (n, total) => `Showing ${n} of ${total}`,
+    ownerDirect: 'Owner direct',
   },
   pt: {
     searchPh: 'Pesquisar por bairro ou tipo…',
@@ -65,6 +67,7 @@ const M = {
     geoDenied: "Não conseguimos acessar sua localização",
     inArea: 'Imóveis na área do mapa', showAll: 'Mostrar tudo', emptyArea: 'Nenhum imóvel nesta área. Afaste o zoom ou mova o mapa.',
     loadMore: 'Carregar mais imóveis', showing: (n, total) => `Mostrando ${n} de ${total}`,
+    ownerDirect: 'Proprietário direto',
   },
 };
 
@@ -476,6 +479,14 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
 
   useEffect(() => { didFit.current = false; drawMarkers(); /* eslint-disable-next-line */ }, [pins, lang, nearMe, userLoc, mapOn]);
 
+  // The seller's approved profile photo (lib/sellerPhotos.js: pins carry it as `sp`) — only
+  // where there is one; otherwise the popup is unchanged.
+  function sellerPhotoHtml(src) {
+    if (!src) return '';
+    const u = String(src).replace(/["<>]/g, '');
+    return `<div style="display:flex;align-items:center;gap:6px;margin-top:6px"><img src="${u}" alt="" style="width:20px;height:20px;border-radius:50%;object-fit:cover;border:1px solid rgba(17,17,17,.25)" onerror="this.parentNode.style.display='none'"/><span style="font:500 11px 'Space Grotesk',sans-serif;color:rgba(17,17,17,.55)">${m.ownerDirect}</span></div>`;
+  }
+
   function popupHtml(l, imgUrl) {
     const img = imgUrl
       ? `<img src="${imgUrl}" alt="" style="width:100%;height:118px;object-fit:cover;display:block" onerror="this.style.display='none'"/>`
@@ -487,6 +498,7 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
         ${priceSub(l) ? `<div style="font:500 11px 'Space Grotesk',sans-serif;color:rgba(17,17,17,.5)">${priceSub(l)}</div>` : ''}
         <div style="font:500 12px 'Space Grotesk',sans-serif;margin-top:2px">${title(l)}</div>
         <div style="font:400 11px 'Space Grotesk',sans-serif;color:rgba(17,17,17,.55);margin-top:1px">${meta(l)}</div>
+        ${sellerPhotoHtml(l.sp || l.seller_photo)}
       </div></a>`;
   }
 
@@ -713,6 +725,13 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
                   {priceSub(l) && <div className="text-[12px] font-medium text-ink/50 whitespace-nowrap">{priceSub(l)}</div>}
                   <div className="text-[14px] font-medium mt-[3px] line-clamp-1">{title(l)}</div>
                   <div className="text-[12px] text-ink/55 mt-[3px] line-clamp-1">{meta(l)}</div>
+                  {l.seller_photo && (
+                    <div className="flex items-center gap-1.5 mt-2" data-testid="card-seller-photo">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={l.seller_photo} alt="" loading="lazy" width={22} height={22} className="w-[22px] h-[22px] rounded-full object-cover border border-ink/25" onError={(e) => { e.currentTarget.parentNode.style.display = 'none'; }} />
+                      <span className="text-[11.5px] font-medium text-ink/55">{m.ownerDirect}</span>
+                    </div>
+                  )}
                 </div>
               </Link>
             ))}

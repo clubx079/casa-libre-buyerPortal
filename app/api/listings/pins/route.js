@@ -3,6 +3,7 @@
 import { NextResponse } from 'next/server';
 import { unstable_cache } from 'next/cache';
 import { getPins } from '@/lib/marketplace';
+import { attachPinPhotos } from '@/lib/sellerPhotos';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,6 +16,7 @@ const cachedPins = unstable_cache(
 export async function GET(req) {
   const sp = req.nextUrl.searchParams;
   const p = Object.fromEntries(['op', 'type', 'beds', 'priceMin', 'priceMax', 'barrio', 'seller', 'q', 'height'].map((k) => [k, sp.get(k) || '']));
-  const pins = await cachedPins(JSON.stringify(p), p);
+  // sp = the seller's approved profile photo (map popup), attached after the cache.
+  const pins = await attachPinPhotos(await cachedPins(JSON.stringify(p), p));
   return NextResponse.json({ pins, count: pins.length });
 }
