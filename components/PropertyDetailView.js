@@ -22,7 +22,6 @@ import { genToken, shortUrl, trackContact, markOpened } from '@/lib/contactTrack
 import { COUNTRY } from '@/lib/country';
 import { inCountry } from '@/utils/gmap';
 import AuthButton from '@/components/AuthButton';
-import SellerInfoButton from '@/components/SellerInfoButton';
 
 const T = {
   es: {
@@ -408,8 +407,6 @@ export default function PropertyDetailView({ l, url }) {
             <WaGlyph /> WhatsApp
           </a>
         )}
-        {/* "Sobre el vendedor" — opens a bottom sheet here (components/SellerInfoButton.js) */}
-        <SellerInfoButton l={l} sellerName={l.user_published ? l.contact_name : null} photo={l.user_published ? l.seller_photo || null : null} size="lg" className={mbarWa ? '' : 'ml-auto'} />
       </div>
 
       {/* ── LIGHTBOX ── full image + bottom thumbnail scroller (tap any to jump) */}

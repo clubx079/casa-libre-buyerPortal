@@ -9,7 +9,6 @@ import { useState } from 'react';
 import { useLang } from '@/lib/useLang';
 import { track } from '@/lib/analytics';
 import { genToken, shortUrl, trackContact } from '@/lib/contactTrack';
-import SellerInfoButton from '@/components/SellerInfoButton';
 
 const T = {
   es: {
@@ -45,7 +44,6 @@ const WaGlyph = ({ size = 21 }) => (
 // sellerProfile: their "Perfil profesional" { name, title, company, website, website_label }
 // (lib/sellerProfile.js publicProfile). Shown together at the top of the card; with neither,
 // the card looks exactly as before.
-// listing: the whole listing, for the "Sobre el vendedor" (i) popover (components/SellerInfoButton.js).
 export default function PropertyContactCard({ sellerName, sellerPhoto, sellerProfile, listing = null, waDigits, url, listingRef, trackProps, shortCode }) {
   const [lang] = useLang();
   const [copied, setCopied] = useState(false);
@@ -124,7 +122,6 @@ export default function PropertyContactCard({ sellerName, sellerPhoto, sellerPro
                 >
                   <WaGlyph /> {t.wa}
                 </a>
-                {listing && <SellerInfoButton l={listing} sellerName={sellerName} photo={sellerPhoto} size="lg" />}
               </div>
 
               <div className="flex gap-2.5 mt-3.5 max-[920px]:mt-0">
@@ -143,7 +140,6 @@ export default function PropertyContactCard({ sellerName, sellerPhoto, sellerPro
               <button disabled aria-disabled="true" className="flex-1 min-w-0 px-4 py-3 rounded-pill bg-paper text-ink/40 font-semibold border border-ink/20 cursor-not-allowed">
                 {t.noContact}
               </button>
-              {listing && <SellerInfoButton l={listing} sellerName={sellerName} photo={sellerPhoto} size="lg" className="max-[920px]:hidden" />}
             </div>
           )}
         </div>

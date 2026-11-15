@@ -204,7 +204,7 @@ export default function SettingsPage() {
   };
 
   // The verified WhatsApp row + the existing add / change flow (/api/account/whatsapp), shown
-  // in "Perfil profesional" and in "Cómo ingresás"; the form opens in the card it was asked from.
+  // once, in "Cómo ingresás" (it used to repeat in "Perfil profesional").
   const waBlock = (where) => (
     <div className="py-3">
       <div className="flex items-center justify-between gap-3">
@@ -258,8 +258,6 @@ export default function SettingsPage() {
             <Field id="pf-company" label={t.company} hint={t.optional} placeholder={t.companyPh} value={prof.company_name} onChange={setField('company_name')} error={proErr.company_name && proErrors[proErr.company_name]} autoComplete="organization" maxLength={100} />
           </div>
           <Field id="pf-web" label={t.website} hint={t.optional} placeholder={t.websitePh} value={prof.company_website} onChange={setField('company_website')} error={proErr.company_website && proErrors[proErr.company_website]} type="url" inputMode="url" autoComplete="url" maxLength={200} />
-
-          <div className="border-t border-ink/10 -mb-1">{waBlock('pro')}</div>
 
           <ProPreview t={t} prof={prof} photo={photo} />
 
