@@ -37,7 +37,7 @@ const M = {
     geoDenied: 'No pudimos acceder a tu ubicación',
     inArea: 'Propiedades en el área del mapa', showAll: 'Ver todas', emptyArea: 'No hay propiedades en esta zona. Alejá o mové el mapa.',
     loadMore: 'Ver más propiedades', showing: (n, total) => `Mostrando ${n} de ${total}`,
-    ownerDirect: 'Dueño directo',
+    ownerDirect: 'Perfil del vendedor',
   },
   en: {
     searchPh: 'Search by neighborhood or type…',
@@ -52,7 +52,7 @@ const M = {
     geoDenied: "We couldn't access your location",
     inArea: 'Properties in the map area', showAll: 'Show all', emptyArea: 'No properties in this area. Zoom out or move the map.',
     loadMore: 'Load more properties', showing: (n, total) => `Showing ${n} of ${total}`,
-    ownerDirect: 'Owner direct',
+    ownerDirect: 'Seller profile',
   },
   pt: {
     searchPh: 'Pesquisar por bairro ou tipo…',
@@ -67,7 +67,7 @@ const M = {
     geoDenied: "Não conseguimos acessar sua localização",
     inArea: 'Imóveis na área do mapa', showAll: 'Mostrar tudo', emptyArea: 'Nenhum imóvel nesta área. Afaste o zoom ou mova o mapa.',
     loadMore: 'Carregar mais imóveis', showing: (n, total) => `Mostrando ${n} de ${total}`,
-    ownerDirect: 'Proprietário direto',
+    ownerDirect: 'Perfil do vendedor',
   },
 };
 
