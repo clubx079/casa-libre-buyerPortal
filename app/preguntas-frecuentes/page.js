@@ -1,6 +1,6 @@
 import MarketingShell from '@/components/MarketingShell';
 import Article from '@/components/marketing/Article';
-import { COUNTRY } from '@/lib/country';
+import { COUNTRY, COUNTRY_PT } from '@/lib/country';
 import { CITIES } from '@/lib/site';
 
 // escribano (PY/UY) vs notario (BO/VE)
@@ -44,6 +44,22 @@ const FAQ_EN = [
   { q: `Are prices in ${COUNTRY.currencyName} or dollars?`, a: `Both. Each property shows its price in ${COUNTRY.currencyName} (${COUNTRY.currencySymbol}) and dollars (US$) with an up-to-date exchange rate.` },
 ];
 
+const FAQ_PT = [
+  { q: 'Que tipo de imóveis vou encontrar no Casa Libre?', a: `Casas, apartamentos, duplex, terrenos e pontos comerciais à venda e para alugar em ${COUNTRY_PT.all}, anunciados por imobiliárias e por proprietários particulares, com mapa, preços em ${COUNTRY.currencyName} e dólares e contato direto pelo WhatsApp. O Casa Libre não é um site só de proprietário para proprietário: imobiliárias e donos anunciam lado a lado.` },
+  { q: 'Quanto custa anunciar um imóvel?', a: 'Anunciar no Casa Libre é totalmente grátis, tanto para imobiliárias quanto para proprietários. Não cobramos nada para anunciar nem comissão sobre a venda ou o aluguel. Você só precisa criar uma conta.' },
+  { q: 'O Casa Libre cobra comissão nas vendas?', a: 'Não. O Casa Libre não cobra comissão. Conectamos quem anuncia diretamente com quem procura; o negócio é fechado entre as partes.' },
+  { q: `Como vendo minha casa ${COUNTRY_PT.in}?`, a: 'Anuncie grátis no Casa Libre: coloque fotos reais, marque o endereço no mapa e defina o preço olhando imóveis parecidos na sua região. Os compradores falam com você direto pelo WhatsApp e você mesmo combina as visitas. Quando tiver um comprador, a venda é assinada em cartório, diante de um tabelião, que confere a escritura e se há dívidas sobre o imóvel.' },
+  { q: 'Como sei quanto vale meu imóvel?', a: 'A referência mais útil é o preço pedido por imóveis comparáveis: mesmo bairro, tamanho, número de quartos e estado de conservação. Filtre essa busca no mapa do Casa Libre e você verá a faixa real de preços da região. Para uma avaliação formal, um avaliador habilitado pode dar um valor documentado.' },
+  { q: 'Que documentos e custos envolve a venda de um imóvel?', a: 'Normalmente a escritura do imóvel, documento de identidade das duas partes, certidões de que impostos e contas de serviços estão em dia e a escritura assinada diante de um tabelião — além dos honorários do cartório e dos impostos de transferência que se aplicarem. Valores e requisitos variam conforme o caso e o país, então confirme com o seu tabelião antes de assinar.' },
+  { q: 'Como alugo meu imóvel sem imobiliária?', a: 'Publique o anúncio grátis com fotos e localização, responda pelo WhatsApp e mostre o imóvel você mesmo. Antes de assinar, peça referências e comprovante de renda, e coloque por escrito o prazo, o valor do aluguel, os reajustes, o depósito e quem paga cada conta. Um contrato assinado, e uma garantia quando for o caso, evita a maioria dos problemas.' },
+  { q: 'Como busco no mapa?', a: 'Abra o mapa no site ou no app e mova-o até a região que interessa: a lista se atualiza com o que aparece na tela. Você pode filtrar por venda ou aluguel, tipo, preço e quartos, e tocar em qualquer pin para ver a foto e o preço sem abrir o anúncio completo.' },
+  { q: 'Preciso de uma conta para anunciar?', a: 'Sim. Para anunciar você precisa entrar com seu e-mail ou com o Google, para que cada imóvel tenha um responsável. Para buscar e ver imóveis não é preciso ter conta.' },
+  { q: 'Em quais cidades há imóveis?', a: `Em ${COUNTRY_PT.all}: ${CITIES.map((x) => x.name).slice(0, 8).join(', ')} e mais.` },
+  { q: 'Posso salvar imóveis para ver depois?', a: 'Sim. Com uma conta grátis você salva seus imóveis favoritos e vê quando quiser no seu painel.' },
+  { q: 'Como entro em contato com quem anunciou um imóvel?', a: 'Cada anúncio mostra o contato de quem publicou, seja uma imobiliária ou um proprietário. Você pode falar pelo WhatsApp ou por telefone para combinar uma visita, sem comissão no meio.' },
+  { q: `Os preços estão em ${COUNTRY.currencyName} ou em dólares?`, a: `Nos dois. Cada imóvel mostra o preço em ${COUNTRY.currencyName} (${COUNTRY.currencySymbol}) e em dólares (US$), com a cotação atualizada.` },
+];
+
 const content = {
   es: {
     hero: { eyebrow: 'Ayuda', title: 'Preguntas', titleSerif: 'frecuentes.', sub: 'Todo lo que necesitás saber sobre comprar, alquilar y publicar en Casa Libre.' },
@@ -57,6 +73,13 @@ const content = {
     blocks: [
       { type: 'faq', items: FAQ_EN },
       { type: 'cta', title: 'Ready to start?', sub: 'Find your next property or list yours for free.', primary: ['Browse listings', '/propiedades'], secondary: ['List for free', '/publicar'] },
+    ],
+  },
+  pt: {
+    hero: { eyebrow: 'Ajuda', title: 'Perguntas', titleSerif: 'frequentes.', sub: 'Tudo que você precisa saber sobre comprar, alugar e anunciar no Casa Libre.' },
+    blocks: [
+      { type: 'faq', items: FAQ_PT },
+      { type: 'cta', title: 'Pronto para começar?', sub: 'Encontre seu próximo imóvel ou anuncie o seu de graça.', primary: ['Ver anúncios', '/propiedades'], secondary: ['Anunciar grátis', '/publicar'] },
     ],
   },
 };

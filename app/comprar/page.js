@@ -1,6 +1,6 @@
 import MarketingShell from '@/components/MarketingShell';
 import Article from '@/components/marketing/Article';
-import { COUNTRY } from '@/lib/country';
+import { COUNTRY, COUNTRY_PT } from '@/lib/country';
 import { SITE } from '@/lib/site';
 import { breadcrumbLd } from '@/lib/schema';
 
@@ -33,6 +33,18 @@ const content = {
       ] },
       { type: 'cities', prefix: 'Buy in' },
       { type: 'cta', title: 'Find your next home', sub: 'Browse properties for sale or list yours for free.', primary: ['View for sale', '/propiedades?op=venta'], secondary: ['List for free', '/publicar'] },
+    ],
+  },
+  pt: {
+    hero: { eyebrow: 'Comprar', title: 'Imóveis à venda', titleSerif: `${COUNTRY_PT.in}.`, sub: 'Casas, apartamentos, duplex e espaços comerciais à venda em todo o país, em um mapa fácil de usar.' },
+    blocks: [
+      { type: 'ctaButton', label: 'Ver imóveis à venda →', href: '/propiedades?op=venta' },
+      { type: 'prose', nodes: [
+        ['p', `No <strong>Casa Libre</strong> você encontrará milhares de imóveis à venda ${COUNTRY_PT.in}: casas em condomínios fechados, apartamentos em ${COUNTRY.capital}, duplex novinhos em folha e espaços comerciais. Filtre por cidade, bairro, preço e quartos, e compare tudo no mapa com fotos reais.`],
+        ['h2', 'Comprar por cidade'],
+      ] },
+      { type: 'cities', prefix: 'Comprar em' },
+      { type: 'cta', title: 'Encontre seu próximo imóvel', sub: 'Explore imóveis à venda ou anuncie o seu gratuitamente.', primary: ['Ver à venda', '/propiedades?op=venta'], secondary: ['Anunciar grátis', '/publicar'] },
     ],
   },
 };

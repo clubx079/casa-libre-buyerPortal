@@ -8,6 +8,7 @@ import { useAuth } from './AuthProvider';
 import { track } from '@/lib/analytics';
 import { deviceId } from '@/lib/deviceSignals';
 import { useLang } from '@/lib/useLang';
+import { tr, localeFor } from '@/lib/i18n';
 import Link from 'next/link';
 
 const HINT_KEY = 'cl_saved_hint';   // the "Guardada → Ver mis guardadas" hint, shown once per browser
@@ -55,9 +56,9 @@ export default function FavoritesProvider({ children }) {
       {children}
       {hint && (
         <div role="status" className="fixed left-1/2 -translate-x-1/2 bottom-[calc(96px+env(safe-area-inset-bottom))] z-[700] flex items-center gap-3 bg-ink text-paper rounded-pill pl-5 pr-2 py-2 shadow-hard-soft text-[14px] font-medium" data-testid="saved-hint">
-          <span>{lang === 'en' ? 'Saved' : 'Guardada'}</span>
+          <span>{tr(lang, 'Guardada', 'Saved', 'Salvo')}</span>
           <Link href={user ? '/cuenta/guardadas' : '/guardadas'} onClick={() => setHint(false)} className="rounded-pill bg-paper text-ink px-3.5 py-1.5 text-[13px] font-semibold whitespace-nowrap">
-            {lang === 'en' ? 'See your saved homes →' : 'Ver mis guardadas →'}
+            {tr(lang, 'Ver mis guardadas →', 'See your saved homes →', 'Ver meus salvos →')}
           </Link>
         </div>
       )}

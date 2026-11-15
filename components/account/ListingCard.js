@@ -3,19 +3,20 @@ import Link from 'next/link';
 import { fmtUsd, fmtPyg, isUnverified, contactSellerFor } from '@/lib/ui';
 import { typeLabel } from '@/lib/propertyType';
 import { useLang } from '@/lib/useLang';
+import { tr, localeFor } from '@/lib/i18n';
 import VerifiedTag from '@/components/VerifiedTag';
 
 // Compact listing card used across the account pages (saved / my listings).
 export default function ListingCard({ l, action }) {
   const [lang] = useLang();
   // Standardized: USD main, local ₲ sub (rent adds /mes|/mo).
-  const per = l.mode === 'alquiler' ? (lang === 'es' ? '/mes' : '/mo') : '';
+  const per = l.mode === 'alquiler' ? tr(lang, '/mes', '/mo', '/mês') : '';
   const noPrice = isUnverified(l, 'price');   // lib/unverified.js
   const price = noPrice ? contactSellerFor('price', lang) : (fmtUsd(l.usd, lang) || '—') + per;
   const priceSub = !noPrice && fmtPyg(l.pyg, lang) ? fmtPyg(l.pyg, lang) + per : '';
-  const title = `${typeLabel(l.type, lang) || (lang === 'es' ? 'Propiedad' : 'Property')}${l.beds ? ` · ${l.beds} ${lang === 'es' ? 'dorm' : 'bd'}` : ''}`;
+  const title = `${typeLabel(l.type, lang) || tr(lang, 'Propiedad', 'Property', 'Imóvel')}${l.beds ? ` · ${l.beds} ${tr(lang, 'dorm', 'bd', 'qto')}` : ''}`;
   const place = [l.neighborhood, l.city].filter(Boolean).join(', ');
-  const meta = [l.area && `${l.area} m²`, l.baths && `${l.baths} ${lang === 'es' ? 'baños' : 'ba'}`].filter(Boolean).join(' · ');
+  const meta = [l.area && `${l.area} m²`, l.baths && `${l.baths} ${tr(lang, 'baños', 'ba', 'banh.')}`].filter(Boolean).join(' · ');
   // AI photo check (lib/listingScan.js): not on the site yet (or rejected) → no link to
   // the public page (it would 404), and a chip saying where it stands.
   const scan = l.scan;   // 'scanning' | 'rejected' | null
@@ -29,17 +30,17 @@ export default function ListingCard({ l, action }) {
       <Box {...boxProps} className="relative block h-[150px] cl-hatch">
         {l.image
           ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={l.image} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-          : <span className="absolute inset-0 flex items-center justify-center font-mono text-[10px] text-ink/45">{lang === 'es' ? 'Foto próximamente' : 'Photo coming soon'}</span>}
-        <span className="absolute top-2 left-2 text-[10px] font-semibold bg-ink text-paper px-2.5 py-1 rounded-pill">{l.mode === 'alquiler' ? (lang === 'es' ? 'Alquiler' : 'Rent') : (lang === 'es' ? 'Venta' : 'Sale')}</span>
+          : <span className="absolute inset-0 flex items-center justify-center font-mono text-[10px] text-ink/45">{tr(lang, 'Foto próximamente', 'Photo coming soon', 'Foto em breve')}</span>}
+        <span className="absolute top-2 left-2 text-[10px] font-semibold bg-ink text-paper px-2.5 py-1 rounded-pill">{l.mode === 'alquiler' ? tr(lang, 'Alquiler', 'Rent', 'Aluguel') : tr(lang, 'Venta', 'Sale', 'Venda')}</span>
         {scan === 'scanning' && (
           <span className="absolute top-2 right-2 inline-flex items-center gap-1.5 text-[10px] font-semibold bg-paper text-ink border border-ink/20 px-2.5 py-1 rounded-pill" data-testid="scan-chip">
-            <span className="w-2.5 h-2.5 rounded-full border-[1.5px] border-ink/25 border-t-ink animate-spin" aria-hidden="true" />{lang === 'es' ? 'Revisando fotos…' : 'Checking photos…'}
+            <span className="w-2.5 h-2.5 rounded-full border-[1.5px] border-ink/25 border-t-ink animate-spin" aria-hidden="true" />{tr(lang, 'Revisando fotos…', 'Checking photos…', 'Verificando fotos…')}
           </span>
         )}
-        {scan === 'rejected' && <span className="absolute top-2 right-2 text-[10px] font-bold bg-red-600 text-white px-2.5 py-1 rounded-pill" data-testid="scan-chip">{lang === 'es' ? 'Fotos no aceptadas' : 'Photos not accepted'}</span>}
-        {pay === 'payment_pending' && <span className="absolute top-2 right-2 text-[10px] font-bold bg-amber-400 text-ink px-2.5 py-1 rounded-pill" data-testid="pay-chip">{lang === 'es' ? 'Pago pendiente' : 'Payment pending'}</span>}
-        {pay === 'expired' && <span className="absolute top-2 right-2 text-[10px] font-bold bg-ink text-paper px-2.5 py-1 rounded-pill" data-testid="pay-chip">{lang === 'es' ? 'Vencida' : 'Ended'}</span>}
-        {review && <span className="absolute top-2 right-2 text-[10px] font-bold bg-amber-400 text-ink px-2.5 py-1 rounded-pill" data-testid="review-chip">{lang === 'es' ? 'En revisión' : 'Under review'}</span>}
+        {scan === 'rejected' && <span className="absolute top-2 right-2 text-[10px] font-bold bg-red-600 text-white px-2.5 py-1 rounded-pill" data-testid="scan-chip">{tr(lang, 'Fotos no aceptadas', 'Photos not accepted', 'Fotos não aceitas')}</span>}
+        {pay === 'payment_pending' && <span className="absolute top-2 right-2 text-[10px] font-bold bg-amber-400 text-ink px-2.5 py-1 rounded-pill" data-testid="pay-chip">{tr(lang, 'Pago pendiente', 'Payment pending', 'Pagamento pendente')}</span>}
+        {pay === 'expired' && <span className="absolute top-2 right-2 text-[10px] font-bold bg-ink text-paper px-2.5 py-1 rounded-pill" data-testid="pay-chip">{tr(lang, 'Vencida', 'Ended', 'Expirado')}</span>}
+        {review && <span className="absolute top-2 right-2 text-[10px] font-bold bg-amber-400 text-ink px-2.5 py-1 rounded-pill" data-testid="review-chip">{tr(lang, 'En revisión', 'Under review', 'Em análise')}</span>}
         {!scan && !pay && !review && l.admin_status && l.admin_status !== 'active' && <span className="absolute top-2 right-2 text-[10px] font-semibold bg-paper text-ink border border-ink/20 px-2.5 py-1 rounded-pill capitalize">{l.admin_status}</span>}
       </Box>
       <div className="relative p-3.5 flex-1 flex flex-col">
@@ -54,8 +55,8 @@ export default function ListingCard({ l, action }) {
         {/* What buyers did with it (app/api/account/listings): saves incl. visitors without an account, and views */}
         {(l.saves != null || l.views != null) && !scan && (
           <div className="flex items-center gap-3 mt-2 text-[12px] font-medium text-ink/70" data-testid="listing-stats">
-            {l.saves != null && <span>♥ {l.saves.toLocaleString(lang === 'es' ? 'es-PY' : 'en-US')} {lang === 'es' ? (l.saves === 1 ? 'persona la guardó' : 'personas la guardaron') : (l.saves === 1 ? 'person saved it' : 'people saved it')}</span>}
-            {l.views != null && <span>👁 {l.views.toLocaleString(lang === 'es' ? 'es-PY' : 'en-US')} {lang === 'es' ? 'visitas' : 'views'}</span>}
+            {l.saves != null && <span>♥ {l.saves.toLocaleString(localeFor(lang, 'es-PY'))} {tr(lang, l.saves === 1 ? 'persona la guardó' : 'personas la guardaron', l.saves === 1 ? 'person saved it' : 'people saved it', l.saves === 1 ? 'pessoa salvou' : 'pessoas salvaram')}</span>}
+            {l.views != null && <span>👁 {l.views.toLocaleString(localeFor(lang, 'es-PY'))} {tr(lang, 'visitas', 'views', 'visualizações')}</span>}
           </div>
         )}
         {action && <div className="mt-3 pt-3 border-t border-ink/10">{action}</div>}

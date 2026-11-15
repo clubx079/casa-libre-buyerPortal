@@ -5,6 +5,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
+import { tr, localeFor } from '@/lib/i18n';
 import { useAuth } from '@/components/AuthProvider';
 import { COUNTRY } from '@/lib/country';
 import AuthButton from '@/components/AuthButton';
@@ -46,6 +47,24 @@ const T = {
     delSub: 'Your answer helps us improve Casa Libre. Takes under a minute.',
     delReasons: ['I sold or rented it', 'I got no contacts', 'I was asked to pay to publish', 'I listed it wrong', 'I listed it somewhere else', 'Something else'],
     delPh: 'Tell us a bit more (optional)…',
+  },
+  pt: {
+    cta: 'Anuncie grátis',
+    kicker: 'Sua opinião',
+    h1: <>Conte o que você acha do <em>Casa Libre</em></>,
+    sub: 'Sua opinião nos ajuda a melhorar. Leva menos de um minuto.',
+    rate: 'Como você avaliaria sua experiência?',
+    name: 'Seu nome (opcional)', email: 'Seu e‑mail (opcional)',
+    msgLabel: 'Seu comentário',
+    msgPh: 'Conte o que você gostou ou o que podemos melhorar…',
+    send: 'Enviar feedback', sending: 'Enviando…',
+    needRating: 'Escolha uma avaliação de 1 a 5 estrelas.',
+    sentH: 'Obrigado pelo seu feedback!', sentSub: 'Recebemos — isso ajuda a melhorar o Casa Libre.',
+    back: 'Voltar ao início',
+    delH1: <>Por que você excluiu seu <em>anúncio</em>?</>,
+    delSub: 'Sua resposta nos ajuda a melhorar o Casa Libre. Leva menos de um minuto.',
+    delReasons: ['Já vendi ou aluguei', 'Não recebi contatos', 'Pediram que eu pagasse para publicar', 'Anunciei errado', 'Anunciei em outro lugar', 'Outro motivo'],
+    delPh: 'Conte um pouco mais (opcional)…',
   },
 };
 
@@ -115,7 +134,7 @@ export default function FeedbackClient() {
         </div>
         <div className="flex items-center gap-1 min-[400px]:gap-1.5 md:gap-3.5 shrink-0">
           <div className="flex items-center h-8 min-[400px]:h-9 md:h-[40px] border border-ink/30 rounded-pill p-[2px] min-[400px]:p-[3px] text-[10px] min-[400px]:text-[11px] md:text-[12px] font-semibold">
-            {['es', 'en'].map((x) => (
+            {['es', 'en', 'pt'].map((x) => (
               <button key={x} onClick={() => setLang(x)} className={`h-full flex items-center px-2 min-[400px]:px-2.5 md:px-3 rounded-pill ${lang === x ? 'bg-ink text-paper' : 'text-ink/55'}`}>{x.toUpperCase()}</button>
             ))}
           </div>
@@ -178,7 +197,7 @@ export default function FeedbackClient() {
             </div>
 
             {err && <p className="text-[13px] text-[#c0392b] mb-3">{err}</p>}
-            {status === 'error' && <p className="text-[13px] text-[#c0392b] mb-3">{lang === 'es' ? 'No pudimos enviar tu opinión. Probá de nuevo.' : "We couldn't send your feedback. Please try again."}</p>}
+            {status === 'error' && <p className="text-[13px] text-[#c0392b] mb-3">{tr(lang, 'No pudimos enviar tu opinión. Probá de nuevo.', "We couldn't send your feedback. Please try again.", 'Não conseguimos enviar sua opinião. Tente novamente.')}</p>}
 
             <button type="submit" disabled={status === 'sending'}
               className="w-full inline-flex items-center justify-center px-6 py-3.5 rounded-pill font-semibold text-[15px] bg-ink text-paper border-[1.5px] border-ink shadow-[4px_4px_0_rgba(17,17,17,.85)] disabled:opacity-60">

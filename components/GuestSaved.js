@@ -11,6 +11,7 @@ import SavedList from '@/components/SavedList';
 const T = {
   es: { title: 'No pierdas tus guardadas', body: 'Por ahora quedan guardadas en este navegador. Creá tu cuenta gratis y las vas a tener siempre, en tu celular y en tu compu.', cta: 'Crear cuenta gratis' },
   en: { title: "Don't lose your saved homes", body: "For now they're saved in this browser. Create your free account and you'll always have them, on your phone and your computer.", cta: 'Create a free account' },
+  pt: { title: "Não perca seus imóveis salvos", body: "Por enquanto eles ficam salvos neste navegador. Crie sua conta grátis e você sempre os terá, no seu celular e no seu computador.", cta: 'Criar conta grátis' },
 };
 
 export default function GuestSaved() {

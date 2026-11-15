@@ -7,7 +7,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
-import { COUNTRY } from '@/lib/country';
+import { COUNTRY, COUNTRY_PT } from '@/lib/country';
 import AuthButton from '@/components/AuthButton';
 
 // Placeholder test number until the real business WhatsApp line is set — the
@@ -115,6 +115,56 @@ const T = {
     // Outgoing WhatsApp is ALWAYS Spanish — the team and market are local.
     waMsg: (name) => '¡Hola! Quiero publicar mi cartera en Casa Libre.' + (name ? ' Soy ' + name.trim() + '.' : ''),
   },
+  pt: {
+    tabs: [['Comprar', '/propiedades?op=venta'], ['Alugar', '/propiedades?op=alquiler'], ['Vender', '/publicar']],
+    cta: 'Anuncie grátis',
+    kicker: 'Empresas e profissionais',
+    h1: <>Sua carteira, diante de todo o mercado. <em>Livremente.</em></>,
+    lede: 'Casa Libre é o portal imobiliário que mais cresce na Latam. Imobiliárias, corretores e incorporadoras anunciam sua carteira, recebem consultas direto no WhatsApp e não pagam nada durante o lançamento.',
+    ctaForm: 'Seja parceiro', ctaSite: 'Veja o portal',
+    mQuote: '“Traga sua carteira. Nós trazemos os compradores.”', mWho: 'Cuate, seu guia',
+    aud: ['Imobiliárias', 'Corretores', 'Incorporadoras', 'Agentes independentes', 'Gestores de aluguel'],
+    props: [
+      ['01', 'Leads diretos, sem intermediários', 'Cada anúncio mostra seu contato. Compradores interessados enviam mensagem no WhatsApp ou ligam para você, direto e sem comissão.'],
+      ['02', 'Publicação instantânea', 'Cadastre um imóvel e ele fica online na hora. Sem espera, sem burocracia: sua carteira completa, online hoje.'],
+      ['03', 'Grátis durante o lançamento', 'Anunciar não custa nada durante o lançamento. Sem comissão nas suas negociações — seu negócio continua seu.'],
+      ['04', 'Visibilidade onde importa', `Trabalhamos para que você seja o primeiro resultado quando alguém busca imóvel ${COUNTRY_PT.in} no Google. Sua carteira cresce com esse tráfego.`],
+      ['05', 'Migração de carteira', 'Tem dezenas ou centenas de anúncios? Ajudamos a migrar todo o seu inventário para que você comece com tudo publicado.'],
+      ['06', 'Dados que funcionam para você', 'Saiba quais anúncios geram contatos: cada toque no WhatsApp, ligação e número copiado são registrados para sua análise.'],
+    ],
+    stepsH: <>Como funciona, em <em>três passos</em></>,
+    stepsSub: 'Do primeiro contato ao seu portfólio no ar, sem enrolação.',
+    steps: [
+      ['1', 'Conte-nos sobre sua operação', 'Preencha o formulário com o tipo de negócio e o tamanho da sua carteira.'],
+      ['2', 'Coordenamos a publicação', 'Entramos em contato pelo WhatsApp, definimos o melhor caminho e migramos seus anúncios.'],
+      ['3', 'Receba consultas diretas', 'Seus imóveis ficam online imediatamente e os compradores enviam mensagem direto a você.'],
+    ],
+    formH: <>Consultas <em>comerciais</em></>,
+    formSub: "Conte quem você é e responderemos em breve.",
+    lType: 'Tipo de negócio', types: ['Imobiliária', 'Corretor', 'Incorporadora', 'Agente independente', 'Gestor de aluguel', 'Outro'],
+    lSize: 'Tamanho da carteira', sizes: ['1–10 anúncios', '11–50 anúncios', '51–200 anúncios', '200+ anúncios'],
+    lName: 'Nome completo', lCompany: 'Empresa (opcional)', lPhone: 'WhatsApp / telefone', lEmail: 'E-mail',
+    lCity: 'Cidade ou região onde atua', lMsg: 'Mensagem (opcional)',
+    consent: 'Ao enviar, você concorda em ser contatado por WhatsApp ou e‑mail sobre sua consulta. Nada mais — sem spam.',
+    btnSubmit: 'Enviar consulta', sending: 'Enviando…',
+    formNote: '[ resposta típica: dentro de um dia útil ]',
+    sideH: 'Por que entrar agora',
+    side: ['Anúncios gratuitos durante todo o lançamento', 'Seu contato em cada anúncio — os leads são seus', 'Publicação instantânea, sem espera', 'Ajuda para migrar grandes carteiras'],
+    sideH2: 'Prefere conversar direto?', waLbl: 'Mande uma mensagem no WhatsApp',
+    emailH: 'Ou nos envie um e‑mail', emailPh: 'Seu e‑mail', queryPh: 'Sua pergunta', emailBtn: 'Enviar e‑mail',
+    emailSending: 'Enviando…', emailSent: "Mensagem enviada — responderemos em breve", emailErr: 'Verifique seu e‑mail e a pergunta',
+    faqH: 'Perguntas frequentes',
+    faq: [
+      ['Quanto custa anunciar?', 'Nada. Durante o lançamento, anunciar no Casa Libre é gratuito para empresas e profissionais, sem limite de anúncios e sem comissão nas suas negociações.'],
+      ['Quem fica com os leads?', 'Você. Cada anúncio mostra seu contato e os compradores enviam mensagem ou ligam diretamente. Não intermediamos nem revendemos consultas.'],
+      ['Quanto tempo leva para sua carteira entrar no ar?', 'A publicação é instantânea. Para carteiras grandes, coordenamos a migração para que todo o seu inventário fique online de uma vez.'],
+      ['É necessário exclusividade?', 'Não. Anuncie no Casa Libre e onde quiser — não exigimos exclusividade.'],
+      ['Como envio vários imóveis de uma vez?', 'Mande uma mensagem com o tamanho da sua carteira e proporemos o melhor caminho de migração para o seu caso.'],
+    ],
+    sent: "Consulta enviada — entraremos em contato em breve", err: 'Verifique os campos destacados',
+    // Outgoing WhatsApp is ALWAYS Spanish — the team and market are local.
+    waMsg: (name) => '¡Hola! Quiero publicar mi cartera en Casa Libre.' + (name ? ' Soy ' + name.trim() + '.' : ''),
+  },
 };
 
 const WaGlyph = () => (
@@ -196,7 +246,7 @@ export default function EmpresasClient() {
         </div>
         <div className="flex items-center gap-1 min-[400px]:gap-1.5 md:gap-3.5 shrink-0">
           <div className="flex items-center h-8 min-[400px]:h-9 md:h-[40px] border border-ink/30 rounded-pill p-[2px] min-[400px]:p-[3px] text-[10px] min-[400px]:text-[11px] md:text-[12px] font-semibold">
-            {['es', 'en'].map((x) => (
+            {['es', 'en', 'pt'].map((x) => (
               <button key={x} onClick={() => setLang(x)} className={`h-full flex items-center px-2 min-[400px]:px-2.5 md:px-3 rounded-pill ${lang === x ? 'bg-ink text-paper' : 'text-ink/55'}`}>{x.toUpperCase()}</button>
             ))}
           </div>

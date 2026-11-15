@@ -13,7 +13,7 @@ export const metadata = {
 // come first; then publishing and the FAQ. lib/support.js.
 const reach = (lang) => [
   ...(supportWhatsAppUrl(lang) ? [{ label: 'WhatsApp', value: `${displayPhone()} →`, href: supportWhatsAppUrl(lang) }] : []),
-  ...(supportEmail() ? [{ label: 'Email', value: supportEmail(), href: `mailto:${supportEmail()}` }] : []),
+  ...(supportEmail() ? [{ label: lang === 'pt' ? 'E-mail' : 'Email', value: supportEmail(), href: `mailto:${supportEmail()}` }] : []),
 ];
 
 const content = {
@@ -34,6 +34,16 @@ const content = {
         ...reach('en'),
         { label: 'List your property', value: 'List for free →', href: '/publicar' },
         { label: 'Frequently asked questions', value: 'See answers →', href: '/preguntas-frecuentes' },
+      ] },
+    ],
+  },
+  pt: {
+    hero: { eyebrow: 'Contato', title: 'Vamos conversar.', sub: 'Tem alguma dúvida ou precisa de ajuda? Mande uma mensagem no WhatsApp ou por e‑mail que a gente responde.' },
+    blocks: [
+      { type: 'contact', items: [
+        ...reach('pt'),
+        { label: 'Anuncie seu imóvel', value: 'Anuncie grátis →', href: '/publicar' },
+        { label: 'Perguntas frequentes', value: 'Ver respostas →', href: '/preguntas-frecuentes' },
       ] },
     ],
   },

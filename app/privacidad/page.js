@@ -1,6 +1,6 @@
 import MarketingShell from '@/components/MarketingShell';
 import Article from '@/components/marketing/Article';
-import { COUNTRY } from '@/lib/country';
+import { COUNTRY, COUNTRY_PT } from '@/lib/country';
 
 export const metadata = {
   title: 'Política de privacidad — Casa Libre',
@@ -11,6 +11,7 @@ export const metadata = {
 // Keep in sync with section 5 of /terminos.
 const UPDATED_ES = '6 de octubre de 2026';
 const UPDATED_EN = 'October 6, 2026';
+const UPDATED_PT = '6 de outubro de 2026';
 const C = COUNTRY.name;
 
 const content = {
@@ -63,6 +64,32 @@ const content = {
         ['p', 'The Platform is not aimed at people under 18 and we do not knowingly collect their data.'],
         ['h2', 'Changes'],
         ['p', 'We may update this policy; we will publish the new version with its date and let you know if the change is material.'],
+      ] },
+    ],
+  },
+  pt: {
+    hero: { title: 'Política de privacidade' },
+    blocks: [
+      { type: 'prose', nodes: [
+        ['p', `<em>Última atualização: ${UPDATED_PT}</em>`],
+        ['p', 'Esta política explica quais dados a Casa Libre coleta, para que os usamos e com quem os compartilhamos. Faz parte dos <a href="/terminos">Termos de Serviço</a>; ao aceitá-los, você concorda com o que está descrito aqui. <strong>Casa Libre não vende seus dados pessoais.</strong>'],
+        ['h2', 'O que coletamos'],
+        ['p', '<strong>O que você nos fornece:</strong> nome, e‑mail, telefone / WhatsApp, senha (criptografada), tipo de usuário (proprietário ou corretor) e os detalhes, fotos e localização dos seus anúncios.<br/><strong>O que é gerado ao usar a Plataforma:</strong> buscas, filtros, imóveis visualizados e salvos, contatos com anunciantes, localização se você permitir, dados do dispositivo e do navegador, endereço IP, cookies e tecnologias semelhantes.<br/><strong>De terceiros:</strong> dados que recebemos ao entrar com o Google e dados de fontes públicas.'],
+        ['h2', 'Para que usamos'],
+        ['p', 'Operar a Plataforma e exibir seus anúncios; permitir que as pessoas entrem em contato com você; verificar contas e prevenir fraudes; mensagens sobre sua conta; novidades e ofertas por e‑mail, WhatsApp, SMS ou notificações; personalizar sua experiência; medir e melhorar nossos serviços e campanhas com ferramentas de análise e publicidade (ex.: PostHog, Google Analytics, Google Tag Manager e Google Ads); e produzir estatísticas e relatórios do mercado imobiliário a partir de dados agregados que não identificam ninguém.'],
+        ['h2', 'Com quem compartilhamos'],
+        ['p', '<strong>Não vendemos nem alugamos seus dados pessoais, nem os entregamos a ninguém em troca de dinheiro ou qualquer outra contrapartida.</strong> Só compartilhamos nos seguintes casos:'],
+        ['p', 'Prestadores de serviço que trabalham para nós (hospedagem em nuvem, e‑mail, análise, mapas, publicidade). Esses prestadores usam os dados apenas para nos fornecer esse serviço. Outros usuários, quando você os contata ou eles o contatam (por exemplo, a imobiliária ou o proprietário de um imóvel recebe sua mensagem). Também compartilhamos informações agregadas ou anonimizadas, que não o identificam, e compartilhamos dados quando exigido por lei ou por uma autoridade. Se a Casa Libre se fundir, reorganizar ou for adquirida, seus dados passarão para a nova empresa, que deverá seguir esta política, inclusive o compromisso de não vendê‑los.'],
+        ['h2', 'Onde e por quanto tempo'],
+        ['p', `Seus dados podem ser armazenados em servidores fora ${COUNTRY_PT.of} com medidas de segurança razoáveis. Nós os mantemos enquanto você tiver uma conta. Se você a excluir, apagamos seus dados pessoais e mantemos apenas estatísticas anônimas que não o identificam.`],
+        ['h2', 'Excluindo sua conta'],
+        ['p', 'Você pode excluir sua conta a qualquer momento no app (Conta → Excluir conta) ou na <a href="/eliminar-cuenta">página</a>. Seu nome, e‑mail, telefone, senha e login do Google, imóveis salvos e rascunhos, as notificações dos seus dispositivos e seus dados de análise são apagados. Seus anúncios perdem seu nome e telefone e deixam de ser exibidos. Não é possível desfazer, e isso não afeta os dados já compartilhados com terceiros antes da sua solicitação.'],
+        ['h2', 'Seus direitos e escolhas'],
+        ['p', 'Você pode editar seu perfil e excluir seus anúncios no seu painel. Para solicitar acesso, correção ou exclusão dos seus dados, escreva para nós através da nossa <a href="/contacto">página de contato</a>. Você pode cancelar a inscrição de mensagens de marketing pelo link no e‑mail ou nos escrevendo. Você pode bloquear cookies no seu navegador, embora alguns recursos possam deixar de funcionar.'],
+        ['h2', 'Menores'],
+        ['p', 'A Plataforma não se destina a pessoas menores de 18 anos e não coletamos seus dados conscientemente.'],
+        ['h2', 'Alterações'],
+        ['p', 'Podemos atualizar esta política; publicaremos a nova versão com a data e avisaremos se a mudança for relevante.'],
       ] },
     ],
   },

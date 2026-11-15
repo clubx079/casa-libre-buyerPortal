@@ -39,6 +39,20 @@ const T = {
     contactReq: 'Leave a contact so we can follow up.',
     cancel: 'Cancel',
   },
+  pt: {
+    trigger: 'Publicador não responde? Reporte',
+    heading: 'Reportar publicador sem resposta',
+    intro: 'Se você enviou mensagem no WhatsApp ou ligou e não recebeu resposta, avise-nos e vamos analisar este anúncio.',
+    namePh: 'Seu nome',
+    contactPh: 'Seu WhatsApp, telefone ou e‑mail',
+    msgPh: 'Conte o que aconteceu (opcional)',
+    submit: 'Enviar denúncia',
+    sending: 'Enviando…',
+    sent: 'Obrigado — recebemos sua denúncia e vamos analisá‑la.',
+    error: 'Não foi possível enviar a denúncia. Tente novamente.',
+    contactReq: 'Deixe um contato para que possamos acompanhar.',
+    cancel: 'Cancelar',
+},
 };
 
 export default function NoResponseReport({ propertyId, listingRef, sellerName, sellerPhone }) {

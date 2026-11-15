@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
 import { useLang } from '@/lib/useLang';
+import { tr, localeFor } from '@/lib/i18n';
 import ConfirmModal from '@/components/ConfirmModal';
 import { COUNTRY } from '@/lib/country';
 import AuthButton from '@/components/AuthButton';
@@ -11,10 +12,12 @@ import AuthButton from '@/components/AuthButton';
 const NAV = {
   es: [['/cuenta', 'Panel', 'dash'], ['/cuenta/guardadas', 'Guardadas', 'heart'], ['/cuenta/publicaciones', 'Mis publicaciones', 'home'], ['/cuenta/referidos', 'Referidos', 'gift'], ['/cuenta/pagos', 'Pagos', 'card'], ['/cuenta/ajustes', 'Ajustes', 'gear']],
   en: [['/cuenta', 'Dashboard', 'dash'], ['/cuenta/guardadas', 'Saved', 'heart'], ['/cuenta/publicaciones', 'My listings', 'home'], ['/cuenta/referidos', 'Referrals', 'gift'], ['/cuenta/pagos', 'Payments', 'card'], ['/cuenta/ajustes', 'Settings', 'gear']],
+  pt: [['/cuenta', 'Painel', 'dash'], ['/cuenta/guardadas', 'Salvos', 'heart'], ['/cuenta/publicaciones', 'Meus anúncios', 'home'], ['/cuenta/referidos', 'Indicações', 'gift'], ['/cuenta/pagos', 'Pagamentos', 'card'], ['/cuenta/ajustes', 'Configurações', 'gear']],
 };
 const T = {
   es: { browse: 'Ver propiedades', publish: 'Publicar propiedad', logout: 'Cerrar sesión', logoutMsg: '¿Querés cerrar tu sesión?', cancel: 'Cancelar' },
   en: { browse: 'Browse listings', publish: 'List a property', logout: 'Log out', logoutMsg: 'Are you sure you want to log out?', cancel: 'Cancel' },
+  pt: { browse: 'Ver imóveis', publish: 'Anunciar imóvel', logout: 'Sair', logoutMsg: 'Tem certeza que quer sair?', cancel: 'Cancelar' },
 };
 
 function Icon({ name }) {
@@ -69,7 +72,7 @@ export default function AccountShell({ children }) {
           <div className="flex items-center gap-2.5 px-2 py-1.5">
             <span className="w-9 h-9 shrink-0 rounded-pill bg-ink text-paper flex items-center justify-center text-[14px] font-bold">{initials}</span>
             <div className="min-w-0">
-              <div className="text-[13px] font-semibold truncate">{user?.full_name || (lang === 'es' ? 'Mi cuenta' : 'My account')}</div>
+              <div className="text-[13px] font-semibold truncate">{user?.full_name || tr(lang, 'Mi cuenta', 'My account', 'Minha conta')}</div>
               <div className="text-[11px] text-ink/50 font-mono truncate">{user?.email}</div>
             </div>
           </div>
@@ -89,7 +92,7 @@ export default function AccountShell({ children }) {
           <div className="hidden lg:block flex-1" />
           <div className="flex items-center gap-2">
             <div className="flex items-center border border-ink/30 rounded-pill p-[3px] text-[12px] font-semibold">
-              {['es', 'en'].map((l) => <button key={l} onClick={() => setLang(l)} className={`px-3 py-1.5 rounded-pill ${lang === l ? 'bg-ink text-paper' : 'text-ink/55'}`}>{l.toUpperCase()}</button>)}
+              {['es', 'en', 'pt'].map((l) => <button key={l} onClick={() => setLang(l)} className={`px-3 py-1.5 rounded-pill ${lang === l ? 'bg-ink text-paper' : 'text-ink/55'}`}>{l.toUpperCase()}</button>)}
             </div>
             <span className="lg:hidden"><AuthButton compact /></span>
           </div>

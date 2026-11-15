@@ -5,7 +5,7 @@
 // same way the other marketing pages work.
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
-import { COUNTRY } from '@/lib/country';
+import { COUNTRY, COUNTRY_PT } from '@/lib/country';
 
 // escribano (PY/UY) vs notario (BO/VE)
 const esc = COUNTRY.notary || 'escribano';
@@ -28,6 +28,15 @@ const UI = {
     ctaSub: (n) => `No commission, no plans. Your listing appears on the map alongside properties from agencies and private owners across ${n}.`,
     ctaBtn: 'List for free', others: 'Other guides',
     inline: 'Meanwhile, see the market:', inlinePublish: 'List for free →',
+  },
+  pt: {
+    guides: 'Guias', short: 'Resposta curta', faq: 'Perguntas frequentes',
+    updated: 'Atualizado', disclaimer: 'Este guia é informativo e não substitui o aconselhamento de um tabelião ou outro profissional; os valores e requisitos podem variar caso a caso.',
+    seeNow: 'Veja imóveis agora', fullMap: 'Ver mapa completo',
+    ctaTitle: 'Anuncie seu imóvel grátis',
+    ctaSub: (n) => `Sem comissão, sem planos. Seu anúncio aparece no mapa ao lado de imóveis de imobiliárias e proprietários particulares em ${COUNTRY_PT.all}.`,
+    ctaBtn: 'Anunciar grátis', others: 'Outros guias',
+    inline: 'Enquanto isso, veja o mercado:', inlinePublish: 'Anunciar grátis →',
   },
 };
 
@@ -60,7 +69,7 @@ export default function GuideArticle({ content, updated, related = [], others = 
           <span className="text-[13.5px] text-ink/55">{t.inline}</span>
           {related.slice(0, 2).map((r) => (
             <Link key={r.href} href={r.href} className="px-3.5 py-1.5 rounded-pill border border-ink/25 bg-card text-[13px] font-medium hover:border-ink">
-              {l === 'en' ? r.labelEn || r.label : r.label}
+              {l === 'en' ? r.labelEn || r.label : l === 'pt' ? r.labelPt || r.label : r.label}
             </Link>
           ))}
           <Link href="/publicar" className="px-3.5 py-1.5 rounded-pill bg-ink text-paper text-[13px] font-semibold">{t.inlinePublish}</Link>
@@ -124,7 +133,7 @@ export default function GuideArticle({ content, updated, related = [], others = 
           <div className="flex flex-wrap gap-2.5">
             {related.map((r) => (
               <Link key={r.href} href={r.href} className="px-4 py-2 rounded-pill border border-ink/25 bg-card text-[13.5px] font-medium hover:border-ink">
-                {l === 'en' ? r.labelEn || r.label : r.label}
+                {l === 'en' ? r.labelEn || r.label : l === 'pt' ? r.labelPt || r.label : r.label}
               </Link>
             ))}
             <Link href="/propiedades" className="px-4 py-2 rounded-pill border border-ink/25 bg-card text-[13.5px] font-medium hover:border-ink">{t.fullMap}</Link>
@@ -145,7 +154,7 @@ export default function GuideArticle({ content, updated, related = [], others = 
             {others.map((o) => (
               <li key={o.slug}>
                 <Link href={`/guias/${o.slug}`} className="font-semibold underline decoration-ink/30 hover:decoration-ink">
-                  {l === 'en' ? o.h1En || o.h1 : o.h1}
+                  {l === 'en' ? o.h1En || o.h1 : l === 'pt' ? o.h1Pt || o.h1 : o.h1}
                 </Link>
               </li>
             ))}

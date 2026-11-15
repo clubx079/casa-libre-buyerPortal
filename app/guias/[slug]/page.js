@@ -12,6 +12,7 @@ import MarketingShell from '@/components/MarketingShell';
 import GuideArticle from '@/components/marketing/GuideArticle';
 import { getGuide, guideSlugs, GUIDES, UPDATED } from '@/lib/guias';
 import { guideEn } from '@/lib/guias.en';
+import { guidePt } from '@/lib/guias.pt';
 import { OPS, TIPOS } from '@/lib/matrix';
 import { SITE, INDEXABLE, CITIES } from '@/lib/site';
 import { COUNTRY } from '@/lib/country';
@@ -41,6 +42,8 @@ const capitalCity = CITIES.find((x) => x.name === COUNTRY.capital) || CITIES[0];
 const citySlug = capitalCity?.slug;
 const cityName = capitalCity?.name || COUNTRY.capital;
 
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
 function relatedLinks(g) {
   if (!citySlug) return [];
   return (g.related || []).map(([op, tipo]) => {
@@ -50,6 +53,7 @@ function relatedLinks(g) {
       href: `/${op}/${tipo}/${citySlug}`,
       label: `${o.short} de ${t.plural} en ${cityName}`,
       labelEn: `${t.pluralEn || t.plural} ${o.labelEn || o.label} in ${cityName}`,
+      labelPt: `${cap(t.pluralPt || t.plural)} ${o.labelPt || o.label} em ${cityName}`,
     };
   }).filter(Boolean);
 }
@@ -58,9 +62,10 @@ export default function Page({ params }) {
   const g = getGuide(params.slug);
   if (!g) notFound();
   const en = guideEn(params.slug);
+  const pt = guidePt(params.slug);
   const url = `${SITE}/guias/${g.slug}`;
   const others = GUIDES.filter((x) => x.slug !== g.slug).slice(0, 4)
-    .map((o) => ({ slug: o.slug, h1: o.h1, h1En: guideEn(o.slug)?.h1 }));
+    .map((o) => ({ slug: o.slug, h1: o.h1, h1En: guideEn(o.slug)?.h1, h1Pt: guidePt(o.slug)?.h1 }));
 
   const ld = [
     {
@@ -91,7 +96,7 @@ export default function Page({ params }) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
       {!INDEXABLE ? <meta name="robots" content="noindex, nofollow" /> : null}
       <GuideArticle
-        content={{ es: g, ...(en ? { en } : {}) }}
+        content={{ es: g, ...(en ? { en } : {}), ...(pt ? { pt } : {}) }}
         updated={UPDATED}
         related={relatedLinks(g)}
         others={others}

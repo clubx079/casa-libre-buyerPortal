@@ -65,7 +65,7 @@ test('translateText gives an instruct model no reasoning settings', async () => 
 test('translateText returns null instead of throwing on every failure', async () => {
   const opts = (fetchImpl) => ({ apiKey: 'k', model: 'm', fetchImpl });
   assert.equal(await translateText('Hola', 'en', { apiKey: '', fetchImpl: fakeFetch('x') }), null);   // no key
-  assert.equal(await translateText('Hola', 'pt', opts(fakeFetch('x'))), null);                       // unknown target
+  assert.equal(await translateText('Hola', 'fr', opts(fakeFetch('x'))), null);                       // unknown target
   assert.equal(await translateText('   ', 'en', opts(fakeFetch('x'))), null);                        // nothing to translate
   assert.equal(await translateText('Hola', 'en', opts(fakeFetch('x', { ok: false }))), null);        // HTTP error
   assert.equal(await translateText('Hola', 'en', opts(fakeFetch('Hel', { finish: 'length' }))), null); // cut off
@@ -92,4 +92,11 @@ test('limiter allows max requests per window per IP, then resets', () => {
   assert.equal(l.allow('2.2.2.2', 20), true);            // other visitors unaffected
   assert.equal(l.allow('1.1.1.1', 1001), true);          // window over
   assert.equal(l.allow(null, 0), true);                  // unknown IP still works
+});
+
+test('translateText supports Brazilian Portuguese (the site PT toggle)', async () => {
+  const f = fakeFetch('Linda casa à venda');
+  const out = await translateText('Hermosa casa en venta', 'pt', { apiKey: 'k', model: 'openai/gpt-oss-20b', fetchImpl: f });
+  assert.equal(out, 'Linda casa à venda');
+  assert.match(f.calls[0].body.messages[0].content, /Brazilian Portuguese/);
 });

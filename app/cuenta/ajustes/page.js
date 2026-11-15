@@ -28,6 +28,18 @@ const T = {
     err: 'Something went wrong. Try again.', errEmail: 'Enter a valid email', errTaken: 'That email is already in use.', errCode: 'Wrong or expired code.',
     delSec: 'Delete account', delText: 'Deletes your account and your personal data. This cannot be undone.', delBtn: 'Delete my account',
   },
+  pt: {
+    title: 'Configurações', profile: 'Perfil', name: 'Nome completo', phone: 'WhatsApp / telefone', save: 'Salvar', saved: 'Salvo ✓', saving: 'Salvando…',
+    emailSec: 'Alterar e‑mail', currentEmail: 'E‑mail atual', newEmail: 'Novo e‑mail', sendCode: 'Enviar código', code: 'Código', verify: 'Verificar e mudar', codeSent: 'Enviamos um código para o novo e‑mail.', emailChanged: 'E‑mail atualizado ✓',
+    signSec: 'Como você entra', signText: 'Você entra com um código que enviamos por e‑mail ou WhatsApp, ou com Google / Apple. Não precisa de senha.',
+    emailRow: 'E‑mail', waRow: 'WhatsApp', confirmed: 'Confirmado', notConfirmed: 'Não confirmado', resend: 'Reenviar confirmação', resent: 'Enviamos o link. Verifique seu e‑mail.',
+    confirmedNow: 'Pronto! Seu e‑mail foi confirmado.', confirmBad: 'O link é inválido ou expirou. Solicite um novo.',
+    addWa: 'Adicionar WhatsApp', waHint: 'Assim você também pode entrar com seu número, nesta mesma conta.', waPh: '+595 981 123 456', waSend: 'Enviar código', waCode: 'Código do WhatsApp', waVerify: 'Verificar', waAdded: 'WhatsApp adicionado ✓',
+    waTaken: 'Esse número já está verificado em outra conta. Entre com esse número ou entre em contato.', waBad: 'Número inválido.', waCodeBad: 'Código errado ou expirado.', waLocked: 'Este é seu WhatsApp verificado: para alterá‑lo use "Alterar WhatsApp" em Como você entra.',
+    changeWa: 'Alterar WhatsApp', changeHint: 'Enviamos um código para o novo número. Depois de verificado, ele substitui o anterior.', waChanged: 'WhatsApp alterado ✓', cancel: 'Cancelar',
+    err: 'Algo deu errado. Tente novamente.', errEmail: 'Informe um e‑mail válido', errTaken: 'Esse e‑mail já está em uso.', errCode: 'Código errado ou expirado.',
+    delSec: 'Excluir conta', delText: 'Exclui sua conta e seus dados pessoais. Não há como desfazer.', delBtn: 'Excluir minha conta',
+},
 };
 
 const inputCls = 'w-full px-4 py-[12px] border-[1.5px] border-ink/30 rounded-input bg-card font-medium text-[15px] outline-none focus:border-ink';

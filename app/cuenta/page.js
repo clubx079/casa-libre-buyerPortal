@@ -19,6 +19,12 @@ const T = {
     recent: 'Recently saved', seeAll: 'See all →', empty: "You haven't saved any properties yet.",
     quick: 'Quick actions',
   },
+  pt: {
+    greet: 'Olá', sub: 'Este é seu painel do Casa Libre.',
+    saved: 'Salvos', mine: 'Meus anúncios', browse: 'Ver imóveis', publish: 'Anunciar imóvel',
+    recent: 'Salvos recentemente', seeAll: 'Ver tudo →', empty: 'Você ainda não salvou nenhum imóvel.',
+    quick: 'Ações rápidas',
+  },
 };
 
 export default function DashboardPage() {

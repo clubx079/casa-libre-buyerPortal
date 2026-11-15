@@ -19,6 +19,15 @@ export default function CityContent({ name, others }) {
         h2: 'Otras ciudades', chip: (n) => `Propiedades en ${n}`,
         ctaTitle: `Tu próximo lugar en ${name}`, ctaSub: 'Buscá o publicá gratis en Casa Libre.', ctaPrimary: [`Ver en ${name}`, `/propiedades?q=${q}`], ctaSecondary: ['Publicar gratis', '/publicar'],
       }
+    : lang === 'pt'
+    ? {
+        eyebrow: `${COUNTRY.name} · ${name}`, title: 'Imóveis em', sub: `Casas, apartamentos e pontos comerciais à venda e para alugar em ${name}. Veja tudo no mapa, com preços em ${COUNTRY.currencyName} e dólares.`,
+        all: `Ver imóveis em ${name} →`, sale: 'À venda', rent: 'Para alugar',
+        p1: `Procurando um imóvel em <strong>${name}</strong>? No Casa Libre você encontra casas, apartamentos, duplex e pontos comerciais em ${name} e arredores. Filtre por preço, quartos e tipo, e compare cada opção no mapa com fotos reais.`,
+        p2pre: `Anunciar seu imóvel em ${name} também é grátis: `, p2link: 'anuncie em minutos', p2post: ' e alcance milhares de pessoas que buscam na região.',
+        h2: 'Outras cidades', chip: (n) => `Imóveis em ${n}`,
+        ctaTitle: `Seu próximo lugar em ${name}`, ctaSub: 'Busque ou anuncie grátis no Casa Libre.', ctaPrimary: [`Ver em ${name}`, `/propiedades?q=${q}`], ctaSecondary: ['Anunciar grátis', '/publicar'],
+      }
     : {
         eyebrow: `${COUNTRY.name} · ${name}`, title: 'Properties in', sub: `Houses, apartments and commercial spaces for sale and rent in ${name}. See everything on the map, with prices in ${COUNTRY.currencyName} and dollars.`,
         all: `View properties in ${name} →`, sale: 'For sale', rent: 'For rent',

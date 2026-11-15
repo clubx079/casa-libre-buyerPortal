@@ -60,6 +60,24 @@ const DICT = {
     err: { unauthorized: 'Log in to feature your property.', already_promoted: 'This property already has an active promotion.', not_publishable: 'The property must be published and complete to feature it.', forbidden: "You can't feature this property.", not_found: 'Property not found.', stripe_not_configured: 'Payments are unavailable right now.' },
     locale: 'en-US',
   },
+  pt: {
+    eyebrow: (p) => (p === 'home' ? 'Destacar na página inicial' : 'Verificar imóvel'),
+    title: (price) => `US$${price} · 30 dias`,
+    what: (p) => (p === 'home'
+      ? 'Seu anúncio recebe o selo Verificado, um pin estrela no mapa (nunca ocultado em cluster) e um destaque na página inicial, por 30 dias.'
+      : 'Seu anúncio recebe o selo Verificado e um pin estrela no mapa (nunca ocultado em cluster), por 30 dias.'),
+    loading: 'Carregando…', processing: 'Processando pagamento…',
+    payWith: (price) => `Pagar US$${price} com este cartão`, payNew: (price) => `Pagar US$${price}`,
+    otherCard: 'Usar outro cartão', backSaved: 'Voltar ao cartão salvo',
+    newHint: 'Informe os dados do seu cartão. Nós o guardamos com segurança no Stripe para sua próxima renovação.',
+    testHint: '· data futura · qualquer CVC', notConfigured: 'Pagamentos não configurados.',
+    okTitle: (p) => (p === 'home' ? 'Seu anúncio está na página inicial!' : 'Imóvel verificado!'),
+    okUntil: (d) => `Ativo até ${d}.`, done: 'Concluído',
+    errTitle: 'Pagamento não concluído', retry: 'Tentar novamente', close: 'Fechar', tryAgain: 'Por favor, tente novamente.',
+    payFail: 'Pagamento não concluído.', startFail: 'Não foi possível iniciar o pagamento.', confirmFail: 'Não foi possível confirmar o pagamento.', authFail: 'Falha na autenticação do cartão.',
+    err: { unauthorized: 'Faça login para destacar seu imóvel.', already_promoted: 'Este imóvel já tem uma promoção ativa.', not_publishable: 'O imóvel precisa estar publicado e completo para ser destacado.', forbidden: 'Você não pode destacar este imóvel.', not_found: 'Imóvel não encontrado.', stripe_not_configured: 'Pagamentos indisponíveis no momento.' },
+    locale: 'pt-BR',
+  },
 };
 
 const brandLabel = (b) => ({ visa: 'Visa', mastercard: 'Mastercard', amex: 'American Express' }[b] || (b ? b[0].toUpperCase() + b.slice(1) : 'Card'));
