@@ -1,4 +1,4 @@
--- 021: seller profile photo (faces only, AI-checked) — lib/profilePhoto.js, lib/profilePhotoScan.js,
+-- 021: seller profile photo (a face or a company logo, AI-checked) — lib/profilePhoto.js, lib/profilePhotoScan.js,
 -- /api/account/profile-photo, Mi cuenta → "Tu foto de perfil".
 --
 -- One photo per account, kept on the account itself (users):

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  PHOTO_STATUS, FACE_FAIL_CATEGORIES, REASONS, reasonFor, parseFaceVerdict, onUpload, onVerdict, onRemove,
+  PHOTO_STATUS, PROFILE_FAIL_CATEGORIES, REASONS, reasonFor, parseFaceVerdict, parseProfileVerdict, onUpload, onVerdict, onRemove,
   ownerView, publicPhoto, isStale, withSellerPhotos, avatarKeyFor, COLUMNS,
 } from '../lib/profilePhoto.js';
 import { logScans, SCAN_API } from '../lib/scanQuota.js';
@@ -12,30 +12,35 @@ const B = { key: 'avatars/u1/b.jpg', url: '/api/media/avatars/u1/b.jpg' };
 const C = { key: 'avatars/u1/c.jpg', url: '/api/media/avatars/u1/c.jpg' };
 const apply = (row, step) => ({ ...row, ...step.patch });
 
-test('the model answer → a face verdict', () => {
-  assert.deepEqual(parseFaceVerdict('PASS'), { verdict: 'pass' });
-  assert.deepEqual(parseFaceVerdict(' pass.\n'), { verdict: 'pass' });
-  assert.deepEqual(parseFaceVerdict('FAIL: logo'), { verdict: 'fail', category: 'logo' });
-  assert.deepEqual(parseFaceVerdict('FAIL - no_face'), { verdict: 'fail', category: 'no_face' });
-  assert.deepEqual(parseFaceVerdict('FAIL: no-face'), { verdict: 'fail', category: 'no_face' });
-  assert.deepEqual(parseFaceVerdict('Fail: object (a house)'), { verdict: 'fail', category: 'object' });
-  assert.deepEqual(parseFaceVerdict('FAIL: group, two people'), { verdict: 'fail', category: 'group' });
-  assert.deepEqual(parseFaceVerdict('<think>a dog</think>FAIL: animal'), { verdict: 'fail', category: 'animal' });
-  assert.deepEqual(parseFaceVerdict('FAIL: unrelated'), { verdict: 'fail', category: 'other' });   // unknown → other
-  assert.equal(parseFaceVerdict('It looks like a man smiling').verdict, 'error');                   // unclear → ask again
-  assert.equal(parseFaceVerdict('').verdict, 'error');
-  assert.equal(parseFaceVerdict(null).verdict, 'error');
+test('the model answer → a profile-picture verdict (faces AND logos are fine)', () => {
+  assert.deepEqual(parseProfileVerdict('PASS'), { verdict: 'pass' });
+  assert.deepEqual(parseProfileVerdict(' pass.\n'), { verdict: 'pass' });
+  assert.deepEqual(parseProfileVerdict('FAIL: adult'), { verdict: 'fail', category: 'adult' });
+  assert.deepEqual(parseProfileVerdict('FAIL - violence'), { verdict: 'fail', category: 'violence' });
+  assert.deepEqual(parseProfileVerdict('Fail: hate (a symbol)'), { verdict: 'fail', category: 'hate' });
+  assert.deepEqual(parseProfileVerdict('<think>a meme</think>FAIL: junk'), { verdict: 'fail', category: 'junk' });
+  // the old faces-only reasons are no reason to reject any more
+  for (const old of ['logo', 'no_face', 'no-face', 'drawing', 'group', 'object', 'animal']) {
+    assert.deepEqual(parseProfileVerdict(`FAIL: ${old}`), { verdict: 'pass' }, old);
+  }
+  assert.deepEqual(parseProfileVerdict('FAIL: unrelated'), { verdict: 'fail', category: 'other' });   // unknown → other
+  assert.equal(parseProfileVerdict('It looks like a man smiling').verdict, 'error');                   // unclear → ask again
+  assert.equal(parseProfileVerdict('').verdict, 'error');
+  assert.equal(parseProfileVerdict(null).verdict, 'error');
+  assert.equal(parseFaceVerdict, parseProfileVerdict);   // old name still works
+  assert.deepEqual(PROFILE_FAIL_CATEGORIES, ['adult', 'violence', 'hate', 'junk']);
 });
 
 test('every category has a short Spanish (voseo) and English reason', () => {
-  for (const c of [...FACE_FAIL_CATEGORIES, 'other']) {
+  for (const c of [...PROFILE_FAIL_CATEGORIES, 'logo', 'no_face', 'other']) {
     assert.ok(REASONS.es[c] && REASONS.es[c].length < 160, c);
     assert.ok(REASONS.en[c], c);
   }
-  assert.match(reasonFor('logo'), /foto real de tu cara/);
-  assert.match(reasonFor('object'), /Subí/);                       // voseo
+  assert.match(reasonFor('junk'), /logo de tu empresa/);
+  assert.match(reasonFor('adult'), /Subí/);                         // voseo
+  assert.doesNotMatch(Object.values(REASONS.es).join(' '), /foto real de tu cara/);
   assert.equal(reasonFor('nonsense'), REASONS.es.other);
-  assert.equal(reasonFor('logo', 'en'), REASONS.en.logo);
+  assert.equal(reasonFor('junk', 'en'), REASONS.en.junk);
 });
 
 test('first upload → checking, nothing shown to buyers yet', () => {
@@ -65,17 +70,17 @@ test('checking → approved: the pending photo becomes the photo', () => {
 
 test('checking → rejected: category + Spanish reason stored, nothing shown to buyers', () => {
   const row = apply({}, onUpload({}, A, NOW));
-  const s = onVerdict(row, { verdict: 'fail', category: 'logo' }, NOW);
+  const s = onVerdict(row, { verdict: 'fail', category: 'adult' }, NOW);
   assert.equal(s.outcome, 'rejected');
   const after = apply(row, s);
-  assert.equal(after.profile_photo_category, 'logo');
-  assert.equal(after.profile_photo_reason, REASONS.es.logo);
+  assert.equal(after.profile_photo_category, 'adult');
+  assert.equal(after.profile_photo_reason, REASONS.es.adult);
   assert.equal(publicPhoto(after), null);
   const v = ownerView(after);
   assert.equal(v.status, 'rejected');
   assert.equal(v.pending, A.url);          // the owner sees which photo was rejected
-  assert.equal(v.reason, REASONS.es.logo);
-  assert.equal(ownerView(after, 'en').reason, REASONS.en.logo);
+  assert.equal(v.reason, REASONS.es.adult);
+  assert.equal(ownerView(after, 'en').reason, REASONS.en.adult);
 });
 
 test('replace an approved photo: the old one keeps showing while checking and after a rejection', () => {
@@ -88,7 +93,7 @@ test('replace an approved photo: the old one keeps showing while checking and af
   assert.equal(ownerView(row).status, 'checking');
   assert.equal(ownerView(row).photo, A.url);
   assert.equal(ownerView(row).pending, B.url);
-  const rej = onVerdict(row, { verdict: 'fail', category: 'object' }, NOW);
+  const rej = onVerdict(row, { verdict: 'fail', category: 'junk' }, NOW);
   assert.deepEqual(rej.deleteKeys, []);
   row = apply(row, rej);
   assert.equal(publicPhoto(row), A.url);   // B rejected → A still shows

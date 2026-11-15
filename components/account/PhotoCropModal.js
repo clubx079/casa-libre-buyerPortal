@@ -4,7 +4,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 // Crop step for the profile photo: the chosen image sits behind a round frame; the user drags
 // it into place and zooms (slider, mouse wheel or pinch), then we cut that square on a canvas
 // and hand back a JPEG blob. Only the cropped square is uploaded and checked, so the round
-// avatar on the listings shows exactly what the user framed here.
+// avatar on the listings shows exactly what the user framed here. Zooming out below "cover"
+// is allowed (down to the whole image fitting inside the circle), so a wide company logo can be
+// shown whole: the empty area around it is white, on screen and in the exported JPEG.
 const VIEW = 300;   // size of the crop area on screen (px)
 const OUT = 800;    // size of the exported square (px); the server keeps at most 800px
 const MAX_ZOOM = 4;
@@ -12,7 +14,7 @@ const MAX_ZOOM = 4;
 export default function PhotoCropModal({ open, src, fallbackSrc = null, t, busy = false, onCancel, onSave }) {
   const [shown, setShown] = useState(src);
   const [img, setImg] = useState(null);         // { el, w, h }
-  const [zoom, setZoom] = useState(1);          // 1 = the image just covers the circle
+  const [zoom, setZoom] = useState(1);          // 1 = the image just covers the frame; minZoom = it fits inside the circle
   const [pos, setPos] = useState({ x: 0, y: 0 }); // offset of the image centre from the frame centre (px)
   const drag = useRef(null);
   const pointers = useRef(new Map());
@@ -39,17 +41,21 @@ export default function PhotoCropModal({ open, src, fallbackSrc = null, t, busy 
   }, [open, busy, onCancel]);
 
   // Scale that makes the image cover the frame, times the zoom.
-  const scale = img ? Math.max(VIEW / img.w, VIEW / img.h) * zoom : 1;
-  // Keep the frame always covered: the image may not move past its own edges.
+  const cover = img ? Math.max(VIEW / img.w, VIEW / img.h) : 1;
+  const scale = cover * zoom;
+  // Smallest zoom: the whole image (its diagonal) fits inside the round frame.
+  const minZoom = img ? Math.min(1, VIEW / Math.hypot(img.w, img.h) / cover) : 1;
+  // Larger than the frame: it may not move past its own edges. Smaller (zoomed out on a
+  // logo): it may not leave the frame.
   const clamp = useCallback((p, s = scale) => {
     if (!img) return p;
-    const mx = Math.max(0, (img.w * s - VIEW) / 2);
-    const my = Math.max(0, (img.h * s - VIEW) / 2);
+    const mx = Math.abs(img.w * s - VIEW) / 2;
+    const my = Math.abs(img.h * s - VIEW) / 2;
     return { x: Math.min(mx, Math.max(-mx, p.x)), y: Math.min(my, Math.max(-my, p.y)) };
   }, [img, scale]);
 
   const setZoomClamped = (z) => {
-    const nz = Math.min(MAX_ZOOM, Math.max(1, z));
+    const nz = Math.min(MAX_ZOOM, Math.max(minZoom, z));
     if (!img) return setZoom(nz);
     const ns = Math.max(VIEW / img.w, VIEW / img.h) * nz;
     setZoom(nz);
@@ -83,17 +89,17 @@ export default function PhotoCropModal({ open, src, fallbackSrc = null, t, busy 
 
   const save = () => {
     if (!img || busy) return;
-    // The visible square, in image pixels.
-    const side = VIEW / scale;
-    const sx = img.w / 2 - pos.x / scale - side / 2;
-    const sy = img.h / 2 - pos.y / scale - side / 2;
-    const size = Math.min(OUT, Math.round(side));          // never upscale a small crop
+    // The visible square is VIEW px on screen = VIEW / scale image px; never upscale a small crop.
+    const size = Math.max(1, Math.min(OUT, Math.round(VIEW / scale)));
+    const k = size / VIEW;                                    // output px per on-screen px
     const c = document.createElement('canvas');
     c.width = size; c.height = size;
     const ctx = c.getContext('2d');
     ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, size, size);
     ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(img.el, sx, sy, side, side, 0, 0, size, size);
+    // Draw the whole image where it sits on screen (works zoomed in or out past the edges).
+    const dw = img.w * scale * k, dh = img.h * scale * k;
+    ctx.drawImage(img.el, (VIEW / 2 + pos.x) * k - dw / 2, (VIEW / 2 + pos.y) * k - dh / 2, dw, dh);
     c.toBlob((b) => { if (b) onSave?.(b); }, 'image/jpeg', 0.92);
   };
 
@@ -106,7 +112,7 @@ export default function PhotoCropModal({ open, src, fallbackSrc = null, t, busy 
         <p className="text-[13.5px] text-ink/60 mt-1 mb-5">{t.cropHint}</p>
 
         <div
-          className="relative mx-auto overflow-hidden rounded-[16px] bg-ink/90 touch-none select-none cursor-grab active:cursor-grabbing"
+          className="relative mx-auto overflow-hidden rounded-[16px] bg-white touch-none select-none cursor-grab active:cursor-grabbing"
           style={{ width: VIEW, height: VIEW, maxWidth: '100%' }}
           onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}
           onWheel={onWheel}
@@ -121,7 +127,7 @@ export default function PhotoCropModal({ open, src, fallbackSrc = null, t, busy 
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="inline-block w-6 h-6 rounded-full border-2 border-paper/30 border-t-paper animate-spin" aria-hidden="true" />
+              <span className="inline-block w-6 h-6 rounded-full border-2 border-ink/20 border-t-ink animate-spin" aria-hidden="true" />
             </div>
           )}
           {/* the round frame: everything outside it is dimmed */}
@@ -131,7 +137,7 @@ export default function PhotoCropModal({ open, src, fallbackSrc = null, t, busy 
         <div className="flex items-center gap-3 mt-5">
           <button type="button" onClick={() => setZoomClamped(zoom / 1.2)} disabled={!img || busy} className="w-9 h-9 rounded-full border-[1.5px] border-ink/30 text-[18px] font-bold leading-none disabled:opacity-40" aria-label={t.zoomOut}>−</button>
           <input
-            type="range" min={1} max={MAX_ZOOM} step={0.01} value={zoom}
+            type="range" min={minZoom} max={MAX_ZOOM} step={0.01} value={zoom}
             onChange={(e) => setZoomClamped(Number(e.target.value))}
             disabled={!img || busy}
             className="flex-1 accent-ink" aria-label={t.zoom}

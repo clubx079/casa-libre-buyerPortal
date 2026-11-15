@@ -12,14 +12,14 @@ import { genToken, shortUrl, trackContact } from '@/lib/contactTrack';
 
 const T = {
   es: {
-    owner: 'El propietario', listedBy: 'Publicado por',
+    owner: 'El propietario', listedBy: 'Publicado por', website: 'Sitio web de',
     wa: 'Hablar por WhatsApp', call: 'Llamar', copy: 'Copiar número', copied: 'Número copiado',
     noContact: 'Sin contacto disponible',
     // ALWAYS Spanish, both languages. Locked format.
     msg: (name, url) => `Hola! Que tal? Está disponible la propiedad?\n\n${url}`,
   },
   en: {
-    owner: 'The owner', listedBy: 'Listed by',
+    owner: 'The owner', listedBy: 'Listed by', website: 'Website of',
     wa: 'Chat on WhatsApp', call: 'Call', copy: 'Copy number', copied: 'Number copied',
     noContact: 'No contact available',
     // The outgoing message is ALWAYS Spanish regardless of UI language.
@@ -33,9 +33,11 @@ const WaGlyph = ({ size = 21 }) => (
   </svg>
 );
 
-// sellerPhoto: the seller's APPROVED profile photo (lib/profilePhoto.js) — shown with their
-// name at the top of the card; without one the card looks exactly as before.
-export default function PropertyContactCard({ sellerName, sellerPhoto, waDigits, url, listingRef, trackProps, shortCode }) {
+// sellerPhoto: the seller's APPROVED profile photo or logo (lib/profilePhoto.js);
+// sellerProfile: their "Perfil profesional" { name, title, company, website, website_label }
+// (lib/sellerProfile.js publicProfile). Shown together at the top of the card; with neither,
+// the card looks exactly as before.
+export default function PropertyContactCard({ sellerName, sellerPhoto, sellerProfile, waDigits, url, listingRef, trackProps, shortCode }) {
   const [lang] = useLang();
   const [copied, setCopied] = useState(false);
   // One tracking token per card render — embedded in the WhatsApp link so we can
@@ -43,7 +45,10 @@ export default function PropertyContactCard({ sellerName, sellerPhoto, waDigits,
   const [token] = useState(genToken);
   const t = T[lang] || T.es;
 
-  const displayName = sellerName || t.owner;
+  const pro = sellerProfile || null;
+  const displayName = pro?.name || sellerName || t.owner;
+  const proLine = pro ? [pro.title, pro.company].filter(Boolean).join(' · ') : '';
+  const showSeller = !!(sellerPhoto || proLine || pro?.website);
   const initial = displayName.trim().charAt(0).toUpperCase() || '?';
   // The message reaches a local (Paraguayan) seller, so it is always in
   // Spanish regardless of the buyer's UI language. The link back to the listing
@@ -66,13 +71,32 @@ export default function PropertyContactCard({ sellerName, sellerPhoto, waDigits,
     <aside className="min-[921px]:sticky min-[921px]:top-5">
       <div className="bg-card overflow-hidden border-[1.5px] border-ink rounded-[18px] shadow-[5px_4px_0_#111] max-[920px]:border-0 max-[920px]:rounded-none max-[920px]:shadow-none max-[920px]:bg-transparent">
         <div className="px-[18px] pt-[18px] pb-[18px] max-[920px]:p-0">
-          {sellerPhoto && (
-            <div className="flex items-center gap-3 mb-4 max-[920px]:mb-3" data-testid="seller-photo">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={sellerPhoto} alt={displayName} width={48} height={48} className="w-12 h-12 rounded-full object-cover border-[1.5px] border-ink shrink-0" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-              <div className="min-w-0">
+          {showSeller && (
+            <div className="flex items-start gap-3 mb-4 max-[920px]:mb-3" data-testid="seller-photo">
+              {sellerPhoto ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={sellerPhoto} alt={displayName} width={48} height={48} className="w-12 h-12 rounded-full object-cover bg-white border-[1.5px] border-ink shrink-0" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-paper border-[1.5px] border-ink shrink-0 flex items-center justify-center text-[18px] font-bold" aria-hidden="true">{initial}</div>
+              )}
+              <div className="min-w-0 flex-1 pt-0.5">
                 <div className="text-[11px] font-semibold uppercase tracking-label text-ink/45">{t.listedBy}</div>
                 <div className="text-[15px] font-bold leading-tight truncate">{displayName}</div>
+                {proLine && <div className="text-[12.5px] text-ink/65 leading-snug mt-0.5 line-clamp-2 break-words" data-testid="seller-title">{proLine}</div>}
+                {pro?.website && (
+                  <a
+                    href={pro.website}
+                    target="_blank"
+                    rel="nofollow noopener"
+                    aria-label={`${t.website} ${pro.company || displayName}`}
+                    onClick={() => track('seller_website_click', { ref: listingRef, ...(trackProps || {}) })}
+                    className="mt-1 inline-flex items-center gap-1 max-w-full text-[12.5px] font-semibold underline underline-offset-2 decoration-ink/30 hover:decoration-ink"
+                    data-testid="seller-website"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true" className="shrink-0"><circle cx="12" cy="12" r="10" /><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10Z" /></svg>
+                    <span className="truncate">{pro.website_label || pro.website}</span>
+                  </a>
+                )}
               </div>
             </div>
           )}
