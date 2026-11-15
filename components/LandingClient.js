@@ -1,5 +1,6 @@
 'use client';
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
+import SearchSpinner from '@/components/SearchSpinner';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
 import AuthButton from '@/components/AuthButton';
@@ -67,7 +68,10 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
   const router = useRouter();
   const t = DICT[lang];
   const [q, setQ] = useState('');
-  const goSearch = () => { const query = q.trim(); router.push(query ? `/propiedades?q=${encodeURIComponent(query)}` : '/propiedades'); };
+  // Typing only edits the box; the search runs on the button / Enter. The transition
+  // keeps the button busy (spinner) until /propiedades has loaded.
+  const [searching, startSearch] = useTransition();
+  const goSearch = () => { if (searching) return; const query = q.trim(); startSearch(() => router.push(query ? `/propiedades?q=${encodeURIComponent(query)}` : '/propiedades')); };
 
   const price = (l) => (isUnverified(l, 'price') ? contactSellerFor('price', lang) : (fmtUsd(l.usd, lang) || '—') + (l.mode === 'alquiler' ? t.perMonth : ''));
   const title = (l) => `${typeLabel(l.type, lang) || (lang === 'es' ? 'Propiedad' : 'Property')}${l.beds ? ` · ${l.beds} ${t.beds}` : ''}`;
@@ -117,15 +121,16 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
               brand line, so the inventory claim needs a heading of its own. */}
           <h2 className="sr-only">{t.seoH2}</h2>
           <p className="text-[clamp(16px,2vw,19px)] leading-relaxed text-ink/60 max-w-[460px] mx-auto md:mx-0 mb-7 md:mb-9 max-[720px]:mb-6">{t.heroSub}</p>
-          <form onSubmit={(e) => { e.preventDefault(); goSearch(); }} className="flex items-center bg-card border-2 border-ink rounded-pill pl-[26px] pr-1.5 py-1.5 max-w-[560px] mx-auto md:mx-0 shadow-hard">
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t.searchPlaceholder} className="flex-1 min-w-0 bg-transparent outline-none text-[16px] text-ink placeholder:text-ink/40" />
+          <form role="search" onSubmit={(e) => { e.preventDefault(); goSearch(); }} className="flex items-center bg-card border-2 border-ink rounded-pill pl-[26px] pr-1.5 py-1.5 max-w-[560px] mx-auto md:mx-0 shadow-hard">
+            <input enterKeyHint="search" aria-label={t.searchPlaceholder} value={q} onChange={(e) => setQ(e.target.value)} placeholder={t.searchPlaceholder} className="flex-1 min-w-0 bg-transparent outline-none text-[16px] text-ink placeholder:text-ink/40" />
             <button
-              type="submit" aria-label={t.searchBtn}
-              className="flex-none flex items-center justify-center bg-ink text-paper rounded-pill font-semibold whitespace-nowrap w-[46px] h-[46px] sm:w-auto sm:h-auto sm:py-3.5 sm:px-[clamp(18px,3vw,30px)]"
+              type="submit" aria-label={t.searchBtn} disabled={searching} aria-busy={searching}
+              className="flex-none flex items-center justify-center gap-2 bg-ink text-paper rounded-pill font-semibold whitespace-nowrap w-[46px] h-[46px] sm:w-auto sm:h-auto sm:py-3.5 sm:px-[clamp(18px,3vw,30px)] touch-manipulation disabled:opacity-80 disabled:cursor-wait"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
+              {searching && <SearchSpinner />}
               <span className="hidden sm:inline text-[15px]">{t.searchBtn}</span>
-              <span className="sm:hidden text-[19px] leading-none" aria-hidden="true">→</span>
+              {!searching && <span className="sm:hidden text-[19px] leading-none" aria-hidden="true">→</span>}
             </button>
           </form>
           <div className="flex gap-2.5 mt-[18px] flex-wrap justify-center md:justify-start">
