@@ -5,6 +5,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
+import { tr, localeFor } from '@/lib/i18n';
 import { COUNTRY } from '@/lib/country';
 
 const T = {
@@ -62,6 +63,33 @@ const T = {
     },
     joined: 'Signed up', viewListing: 'View listing', own: "That's your own link: share it with other people.",
   },
+  pt: {
+    title: 'Indicações', sub: 'Convide outras pessoas a anunciar no Casa-Libre e ganhe dias de Verificado grátis',
+    loading: 'Carregando…', off: 'O programa de indicações não está disponível no momento.',
+    notVerified: 'Você precisa de uma conta verificada para convidar outras pessoas.', needListing: 'Você precisa ter ao menos um imóvel ativo para convidar outras pessoas.', publish: 'Anuncie um imóvel',
+    linkTitle: 'Seu link', copy: 'Copiar link', copied: 'Copiado', share: 'Compartilhar no WhatsApp',
+    how: 'Como funciona',
+    step1: 'Compartilhe seu link com quem quiser vender ou alugar seu imóvel.',
+    step2: (d) => `A pessoa cria uma conta pelo seu link e anuncia um imóvel. O anúncio dela fica Verificado grátis por ${d} dias.`,
+    step3: (d) => `Quando o anúncio dela estiver ativo, um dos seus imóveis recebe ${d} dias de Verificado grátis.`,
+    step4: (n, d, rep) => `Com ${n} pessoas convidadas que anunciaram, um dos seus imóveis também aparece na página inicial por ${d} dias${rep ? ', e novamente a cada ' + n + ' convidados a mais' : ''}.`,
+    note: 'Só contam contas novas de pessoas diferentes de você, com um anúncio ativo.',
+    stats: { clicks: 'Visitas ao link', signups: 'Cadastros', qualified: 'Anunciou', rewards: 'Recompensas' },
+    rewardsTitle: 'Suas recompensas', noRewards: 'Ainda não há recompensas. Cada pessoa convidada que anuncia adiciona dias de Verificado.',
+    peopleTitle: 'Pessoas que você convidou', noPeople: 'Ninguém se cadastrou ainda com seu link.',
+    type: { referrer: (n) => (n ? `Por convidar ${n}` : 'Por convidar'), new_user: () => 'Recompensa de boas‑vindas', milestone: () => 'Marco de indicação', manual: () => 'Presente da Casa-Libre' },
+    plan: { verified: 'Verificado', home: 'Verificado + página inicial' },
+    days: (d) => `${d} dias`,
+    state: { granted: (d) => `Ativa até ${d}`, expired: (d) => `Encerrada em ${d}`, revoked: () => 'Cancelada', pending: () => 'Pendente' },
+    wait: { no_live_listing: 'Anuncie um imóvel para ativá-lo', listing_not_live: 'É ativado quando seu anúncio ficar ativo' },
+    person: {
+      qualified: 'Anunciou: conta para suas recompensas',
+      no_listing: 'Cadastrou, ainda sem anúncio', checking_photos: 'Anunciou, fotos em análise', payment_pending: 'Anunciou, pagamento pendente',
+      duplicate: 'Anúncio em revisão', photos_rejected: 'Fotos rejeitadas, ainda não conta', not_live: 'Anúncio ainda não ativo',
+      rejected: 'Não conta para recompensas',
+    },
+    joined: 'Cadastrou em', viewListing: 'Ver anúncio', own: "Esse é o seu próprio link: compartilhe com outras pessoas.",
+  },
 };
 
 function Stat({ label, value }) {
@@ -83,7 +111,7 @@ export default function ReferralsPage() {
     try { setOwn(new URLSearchParams(window.location.search).get('own') === '1'); } catch {}
     fetch('/api/account/referrals', { cache: 'no-store' }).then((r) => r.json()).then(setData).catch(() => setData({ enabled: false }));
   }, []);
-  const fmt = (iso) => { try { return new Date(iso).toLocaleDateString(lang === 'es' ? COUNTRY.locale : 'en-US', { day: 'numeric', month: 'long' }); } catch { return ''; } };
+  const fmt = (iso) => { try { return new Date(iso).toLocaleDateString(localeFor(lang, COUNTRY.locale), { day: 'numeric', month: 'long' }); } catch { return ''; } };
   const copy = async () => { try { await navigator.clipboard.writeText(data.url); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch {} };
 
   const head = (

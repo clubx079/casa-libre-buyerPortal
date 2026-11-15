@@ -1,4 +1,4 @@
-// POST /api/translate { id, target: 'es' | 'en' } → { text }
+// POST /api/translate { id, target: 'es' | 'en' | 'pt' } → { text }
 // The "Translate" button under a listing description — website property page and
 // the mobile app. Only translates the description of a live listing (looked up by
 // id), never text sent by the caller. See lib/translate.js (Groq, cache, limits).

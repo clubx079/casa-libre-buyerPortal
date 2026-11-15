@@ -1,6 +1,6 @@
 import MarketingShell from '@/components/MarketingShell';
 import Article from '@/components/marketing/Article';
-import { COUNTRY } from '@/lib/country';
+import { COUNTRY, COUNTRY_PT } from '@/lib/country';
 
 export const metadata = {
   title: `Publicá tu propiedad gratis en ${COUNTRY.name} — Vender o alquilar`,
@@ -35,6 +35,20 @@ const content = {
         { t: 'Manage everything', d: 'Edit or delete your listings anytime from your dashboard.' },
       ] },
       { type: 'cta', title: 'List in minutes', sub: 'Create your account and list your property for free, today.', primary: ['List for free', '/publicar'], secondary: ['How it works', '/como-funciona'] },
+    ],
+  },
+  pt: {
+    hero: { eyebrow: 'Para quem publica', title: 'Anuncie seu imóvel', titleSerif: 'grátis.', sub: `Venda ou alugue seu imóvel ${COUNTRY_PT.in} sem pagar comissões ou planos. Ele fica no ar imediatamente.` },
+    blocks: [
+      { type: 'features', items: [
+        { t: 'Sem custo', d: 'Anunciar é 100% grátis. Não cobramos nada para publicar nem comissão na negociação.' },
+        { t: 'Instantâneo', d: 'Seu imóvel aparece no marketplace e no mapa no momento em que você o publica.' },
+        { t: 'Alcance mais pessoas', d: 'Milhares de pessoas buscam imóveis no Casa Libre todo mês, em todo o país.' },
+        { t: 'Fotos e localização', d: 'Envie fotos reais e marque a localização para que as pessoas encontrem você facilmente.' },
+        { t: 'Contato direto', d: 'Compradores interessados entram em contato via WhatsApp ou telefone, sem intermediários.' },
+        { t: 'Gerencie tudo', d: 'Edite ou exclua seus anúncios a qualquer momento pelo seu painel.' },
+      ] },
+      { type: 'cta', title: 'Anuncie em minutos', sub: 'Crie sua conta e anuncie seu imóvel grátis, hoje mesmo.', primary: ['Anunciar grátis', '/publicar'], secondary: ['Como funciona', '/como-funciona'] },
     ],
   },
 };

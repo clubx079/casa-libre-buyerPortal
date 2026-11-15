@@ -55,6 +55,27 @@ const DICT = {
     errEmailTaken: 'That email already has an account. Log in with your email and add your WhatsApp in Settings, so you keep one account.', errWaSend: 'Could not send the WhatsApp code. Try with your email.',
     testCode: (c) => `Test mode (no WhatsApp is sent): the code is ${c}`,
   },
+  pt: {
+    emailTitle: 'Entrar ou criar conta', emailSub: 'Enviaremos um código por e‑mail. Sem senhas.',
+    email: 'E-mail', emailPh: 'seu@email.com', continue: 'Enviar código', googleBtn: 'Continuar com Google', orText: 'ou',
+    loginTitle: 'Digite o código', signupTitle: 'Criar sua conta',
+    codeSub: (e) => `Enviamos um código de 6 dígitos para ${e}.`,
+    name: 'Nome completo', namePh: 'Ana Giménez', phone: 'WhatsApp / telefone', phonePh: '0981 123 456',
+    code: 'Código', login: 'Entrar', create: 'Criar conta', resend: 'Reenviar código', resent: 'Código reenviado ✓',
+    changeEmail: '← Alterar e‑mail', close: 'Fechar',
+    errEmail: 'Informe um e‑mail válido', errName: 'Informe seu nome',
+    googleTerms: 'Ao continuar com o Google, você aceita os ', termsPre: 'Concordo com os ', termsLink: 'Termos de Uso', termsMid: ' e a ', privacyLink: 'Política de Privacidade', errTerms: 'Para continuar, aceite os Termos de Uso.',
+    errCode: 'Código errado ou expirado', errSend: 'Não foi possível enviar o código. Tente novamente.',
+    errRate: 'Muitas tentativas. Aguarde um momento e tente novamente.',
+    errBlocked: 'Esta conta está indisponível. Entre em contato pela página de contato.',
+    errGeneric: 'Algo deu errado. Tente novamente.',
+    sending: 'Enviando…', verifying: 'Verificando…',
+    byEmail: 'E-mail', byWhatsApp: 'WhatsApp', waSub: 'Enviaremos um código pelo WhatsApp. Sem senhas.',
+    waPhone: 'Seu número de WhatsApp', waCodeSub: (p) => `Enviamos um código de 6 dígitos pelo WhatsApp para ${p}.`,
+    changePhone: '← Alterar número', errPhone: 'Informe um número de WhatsApp válido',
+    errEmailTaken: 'Esse e‑mail já tem uma conta. Entre com ele e adicione seu WhatsApp nas Configurações, para manter uma única conta.', errWaSend: 'Não foi possível enviar o código pelo WhatsApp. Tente com seu e‑mail.',
+    testCode: (c) => `Modo de teste (não envia WhatsApp): o código é ${c}`,
+  },
 };
 const WHATSAPP_LOGIN = process.env.NEXT_PUBLIC_WHATSAPP_LOGIN === '1';
 

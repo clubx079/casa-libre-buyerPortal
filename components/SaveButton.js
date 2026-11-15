@@ -5,6 +5,7 @@ import { useLang } from '@/lib/useLang';
 const T = {
   es: { save: 'Guardar', saved: 'Guardada', remove: 'Quitar de guardadas' },
   en: { save: 'Save', saved: 'Saved', remove: 'Remove from saved' },
+  pt: { save: 'Salvar', saved: 'Salvo', remove: 'Remover dos salvos' },
 };
 
 // Heart toggle for saving a property.

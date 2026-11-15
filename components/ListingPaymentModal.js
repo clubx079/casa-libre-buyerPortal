@@ -57,6 +57,24 @@ const DICT = {
     err: { unauthorized: 'Log in to pay.', not_pending: 'This listing is already paid.', not_paid_listing: "This listing can't be extended.", forbidden: "You can't pay for this listing.", not_found: 'Listing not found.', stripe_not_configured: 'Payments are unavailable right now.' },
     fail: 'Payment did not complete.', locale: 'en-US',
   },
+  pt: {
+    titlePublish: "Você chegou ao limite de anúncios gratuitos deste mês",
+    subPublish: (n) => `A cada mês você pode anunciar ${n} ${n === 1 ? 'imóvel' : 'imóveis'} gratuitamente. Seu anúncio está salvo — publique agora.`,
+    titleExtend: "Estenda seu anúncio",
+    subExtend: (d) => `Seu anúncio volta ao site (ou continua) por mais ${d} dias.`,
+    off: (p) => `${p}% OFF`, live: (d) => `Publicado por ${d} dias`, more: (d) => `+${d} dias`,
+    reset: "Seus anúncios gratuitos voltam no dia 1º do próximo mês.",
+    agents: "Anunciando muitos imóveis? Temos um plano para corretores e imobiliárias.", agentsLink: "Fale conosco",
+    newUntil: (d) => `Fica ativo até ${d}.`,
+    payWith: (price, c) => `Pagar ${price} com ${c}`, pay: (price) => `Pagar ${price}`, otherCard: "Usar outro cartão",
+    newHint: "Informe os dados do seu cartão. Nós o armazenamos com segurança no Stripe.",
+    loading: "Carregando…", processing: "Processando pagamento…",
+    okPublish: "Pagamento recebido! Verificamos as fotos e publicamos em instantes.", okExtend: "Pronto! Seu anúncio foi estendido.",
+    okUntil: (d) => `Fica no site até ${d}.`, done: "Concluído",
+    errTitle: "Pagamento não concluído", retry: "Tentar novamente", close: "Fechar",
+    err: { unauthorized: "Faça login para pagar.", not_pending: "Este anúncio já foi pago.", not_paid_listing: "Este anúncio não pode ser estendido.", forbidden: "Você não pode pagar por este anúncio.", not_found: "Anúncio não encontrado.", stripe_not_configured: "Pagamentos indisponíveis no momento." },
+    fail: "Pagamento não concluído.", locale: 'pt-BR',
+  },
 };
 
 

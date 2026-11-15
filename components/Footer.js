@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
 import { CITIES, COMPETITORS } from '@/lib/site';
-import { COUNTRY } from '@/lib/country';
+import { COUNTRY, COUNTRY_PT } from '@/lib/country';
 import { displayPhone, supportWhatsAppUrl, supportEmail } from '@/lib/support';
 
 // Site-wide footer. The dense internal linking here is the main signal Google
@@ -25,6 +25,15 @@ const L = {
     cityPrefix: '', vs: (n) => `Casa Libre vs ${n}`,
     terms: 'Terms', privacy: 'Privacy',
     fxNote: 'Reference exchange rate of the day · source open.er-api.com',
+  },
+  pt: {
+    tagline: `Compre, alugue e anuncie imóveis ${COUNTRY_PT.in} — grátis.`,
+    platform: 'Plataforma', company: 'Empresa', cities: 'Cidades', compare: 'Comparar',
+    buy: 'Comprar imóveis', rent: 'Alugar imóveis', all: 'Ver todos os anúncios', publish: 'Anuncie grátis', getApp: 'Baixe o app',
+    story: 'Nossa história', guides: 'Guias', how: 'Como funciona', sell: 'Anuncie seu imóvel', business: 'Para investidores', pmgmt: 'Gestão de imóveis', contact: 'Contato', faq: 'Perguntas frequentes',
+    cityPrefix: '', vs: (n) => `Casa Libre vs ${n}`,
+    terms: 'Termos', privacy: 'Privacidade',
+    fxNote: 'Taxa de câmbio de referência do dia · fonte open.er-api.com',
   },
 };
 

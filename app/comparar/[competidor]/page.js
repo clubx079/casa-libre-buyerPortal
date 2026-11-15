@@ -24,7 +24,7 @@ export default function Page({ params }) {
   const others = COMPETITORS.filter((x) => x.slug !== c.slug);
   return (
     <MarketingShell>
-      <CompareContent name={c.name} blurb={c.blurb} blurbEn={c.blurbEn} others={others} />
+      <CompareContent name={c.name} blurb={c.blurb} blurbEn={c.blurbEn} blurbPt={c.blurbPt} others={others} />
     </MarketingShell>
   );
 }

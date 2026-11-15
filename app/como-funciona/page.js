@@ -45,6 +45,24 @@ const content = {
       { type: 'cta', title: 'Start today', sub: 'Searching is free. Listing is too.', primary: ['Browse listings', '/propiedades'], secondary: ['List for free', '/publicar'] },
     ],
   },
+  pt: {
+    hero: { eyebrow: 'Como funciona', title: 'Simples para todos,', titleSerif: 'grátis.', sub: 'Buscar ou anunciar no Casa Libre leva minutos. Sem comissões, sem planos.' },
+    blocks: [
+      { type: 'heading', text: 'Se você está procurando um imóvel' },
+      { type: 'features', items: [
+        { t: '1 · Explore o mapa', d: `Filtre por cidade, bairro, tipo, preço e quartos. Veja cada imóvel no mapa com fotos reais e preços em ${COUNTRY.currencySymbol} e US$.` },
+        { t: '2 · Salve seus favoritos', d: 'Crie sua conta e salve os imóveis que você gosta para revisitá-los no seu painel.' },
+        { t: '3 · Contate o proprietário', d: 'Cada anúncio tem o contato de quem publica. Agende a visita diretamente, sem intermediários.' },
+      ] },
+      { type: 'heading', text: 'Se você está vendendo ou alugando' },
+      { type: 'features', items: [
+        { t: '1 · Entre', d: 'Crie sua conta com e‑mail ou Google. Cada anúncio fica vinculado à sua conta.' },
+        { t: '2 · Adicione seu imóvel', d: 'Preencha os detalhes, envie suas fotos e a localização. Tudo em um único passo.' },
+        { t: '3 · Anuncie grátis', d: 'Seu imóvel aparece instantaneamente no marketplace e no mapa. Sem custo, sem comissão.' },
+      ] },
+      { type: 'cta', title: 'Comece hoje', sub: 'Buscar é grátis. Anunciar também.', primary: ['Explorar anúncios', '/propiedades'], secondary: ['Anuncie grátis', '/publicar'] },
+    ],
+  },
 };
 
 export default function Page() {

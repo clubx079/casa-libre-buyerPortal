@@ -9,6 +9,7 @@ import { PROPERTY_TYPES } from '@/lib/propertyTypeOptions';
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
+import { tr, localeFor } from '@/lib/i18n';
 import { useSellFlow } from '@/components/SellFlow';
 import { useFavorites } from '@/components/FavoritesProvider';
 import { typeLabel, typeKey } from '@/lib/propertyType';
@@ -31,27 +32,28 @@ const PER_PAGE = 24;
 const TXT = {
   es: { forSale: 'En venta', forRent: 'En alquiler', filters: 'Filtros', type: 'Tipo', price: 'Precio', beds: 'Dorm.', list: 'Lista', map: 'Mapa', cta: 'Publicá gratis', searchPh: 'Barrio, ciudad o edificio…', propType: 'Tipo de propiedad', priceUsd: 'Precio · US$', bedrooms: 'Dormitorios', barrio: 'Barrio', listedBy: 'Publicado por', ownerDirect: 'Dueño directo', agent: 'Inmobiliaria', clearAll: 'Borrar todo', show: 'Ver', close: 'Cerrar', sortBy: 'Ordenar por', noResults: 'Sin resultados', inArea: 'Propiedades en el área del mapa', showAll: 'Ver todas', emptyArea: 'No hay propiedades en esta zona. Alejá o mové el mapa.', loadMore: 'Ver más', propsWord: 'propiedades', nearMe: 'Cerca de mí', myLocation: 'Mi ubicación', geoDenied: 'No pudimos acceder a tu ubicación' },
   en: { forSale: 'For sale', forRent: 'For rent', filters: 'Filters', type: 'Type', price: 'Price', beds: 'Beds', list: 'List', map: 'Map', cta: 'List for free', searchPh: 'Neighborhood, city or building…', propType: 'Property type', priceUsd: 'Price · US$', bedrooms: 'Bedrooms', barrio: 'Barrio', listedBy: 'Listed by', ownerDirect: 'Owner direct', agent: 'Agent', clearAll: 'Clear all', show: 'Show', close: 'Close', sortBy: 'Sort by', noResults: 'No results', inArea: 'Properties in the map area', showAll: 'Show all', emptyArea: 'No properties in this area. Zoom out or move the map.', loadMore: 'Load more', propsWord: 'listings', nearMe: 'Near me', myLocation: 'My location', geoDenied: "We couldn't access your location" },
+  pt: { forSale: 'À venda', forRent: 'Para alugar', filters: 'Filtros', type: 'Tipo', price: 'Preço', beds: 'Quartos', list: 'Lista', map: 'Mapa', cta: 'Anuncie grátis', searchPh: 'Bairro, cidade ou prédio…', propType: 'Tipo de imóvel', priceUsd: 'Preço · US$', bedrooms: 'Quartos', barrio: 'Bairro', listedBy: 'Publicado por', ownerDirect: 'Proprietário direto', agent: 'Imobiliária', clearAll: 'Limpar tudo', show: 'Ver', close: 'Fechar', sortBy: 'Ordenar por', noResults: 'Sem resultados', inArea: 'Imóveis na área do mapa', showAll: 'Ver tudo', emptyArea: 'Nenhum imóvel nesta área. Aumente o zoom ou mova o mapa.', loadMore: 'Carregar mais', propsWord: 'imóveis', nearMe: 'Perto de mim', myLocation: 'Minha localização', geoDenied: "Não conseguimos acessar sua localização" },
 };
 
 // Same types as the desktop filter and the List-a-property form (lib/propertyTypeOptions.js).
-const TYPE_PILLS = PROPERTY_TYPES.map((t) => ({ k: t.key, es: t.es, en: t.en }));
-const typePillLabel = (k, lang) => { const o = TYPE_PILLS.find((x) => x.k === k); return o ? o[lang === 'en' ? 'en' : 'es'] : ''; };
+const TYPE_PILLS = PROPERTY_TYPES.map((t) => ({ k: t.key, es: t.es, en: t.en, pt: t.pt }));
+const typePillLabel = (k, lang) => { const o = TYPE_PILLS.find((x) => x.k === k); return o ? o[lang] || o.es : ''; };
 
 const priceBuckets = (mode, lang) => mode === 'alquiler'
-  ? [{ k: 'p1', l: lang === 'en' ? 'Under $500' : 'Hasta $500', t: (v) => v < 500 },
+  ? [{ k: 'p1', l: tr(lang, 'Hasta $500', 'Under $500', 'Até $500'), t: (v) => v < 500 },
      { k: 'p2', l: '$500 – 1.000', t: (v) => v >= 500 && v <= 1000 },
      { k: 'p3', l: '$1.000 – 2.000', t: (v) => v > 1000 && v <= 2000 },
      { k: 'p4', l: '$2.000+', t: (v) => v > 2000 }]
-  : [{ k: 'p1', l: lang === 'en' ? 'Under 80k' : 'Hasta 80k', t: (v) => v < 80000 },
+  : [{ k: 'p1', l: tr(lang, 'Hasta 80k', 'Under 80k', 'Até 80k'), t: (v) => v < 80000 },
      { k: 'p2', l: '80k – 200k', t: (v) => v >= 80000 && v <= 200000 },
      { k: 'p3', l: '200k – 400k', t: (v) => v > 200000 && v <= 400000 },
      { k: 'p4', l: '400k+', t: (v) => v > 400000 }];
 
 const SORTS = [
-  { k: 'relevancia', es: 'Relevancia', en: 'Relevance', esS: 'Relevancia', enS: 'Relevance' },
-  { k: 'precio_asc', es: 'Precio: menor a mayor', en: 'Price: low to high', esS: 'Precio ↑', enS: 'Price ↑' },
-  { k: 'precio_desc', es: 'Precio: mayor a menor', en: 'Price: high to low', esS: 'Precio ↓', enS: 'Price ↓' },
-  { k: 'area_desc', es: 'Superficie: mayor primero', en: 'Area: largest first', esS: 'Mayor', enS: 'Largest' },
+  { k: 'relevancia', es: 'Relevancia', en: 'Relevance', pt: 'Relevância', esS: 'Relevancia', enS: 'Relevance', ptS: 'Relevância' },
+  { k: 'precio_asc', es: 'Precio: menor a mayor', en: 'Price: low to high', pt: 'Preço: menor para maior', esS: 'Precio ↑', enS: 'Price ↑', ptS: 'Preço ↑' },
+  { k: 'precio_desc', es: 'Precio: mayor a menor', en: 'Price: high to low', pt: 'Preço: maior para menor', esS: 'Precio ↓', enS: 'Price ↓', ptS: 'Preço ↓' },
+  { k: 'area_desc', es: 'Superficie: mayor primero', en: 'Area: largest first', pt: 'Área: maior primeiro', esS: 'Mayor', enS: 'Largest', ptS: 'Maior' },
 ];
 
 export default function MobileMarketplace({ initialListings = [], initialCount = 0, initialPins = [], totalCount = 0, initialOp = 'all', initialQuery = '', initialType = 'all', zoningOn = false }) {
@@ -366,7 +368,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
   const noPrice = (l) => !!l.nv || isUnverified(l, 'price');
   const priceMain = (l) => (noPrice(l) ? contactSellerFor('price', lang) : (fmtUsd(l.usd, lang) || '—') + (l.mode === 'alquiler' ? t.perMonth : ''));
   const priceSub = (l) => (!noPrice(l) && fmtPyg(l.pyg, lang) ? fmtPyg(l.pyg, lang) + (l.mode === 'alquiler' ? t.perMonth : '') : '');
-  const title = (l) => { let tp = typeLabel(l.type, lang) || (lang === 'es' ? 'Inmueble' : 'Property'); const zone = titleCaseZone(l.neighborhood || l.city || ''); const base = l.beds ? `${tp} · ${l.beds} ${bedAbbr(lang)}` : tp; return zone ? `${base} · ${zone}` : base; };
+  const title = (l) => { let tp = typeLabel(l.type, lang) || tr(lang, 'Inmueble', 'Property', 'Imóvel'); const zone = titleCaseZone(l.neighborhood || l.city || ''); const base = l.beds ? `${tp} · ${l.beds} ${bedAbbr(lang)}` : tp; return zone ? `${base} · ${zone}` : base; };
   const meta = (l) => [l.area && `${l.area} m²`, l.baths && `${l.baths} ${bathWord(l.baths, lang)}`, l.parking && `${l.parking} ${parkWord(l.parking, lang)}`].filter(Boolean).join(' · ');
 
   // ---- geolocation: "my location" recenter + "near me" radius filter ----
@@ -388,7 +390,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
     if (youMarkerRef.current) { try { youMarkerRef.current.setMap(null); } catch {} }
     youMarkerRef.current = new google.maps.Marker({
       position: loc, map, zIndex: 99999, icon: youAreHereIcon(google),
-      title: lang === 'es' ? 'Estás aquí' : 'You are here',
+      title: tr(lang, 'Estás aquí', 'You are here', 'Você está aqui'),
     });
   };
   // Locate + "near me" as ONE toggle, fired by the map's triangle button. On:
@@ -486,7 +488,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
     <button onClick={onClick} className={`shrink-0 border-[1.5px] rounded-pill px-4 py-[9px] text-[14px] font-medium ${on ? 'bg-ink text-paper border-ink' : 'bg-card border-ink/30 text-ink'}`}>{label}</button>
   );
   const Section = ({ children }) => <div className="font-mono text-[11px] tracking-[1px] text-ink/45 mt-[22px] mb-2.5 uppercase">{children}</div>;
-  const sortShort = (SORTS.find((s) => s.k === sort) || SORTS[0])[lang === 'en' ? 'enS' : 'esS'];
+  const sortShort = (SORTS.find((s) => s.k === sort) || SORTS[0])[`${['en', 'pt'].includes(lang) ? lang : 'es'}S`];
 
   return (
     // overflow-x-clip: nothing may make the page wider than the phone (a wider page
@@ -503,7 +505,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
         </div>
         <div className="flex items-center gap-1 min-[400px]:gap-1.5 shrink-0">
           <div className="flex items-center border-[1.5px] border-ink rounded-pill overflow-hidden text-[10px] min-[400px]:text-[11px] font-semibold">
-            {['es', 'en'].map((l) => <button key={l} onClick={() => setLang(l)} className={`px-2 min-[400px]:px-2.5 py-1.5 ${lang === l ? 'bg-ink text-paper' : 'text-ink'}`}>{l.toUpperCase()}</button>)}
+            {['es', 'en', 'pt'].map((l) => <button key={l} onClick={() => setLang(l)} className={`px-1.5 min-[400px]:px-2 py-1.5 ${lang === l ? 'bg-ink text-paper' : 'text-ink'}`}>{l.toUpperCase()}</button>)}
           </div>
           <button onClick={openSell} className="bg-ink text-paper rounded-pill px-2.5 min-[400px]:px-3 py-[8px] text-[11.5px] min-[400px]:text-[12.5px] font-bold whitespace-nowrap">{X.cta}</button>
           <AuthButton compact />
@@ -628,7 +630,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
             <div className="font-mono text-[11px] tracking-[1px] text-ink/45 px-5 pb-1 uppercase">{X.sortBy}</div>
             {SORTS.map((s) => (
               <button key={s.k} onClick={() => { setSort(s.k); setSortOpen(false); }} className={`w-full flex items-center justify-between px-5 py-3.5 text-[15px] ${s.k === sort ? 'font-bold' : ''}`}>
-                {s[lang === 'en' ? 'en' : 'es']}{s.k === sort ? <span>✓</span> : null}
+                {s[lang] || s.es}{s.k === sort ? <span>✓</span> : null}
               </button>
             ))}
           </div>
@@ -646,7 +648,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
             </div>
             <div className="px-5 overflow-y-auto flex-1 pb-3">
               <Section>{X.propType}</Section>
-              <div className="flex flex-wrap gap-2.5">{TYPE_PILLS.map((tp) => <Pill key={tp.k} label={tp[lang === 'en' ? 'en' : 'es']} on={typeF === tp.k} onClick={() => setTypeF(typeF === tp.k ? 'all' : tp.k)} />)}</div>
+              <div className="flex flex-wrap gap-2.5">{TYPE_PILLS.map((tp) => <Pill key={tp.k} label={tp[lang] || tp.es} on={typeF === tp.k} onClick={() => setTypeF(typeF === tp.k ? 'all' : tp.k)} />)}</div>
               <Section>{X.priceUsd}</Section>
               <div className="flex flex-wrap gap-2.5">{buckets.map((b) => <Pill key={b.k} label={b.l} on={priceF === b.k} onClick={() => setPriceF(priceF === b.k ? 'all' : b.k)} />)}</div>
               <Section>{X.bedrooms}</Section>
@@ -654,8 +656,8 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
               {barrios.length > 0 && (<><Section>{X.barrio}</Section><div className="flex flex-wrap gap-2.5">{barrios.map((nb) => <Pill key={nb} label={nb} on={barrioF === nb} onClick={() => setBarrioF(barrioF === nb ? 'all' : nb)} />)}</div></>)}
               {zoningOn && (
                 <>
-                  <Section>{lang === 'en' ? 'Zoning · Asunción' : 'Zonificación · Asunción'}</Section>
-                  <div className="flex flex-wrap gap-2.5">{CATEGORIES.filter((c) => c.id !== 'otro').map((c) => <Pill key={c.id} label={lang === 'en' ? c.en : c.es} on={heightF === c.id} onClick={() => setHeightF(heightF === c.id ? 'all' : c.id)} />)}</div>
+                  <Section>{tr(lang, 'Zonificación · Asunción', 'Zoning · Asunción', 'Zoneamento · Asunción')}</Section>
+                  <div className="flex flex-wrap gap-2.5">{CATEGORIES.filter((c) => c.id !== 'otro').map((c) => <Pill key={c.id} label={c[lang] || c.es} on={heightF === c.id} onClick={() => setHeightF(heightF === c.id ? 'all' : c.id)} />)}</div>
                 </>
               )}
               <Section>{X.listedBy}</Section>

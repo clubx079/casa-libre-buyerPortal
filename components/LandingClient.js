@@ -3,13 +3,14 @@ import { useState, useTransition } from 'react';
 import SearchSpinner from '@/components/SearchSpinner';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
+import { tr, localeFor } from '@/lib/i18n';
 import AuthButton from '@/components/AuthButton';
 import { useSellFlow } from '@/components/SellFlow';
 import VerifiedTag from '@/components/VerifiedTag';
 import { useRouter } from 'next/navigation';
 import { typeLabel } from '@/lib/propertyType';
 import { fmtUsd, fmtPyg, bathWord, isUnverified, contactSellerFor } from '@/lib/ui';
-import { COUNTRY } from '@/lib/country';
+import { COUNTRY, COUNTRY_PT } from '@/lib/country';
 
 const DICT = {
   es: {
@@ -60,6 +61,30 @@ const DICT = {
     ctaBtn1: 'Explore homes', ctaBtn2: 'List for free',
     chips: COUNTRY.featuredZones,
   },
+  pt: {
+    navBuy: 'Comprar', navRent: 'Alugar', navSell: 'Vender', navCta: 'Anunciar grátis',
+    heroLine1: 'Encontre seu lugar,', heroLine2: 'livremente.',
+    heroSub: `O marketplace imobiliário de maior crescimento ${COUNTRY_PT.in}: busca no mapa, contato direto por WhatsApp e app para iPhone e Android. Compre, alugue ou anuncie sem comissão.`,
+    seoH2: `Casa Libre, o marketplace imobiliário de maior crescimento ${COUNTRY_PT.in}: casas, apartamentos e terrenos à venda e para aluguel.`,
+    searchPlaceholder: 'Onde você quer morar? — “Carmelitas”, “Recoleta”…', searchBtn: 'Buscar',
+    mascotCaption: '“Vamos lá!” — Cuate, seu guia',
+    listingsTitle: 'Destaques', listingsTitleSerif: 'de imobiliárias e proprietários', listingsAll: 'Ver todas →',
+    forSale: 'À venda', forRent: 'Para alugar', perMonth: '/mês', beds: 'quartos', baths: 'banheiros',
+    stepsTitle: 'Três passos e pronto',
+    steps: [
+      { n: '1', t: 'Conte o que você procura', d: 'Bairro, orçamento, quartos. Cuate só mostra o que vale a sua atenção.' },
+      { n: '2', t: 'Entre em contato com o anunciante', d: 'Mande mensagem no WhatsApp ou ligue direto pelo anúncio. Sem intermediários, sem enrolação.' },
+      { n: '3', t: 'Feche o negócio do seu jeito', d: 'Combine a visita e o negócio direto com quem postou. Você define o ritmo.' },
+    ],
+    stats: (c) => [
+      { v: `${c.toLocaleString('pt-BR')}+`, l: 'imóveis ativos' }, { v: '0%', l: 'comissão de anúncio' },
+      { v: 'Instantâneo', l: 'seu anúncio vai ao ar' },
+    ],
+    ctaTitle: 'Sua casa está procurando', ctaTitleSerif: 'por você.',
+    ctaSub: 'Grátis para buscar, grátis para anunciar. Comece hoje.',
+    ctaBtn1: 'Explore imóveis', ctaBtn2: 'Anunciar grátis',
+    chips: COUNTRY.featuredZones,
+  },
 };
 
 export default function LandingClient({ featured = [], count = 0, tickerData = [] }) {
@@ -74,7 +99,7 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
   const goSearch = () => { if (searching) return; const query = q.trim(); startSearch(() => router.push(query ? `/propiedades?q=${encodeURIComponent(query)}` : '/propiedades')); };
 
   const price = (l) => (isUnverified(l, 'price') ? contactSellerFor('price', lang) : (fmtUsd(l.usd, lang) || '—') + (l.mode === 'alquiler' ? t.perMonth : ''));
-  const title = (l) => `${typeLabel(l.type, lang) || (lang === 'es' ? 'Propiedad' : 'Property')}${l.beds ? ` · ${l.beds} ${t.beds}` : ''}`;
+  const title = (l) => `${typeLabel(l.type, lang) || tr(lang, 'Propiedad', 'Property', 'Imóvel')}${l.beds ? ` · ${l.beds} ${t.beds}` : ''}`;
   const place = (l) => [l.neighborhood, l.city].filter(Boolean).join(', ');
   const meta = (l) => [l.area && `${l.area} m²`, l.baths && `${l.baths} ${bathWord(l.baths, lang)}`].filter(Boolean).join(' · ');
   const ticker = tickerData.length ? tickerData : [`CASA LIBRE — PROPIEDADES EN ${(COUNTRY.name || 'Sudamérica').toUpperCase()}`];
@@ -104,7 +129,7 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
         </div>
         <div className="flex items-center gap-3.5">
           <div className="flex items-center h-[40px] border border-ink/30 rounded-pill p-[3px] text-[12px] font-semibold">
-            {['es', 'en'].map((l) => <button key={l} onClick={() => setLang(l)} className={`h-full flex items-center px-3 rounded-pill ${lang === l ? 'bg-ink text-paper' : 'text-ink/55'}`}>{l.toUpperCase()}</button>)}
+            {['es', 'en', 'pt'].map((l) => <button key={l} onClick={() => setLang(l)} className={`h-full flex items-center px-3 rounded-pill ${lang === l ? 'bg-ink text-paper' : 'text-ink/55'}`}>{l.toUpperCase()}</button>)}
           </div>
           <AuthButton />
           <button onClick={openSell} className="inline-flex items-center h-[40px] px-[22px] bg-ink text-paper rounded-pill text-[14px] font-semibold whitespace-nowrap">{t.navCta}</button>

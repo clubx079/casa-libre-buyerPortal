@@ -5,7 +5,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
-import { COUNTRY } from '@/lib/country';
+import { COUNTRY, COUNTRY_PT } from '@/lib/country';
 import AuthButton from '@/components/AuthButton';
 import { Badge } from '@/components/AppBadges';
 
@@ -42,6 +42,22 @@ const T = {
       ['Direct WhatsApp', 'Contact whoever posted, no middlemen.'],
     ],
   },
+  pt: {
+    tabs: [['Comprar', '/propiedades?op=venta'], ['Alugar', '/propiedades?op=alquiler'], ['Vender', '/publicar']],
+    cta: 'Anuncie grátis',
+    kicker: 'App para iPhone e Android',
+    h1: <>Casa-Libre, <em>no seu celular.</em></>,
+    lede: `Busque no mapa, salve favoritos e converse direto no WhatsApp com quem publicou. Gratuito na App Store e no Google Play.`,
+    browse: 'Explore imóveis na web',
+    home: 'Voltar ao início',
+    featTitle: 'O que você tem no app',
+    feats: [
+      ['Casa Libre no seu bolso', `Casas, apartamentos e terrenos em ${COUNTRY_PT.all}, no mapa.`],
+      ['Favoritos e alertas', 'Salve imóveis e receba avisos quando surgir algo novo.'],
+      ['Mapa e perto de mim', 'Busque por região e encontre o que está próximo a você.'],
+      ['WhatsApp direto', 'Entre em contato com quem publicou, sem intermediários.'],
+    ],
+  },
 };
 
 export default function AppDownloadClient({ tickerData = [] }) {
@@ -67,7 +83,7 @@ export default function AppDownloadClient({ tickerData = [] }) {
         </div>
         <div className="flex items-center gap-1 min-[400px]:gap-1.5 md:gap-3.5 shrink-0">
           <div className="flex items-center h-8 min-[400px]:h-9 md:h-[40px] border border-ink/30 rounded-pill p-[2px] min-[400px]:p-[3px] text-[10px] min-[400px]:text-[11px] md:text-[12px] font-semibold">
-            {['es', 'en'].map((x) => (
+            {['es', 'en', 'pt'].map((x) => (
               <button key={x} onClick={() => setLang(x)} className={`h-full flex items-center px-2 min-[400px]:px-2.5 md:px-3 rounded-pill ${lang === x ? 'bg-ink text-paper' : 'text-ink/55'}`}>{x.toUpperCase()}</button>
             ))}
           </div>

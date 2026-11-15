@@ -16,6 +16,11 @@ const T = {
     hint: 'Remove the photos marked in red and add others.', bad: 'Not accepted', cover: 'Cover', add: 'Add photos',
     cancel: 'Cancel', submit: 'Submit again', sending: 'Sending…', removeBad: 'Remove the photos marked in red first.', fail: "Couldn't send. Please try again.", loading: 'Loading photos…',
   },
+  pt: {
+    title: 'Corrigir fotos', why: 'Algumas fotos podem conter conteúdo 18+, prejudicial, abusivo ou sem relação com o imóvel.',
+    hint: 'Remova as fotos marcadas em vermelho e adicione outras.', bad: 'Não aceita', cover: 'Capa', add: 'Adicionar fotos',
+    cancel: 'Cancelar', submit: 'Enviar novamente', sending: 'Enviando…', removeBad: 'Primeiro remova as fotos marcadas em vermelho.', fail: 'Não foi possível enviar. Por favor, tente novamente.', loading: 'Carregando fotos…',
+  },
 };
 
 export default function FixPhotosModal({ listing, lang, onClose, onDone }) {

@@ -59,6 +59,31 @@ const content = {
       { type: 'cta', title: 'Let’s talk about your property', sub: 'Tell us what you need and we’ll help you manage it.', primary: ['Contact us', '/contacto'], secondary: ['For Investors', '/empresas'] },
     ],
   },
+  pt: {
+    hero: {
+      eyebrow: 'Gestão de imóveis',
+      title: 'Seu aluguel,',
+      titleSerif: 'cuidado.',
+      sub: 'Nós administramos seu imóvel de aluguel do início ao fim. Você recebe o aluguel; nós cuidamos do resto.',
+    },
+    blocks: [
+      { type: 'heading', text: 'O que fazemos por você' },
+      { type: 'features', items: [
+        { t: 'Busca e triagem de inquilinos', d: 'Divulgamos seu imóvel, agendamos as visitas e avaliamos cada candidato para que você alugue com tranquilidade.' },
+        { t: 'Cobrança de aluguel', d: 'Gerenciamos a cobrança mensal e transferimos o valor para você pontualmente, com registro claro de cada pagamento.' },
+        { t: 'Manutenção e reparos', d: 'Atendemos às solicitações dos inquilinos e coordenamos profissionais de confiança sempre que algo precisar de conserto.' },
+        { t: 'Contratos e documentação', d: 'Preparamos, renovamos e arquivamos os contratos, mantendo tudo em ordem.' },
+        { t: 'Relatórios ao proprietário', d: 'Você recebe um resumo do status do seu imóvel, pagamentos e despesas sempre que precisar.' },
+        { t: 'Um único ponto de contato', d: 'Um time cuida de tudo. Você tem uma pessoa única para recorrer — sem rodeios.' },
+      ] },
+      { type: 'heading', text: 'Por que Casa Libre' },
+      { type: 'prose', nodes: [
+        ['p', `Somos a plataforma imobiliária mais amigável do ${COUNTRY.name}. Conhecemos o mercado local, falamos de forma clara e trabalhamos para tornar ser proprietário simples.`],
+        ['p', 'Seja você dono de um imóvel ou de vários, adaptamos o serviço ao que você precisa — sem letra miúda, sem surpresas. Você decide quanto delegar; nós garantimos que tudo funcione.'],
+      ] },
+      { type: 'cta', title: 'Vamos conversar sobre seu imóvel', sub: 'Conte o que você precisa e ajudaremos a gerenciá-lo.', primary: ['Fale conosco', '/contacto'], secondary: ['Para investidores', '/empresas'] },
+    ],
+  },
 };
 
 export default function Page() {

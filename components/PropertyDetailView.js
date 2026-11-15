@@ -7,6 +7,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
+import { tr, localeFor } from '@/lib/i18n';
 import ZoningBadge from '@/components/ZoningBadge';
 import { typeLabel } from '@/lib/propertyType';
 import { track } from '@/lib/analytics';
@@ -43,6 +44,31 @@ const T = {
     viewAll: (k) => `View all photos (${k})`,
     listedAgo: (n) => (n === 0 ? 'Just listed on Casa Libre' : `${n} ${n === 1 ? 'day' : 'days'} on Casa Libre`),
   },
+  pt: {
+    tabs: [['Comprar', '/propiedades?op=venta'], ['Alugar', '/propiedades?op=alquiler'], ['Vender', '/publicar']],
+    cta: 'Anuncie grátis',
+    crumbHome: 'Início',
+    crumbList: 'Imóveis',
+    forSale: 'À venda',
+    forRent: 'Para alugar',
+    perMonth: '/mês',
+    bedShort: 'qto',
+    specBeds: 'Quartos',
+    specBaths: 'Banheiros',
+    specBuilt: 'm² construídos',
+    specLot: 'm² terreno',
+    specPark: 'Vagas de garagem',
+    descH: 'Descrição',
+    featH: 'Características',
+    locH: 'Localização',
+    published: 'Publicado',
+    ref: 'Ref',
+    photoSoon: 'Foto em breve',
+    bizLink: 'Imobiliária ou empresa? Anuncie seu portfólio →',
+    sellCta: 'Quer vender? Anuncie seu imóvel →',
+    viewAll: (k) => `Ver todas as fotos (${k})`,
+    listedAgo: (n) => (n === 0 ? 'Acabou de ser anunciado no Casa Libre' : `${n} ${n === 1 ? 'dia' : 'dias'} no Casa Libre`),
+  },
 };
 
 const stripe = 'repeating-linear-gradient(45deg,#eae6dd,#eae6dd 10px,#f4f1ea 10px,#f4f1ea 20px)';
@@ -56,7 +82,7 @@ const WaGlyph = ({ size = 19 }) => (
 const fmtDate = (v, lang) => {
   if (!v) return null;
   try {
-    return new Date(v).toLocaleDateString(lang === 'es' ? COUNTRY.locale : 'en-US', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
+    return new Date(v).toLocaleDateString(localeFor(lang, COUNTRY.locale), { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
   } catch { return null; }
 };
 
@@ -73,7 +99,7 @@ export default function PropertyDetailView({ l, url }) {
   // Shared CL ref (tracking + display) — numeric ids render "CL-0002"-style.
   const listingRef = clRef(l.id ?? l.slug);
   const zone = [l.neighborhood, l.city].filter(Boolean).join(', ') || l.address || '';
-  const tp = typeLabel(l.type, lang) || (lang === 'es' ? 'Propiedad' : 'Property');
+  const tp = typeLabel(l.type, lang) || tr(lang, 'Propiedad', 'Property', 'Imóvel');
   const title = `${tp}${l.beds ? ` ${l.beds} ${t.bedShort}` : ''}${l.neighborhood ? ` · ${l.neighborhood}` : l.city ? ` · ${l.city}` : ''}`;
   const modeLabel = l.mode === 'alquiler' ? t.forRent : t.forSale;
   const sfx = l.mode === 'alquiler' ? t.perMonth : '';
@@ -239,7 +265,7 @@ export default function PropertyDetailView({ l, url }) {
         </div>
         <div className="flex items-center gap-1 min-[400px]:gap-1.5 md:gap-3.5 shrink-0">
           <div className="flex items-center h-8 min-[400px]:h-9 md:h-[40px] border border-ink/30 rounded-pill p-[2px] min-[400px]:p-[3px] text-[10px] min-[400px]:text-[11px] md:text-[12px] font-semibold">
-            {['es', 'en'].map((x) => (
+            {['es', 'en', 'pt'].map((x) => (
               <button key={x} onClick={() => setLang(x)} className={`h-full flex items-center px-2 min-[400px]:px-2.5 md:px-3 rounded-pill ${lang === x ? 'bg-ink text-paper' : 'text-ink/55'}`}>{x.toUpperCase()}</button>
             ))}
           </div>

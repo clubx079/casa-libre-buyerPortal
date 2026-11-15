@@ -8,7 +8,7 @@ test('the confirm word is ELIMINAR in Spanish and DELETE in English', () => {
 });
 
 test('typing the word (any case, extra spaces) unlocks the button', () => {
-  for (const s of ['ELIMINAR', 'eliminar', '  Eliminar ', 'DELETE', 'delete']) assert.equal(deleteWordOk(s), true, s);
+  for (const s of ['ELIMINAR', 'eliminar', '  Eliminar ', 'DELETE', 'delete', 'EXCLUIR', 'excluir']) assert.equal(deleteWordOk(s), true, s);
 });
 
 test('anything else keeps it locked', () => {

@@ -13,6 +13,7 @@ import { CardGridSkeleton } from '@/components/account/Skeletons';
 const T = {
   es: { title: 'Guardadas', sub: (n) => `${n} ${n === 1 ? 'propiedad guardada' : 'propiedades guardadas'}`, empty: 'Todavía no guardaste ninguna propiedad. Tocá el ♥ en las que te gusten y te esperan acá.', browse: 'Ver propiedades' },
   en: { title: 'Saved', sub: (n) => `${n} saved ${n === 1 ? 'property' : 'properties'}`, empty: "You haven't saved any properties yet. Tap the ♥ on the ones you like and they'll wait for you here.", browse: 'Browse listings' },
+  pt: { title: 'Salvos', sub: (n) => `${n} ${n === 1 ? 'imóvel salvo' : 'imóveis salvos'}`, empty: "Você ainda não salvou nenhum imóvel. Toque no ♥ nos que você gostar e eles vão esperar por você aqui.", browse: 'Ver anúncios' },
 };
 
 export default function SavedList({ banner = null }) {
