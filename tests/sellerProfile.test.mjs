@@ -74,3 +74,14 @@ test('missing-column errors are recognised (migration 022 not applied yet)', () 
   assert.ok(isMissingColumnError(airobase));
   assert.ok(!isMissingColumnError(new Error('timeout')));
 });
+
+test('seller info for the "Sobre el vendedor" popover: never the phone, empty fields null', async () => {
+  const { sellerInfo } = await import('../lib/sellerProfile.js');
+  assert.equal(sellerInfo(null), null);
+  const full = sellerInfo({ first_name: 'Ana', last_name: 'López', job_title: 'Agente', company_name: 'Inmo', company_website: 'https://inmo.com', created_at: '2026-03-02T10:00:00Z', phone_verified_at: '2026-03-03T10:00:00Z', phone: '+595981000000' }, 4);
+  assert.deepEqual(full, { name: 'Ana López', title: 'Agente', company: 'Inmo', website: 'https://inmo.com', website_label: 'inmo.com', member_since: '2026-03-02T10:00:00Z', wa_verified: true, active_listings: 4 });
+  assert.ok(!JSON.stringify(full).includes('595981'));
+  // before migration 022 / nothing filled in: still member since
+  assert.deepEqual(sellerInfo({ created_at: '2026-01-01T00:00:00Z' }, 0), { name: null, title: null, company: null, website: null, website_label: null, member_since: '2026-01-01T00:00:00Z', wa_verified: false, active_listings: null });
+  assert.equal(sellerInfo({ created_at: null }, null).active_listings, null);
+});

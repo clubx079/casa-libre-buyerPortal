@@ -21,6 +21,7 @@ import { genToken, shortUrl, trackContact, markOpened } from '@/lib/contactTrack
 import { COUNTRY } from '@/lib/country';
 import { inCountry } from '@/utils/gmap';
 import AuthButton from '@/components/AuthButton';
+import SellerInfoButton from '@/components/SellerInfoButton';
 
 const T = {
   es: {
@@ -360,7 +361,7 @@ export default function PropertyDetailView({ l, url }) {
 
         {/* CONTACT CARD */}
         <div>
-          <PropertyContactCard sellerName={l.user_published ? l.contact_name : null} sellerPhoto={l.user_published ? l.seller_photo || null : null} sellerProfile={l.user_published ? l.seller_profile || null : null} waDigits={waDigits || null} url={url} listingRef={listingRef} trackProps={trackProps} shortCode={l.short_code} />
+          <PropertyContactCard sellerName={l.user_published ? l.contact_name : null} sellerPhoto={l.user_published ? l.seller_photo || null : null} sellerProfile={l.user_published ? l.seller_profile || null : null} listing={l} waDigits={waDigits || null} url={url} listingRef={listingRef} trackProps={trackProps} shortCode={l.short_code} />
           {/* Report + sell + partner funnels — one evenly-spaced column, no divider. */}
           <div className="mt-4 text-center flex flex-col items-center gap-3">
             <NoResponseReport propertyId={l.id} listingRef={listingRef} sellerName={l.contact_name} sellerPhone={l.contact_phone} />
@@ -381,6 +382,8 @@ export default function PropertyDetailView({ l, url }) {
             <WaGlyph /> WhatsApp
           </a>
         )}
+        {/* "Sobre el vendedor" — opens a bottom sheet here (components/SellerInfoButton.js) */}
+        <SellerInfoButton l={l} sellerName={l.user_published ? l.contact_name : null} photo={l.user_published ? l.seller_photo || null : null} size="lg" className={mbarWa ? '' : 'ml-auto'} />
       </div>
 
       {/* ── LIGHTBOX ── full image + bottom thumbnail scroller (tap any to jump) */}

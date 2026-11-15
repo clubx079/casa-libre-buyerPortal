@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { useLang } from '@/lib/useLang';
 import { track } from '@/lib/analytics';
 import { genToken, shortUrl, trackContact } from '@/lib/contactTrack';
+import SellerInfoButton from '@/components/SellerInfoButton';
 
 const T = {
   es: {
@@ -37,7 +38,8 @@ const WaGlyph = ({ size = 21 }) => (
 // sellerProfile: their "Perfil profesional" { name, title, company, website, website_label }
 // (lib/sellerProfile.js publicProfile). Shown together at the top of the card; with neither,
 // the card looks exactly as before.
-export default function PropertyContactCard({ sellerName, sellerPhoto, sellerProfile, waDigits, url, listingRef, trackProps, shortCode }) {
+// listing: the whole listing, for the "Sobre el vendedor" (i) popover (components/SellerInfoButton.js).
+export default function PropertyContactCard({ sellerName, sellerPhoto, sellerProfile, listing = null, waDigits, url, listingRef, trackProps, shortCode }) {
   const [lang] = useLang();
   const [copied, setCopied] = useState(false);
   // One tracking token per card render — embedded in the WhatsApp link so we can
@@ -69,7 +71,7 @@ export default function PropertyContactCard({ sellerName, sellerPhoto, sellerPro
 
   return (
     <aside className="min-[921px]:sticky min-[921px]:top-5">
-      <div className="bg-card overflow-hidden border-[1.5px] border-ink rounded-[18px] shadow-[5px_4px_0_#111] max-[920px]:border-0 max-[920px]:rounded-none max-[920px]:shadow-none max-[920px]:bg-transparent">
+      <div className="bg-card border-[1.5px] border-ink rounded-[18px] shadow-[5px_4px_0_#111] max-[920px]:border-0 max-[920px]:rounded-none max-[920px]:shadow-none max-[920px]:bg-transparent">
         <div className="px-[18px] pt-[18px] pb-[18px] max-[920px]:p-0">
           {showSeller && (
             <div className="flex items-start gap-3 mb-4 max-[920px]:mb-3" data-testid="seller-photo">
@@ -104,16 +106,19 @@ export default function PropertyContactCard({ sellerName, sellerPhoto, sellerPro
             <>
               {/* WhatsApp lives in the card on desktop; on mobile the sticky bottom
                   bar carries it, so hide this one to avoid two WhatsApp buttons. */}
-              <a
-                href={waUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => { track('contact_whatsapp_click', { ref: listingRef, ...(trackProps || {}), contact_token: token }); recordContact('whatsapp'); }}
-                className="max-[920px]:hidden w-full flex items-center justify-center gap-2.5 px-[18px] py-[13px] rounded-pill text-[15px] font-semibold text-white transition-transform active:translate-x-[2px] active:translate-y-[2px]"
-                style={{ background: '#25D366', border: '1.5px solid #111', boxShadow: '4px 4px 0 #111' }}
-              >
-                <WaGlyph /> {t.wa}
-              </a>
+              <div className="flex items-center gap-2.5 max-[920px]:hidden">
+                <a
+                  href={waUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => { track('contact_whatsapp_click', { ref: listingRef, ...(trackProps || {}), contact_token: token }); recordContact('whatsapp'); }}
+                  className="flex-1 min-w-0 flex items-center justify-center gap-2.5 px-[18px] py-[13px] rounded-pill text-[15px] font-semibold text-white transition-transform active:translate-x-[2px] active:translate-y-[2px]"
+                  style={{ background: '#25D366', border: '1.5px solid #111', boxShadow: '4px 4px 0 #111' }}
+                >
+                  <WaGlyph /> {t.wa}
+                </a>
+                {listing && <SellerInfoButton l={listing} sellerName={sellerName} photo={sellerPhoto} size="lg" />}
+              </div>
 
               <div className="flex gap-2.5 mt-3.5 max-[920px]:mt-0">
                 <a href={`tel:+${waDigits}`} onClick={() => track('contact_call_click', { ref: listingRef, ...(trackProps || {}), contact_token: token })} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 max-[920px]:py-2 rounded-pill border border-ink bg-card text-[13.5px] max-[920px]:text-[12.5px] font-medium hover:bg-paper transition-colors">
@@ -127,9 +132,12 @@ export default function PropertyContactCard({ sellerName, sellerPhoto, sellerPro
               </div>
             </>
           ) : (
-            <button disabled aria-disabled="true" className="w-full px-4 py-3 rounded-pill bg-paper text-ink/40 font-semibold border border-ink/20 cursor-not-allowed">
-              {t.noContact}
-            </button>
+            <div className="flex items-center gap-2.5">
+              <button disabled aria-disabled="true" className="flex-1 min-w-0 px-4 py-3 rounded-pill bg-paper text-ink/40 font-semibold border border-ink/20 cursor-not-allowed">
+                {t.noContact}
+              </button>
+              {listing && <SellerInfoButton l={listing} sellerName={sellerName} photo={sellerPhoto} size="lg" className="max-[920px]:hidden" />}
+            </div>
           )}
         </div>
       </div>
