@@ -517,8 +517,8 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
       <div className="px-4 pb-3">
         <form role="search" onSubmit={onSearchSubmit} className="flex items-center bg-card border-[1.5px] border-ink/12 rounded-pill h-[54px] pl-[18px] pr-[5px]">
           <input enterKeyHint="search" aria-label={X.searchPh} value={qInput} onChange={(e) => { const v = e.target.value; setQInput(v); if (!v.trim() && q) applySearch(''); }} placeholder={X.searchPh} className="flex-1 min-w-0 bg-transparent outline-none text-[15px] text-ink placeholder:text-ink/45" />
-          {qInput && <button type="button" onClick={clearSearch} aria-label={lang === 'en' ? 'Clear search' : 'Borrar búsqueda'} className="w-9 h-11 flex-none flex items-center justify-center text-ink/30 text-[18px] leading-none touch-manipulation">✕</button>}
-          <button type="submit" aria-label={searching ? (lang === 'en' ? 'Searching…' : 'Buscando…') : (lang === 'en' ? 'Search' : 'Buscar')} disabled={searching} aria-busy={searching} className="w-11 h-11 flex-none rounded-pill bg-ink text-paper flex items-center justify-center text-[20px] touch-manipulation disabled:cursor-wait">{searching ? <SearchSpinner className="w-5 h-5" /> : <span aria-hidden="true">→</span>}</button>
+          {qInput && <button type="button" onClick={clearSearch} aria-label={tr(lang, 'Borrar búsqueda', 'Clear search', 'Limpar busca')} className="w-9 h-11 flex-none flex items-center justify-center text-ink/30 text-[18px] leading-none touch-manipulation">✕</button>}
+          <button type="submit" aria-label={searching ? tr(lang, 'Buscando…', 'Searching…', 'Buscando…') : tr(lang, 'Buscar', 'Search', 'Buscar')} disabled={searching} aria-busy={searching} className="w-11 h-11 flex-none rounded-pill bg-ink text-paper flex items-center justify-center text-[20px] touch-manipulation disabled:cursor-wait">{searching ? <SearchSpinner className="w-5 h-5" /> : <span aria-hidden="true">→</span>}</button>
         </form>
       </div>
 
