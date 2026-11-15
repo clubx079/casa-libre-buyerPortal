@@ -134,7 +134,7 @@ export default function MobileHome({ featured = [], count = 0, tickerData = [] }
       <div className="px-4 mt-3">
         <form role="search" onSubmit={(e) => { e.preventDefault(); go(); }} className="flex items-center bg-card border-2 border-ink rounded-pill h-[60px] pl-5 pr-[5px] shadow-hard">
           <input enterKeyHint="search" aria-label={t.searchPh} value={q} onChange={(e) => setQ(e.target.value)} placeholder={t.searchPh} className="flex-1 min-w-0 bg-transparent outline-none text-[16px] text-ink placeholder:text-ink/45" />
-          <button type="submit" aria-label={searching ? 'Buscando…' : 'Buscar'} disabled={searching} aria-busy={searching} className="w-12 h-12 flex-none rounded-pill bg-ink text-paper flex items-center justify-center text-[22px] touch-manipulation disabled:opacity-80">{searching ? <SearchSpinner className="w-5 h-5" /> : <span aria-hidden="true">→</span>}</button>
+          <button type="submit" aria-label={searching ? 'Buscando…' : 'Buscar'} disabled={searching} aria-busy={searching} className="w-12 h-12 flex-none rounded-pill bg-ink text-paper flex items-center justify-center text-[22px] touch-manipulation disabled:cursor-wait">{searching ? <SearchSpinner className="w-5 h-5" /> : <span aria-hidden="true">→</span>}</button>
         </form>
       </div>
 

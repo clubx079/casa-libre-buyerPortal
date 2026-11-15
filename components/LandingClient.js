@@ -150,7 +150,7 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
             <input enterKeyHint="search" aria-label={t.searchPlaceholder} value={q} onChange={(e) => setQ(e.target.value)} placeholder={t.searchPlaceholder} className="flex-1 min-w-0 bg-transparent outline-none text-[16px] text-ink placeholder:text-ink/40" />
             <button
               type="submit" aria-label={t.searchBtn} disabled={searching} aria-busy={searching}
-              className="flex-none flex items-center justify-center gap-2 bg-ink text-paper rounded-pill font-semibold whitespace-nowrap w-[46px] h-[46px] sm:w-auto sm:h-auto sm:py-3.5 sm:px-[clamp(18px,3vw,30px)] touch-manipulation disabled:opacity-80 disabled:cursor-wait"
+              className="flex-none flex items-center justify-center gap-2 bg-ink text-paper rounded-pill font-semibold whitespace-nowrap w-[46px] h-[46px] sm:w-auto sm:h-auto sm:py-3.5 sm:px-[clamp(18px,3vw,30px)] touch-manipulation disabled:cursor-wait"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               {searching && <SearchSpinner />}
