@@ -27,7 +27,7 @@ const T = {
     msg: (name, url) => `Hola! Que tal? Está disponible la propiedad?\n\n${url}`,
   },
   pt: {
-    owner: 'O proprietário',
+    owner: 'O proprietário', listedBy: 'Publicado por', website: 'Site de',
     wa: 'Chat no WhatsApp', call: 'Ligar', copy: 'Copiar número', copied: 'Número copiado',
     noContact: 'Sem contato disponível',
     // The outgoing message is ALWAYS Spanish regardless of UI language.

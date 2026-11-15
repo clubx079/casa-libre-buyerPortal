@@ -44,6 +44,23 @@ const T = {
     errMany: 'You uploaded many photos in a row. Try again in a few minutes.', errSetup: 'This feature is not available yet.',
     err: 'Something went wrong. Try again.',
   },
+  pt: {
+    title: 'Sua foto de perfil ou logo',
+    intro: 'Os compradores confiam mais quando veem quem está vendendo. Sua foto ou o logo da sua imobiliária aparece em todos os seus anúncios, ao lado do seu nome.',
+    rules: 'Envie uma foto sua ou o logo da sua empresa. Não aceitamos imagens adultas, violentas ou ofensivas, memes nem capturas de tela.',
+    upload: 'Enviar foto', replace: 'Trocar foto', another: 'Enviar outra foto', remove: 'Remover foto', removing: 'Removendo…', uploading: 'Enviando…',
+    checking: 'Estamos verificando sua foto', checkingSub: 'Leva alguns segundos. Você pode continuar usando o site.',
+    checkingKeep: 'Enquanto isso, sua foto atual continua aparecendo.',
+    approved: 'Sua foto foi aprovada e já aparece nos seus anúncios',
+    rejected: 'Sua foto não foi aprovada', rejectedKeep: 'Sua foto anterior continua aparecendo.',
+    none: 'Você ainda não tem foto de perfil.', current: 'Foto atual', newOne: 'Nova foto', inReview: 'Em análise', notApproved: 'Não aprovada',
+    confirmRemove: 'Ela deixará de aparecer nos seus anúncios. Você pode enviar outra quando quiser.',
+    removeTitle: 'Remover sua foto de perfil?', removeYes: 'Sim, remover', cancel: 'Cancelar',
+    cropTitle: 'Ajuste sua foto', cropHint: 'Arraste a imagem e use o zoom para que seu rosto ou seu logo fique dentro do círculo.', cropSave: 'Salvar foto', zoom: 'Zoom', zoomIn: 'Aumentar zoom', zoomOut: 'Diminuir zoom', recrop: 'Ajustar o recorte da foto', recropShort: 'Ajustar',
+    errTooLarge: 'A foto é grande demais (máx. 15 MB).', errType: 'Esse arquivo não é uma foto. Tente um JPG ou PNG.',
+    errMany: 'Você enviou muitas fotos seguidas. Tente de novo em alguns minutos.', errSetup: 'Este recurso ainda não está disponível.',
+    err: 'Algo deu errado. Tente novamente.',
+  },
 };
 
 const ERR = { too_large: 'errTooLarge', unreadable_image: 'errType', not_an_image: 'errType', too_many: 'errMany', not_set_up: 'errSetup' };

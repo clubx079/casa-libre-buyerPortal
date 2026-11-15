@@ -42,6 +42,11 @@ const T = {
   },
   pt: {
     title: 'Configurações', profile: 'Perfil', name: 'Nome completo', phone: 'WhatsApp / telefone', save: 'Salvar', saved: 'Salvo ✓', saving: 'Salvando…',
+    pro: 'Perfil profissional', proIntro: 'Os compradores veem isto ao lado da sua foto em todos os seus anúncios. Um perfil completo transmite confiança e traz mais contatos.',
+    firstName: 'Nome', lastName: 'Sobrenome', jobTitle: 'Cargo', jobTitlePh: 'Ex.: Corretor de imóveis', company: 'Empresa / imobiliária', companyPh: 'Ex.: Asunción Imóveis', website: 'Site da empresa', websitePh: 'www.suaimobiliaria.com', optional: 'opcional',
+    waConfirmed: 'WhatsApp confirmado', waNone: 'Você ainda não confirmou seu WhatsApp. Confirme para que os compradores possam falar com você com confiança.',
+    proSaved: 'Perfil salvo ✓ Ele já aparece nos seus anúncios.', proPending: 'Salvamos seu nome. Cargo, empresa e site poderão ser salvos em breve (migração pendente).', proFix: 'Confira os campos destacados.',
+    preview: 'Como os compradores veem você', listedBy: 'Publicado por',
     emailSec: 'Alterar e‑mail', currentEmail: 'E‑mail atual', newEmail: 'Novo e‑mail', sendCode: 'Enviar código', code: 'Código', verify: 'Verificar e mudar', codeSent: 'Enviamos um código para o novo e‑mail.', emailChanged: 'E‑mail atualizado ✓',
     signSec: 'Como você entra', signText: 'Você entra com um código que enviamos por e‑mail ou WhatsApp, ou com Google / Apple. Não precisa de senha.',
     emailRow: 'E‑mail', waRow: 'WhatsApp', confirmed: 'Confirmado', notConfirmed: 'Não confirmado', resend: 'Reenviar confirmação', resent: 'Enviamos o link. Verifique seu e‑mail.',

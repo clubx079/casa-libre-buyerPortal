@@ -15,7 +15,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const missingColumn = (e) => !!e && (e.code === '42703' || e.code === 'PGRST204' || /profile_photo/.test(String(e.message || '')));
-const langOf = (req) => (new URL(req.url).searchParams.get('lang') === 'en' ? 'en' : 'es');
+const langOf = (req) => { const l = new URL(req.url).searchParams.get('lang'); return l === 'en' || l === 'pt' ? l : 'es'; };
 
 // A few uploads per person per 10 minutes (each one is an AI check).
 const UPLOADS = new Map();

@@ -11,6 +11,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLang } from '@/lib/useLang';
+import { localeFor } from '@/lib/i18n';
 import { track } from '@/lib/analytics';
 import { COUNTRY } from '@/lib/country';
 import VerifiedTag from '@/components/VerifiedTag';
@@ -30,6 +31,13 @@ const T = {
     active: (n) => (n === 1 ? '1 active listing on Casa-Libre' : `${n} active listings on Casa-Libre`),
     website: 'Website', contact: 'To reach the seller, use the WhatsApp button.',
   },
+  pt: {
+    aria: 'Sobre o vendedor', title: 'Sobre o vendedor', close: 'Fechar',
+    owner: 'O proprietário', advertiser: 'Anunciante',
+    waOk: 'WhatsApp confirmado ✓', since: (d) => `Membro desde ${d}`, listedSince: (d) => `No Casa-Libre desde ${d}`,
+    active: (n) => (n === 1 ? '1 anúncio ativo no Casa-Libre' : `${n} anúncios ativos no Casa-Libre`),
+    website: 'Site', contact: 'Para falar com o vendedor, use o botão do WhatsApp.',
+  },
 };
 
 const MOBILE = '(max-width: 920px)';
@@ -38,7 +46,7 @@ const monthYear = (v, lang) => {
   if (!v) return null;
   const d = new Date(v);
   if (Number.isNaN(d.getTime())) return null;
-  try { return d.toLocaleDateString(lang === 'es' ? COUNTRY.locale || 'es' : 'en-US', { month: 'long', year: 'numeric' }); } catch { return null; }
+  try { return d.toLocaleDateString(localeFor(lang, COUNTRY.locale || 'es'), { month: 'long', year: 'numeric' }); } catch { return null; }
 };
 
 // l = the listing (PropertyDetailView); sellerName = the name the contact card shows (null for
