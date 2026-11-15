@@ -1,6 +1,6 @@
 import MarketingShell from '@/components/MarketingShell';
 import Article from '@/components/marketing/Article';
-import { COUNTRY } from '@/lib/country';
+import { COUNTRY, COUNTRY_PT } from '@/lib/country';
 import { SITE } from '@/lib/site';
 import { breadcrumbLd } from '@/lib/schema';
 
@@ -33,6 +33,18 @@ const content = {
       ] },
       { type: 'cities', prefix: 'Rent in' },
       { type: 'cta', title: 'Find your next home', sub: 'Browse properties for rent or list yours for free.', primary: ['View for rent', '/propiedades?op=alquiler'], secondary: ['List for free', '/publicar'] },
+    ],
+  },
+  pt: {
+    hero: { eyebrow: 'Aluguel', title: 'Imóveis para alugar', titleSerif: `${COUNTRY_PT.in}.`, sub: 'Casas e apartamentos para alugar em todo o país, com preço mensal claro e localização no mapa.' },
+    blocks: [
+      { type: 'ctaButton', label: 'Ver imóveis para alugar →', href: '/propiedades?op=alquiler' },
+      { type: 'prose', nodes: [
+        ['p', `Quer alugar? No <strong>Casa Libre</strong> você encontra apartamentos mobiliados, casas familiares e studios para alugar em ${COUNTRY.capital} e no interior. Compare o aluguel mensal em ${COUNTRY.currencyName} e dólares e agende a visita direto com o proprietário.`],
+        ['h2', 'Aluguel por cidade'],
+      ] },
+      { type: 'cities', prefix: 'Alugar em' },
+      { type: 'cta', title: 'Encontre seu próximo lar', sub: 'Explore imóveis para alugar ou anuncie o seu gratuitamente.', primary: ['Ver para alugar', '/propiedades?op=alquiler'], secondary: ['Anunciar grátis', '/publicar'] },
     ],
   },
 };

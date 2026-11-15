@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useLang } from '@/lib/useLang';
 
-const T = { es: { share: 'Compartir', copied: 'Enlace copiado' }, en: { share: 'Share', copied: 'Link copied' } };
+const T = { es: { share: 'Compartir', copied: 'Enlace copiado' }, en: { share: 'Share', copied: 'Link copied' }, pt: { share: 'Compartilhar', copied: 'Link copiado' } };
 
 // Circular share button (matches SaveButton). Uses the native Web Share sheet
 // where available (mobile), falling back to copy-to-clipboard on desktop.

@@ -8,10 +8,11 @@ import SearchSpinner from '@/components/SearchSpinner';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useLang } from '@/lib/useLang';
+import { tr, localeFor } from '@/lib/i18n';
 import { useSellFlow } from '@/components/SellFlow';
 import { typeLabel } from '@/lib/propertyType';
 import { fmtUsd, isUnverified, contactSellerFor } from '@/lib/ui';
-import { COUNTRY } from '@/lib/country';
+import { COUNTRY, COUNTRY_PT } from '@/lib/country';
 import VerifiedTag from '@/components/VerifiedTag';
 import AuthButton from '@/components/AuthButton';
 
@@ -50,6 +51,23 @@ const H = {
     ctaTitle: 'Your home is out there looking', ctaSerif: 'for you.', ctaSub: 'Free to browse, free to list. Start today.',
     explore: 'Explore homes', chips: COUNTRY.featuredZones,
   },
+  pt: {
+    cta: 'Anuncie grátis', buy: 'Comprar', rent: 'Alugar', sell: 'Vender',
+    heroL1: 'Encontre seu lugar,', heroL2: 'livremente.',
+    heroSub: ['O marketplace imobiliário', `que mais cresce ${COUNTRY_PT.in},`, 'sem comissão.'],
+    searchPh: 'Onde você quer morar?', mascotCaption: '“Vamos nessa!” — Cuate, seu guia',
+    justListed: 'Em destaque', justListedSerif: 'de imobiliárias e proprietários', viewAll: 'Ver tudo →',
+    forSale: 'À venda', forRent: 'Para alugar', perMonth: '/mês', bd: 'qto',
+    stepsTitle: 'Três passos e pronto',
+    steps: [
+      { n: '1', t: 'Conte o que você procura', d: 'Bairro, orçamento, quartos. Cuate só mostra o que vale a sua atenção.' },
+      { n: '2', t: 'Entre em contato com o anunciante', d: 'Mande mensagem no WhatsApp ou ligue direto pelo anúncio. Sem intermediários, sem enrolação.' },
+      { n: '3', t: 'Feche o negócio do seu jeito', d: 'Agende a visita e o negócio direto com quem publicou. Você define o ritmo.' },
+    ],
+    statActive: 'imóveis ativos', statComm: 'comissão ao anunciar', statInstant: 'Instantâneo', statInstantL: 'seu anúncio vai ao ar',
+    ctaTitle: 'Sua casa está procurando', ctaSerif: 'por você.', ctaSub: 'Grátis para buscar, grátis para anunciar. Comece hoje.',
+    explore: 'Explore imóveis', chips: COUNTRY.featuredZones,
+  },
 };
 
 export default function MobileHome({ featured = [], count = 0, tickerData = [] }) {
@@ -65,7 +83,7 @@ export default function MobileHome({ featured = [], count = 0, tickerData = [] }
   const go = () => { if (searching) return; const query = q.trim(); startSearch(() => router.push(query ? `/propiedades?q=${encodeURIComponent(query)}` : '/propiedades')); };
   const ticker = tickerData.length ? tickerData : [`CASA LIBRE — PROPIEDADES EN ${(COUNTRY.name || 'Sudamérica').toUpperCase()}`];
   const price = (l) => (isUnverified(l, 'price') ? contactSellerFor('price', lang) : (fmtUsd(l.usd, lang) || '—') + (l.mode === 'alquiler' ? t.perMonth : ''));
-  const fTitle = (l) => `${typeLabel(l.type, lang) || (lang === 'es' ? 'Propiedad' : 'Property')}${l.beds ? ` · ${l.beds} ${t.bd}` : ''}`;
+  const fTitle = (l) => `${typeLabel(l.type, lang) || tr(lang, 'Propiedad', 'Property', 'Imóvel')}${l.beds ? ` · ${l.beds} ${t.bd}` : ''}`;
   const fMeta = (l) => [[l.neighborhood, l.city].filter(Boolean).join(', '), l.area && `${l.area} m²`].filter(Boolean).join(' · ');
 
   // Three distinct buttons (buy / rent / sell), each its own bordered pill. The
@@ -89,7 +107,7 @@ export default function MobileHome({ featured = [], count = 0, tickerData = [] }
         </span>
         <div className="flex items-center gap-1 min-[400px]:gap-1.5 shrink-0">
           <div className="flex items-center border-[1.5px] border-ink rounded-pill overflow-hidden text-[10px] min-[400px]:text-[11px] font-semibold">
-            {['es', 'en'].map((l) => <button key={l} onClick={() => setLang(l)} className={`px-2 min-[400px]:px-2.5 py-1.5 ${lang === l ? 'bg-ink text-paper' : 'text-ink'}`}>{l.toUpperCase()}</button>)}
+            {['es', 'en', 'pt'].map((l) => <button key={l} onClick={() => setLang(l)} className={`px-1.5 min-[400px]:px-2 py-1.5 ${lang === l ? 'bg-ink text-paper' : 'text-ink'}`}>{l.toUpperCase()}</button>)}
           </div>
           <button onClick={openSell} className="bg-ink text-paper rounded-pill px-2.5 min-[400px]:px-3 py-[8px] text-[11.5px] min-[400px]:text-[12.5px] font-bold whitespace-nowrap">{t.cta}</button>
           <AuthButton compact />
@@ -166,7 +184,7 @@ export default function MobileHome({ featured = [], count = 0, tickerData = [] }
         </div>
 
         <div className="border-t border-paper/20 mt-[18px] pt-6 flex flex-col gap-4">
-          {[[`${count.toLocaleString(lang === 'en' ? 'en-US' : COUNTRY.locale)}+`, t.statActive], ['0%', t.statComm], [t.statInstant, t.statInstantL]].map(([v, l], i) => (
+          {[[`${count.toLocaleString(localeFor(lang, COUNTRY.locale))}+`, t.statActive], ['0%', t.statComm], [t.statInstant, t.statInstantL]].map(([v, l], i) => (
             <div key={i} className="flex items-baseline"><span className="text-[30px] font-bold tracking-[-0.02em]">{v}</span><span className="font-mono text-[12px] text-paper/50 ml-3">{l}</span></div>
           ))}
         </div>

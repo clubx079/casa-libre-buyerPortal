@@ -3,12 +3,14 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from './AuthProvider';
 import { useLang } from '@/lib/useLang';
+import { tr, localeFor } from '@/lib/i18n';
 import ConfirmModal from './ConfirmModal';
 import { useFavorites } from './FavoritesProvider';
 
 const T = {
   es: { login: 'Ingresar', logout: 'Salir', account: 'Mi panel', saved: 'Guardadas', mine: 'Mis publicaciones', payments: 'Pagos', settings: 'Ajustes', logoutT: 'Cerrar sesión', logoutMsg: '¿Querés cerrar tu sesión?', cancel: 'Cancelar' },
   en: { login: 'Log in', logout: 'Log out', account: 'Dashboard', saved: 'Saved', mine: 'My listings', payments: 'Payments', settings: 'Settings', logoutT: 'Log out', logoutMsg: 'Are you sure you want to log out?', cancel: 'Cancel' },
+  pt: { login: 'Entrar', logout: 'Sair', account: 'Painel', saved: 'Salvos', mine: 'Meus anúncios', payments: 'Pagamentos', settings: 'Configurações', logoutT: 'Sair', logoutMsg: 'Tem certeza que deseja sair?', cancel: 'Cancelar' },
 };
 
 // compact: for the tight mobile headers. Signed in → the round avatar (same menu).
@@ -23,7 +25,7 @@ function SavedLink({ variant, compact }) {
   const { count } = useFavorites();
   const [lang] = useLang();
   if (user) return null;              // signed in: Guardadas is in the account menu
-  const label = lang === 'en' ? 'Saved' : 'Guardadas';
+  const label = tr(lang, 'Guardadas', 'Saved', 'Salvos');
   const dark = variant === 'dark';
   return (
     <Link href={user ? '/cuenta/guardadas' : '/guardadas'} aria-label={label} title={label} data-testid="nav-saved"

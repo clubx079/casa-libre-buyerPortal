@@ -1,10 +1,10 @@
 'use client';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
-import { COUNTRY } from '@/lib/country';
+import { COUNTRY, COUNTRY_PT } from '@/lib/country';
 import { Hero, CTABand } from './Parts';
 
-export default function CompareContent({ name, blurb, blurbEn, others }) {
+export default function CompareContent({ name, blurb, blurbEn, blurbPt, others }) {
   const [lang] = useLang();
   const es = lang === 'es';
   const t = es
@@ -22,6 +22,22 @@ export default function CompareContent({ name, blurb, blurbEn, others }) {
         note: `Si estás decidiendo dónde publicar o buscar tu próxima propiedad en ${COUNTRY.name}, la diferencia principal es simple: en <strong>Casa Libre</strong> publicar es gratis, sin comisiones, y todo se ve en un mapa claro con precios en ${COUNTRY.currencyName} y dólares.`,
         chip: (n) => `Casa Libre vs ${n}`,
         ctaTitle: 'Probá Casa Libre gratis', ctaSub: 'Buscá miles de propiedades o publicá la tuya sin costo.', ctaPrimary: ['Ver propiedades', '/propiedades'], ctaSecondary: ['Publicar gratis', '/publicar'],
+      }
+    : lang === 'pt'
+    ? {
+        eyebrow: 'Comparação', title: 'Casa Libre',
+        sub: `${name} é ${blurbPt || blurbEn || blurb} O Casa Libre é um marketplace onde buscar e anunciar imóveis ${COUNTRY_PT.in} é simples e grátis.`,
+        rows: [
+          ['Custo para anunciar', 'Grátis', 'Planos pagos / comissões'],
+          ['Comissão na venda', 'Sem comissão', 'Costuma cobrar'],
+          ['Publicação na hora', 'Sim', 'Depende do plano'],
+          ['Mapa com todos os imóveis', 'Sim', 'Limitado'],
+          [`Preço em ${COUNTRY.currencySymbol} e US$`, 'Sim', 'Varia'],
+          ['Contato direto com quem anunciou', 'Sim — imobiliária ou proprietário', 'Às vezes só por formulário'],
+        ],
+        note: `Se você está decidindo onde anunciar ou buscar seu próximo imóvel ${COUNTRY_PT.in}, a principal diferença é simples: no <strong>Casa Libre</strong> anunciar é grátis, sem comissões, e tudo aparece em um mapa claro com preços em ${COUNTRY.currencyName} e dólares.`,
+        chip: (n) => `Casa Libre vs ${n}`,
+        ctaTitle: 'Experimente o Casa Libre grátis', ctaSub: 'Busque milhares de imóveis ou anuncie o seu sem custo.', ctaPrimary: ['Ver imóveis', '/propiedades'], ctaSecondary: ['Anunciar grátis', '/publicar'],
       }
     : {
         eyebrow: 'Comparison', title: 'Casa Libre',

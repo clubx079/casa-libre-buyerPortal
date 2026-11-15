@@ -1,6 +1,6 @@
 import MarketingShell from '@/components/MarketingShell';
 import Article from '@/components/marketing/Article';
-import { COUNTRY } from '@/lib/country';
+import { COUNTRY, COUNTRY_PT } from '@/lib/country';
 
 export const metadata = {
   title: 'Términos y condiciones — Casa Libre',
@@ -12,10 +12,12 @@ export const metadata = {
 // version current at sign-up via the checkbox in the sell wizard / sign-up form).
 const UPDATED_ES = '6 de octubre de 2026';
 const UPDATED_EN = 'October 6, 2026';
+const UPDATED_PT = '6 de outubro de 2026';
 
 const C = COUNTRY.name;
 const contactEs = '<a href="/contacto">página de contacto</a>';
 const contactEn = '<a href="/contacto">contact page</a>';
+const contactPt = '<a href="/contacto">página de contato</a>';
 
 const content = {
   es: {
@@ -139,6 +141,67 @@ const content = {
 
         ['h2', '15. Contact'],
         ['p', `For questions about these Terms or your data, write to us via our ${contactEn}.`],
+      ] },
+    ],
+  },
+  pt: {
+    hero: { title: 'Termos de Uso' },
+    blocks: [
+      { type: 'prose', nodes: [
+        ['p', `<em>Última atualização: ${UPDATED_PT}</em>`],
+        ['p', `Estes Termos de Uso (os "Termos") regulam o uso da Casa Libre (o site, o aplicativo móvel e os serviços relacionados, juntos a "Plataforma") ${COUNTRY_PT.in}. "Casa Libre", "nós" e "nosso" referem-se ao operador da Plataforma. "Você" ou "Usuário" significa qualquer pessoa que visite, se registre ou publique na Plataforma. A versão em espanhol prevalece em caso de divergência.`],
+
+        ['h2', '1. Aceitação'],
+        ['p', 'Ao criar uma conta, marcar a caixa "Concordo com os Termos de Uso", entrar com o Google ou outro provedor, anunciar um imóvel ou usar a Plataforma de outra forma, você confirma que leu, entendeu e aceita estes Termos e nossa <a href="/privacidad">Política de Privacidade</a>, que faz parte deles. Se não concordar, não use a Plataforma.'],
+
+        ['h2', '2. O que é a Casa Libre'],
+        ['p', 'Casa Libre é um marketplace online onde proprietários, imobiliárias, corretores e incorporadoras anunciam imóveis para venda ou aluguel, e as pessoas os buscam e entram em contato com o anunciante. Casa Libre não é uma imobiliária, não participa das transações entre usuários, não atua como intermediário, agente, notário ou garantidor, e não cobra comissão nas transações. Alguns anúncios podem provir de fontes públicas de terceiros; nesse caso as informações são as publicadas por essas fontes.'],
+
+        ['h2', '3. Contas'],
+        ['p', 'Você precisa de uma conta para anunciar. Deve ter pelo menos 18 anos e capacidade legal para contratar. Você concorda em fornecer informações verdadeiras, completas e atualizadas, manter seu acesso confidencial e nos informar sobre qualquer uso não autorizado. Você é responsável por toda a atividade na sua conta. Podemos verificar sua identidade ou sua relação com o imóvel e suspender contas cujas informações não possam ser verificadas.'],
+
+        ['h2', '4. Anúncios'],
+        ['p', 'Você é o único responsável pelo conteúdo que publica (detalhes, preço, fotos, descrição e dados de contato) e garante que: (a) tem direito de oferecer o imóvel ou está autorizado pelo proprietário; (b) as informações são verdadeiras e não enganosas; (c) as fotos e textos são seus ou você tem permissão para usá‑los; e (d) o anúncio cumpre a legislação aplicável. Anúncios falsos, duplicados, inexistentes ou que não estejam mais disponíveis, bem como conteúdo ofensivo, discriminatório ou que viole direitos, não são permitidos.'],
+        ['p', 'Ao anunciar, você nos concede uma licença mundial, não exclusiva, livre de royalties, transferível e sublicenciável para hospedar, reproduzir, adaptar (ex.: recortar, traduzir ou melhorar fotos), exibir e distribuir esse conteúdo na Plataforma, em nossos canais sociais e campanhas, em mecanismos de busca e assistentes de IA, e através de parceiros e portais com os quais trabalhamos. A licença permanece enquanto o conteúdo estiver publicado e pelo tempo razoável necessário para removê‑lo de backups, caches e materiais já distribuídos. Esta licença não nos permite vender seus dados pessoais (veja a seção 5).'],
+        ['p', 'Podemos revisar, reformatar, destacar, ocultar ou remover qualquer anúncio a nosso critério e sem aviso prévio, inclusive anúncios que violem estes Termos ou nossos critérios de qualidade.'],
+
+        ['h2', '5. Dados pessoais e consentimento'],
+        ['p', 'Ao aceitar estes Termos, você concede seu consentimento livre, expresso e informado para que a Casa Libre colete, armazene, processe e utilize os dados que você fornece ou que são gerados ao usar a Plataforma, incluindo: nome, e‑mail, telefone e WhatsApp; seus anúncios e detalhes dos imóveis; localização aproximada ou precisa, se você permitir; buscas, favoritos, contatos e outras interações; dispositivo, navegador, endereço IP e cookies ou tecnologias semelhantes.'],
+        ['p', 'Usamos esses dados para: operar a Plataforma e exibir seus anúncios; permitir que pessoas interessadas entrem em contato com você; verificar contas e prevenir fraudes; enviar mensagens sobre sua conta e anúncios; enviar novidades e ofertas por e‑mail, WhatsApp, SMS ou notificações; personalizar sua experiência; medir e melhorar nossos serviços e campanhas (incluindo ferramentas de análise e publicidade de terceiros); e gerar estatísticas, pesquisas de mercado e índices do mercado imobiliário a partir de dados agregados ou anonimados que não identifiquem ninguém.'],
+        ['p', '<strong>A Casa Libre não vende seus dados pessoais.</strong> Não os vendemos nem alugamos, nem os entregamos a ninguém em troca de dinheiro ou qualquer outra contrapartida.'],
+        ['p', 'Compartilhamos dados pessoais apenas com os provedores que trabalham para nós (hospedagem em nuvem, e‑mail, análise, mapas e publicidade), que os utilizam exclusivamente para nos prestar esse serviço; com outros usuários, quando você os contata ou eles o contatam; e quando exigido por lei ou autoridade. Também podemos compartilhar informações agregadas ou anonimadas, que não o identificam.'],
+        ['p', `Seus dados podem ser armazenados e processados em servidores localizados fora ${COUNTRY_PT.of}, incluindo serviços de nuvem de terceiros, com medidas de segurança razoáveis. Se a Casa Libre se fundir, reorganizar ou for adquirida, os dados passarão para a nova entidade como parte dessa transação, e essa entidade deverá seguir estes Termos e a Política de Privacidade, incluindo o compromisso de não vender dados pessoais. Mantemos os dados enquanto você tiver uma conta. Se você a excluir, apagamos seus dados pessoais e mantemos apenas estatísticas anônimas.`],
+        ['p', `Você pode solicitar acesso, correção ou exclusão dos seus dados, e retirar seu consentimento para mensagens de marketing, escrevendo para nós via nosso ${contactPt}. A retirada do consentimento não afeta o tratamento realizado antes da sua solicitação e pode impedir o uso de alguns recursos. Você pode excluir sua conta a qualquer momento no app (Conta → Excluir conta) ou na <a href="/eliminar-cuenta">esta página</a>. Os detalhes estão na <a href="/privacidad">Política de Privacidade</a>.`],
+
+        ['h2', '6. Contatos entre usuários'],
+        ["p", "Quando você entra em contato com um anunciante (ex.: por WhatsApp ou telefone) compartilha seus dados de contato com ele e podemos registrar esse contato. Os dados de contato de outros usuários só podem ser usados para consultar o imóvel anunciado. É proibido utilizá‑los para spam, marketing não solicitado, revenda de bases de dados ou qualquer outro fim. Qualquer negociação, visita, pagamento ou contrato é exclusivamente entre os usuários: verifique o imóvel, a documentação e a identidade da outra parte antes de pagar ou assinar."],
+
+        ['h2', '7. Usos proibidos'],
+        ['p', 'Você não pode: extrair dados da Plataforma por meios automatizados (scraping, bots, crawlers) sem nossa permissão por escrito; copiar ou reutilizar anúncios, fotos ou bancos de dados; contornar medidas técnicas ou de segurança; enviar malware; se passar por outra pessoa; usar a Plataforma para atividades ilegais, fraude ou lavagem de dinheiro; ou interferir em seu funcionamento.'],
+
+        ['h2', '8. Propriedade intelectual'],
+        ['p', 'A marca Casa Libre, o design, o software, os bancos de dados, nossos próprios textos e outros elementos da Plataforma pertencem a nós ou são licenciados a nós e são protegidos por lei. O uso da Plataforma não lhe confere direitos sobre eles.'],
+
+        ['h2', '9. Sem garantias'],
+        ['p', 'A Plataforma é fornecida "como está" e "conforme disponibilidade". Não garantimos que os anúncios sejam precisos, que os imóveis estejam disponíveis ou nas condições descritas, nem que a Plataforma funcione sem interrupções ou erros. Informações de zoneamento, preços de referência, taxas de câmbio e quaisquer outros dados informativos são apenas indicativos e não substituem a consulta à autoridade competente ou a um profissional.'],
+
+        ['h2', '10. Limitação de responsabilidade'],
+        ['p', 'Na máxima extensão permitida por lei, a Casa Libre não se responsabiliza por danos indiretos, lucros cessantes, perda de dados ou oportunidades, pelos atos, anúncios ou omissões de usuários ou terceiros, ou por transações entre eles. Nossa responsabilidade total para você é limitada ao mínimo permitido pela legislação aplicável.'],
+
+        ['h2', '11. Indenização'],
+        ['p', 'Você concorda em manter a Casa Libre, seus proprietários, equipe e colaboradores isentos de reivindicações, danos e custos (incluindo honorários advocatícios) decorrentes do seu conteúdo, do uso da Plataforma ou do descumprimento destes Termos ou da lei.'],
+
+        ['h2', '12. Suspensão e encerramento'],
+        ['p', `Podemos suspender ou encerrar sua conta e anúncios se você violar estes Termos, houver indícios de fraude ou se a lei exigir. Você pode encerrar sua conta a qualquer momento pelo seu painel ou via nosso ${contactPt}. As seções sobre licença de conteúdo, dados, propriedade intelectual, limitação de responsabilidade e indenização permanecem vigentes após o encerramento.`],
+
+        ['h2', '13. Alterações'],
+        ['p', 'Podemos alterar estes Termos. Publicaremos a nova versão com a data e, se a mudança for relevante, notificaremos você por e‑mail ou na Plataforma. Se continuar usando a Plataforma após sua entrada em vigor, você aceita a nova versão.'],
+
+        ['h2', '14. Lei aplicável'],
+        ['p', `Estes Termos são regidos pelas leis ${COUNTRY_PT.of}. Qualquer disputa será submetida aos tribunais competentes de ${COUNTRY.capital || C}, salvo se a legislação aplicável determinar outra jurisdição. Se alguma cláusula for inválida, o restante permanecerá em vigor.`],
+
+        ['h2', '15. Contato'],
+        ['p', `Para dúvidas sobre estes Termos ou seus dados, escreva para nós via nosso ${contactPt}.`],
       ] },
     ],
   },

@@ -21,6 +21,7 @@ const SNOOZE = 'cl_app_promo_until';  // localStorage: ms timestamp
 const TXT = {
   es: { line: 'Funciona mejor en la app', sub: 'Descargá gratis la app de Casa Libre', close: 'Cerrar' },
   en: { line: 'It works better on the app', sub: 'Get the Casa Libre app for free', close: 'Close' },
+  pt: { line: 'Funciona melhor no app', sub: 'Baixe o app do Casa Libre grátis', close: 'Fechar' },
 };
 
 const read = (store, key, fallback) => { try { const v = store.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; } };

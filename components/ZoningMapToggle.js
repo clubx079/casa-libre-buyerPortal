@@ -44,6 +44,7 @@ export function useZoningOverlay(mapRef, on, height = 'all') {
 const TXT = {
   es: { btn: 'Zonificación', title: 'Pisos permitidos · Asunción', rows: { baja: 'Baja · hasta 4', media: 'Media · 5–6', alta: 'Alta · 7+' } },
   en: { btn: 'Zoning', title: 'Floors allowed · Asunción', rows: { baja: 'Low · up to 4', media: 'Mid · 5–6', alta: 'High · 7+' } },
+  pt: { btn: 'Zoneamento', title: 'Andares permitidos · Asunción', rows: { baja: 'Baixa · até 4', media: 'Média · 5–6', alta: 'Alta · 7+' } },
 };
 
 const Check = () => (
@@ -57,7 +58,7 @@ const Spinner = () => (
 );
 
 export default function ZoningMapToggle({ on, onToggle, height = 'all', loading = false, lang = 'es', className = '' }) {
-  const t = TXT[lang === 'en' ? 'en' : 'es'];
+  const t = TXT[lang] || TXT.es;
   const shown = ZONE_CATEGORIES.includes(height) ? [height] : ZONE_CATEGORIES;
   return (
     <div className={`flex flex-col items-end gap-2 ${className}`}>

@@ -3,6 +3,7 @@ import { typeLabel } from '@/lib/propertyTypeOptions';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
+import { tr, localeFor } from '@/lib/i18n';
 import ListingCard from '@/components/account/ListingCard';
 import ConfirmModal from '@/components/ConfirmModal';
 import HighlightModal from '@/components/HighlightModal';
@@ -16,6 +17,7 @@ import { track } from '@/lib/analytics';
 const T = {
   es: { title: 'Mis publicaciones', sub: (n) => `${n} ${n === 1 ? 'propiedad publicada' : 'propiedades publicadas'}`, empty: 'Todavía no publicaste ninguna propiedad.', publish: 'Publicar propiedad', del: 'Eliminar', confirmT: 'Eliminar publicación', confirm: 'Esta acción no se puede deshacer. ¿Querés eliminar esta propiedad?', cancel: 'Cancelar', deleting: 'Eliminando…', view: 'Ver', loading: 'Cargando…', promoteVerify: 'Verificar · US$5', promoteHome: 'Portada · US$20', renew: 'Renovar', verifiedChip: 'Verificada', homeChip: 'En portada', upgradeHome: 'Subir a portada · US$20', paying: 'Procesando…', daysLeft: (n) => `faltan ${n} ${n === 1 ? 'día' : 'días'}` },
   en: { title: 'My listings', sub: (n) => `${n} published ${n === 1 ? 'property' : 'properties'}`, empty: "You haven't published any properties yet.", publish: 'List a property', del: 'Delete', confirmT: 'Delete listing', confirm: "This can't be undone. Delete this property?", cancel: 'Cancel', deleting: 'Deleting…', view: 'View', loading: 'Loading…', promoteVerify: 'Verify · US$5', promoteHome: 'Landing · US$20', renew: 'Renew', verifiedChip: 'Verified', homeChip: 'On landing', upgradeHome: 'Move to Landing · US$20', paying: 'Processing…', daysLeft: (n) => `${n} ${n === 1 ? 'day' : 'days'} left` },
+  pt: { title: 'Meus anúncios', sub: (n) => `${n} ${n === 1 ? 'imóvel publicado' : 'imóveis publicados'}`, empty: "Você ainda não publicou nenhum imóvel.", publish: 'Anunciar imóvel', del: 'Excluir', confirmT: 'Excluir anúncio', confirm: "Esta ação não pode ser desfeita. Excluir este imóvel?", cancel: 'Cancelar', deleting: 'Excluindo…', view: 'Ver', loading: 'Carregando…', promoteVerify: 'Verificar · US$5', promoteHome: 'Em destaque · US$20', renew: 'Renovar', verifiedChip: 'Verificado', homeChip: 'Em destaque', upgradeHome: 'Mover para destaque · US$20', paying: 'Processando…', daysLeft: (n) => `${n} ${n === 1 ? 'dia' : 'dias'} restantes` },
 };
 
 // The first-listing gift email's "Verificar mi publicación" button lands here
@@ -38,6 +40,15 @@ const GIFT = {
     invalid: "This link isn't valid for this account.",
     error: "We couldn't activate the gift. Please try again later.",
     seeHome: 'See the home page', close: 'Close',
+  },
+  pt: {
+    claimedT: 'Imóvel verificado',
+    claimed: (d) => `Pronto: seu imóvel está agora verificado e em destaque na página inicial da Casa Libre${d ? ` até ${d}` : ''}, grátis. Mais compradores vão vê-lo.`,
+    expired: 'Este presente não está mais disponível: o link expirou.',
+    inactive: "Não conseguimos ativar o presente porque o anúncio não está ativo no momento.",
+    invalid: "Este link não é válido para esta conta.",
+    error: "Não conseguimos ativar o presente. Tente novamente mais tarde.",
+    seeHome: 'Ver a página inicial', close: 'Fechar',
   },
 };
 
@@ -68,6 +79,18 @@ const LGIFT = {
     invalid: "This link isn't valid for this account.",
     error: "We couldn't publish it. Please try again later.",
     close: 'Close',
+  },
+  pt: {
+    note: (d) => `Esta vai por nossa conta: publique grátis${d ? ` até ${d}` : ''}.`,
+    btn: 'Publicar grátis', busy: 'Publicando…',
+    claimedT: 'Pronto, esta vai por nossa conta!',
+    claimed: "Seu anúncio está sendo publicado grátis: estamos verificando as fotos e ele ficará ativo em instantes.",
+    expired: 'Este presente expirou. Você pode pagar para publicá‑lo.',
+    paid: 'Este anúncio já está pago.',
+    unavailable: 'Este anúncio não está mais aguardando pagamento.',
+    invalid: "Este link não é válido para esta conta.",
+    error: "Não conseguimos publicar. Por favor, tente novamente mais tarde.",
+    close: 'Fechar',
   },
 };
 
@@ -102,17 +125,30 @@ const D = {
     confirmT: 'Delete draft', confirm: 'Delete this draft?',
     types: { casa: 'House', departamento: 'Apartment', duplex: 'Duplex', terreno: 'Lot' }, sale: 'Sale', rent: 'Rent', property: 'Property',
   },
+  pt: {
+    tabActive: 'Publicados', tabDrafts: 'Rascunhos', tabRejected: 'Rejeitados', draftChip: 'Rascunho', cont: 'Continuar', del: 'Excluir',
+    emptyRejected: 'Nenhum anúncio rejeitado.',
+    scanningNote: 'Estamos analisando as fotos. Seu anúncio será publicado em breve.',
+    reviewNote: 'Em revisão: pode ser um anúncio duplicado. Tem os mesmos dados e fotos de outro seu imóvel, então não o publicamos. Enviamos um e‑mail para você.',
+    pendingNote: 'Salvo, mas ainda não está no site: você já usou os anúncios gratuitos deste mês. Pague para publicá‑lo.', payPublish: 'Pagar e publicar',
+    endedNote: (d) => `Encerrado${d ? ` em ${d}` : ''} e fora do site. Estenda para trazê‑lo de volta.`, extend: 'Estender', paidChip: 'Anúncio pago',
+    rejectedNote: 'Não publicamos: algumas fotos podem conter conteúdo adulto (+18), prejudicial, ofensivo ou sem relação com o imóvel. Substitua‑as e envie novamente.',
+    fix: 'Corrigir fotos', edit: 'Editar',
+    emptyDrafts: 'Nenhum rascunho. Se você começar a anunciar e não terminar, salvamos aqui.',
+    saved: (s) => `Salvo ${s}`, missing: 'Faltando', miss: { price: 'preço', area: 'área', phone: 'telefone', photos: 'fotos' },
+    confirmT: 'Excluir rascunho', confirm: 'Excluir este rascunho?',
+    types: { casa: 'Casa', departamento: 'Apartamento', duplex: 'Duplex', terreno: 'Terreno' }, sale: 'Venda', rent: 'Aluguel', property: 'Imóvel',
+},
 };
 
 function ago(iso, lang) {
   const m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
-  const es = lang !== 'en';
-  if (m < 1) return es ? 'recién' : 'just now';
-  if (m < 60) return es ? `hace ${m} min` : `${m} min ago`;
+  if (m < 1) return tr(lang, 'recién', 'just now', 'agora mesmo');
+  if (m < 60) return tr(lang, `hace ${m} min`, `${m} min ago`, `há ${m} min`);
   const h = Math.round(m / 60);
-  if (h < 24) return es ? `hace ${h} h` : `${h} h ago`;
+  if (h < 24) return tr(lang, `hace ${h} h`, `${h} h ago`, `há ${h} h`);
   const d = Math.round(h / 24);
-  return es ? `hace ${d} ${d === 1 ? 'día' : 'días'}` : `${d} ${d === 1 ? 'day' : 'days'} ago`;
+  return tr(lang, `hace ${d} ${d === 1 ? 'día' : 'días'}`, `${d} ${d === 1 ? 'day' : 'days'} ago`, `há ${d} ${d === 1 ? 'dia' : 'dias'}`);
 }
 
 function DraftCard({ d, lang, onContinue, onDelete }) {
@@ -324,7 +360,7 @@ export default function MyListingsPage() {
         const ok = gift.state === 'claimed';
         const l = ok && listings ? listings.find((x) => x.id === gift.id) : null;
         let until = '';
-        try { if (l?.promotion_expires_at) until = new Date(l.promotion_expires_at).toLocaleDateString(lang === 'en' ? 'en-US' : 'es-PY', { day: 'numeric', month: 'long' }); } catch {}
+        try { if (l?.promotion_expires_at) until = new Date(l.promotion_expires_at).toLocaleDateString(localeFor(lang, 'es-PY'), { day: 'numeric', month: 'long' }); } catch {}
         return (
           <div data-testid="gift-banner" className={`mb-6 rounded-card border-[1.5px] p-4 sm:p-5 flex items-start gap-3 ${ok ? 'border-ink bg-card shadow-hard-soft' : 'border-red-300 bg-red-50'}`}>
             {ok && <span aria-hidden className="shrink-0 w-9 h-9 rounded-full bg-ink text-paper inline-flex items-center justify-center text-[18px] font-bold">✓</span>}
@@ -421,11 +457,11 @@ export default function MyListingsPage() {
               </div>
             ) : l.payState ? (
               <div className="flex flex-col gap-2.5" data-testid={`pay-card-${l.payState}`}>
-                <p className="text-[12.5px] leading-snug text-ink/70">{l.payState === 'payment_pending' ? x.pendingNote : x.endedNote(l.paid?.until ? new Date(l.paid.until).toLocaleDateString(lang === 'es' ? 'es' : 'en-US', { day: 'numeric', month: 'long' }) : '')}</p>
+                <p className="text-[12.5px] leading-snug text-ink/70">{l.payState === 'payment_pending' ? x.pendingNote : x.endedNote(l.paid?.until ? new Date(l.paid.until).toLocaleDateString(localeFor(lang, 'es'), { day: 'numeric', month: 'long' }) : '')}</p>
                 {l.payState === 'payment_pending' && l.paid?.gift?.open && (() => {
                   const g = LGIFT[lang] || LGIFT.es;
                   let d = '';
-                  try { d = new Date(l.paid.gift.expires_at).toLocaleDateString(lang === 'es' ? 'es' : 'en-US', { day: 'numeric', month: 'long' }); } catch {}
+                  try { d = new Date(l.paid.gift.expires_at).toLocaleDateString(localeFor(lang, 'es'), { day: 'numeric', month: 'long' }); } catch {}
                   return (
                     <div className="rounded-[12px] border-[1.5px] border-ink bg-card p-3 flex flex-col gap-2" data-testid="listing-gift-offer">
                       <p className="text-[12.5px] leading-snug font-semibold">{g.note(d)}</p>

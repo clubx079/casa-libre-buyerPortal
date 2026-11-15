@@ -9,6 +9,7 @@ import { track } from '@/lib/analytics';
 const T = {
   es: { btn: 'Traducir al español', busy: 'Traduciendo…', note: 'Traducido automáticamente', original: 'Ver original', again: 'Ver traducción', err: 'No se pudo traducir. Probá de nuevo.' },
   en: { btn: 'Translate to English', busy: 'Translating…', note: 'Translated automatically', original: 'Show original', again: 'Show translation', err: 'Couldn’t translate. Please try again.' },
+  pt: { btn: 'Traduzir para o português', busy: 'Traduzindo…', note: 'Traduzido automaticamente', original: 'Ver original', again: 'Ver tradução', err: 'Não foi possível traduzir. Tente novamente.' },
 };
 
 const split = (s) => String(s || '').split(/\n{2,}|\r?\n/).map((x) => x.trim()).filter(Boolean);

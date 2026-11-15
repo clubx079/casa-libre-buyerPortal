@@ -7,6 +7,7 @@ import { COUNTRY } from '@/lib/country';
 const NAV = {
   es: { buy: 'Comprar', rent: 'Alquilar', sell: 'Vender', browse: 'Ver propiedades' },
   en: { buy: 'Buy', rent: 'Rent', sell: 'Sell', browse: 'Browse listings' },
+  pt: { buy: 'Comprar', rent: 'Alugar', sell: 'Vender', browse: 'Ver anúncios' },
 };
 
 export default function SiteNav() {
@@ -24,7 +25,7 @@ export default function SiteNav() {
       </div>
       <div className="flex items-center gap-3">
         <div className="hidden sm:flex items-center border border-ink/30 rounded-pill p-[3px] text-[12px] font-semibold">
-          {['es', 'en'].map((l) => <button key={l} onClick={() => setLang(l)} className={`px-3 py-1.5 rounded-pill ${lang === l ? 'bg-ink text-paper' : 'text-ink/55'}`}>{l.toUpperCase()}</button>)}
+          {['es', 'en', 'pt'].map((l) => <button key={l} onClick={() => setLang(l)} className={`px-3 py-1.5 rounded-pill ${lang === l ? 'bg-ink text-paper' : 'text-ink/55'}`}>{l.toUpperCase()}</button>)}
         </div>
         <AuthButton />
         <Link href="/propiedades" className="text-[14px] font-semibold px-[18px] py-2.5 bg-ink text-paper rounded-pill">{t.browse}</Link>

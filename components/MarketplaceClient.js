@@ -9,6 +9,7 @@ import { typeLabel, typeKey } from '@/lib/propertyType';
 import { T, fmtUsd, fmtPyg, shortUsd, titleCaseZone, bedAbbr, bathWord, parkWord, isUnverified, contactSellerFor, NO_PRICE_PIN } from '@/lib/ui';
 import { fmtRate } from '@/lib/money';
 import { useLang } from '@/lib/useLang';
+import { tr, localeFor } from '@/lib/i18n';
 import AuthButton from '@/components/AuthButton';
 import VerifiedTag from '@/components/VerifiedTag';
 import { StickyAppBadges } from '@/components/AppBadges';
@@ -52,6 +53,20 @@ const M = {
     inArea: 'Properties in the map area', showAll: 'Show all', emptyArea: 'No properties in this area. Zoom out or move the map.',
     loadMore: 'Load more properties', showing: (n, total) => `Showing ${n} of ${total}`,
     ownerDirect: 'Owner direct',
+  },
+  pt: {
+    searchPh: 'Pesquisar por bairro ou tipo…',
+    empty: 'Sem resultados — tente outro bairro',
+    types: { all: 'Tipo: todos', ...Object.fromEntries(typeOptions('pt')) },
+    pricesUsd: { all: 'Preço: todos', p1: 'Até US$ 100k', p2: 'US$ 100k – 200k', p3: 'Acima de US$ 200k' },
+    pricesPyg: { all: 'Preço: todos', p1: 'Até US$ 500/mês', p2: 'US$ 500 – 1.000/mês', p3: 'Acima de US$ 1.000/mês' },
+    beds: { all: 'Quartos: todos', b1: '1+', b2: '2+', b3: '3+' },
+    sort: { relevancia: 'Relevância', precio_asc: 'Preço: do menor ao maior', precio_desc: 'Preço: do maior ao menor', area_desc: 'Área: maior primeiro' },
+    listView: 'Lista', mapView: 'Mapa',
+    nearMe: 'Perto de mim', myLocation: 'Minha localização',
+    geoDenied: "Não conseguimos acessar sua localização",
+    inArea: 'Imóveis na área do mapa', showAll: 'Mostrar tudo', emptyArea: 'Nenhum imóvel nesta área. Afaste o zoom ou mova o mapa.',
+    loadMore: 'Carregar mais imóveis', showing: (n, total) => `Mostrando ${n} de ${total}`,
   },
 };
 
@@ -286,7 +301,7 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
 
   // ---- display helpers ----
   const title = (l) => {
-    let tp = typeLabel(l.type, lang) || (lang === 'es' ? 'Inmueble' : 'Property');
+    let tp = typeLabel(l.type, lang) || tr(lang, 'Inmueble', 'Property', 'Imóvel');
     if (tp === 'Departamento') tp = 'Depto'; // title-only abbreviation (mock: "Depto 2 dorm · Villa Morra")
     const zone = titleCaseZone(l.neighborhood || l.city || '');
     const base = l.beds ? `${tp} ${l.beds} ${bedAbbr(lang)}` : tp;
@@ -326,7 +341,7 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
     if (youMarkerRef.current) { try { youMarkerRef.current.setMap(null); } catch {} }
     youMarkerRef.current = new google.maps.Marker({
       position: loc, map, zIndex: 99999, icon: youAreHereIcon(google),
-      title: lang === 'es' ? 'Estás aquí' : 'You are here',
+      title: tr(lang, 'Estás aquí', 'You are here', 'Você está aqui'),
     });
   };
   // Locate + "near me" as ONE toggle, fired by the map's triangle button. On:
@@ -620,7 +635,7 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
         </div>
         <div className="flex items-center gap-3.5">
           <div className="flex items-center h-[40px] border border-ink/30 rounded-pill p-[3px] text-[12px] font-semibold">
-            {['es', 'en'].map((l) => (
+            {['es', 'en', 'pt'].map((l) => (
               <button key={l} onClick={() => setLang(l)} className={`h-full flex items-center px-3 rounded-pill ${lang === l ? 'bg-ink text-paper' : 'text-ink/55'}`}>{l.toUpperCase()}</button>
             ))}
           </div>
@@ -649,9 +664,9 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
           {Object.entries(m.beds).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
         {zoningOn && (
-          <select value={heightF} onChange={(e) => setHeightF(e.target.value)} className={selCls} title={lang === 'en' ? 'Zoning: how high the city allows building (Asunción only)' : 'Zonificación: cuántos pisos permite construir la ciudad (solo Asunción)'}>
-            <option value="all">{lang === 'en' ? 'Zoning · Asunción' : 'Zonificación · Asunción'}</option>
-            {CATEGORIES.filter((c) => c.id !== 'otro').map((c) => <option key={c.id} value={c.id}>{lang === 'en' ? c.en : c.es}</option>)}
+          <select value={heightF} onChange={(e) => setHeightF(e.target.value)} className={selCls} title={tr(lang, 'Zonificación: cuántos pisos permite construir la ciudad (solo Asunción)', 'Zoning: how high the city allows building (Asunción only)', 'Zoneamento: quantos andares a cidade permite construir (só Asunción)')}>
+            <option value="all">{tr(lang, 'Zonificación · Asunción', 'Zoning · Asunción', 'Zoneamento · Asunción')}</option>
+            {CATEGORIES.filter((c) => c.id !== 'otro').map((c) => <option key={c.id} value={c.id}>{c[lang] || c.es}</option>)}
           </select>
         )}
         {/* view toggle — mockup .view-toggle, right-aligned, mobile only */}
@@ -756,7 +771,7 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
           {!mapReady && (
             <div className="absolute inset-0 z-[5] flex flex-col items-center justify-center gap-3" style={{ background: 'repeating-linear-gradient(45deg,#EAE6DD,#EAE6DD 10px,#F4F1EA 10px,#F4F1EA 20px)' }}>
               <span className="w-7 h-7 rounded-full border-2 border-ink/20 border-t-ink animate-spin" aria-hidden="true" />
-              <span className="font-mono text-[12px] text-ink/55">{lang === 'es' ? 'Cargando mapa…' : 'Loading map…'}</span>
+              <span className="font-mono text-[12px] text-ink/55">{tr(lang, 'Cargando mapa…', 'Loading map…', 'Carregando mapa…')}</span>
             </div>
           )}
         </div>

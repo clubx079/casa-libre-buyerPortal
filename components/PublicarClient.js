@@ -26,6 +26,12 @@ const DICT = {
     sub: 'Tell us about your property. It goes live in the marketplace instantly.',
     btn: 'List a property',
   },
+  pt: {
+    navBuy: 'Comprar', navRent: 'Alugar', navSell: 'Vender', navCta: 'Publicar grátis',
+    title: 'Anuncie seu imóvel', titleSerif: 'em minutos.',
+    sub: 'Conte-nos sobre seu imóvel. Ele fica no marketplace imediatamente.',
+    btn: 'Anunciar imóvel',
+  },
 };
 
 export default function PublicarClient() {
@@ -61,7 +67,7 @@ export default function PublicarClient() {
         </div>
         <div className="flex items-center gap-3.5">
           <div className="flex items-center h-[40px] border border-ink/30 rounded-pill p-[3px] text-[12px] font-semibold">
-            {['es', 'en'].map((l) => (
+            {['es', 'en', 'pt'].map((l) => (
               <button key={l} onClick={() => setLang(l)} className={`h-full flex items-center px-3 rounded-pill ${lang === l ? 'bg-ink text-paper' : 'text-ink/55'}`}>{l.toUpperCase()}</button>
             ))}
           </div>

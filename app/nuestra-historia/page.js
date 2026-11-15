@@ -1,6 +1,6 @@
 import MarketingShell from '@/components/MarketingShell';
 import Article from '@/components/marketing/Article';
-import { COUNTRY } from '@/lib/country';
+import { COUNTRY, COUNTRY_PT } from '@/lib/country';
 
 export const metadata = {
   title: `Nuestra historia — Casa Libre, el marketplace de propiedades de ${COUNTRY.name}`,
@@ -37,6 +37,21 @@ const content = {
         ['p', 'From Asunción and Greater Asunción to Ciudad del Este, Encarnación and San Bernardino, Casa Libre shows you what’s available near you, on an easy-to-use map.'],
       ] },
       { type: 'cta', title: 'Find your next place', sub: `Browse thousands of properties across ${COUNTRY.name}, or list yours for free.`, primary: ['Browse listings', '/propiedades'], secondary: ['List for free', '/publicar'] },
+    ],
+  },
+  pt: {
+    hero: { eyebrow: 'Nossa história', title: 'Um lugar,', titleSerif: 'livremente.', sub: `Casa Libre começou a partir de uma ideia simples: encontrar e anunciar imóveis ${COUNTRY_PT.in} não deveria custar uma fortuna nem ser complicado.` },
+    blocks: [
+      { type: 'prose', nodes: [
+        ['p', `Durante anos, comprar ou alugar um imóvel ${COUNTRY_PT.in} significou pular entre portais pagos, classificados bagunçados e anúncios duplicados. Anunciar era pior: planos caros, comissões e burocracia. Acreditávamos que havia um jeito melhor.`],
+        ['h2', 'Nossa missão'],
+        ['p', `<strong>Casa Libre</strong> é o marketplace imobiliário que mais cresce ${COUNTRY_PT.in}: casas, apartamentos, dúplex e espaços comerciais para venda e aluguel, com busca no mapa, fotos reais, preços em ${COUNTRY.currencyName} e dólares, contato direto por WhatsApp e um app para iPhone e Android. Buscar é grátis. E anunciar seu imóvel também.`],
+        ['h2', 'Por que é grátis'],
+        ['p', 'Acreditamos que o mercado imobiliário funciona melhor quando qualquer pessoa pode anunciar sem barreiras. Por isso, anunciar no Casa Libre não tem custo: tudo que você precisa é uma conta. Assim, cada anúncio tem um dono real e os compradores encontram mais e melhores opções.'],
+        ['h2', `Para ${COUNTRY_PT.all}`],
+        ['p', 'De Asunción e Grande Asunción até Ciudad del Este, Encarnación e San Bernardino, Casa Libre mostra o que está disponível perto de você, em um mapa fácil de usar.'],
+      ] },
+      { type: 'cta', title: 'Encontre seu próximo lugar', sub: `Explore milhares de imóveis em ${COUNTRY_PT.all}, ou anuncie o seu gratuitamente.`, primary: ['Ver imóveis', '/propiedades'], secondary: ['Anunciar grátis', '/publicar'] },
     ],
   },
 };

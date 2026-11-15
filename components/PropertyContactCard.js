@@ -26,6 +26,13 @@ const T = {
     // The outgoing message is ALWAYS Spanish regardless of UI language.
     msg: (name, url) => `Hola! Que tal? Está disponible la propiedad?\n\n${url}`,
   },
+  pt: {
+    owner: 'O proprietário',
+    wa: 'Chat no WhatsApp', call: 'Ligar', copy: 'Copiar número', copied: 'Número copiado',
+    noContact: 'Sem contato disponível',
+    // The outgoing message is ALWAYS Spanish regardless of UI language.
+    msg: (name, url) => `Hola! Que tal? Está disponible la propiedad?\n\n${url}`,
+  },
 };
 
 const WaGlyph = ({ size = 21 }) => (

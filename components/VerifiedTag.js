@@ -1,3 +1,4 @@
+import { tr } from '@/lib/i18n';
 // Casa Libre "Verificada" (verified) tag — shown on every paid promotion (both the
 // US$5 verified plan and the US$20 landing plan). Brand-mono: ink pill with a paper
 // verified-seal icon + text (ink/paper only, no color, no emoji). The check inside the
@@ -18,7 +19,7 @@ export default function VerifiedTag({ lang = 'es', className = '' }) {
   return (
     <span className={`inline-flex items-center gap-1 bg-ink text-paper rounded-pill font-bold uppercase tracking-label leading-none ${className}`}>
       <VerifiedIcon className="w-[1.15em] h-[1.15em] -ml-0.5" />
-      {lang === 'es' ? 'Verificada' : 'Verified'}
+      {tr(lang, 'Verificada', 'Verified', 'Verificado')}
     </span>
   );
 }

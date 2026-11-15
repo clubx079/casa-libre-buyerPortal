@@ -16,6 +16,7 @@ import { typeOptions, normalizeTypeKey, areaRange } from '@/lib/propertyTypeOpti
 import { createContext, useContext, useState, useCallback, useRef, useEffect, Fragment } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLang } from '@/lib/useLang';
+import { tr, localeFor } from '@/lib/i18n';
 import { useAuth } from '@/components/AuthProvider';
 import { track } from '@/lib/analytics';
 import { hasRooms, cleanStreet } from '@/lib/listingInput';
@@ -174,6 +175,72 @@ const DICT = {
     resumedNote: 'Picking up where you left off.', startOver: 'Start over',
     errArea: 'Enter the area', errAreaRange: (max) => `Area must be between 5 and ${max.toLocaleString('en-US')} m²`, errPhone: 'Enter a valid phone', errPhotos: 'Add at least one photo',
     errSubmit: 'Could not publish. Please try again.',
+  },
+  pt: {
+    steps: ['Operação', 'Vendedor', 'Localização', 'Detalhes', 'Confirmar'],
+    q1: 'O que você quer fazer?', sell: 'Vender', rent: 'Alugar',
+    q2: 'Você é o proprietário ou um corretor?', owner: 'Proprietário', agent: 'Corretor',
+    name: 'Seu nome', namePh: 'Ana Giménez', email: 'Seu e‑mail', emailPh: 'ana@email.com',
+    termsPre: 'Eu concordo com os ', termsLink: 'Termos de Serviço', termsMid: ' e a ', privacyLink: 'Política de Privacidade', errTerms: 'Para continuar, aceite os Termos de Serviço.',
+    q3: 'Onde fica o imóvel?', addrPh: 'ex.: Mcal. López 1234, Asunción', addrHint: 'Digite a rua e o número e escolha o endereço na lista.',
+    barrio: 'Bairro', ciudad: 'Cidade',
+    barrioPh: 'ex.: Villa Morra', errBarrio: 'Informe o bairro',
+    errStreet: 'Comece digitando a rua e o número (ex.: Mcal. López 1234) e escolha o endereço na lista.',
+    pinLocating: 'Localizando…',
+    pinApprox: "Não encontramos o endereço exato nessa cidade. Marque seu imóvel no mapa.",
+    pinOpen: 'Marcar no mapa', pinAdjust: 'Ajustar no mapa', pinOk: 'Localização marcada no mapa.',
+    pinTitle: 'Confirme a localização', pinHelp: 'Busque o endereço ou um local próximo, depois arraste o pin até seu imóvel ou toque no mapa onde ele está.', pinSearchPh: 'Buscar endereço ou local', pinDragHint: 'Arraste o pin vermelho até seu imóvel', pinCheck: 'Verifique se o pin está exatamente no seu imóvel.',
+    pinConfirm: 'Confirmar localização', pinCancel: 'Cancelar', pinMapError: "Não foi possível carregar o mapa. Tente novamente em instantes.",
+    pinFar: (city) => `O pin está longe de ${city || 'a cidade'}. Tem certeza de que o imóvel está aí?`,
+    beds: 'Quartos', baths: 'Banheiros',
+    verifyTitle: 'Confirme sua conta', verifySub: (e) => `Para publicar, continue com o Google ou enviaremos um código de 6 dígitos para ${e} ou pelo WhatsApp.`, sendCode: 'Enviar código',
+    sendByEmail: 'Enviar código por e‑mail', sendByWa: 'Enviar código por WhatsApp',
+    waOtpSub: (p) => `Digite o código que enviamos por WhatsApp para ${p}.`, waTest: (c) => `Modo teste (nenhum WhatsApp será enviado): o código é ${c}`,
+    saveEdit: 'Salvar alterações', savingEdit: 'Salvando…', saveVerified: 'Salvar e verificar por US$5', saveHome: 'Salvar e destacar na página inicial por US$20',
+    activePlan: (home, d) => `${home ? 'Na página inicial' : 'Verificado'} até ${d}.`, editedTitle: 'Alterações salvas!',
+    editedLive: 'Seu anúncio agora exibe as alterações.', editedChecking: "Estamos revisando as novas fotos. Ele ficará visível novamente assim que terminarmos, em alguns minutos.",
+    editedDup: "Ele ficou igual a outro dos seus anúncios, então vamos revisá‑lo antes de exibi‑lo. Enviaremos um e‑mail.",
+    editLock: { checking: "Ainda estamos revisando as fotos. Tente novamente em alguns minutos.", taken_down: "Este anúncio não está visível porque nossa equipe está revisando. Fale conosco para alterá‑lo.", held_duplicate: 'Este anúncio está em revisão. Fale conosco para alterá‑lo.', payment_pending: 'Primeiro complete o pagamento deste anúncio.', locked: "Este anúncio não pode ser editado." },
+    errEditLoad: "Não foi possível abrir o anúncio. Tente novamente.", errPhotosMin: 'Adicione ao menos uma foto',
+    waCheckTitle: 'Confirme seu WhatsApp', waCheckSub: (p) => `Os compradores vão te enviar mensagens no ${p}. Para garantir que chegue, enviaremos um código de 6 dígitos por WhatsApp para esse número.`,
+    waCheckSend: 'Enviar código por WhatsApp', waCheckCode: (p) => `Digite o código que enviamos por WhatsApp para ${p}.`, waCheckChange: 'Alterar o número',
+    errWaCheck: "Não foi possível enviar o código. Verifique o número e tente novamente.", errWaCode: "Código incorreto.", errWaExpired: 'O código expirou. Solicite um novo.',
+    errWaSend: 'Não foi possível enviar o código por WhatsApp. Tente por e‑mail.', errWaNotLinked: "Esse WhatsApp ainda não está vinculado à conta deste e‑mail. Use o código por e‑mail.",
+    fWa: 'Seu WhatsApp (para compradores)',
+    otpTitle: 'Código de confirmação enviado', otpSub: (e) => `Digite o código que enviamos por e‑mail para ${e} para verificar seu e‑mail.`,
+    codePh: 'Código de 6 dígitos', verify: 'Verificar', verifying: 'Verificando…', resend: 'Reenviar código', resent: 'Código reenviado',
+    haveAccount: 'Já existe uma conta', existsSub: (e) => `${e} já tem uma conta no Casa Libre. Entre com o Google ou enviaremos um código de 6 dígitos por e‑mail ou WhatsApp.`, haveAccountSub: (e) => `Enviamos um código para ${e}. Digite‑o para continuar.`, googleBtn: 'Continuar com Google', orText: 'ou', login: 'Entrar', errGeneric: 'Algo deu errado. Tente novamente.', doneDash: 'Ir ao meu painel',
+    d4Title: 'Detalhes do imóvel', d4Sub: 'Preencha os detalhes do seu imóvel.',
+    cTitle: 'Confirme os detalhes', cSub: 'Verifique seu imóvel antes de publicá‑lo.', cCheck: 'Confirmo que os detalhes estão corretos', errConfirm: 'Confirme que os detalhes estão corretos para publicar.',
+    cOp: 'Operação', cAddr: 'Endereço', cPhone: 'WhatsApp', cContact: 'Contato', cPhotos: (n) => `${n} foto${n === 1 ? '' : 's'}`,
+    fType: 'Tipo de imóvel', typePh: 'Selecione o tipo', types: typeOptions('pt'),
+    fPrice: (m) => (m === 'venta' ? 'Preço' : 'Aluguel mensal'), fPricePh: (m) => (m === 'venta' ? '145.000' : '4.500.000'),
+    fArea: 'Área (m²)', fDesc: 'Descrição', fDescPh: 'Apartamento iluminado com varanda, a 2 quadras do Shopping del Sol…',
+    fPhone: 'WhatsApp / telefone (para compradores)', fPhonePh: '0981 123 456',
+    fPhotos: 'Arraste ou escolha suas fotos', fPhotosSub: 'mín. 1 foto · JPG ou PNG', photosChosen: (n) => `${n} foto${n === 1 ? '' : 's'} selecionada${n === 1 ? '' : 's'}`,
+    publishBtn: 'Publicar grátis', publishing: 'Publicando…',
+    paidNote: (n) => `Você já usou suas ${n} publicações grátis este mês. Esta custa:`, paidLive: (d) => `ativa ${d} dias`, publishPaid: (p, pl) => `Publicar · ${p}${pl === 'home' ? ' + US$20' : pl === 'verified' ? ' + US$5' : ''}`,
+    dupTitle: 'Em revisão: pode ser um duplicado', dupSub: 'Ele tem os mesmos detalhes e fotos de outro dos seus anúncios, por isso não o publicamos. Enviamos um e‑mail.',
+    pendTitle: 'Seu anúncio está salvo', pendSub: 'Precisa do pagamento para ficar ativo. Você pode pagar em Meus anúncios.', payNow: 'Pagar e publicar',
+    backToApp: 'Voltar ao app',
+    doneTitle: 'Seu anúncio está ativo!', doneSub: 'Ele já aparece no marketplace do Casa Libre.', doneView: 'Ver meu anúncio', doneBrowse: 'Ver anúncios',
+    scanTitle: 'Pronto! Estamos revisando suas fotos', scanSub: 'Ele ficará ativo em breve. Acompanhe em Meus anúncios.', scanView: 'Meus anúncios',
+    planTitle: 'Adicionar visibilidade',
+    v5Title: 'Selo Verificado no marketplace', v5Price: 'US$5 · 30 dias',
+    v20Title: 'Exiba seu imóvel na página inicial com o selo Verificado', v20Price: 'US$20 · 30 dias',
+    publishVerified: 'Publicar por US$5', publishHome: 'Publicar por US$20',
+    usTitle: 'Adicione visibilidade ao seu anúncio', usSub: 'Escolha um plano para destacar seu anúncio por 30 dias.',
+    usVerify: 'Verificar · US$5', usHome: 'Na página inicial · US$20', payingMsg: 'Processando pagamento…',
+    hiDoneVerified: 'Seu anúncio está verificado por 30 dias!', hiDoneHome: 'Seu anúncio está na página inicial por 30 dias!',
+    next: 'Próximo', back: '← Voltar', close: 'Fechar', sending: 'Enviando…',
+    errSeller: 'Escolha proprietário ou corretor', errName: 'Informe seu nome', errEmail: 'Informe um e‑mail válido', errAddr: 'Escolha um endereço',
+    errSendOtp: 'Não foi possível enviar o código. Tente novamente.', emailTaken: 'Este e‑mail já possui uma conta.', loginInstead: 'Entre para continuar',
+    errCode: 'Código inválido ou expirado', errType: 'Selecione o tipo de imóvel', errPrice: 'Informe um preço válido',
+    errPriceFloorSale: 'O preço de venda deve ser no mínimo US$ 5.000', errPriceFloorRent: `Aluguel mensal deve ser no mínimo ${COUNTRY.currencySymbol} ${COUNTRY.rentFloorLocal.toLocaleString('pt-BR')}`,
+    currencyPh: 'Moeda', errCurrency: 'Selecione a moeda', extraNote: 'Publicado em US$, convertido à taxa do dia.',
+    resumedNote: 'Continuando de onde parou.', startOver: 'Começar de novo',
+    errArea: 'Informe a área', errAreaRange: (max) => `A área deve estar entre 5 e ${max.toLocaleString('pt-BR')} m²`, errPhone: 'Informe um telefone válido', errPhotos: 'Adicione ao menos uma foto',
+    errSubmit: 'Não foi possível publicar. Tente novamente.',
   },
 };
 
@@ -1427,7 +1494,7 @@ export default function SellFlowProvider({ children }) {
                     {/* Promotion plans — two prominent, mutually-exclusive boxes. On a paid
                         listing the plan is charged right after the listing's own payment. */}
                     {editId && editPromo && (
-                      <div className="mt-4 rounded-[14px] border-[1.5px] border-ink/30 bg-card px-4 py-3 text-[13px] font-semibold flex items-center gap-2"><VerifiedIcon className="w-4 h-4" />{t.activePlan(editPromo.plan === 'home', new Date(editPromo.until).toLocaleDateString(lang === 'es' ? 'es-PY' : 'en-US', { day: 'numeric', month: 'long' }))}</div>
+                      <div className="mt-4 rounded-[14px] border-[1.5px] border-ink/30 bg-card px-4 py-3 text-[13px] font-semibold flex items-center gap-2"><VerifiedIcon className="w-4 h-4" />{t.activePlan(editPromo.plan === 'home', new Date(editPromo.until).toLocaleDateString(localeFor(lang, 'es-PY'), { day: 'numeric', month: 'long' }))}</div>
                     )}
                     {(!editId || editPromo?.plan !== 'home') && <div className="mt-4">
                       <div className="text-[13px] font-semibold mb-2">{t.planTitle}</div>
