@@ -3,6 +3,7 @@
 // so the secret AiroBase key never leaves the server. CORS-open (public data).
 import { NextResponse } from 'next/server';
 import { getListings, getMobileSlimListings } from '@/lib/listings';
+import { attachSellerPhotos } from '@/lib/sellerPhotos';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -27,7 +28,9 @@ export async function GET(req) {
     // url — no phone/contact/description/image array. Cached 5 min server-side.
     if (url.searchParams.get('slim') === '1') {
       const { rate, totalCount, listings } = await getMobileSlimListings(mode0);
-      return NextResponse.json({ rate, count: listings.length, total: totalCount, listings }, { headers: CORS });
+      // seller_photo (the seller's approved profile photo) is attached after the cache, as on the website
+      const withPhotos = await attachSellerPhotos(listings);
+      return NextResponse.json({ rate, count: withPhotos.length, total: totalCount, listings: withPhotos }, { headers: CORS });
     }
     // Clamp to the app's real need (≤600). Was 5000 — a single call that dumped
     // the whole catalog. The app requests 600, so this is invisible to it.
@@ -42,7 +45,8 @@ export async function GET(req) {
     // The app doesn't show "Contact seller for …" yet (lib/unverified.js): listings with a
     // field we couldn't verify stay website-only for now.
     const shown = listings.filter((l) => !l.unverified);
-    return NextResponse.json({ rate, count: shown.length, total: totalCount, listings: shown }, { headers: CORS });
+    const withPhotos = await attachSellerPhotos(shown);
+    return NextResponse.json({ rate, count: withPhotos.length, total: totalCount, listings: withPhotos }, { headers: CORS });
   } catch (e) {
     return NextResponse.json({ error: 'failed', detail: String(e?.message || e) }, { status: 500, headers: CORS });
   }

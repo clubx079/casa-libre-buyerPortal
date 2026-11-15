@@ -1,6 +1,7 @@
 // Hydrate a set of listing ids (used by the mobile Saved tab). POST { ids: [] }.
 import { NextResponse } from 'next/server';
 import { getListingsByIds } from '@/lib/listings';
+import { attachSellerPhotos } from '@/lib/sellerPhotos';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -22,7 +23,7 @@ export async function POST(req) {
     const { rate, listings } = await getListingsByIds(ids);
     // The app doesn't show "Contact seller for …" yet (lib/unverified.js): listings with a
     // field we couldn't verify stay website-only for now.
-    return NextResponse.json({ rate, listings: listings.filter((l) => !l.unverified) }, { headers: CORS });
+    return NextResponse.json({ rate, listings: await attachSellerPhotos(listings.filter((l) => !l.unverified)) }, { headers: CORS });
   } catch (e) {
     return NextResponse.json({ error: 'failed', detail: String(e?.message || e) }, { status: 500, headers: CORS });
   }

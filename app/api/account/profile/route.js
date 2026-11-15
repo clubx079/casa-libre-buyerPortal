@@ -9,7 +9,7 @@ import { NextResponse } from 'next/server';
 import { getSession, setSessionCookie } from '@/lib/auth';
 import { getUserById, publicUser } from '@/lib/users';
 import { update } from '@/lib/db';
-import { validateProfile, formValues, isMissingColumnError } from '@/lib/sellerProfile';
+import { validateProfile, formValues, isMissingColumnError, splitFullName } from '@/lib/sellerProfile';
 import { invalidateSellerProfiles } from '@/lib/sellerPhotos';
 
 export const runtime = 'nodejs';
@@ -66,11 +66,21 @@ export async function PATCH(req) {
   }
   if (!Object.keys(patch).length) return NextResponse.json({ error: 'nothing_to_update' }, { status: 400 });
   patch.updated_at = new Date().toISOString();
+  // One name only: a name saved here (older app versions' Settings) also becomes the
+  // Perfil profesional first / last name, so the listing card and the account agree.
+  const named = typeof body.full_name === 'string' && patch.full_name;
+  const where = `id=eq.${encodeURIComponent(s.uid)}`;
   try {
-    await update('users', `id=eq.${encodeURIComponent(s.uid)}`, patch, { returning: 'minimal' });
+    if (named) {
+      try { await update('users', where, { ...patch, ...splitFullName(patch.full_name) }, { returning: 'minimal' }); }
+      catch (e) { if (!isMissingColumnError(e)) throw e; await update('users', where, patch, { returning: 'minimal' }); }
+    } else {
+      await update('users', where, patch, { returning: 'minimal' });
+    }
   } catch (e) {
     return NextResponse.json({ error: 'update_failed', detail: e?.message }, { status: 500 });
   }
+  if (named) invalidateSellerProfiles();
   const fresh = await getUserById(s.uid);
   if (fresh) setSessionCookie(fresh); // refresh name in the session token
   return NextResponse.json({ ok: true, user: publicUser(fresh) });

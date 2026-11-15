@@ -1,6 +1,7 @@
 // Single listing for the mobile app. `id` is the property UUID (or slug).
 import { NextResponse } from 'next/server';
 import { getListing } from '@/lib/listings';
+import { attachSellerPhoto } from '@/lib/sellerPhotos';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -22,7 +23,9 @@ export async function GET(req, { params }) {
     // The app doesn't show "Contact seller for …" yet (lib/unverified.js): listings with a
     // field we couldn't verify stay website-only for now.
     if (!l || l.unverified) return NextResponse.json({ error: 'not_found' }, { status: 404, headers: CORS });
-    return NextResponse.json({ listing: l }, { headers: CORS });
+    // The seller's approved photo and "Perfil profesional" (name, title, company, website), only for
+    // listings a seller published, exactly as the website's property page shows them.
+    return NextResponse.json({ listing: await attachSellerPhoto(l) }, { headers: CORS });
   } catch (e) {
     return NextResponse.json({ error: 'failed', detail: String(e?.message || e) }, { status: 500, headers: CORS });
   }

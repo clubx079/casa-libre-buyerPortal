@@ -85,3 +85,18 @@ test('seller info for the "Sobre el vendedor" popover: never the phone, empty fi
   assert.deepEqual(sellerInfo({ created_at: '2026-01-01T00:00:00Z' }, 0), { name: null, title: null, company: null, website: null, website_label: null, member_since: '2026-01-01T00:00:00Z', wa_verified: false, active_listings: null });
   assert.equal(sellerInfo({ created_at: null }, null).active_listings, null);
 });
+
+test('one name: when first/last no longer match full_name (changed elsewhere), full_name wins', async () => {
+  const { currentName, formValues, publicProfile } = await import('../lib/sellerProfile.js');
+  // the old app Settings saved only full_name
+  const row = { full_name: 'Juan Pérez', first_name: 'Omar', last_name: 'Faiz', job_title: 'Agente' };
+  assert.deepEqual(currentName(row), { first_name: 'Juan', last_name: 'Pérez', saved: true });
+  assert.equal(formValues(row).first_name, 'Juan');
+  assert.equal(formValues(row).last_name, 'Pérez');
+  assert.equal(publicProfile(row).name, 'Juan Pérez');
+  // in sync: the saved split is kept (e.g. two first names)
+  const two = { full_name: 'María José López', first_name: 'María José', last_name: 'López' };
+  assert.deepEqual(currentName(two), { first_name: 'María José', last_name: 'López', saved: true });
+  // never saved: the card keeps the listing's contact name
+  assert.equal(publicProfile({ full_name: 'Ana López', job_title: 'Agente' }).name, null);
+});
