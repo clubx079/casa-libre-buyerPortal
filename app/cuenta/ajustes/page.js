@@ -129,7 +129,7 @@ export default function SettingsPage() {
     } catch {}
   }, []);
   const [pBusy, setPBusy] = useState(false); const [pMsg, setPMsg] = useState(null);
-  const [newEmail, setNewEmail] = useState(''); const [emCode, setEmCode] = useState(''); const [emStage, setEmStage] = useState('idle'); const [emBusy, setEmBusy] = useState(false); const [emMsg, setEmMsg] = useState(null);
+  const [newEmail, setNewEmail] = useState(''); const [emCode, setEmCode] = useState(''); const [emStage, setEmStage] = useState('idle'); const [emBusy, setEmBusy] = useState(false); const [emMsg, setEmMsg] = useState(null); const [emOpen, setEmOpen] = useState(false);
 
   useEffect(() => { fetch('/api/account/profile').then((r) => r.json()).then((j) => { if (!j.error) setProf((p) => ({ ...p, ...j })); }).catch(() => {}); }, []);
   // the approved photo / logo, for the seller-card preview
@@ -198,7 +198,7 @@ export default function SettingsPage() {
         const r = await post('/api/account/change-email', { newEmail, code: emCode });
         const j = await r.json();
         if (!r.ok || !j.ok) { setEmMsg({ text: t.errCode }); return; }
-        setProf((p) => ({ ...p, email: newEmail })); setEmStage('idle'); setNewEmail(''); setEmCode(''); setEmMsg({ text: t.emailChanged, ok: true });
+        setProf((p) => ({ ...p, email: newEmail })); setEmStage('idle'); setNewEmail(''); setEmCode(''); setEmOpen(false); setEmMsg({ text: t.emailChanged, ok: true });
       }
     } catch { setEmMsg({ text: t.err }); } finally { setEmBusy(false); }
   };
@@ -266,31 +266,37 @@ export default function SettingsPage() {
         </form>
       </Card>
 
-      <Card title={t.emailSec}>
-        <form onSubmit={emailStep} className="flex flex-col gap-3.5">
-          <div><label className={labelCls}>{t.currentEmail}</label><div className="font-mono text-[13px] text-ink/55 px-1">{prof.email}</div></div>
-          <div><label className={labelCls}>{t.newEmail}</label><input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} className={inputCls} disabled={emStage === 'code'} /></div>
-          {emStage === 'code' && <div><label className={labelCls}>{t.code}</label><input value={emCode} onChange={(e) => setEmCode(e.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" placeholder="000000" className={`${inputCls} tracking-[6px] font-mono text-center`} /></div>}
-          <div><button type="submit" disabled={emBusy} className={btn}>{emStage === 'code' ? t.verify : t.sendCode}</button></div>
-          <Msg {...(emMsg || {})} text={emMsg?.text} />
-        </form>
-      </Card>
-
       <Card title={t.signSec}>
         <p className="text-[14px] text-ink/70 mb-4">{t.signText}</p>
         {notice && <Msg text={notice === 'confirmed' ? t.confirmedNow : t.confirmBad} ok={notice === 'confirmed'} />}
         <div className="flex flex-col divide-y divide-ink/10 mt-2" data-testid="sign-in-methods">
-          <div className="flex items-center justify-between gap-3 py-3">
-            <div className="min-w-0">
-              <div className="text-[13px] font-semibold">{t.emailRow}</div>
-              <div className="font-mono text-[12.5px] text-ink/55 truncate">{prof.email}</div>
+          <div className="py-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-[13px] font-semibold">{t.emailRow}</div>
+                <div className="font-mono text-[12.5px] text-ink/55 truncate">{prof.email}</div>
+              </div>
+              <div className="shrink-0 flex items-center gap-2">
+                {prof.email_confirmed
+                  ? <span className="text-[12px] font-bold text-green-800 bg-green-50 border border-green-200 rounded-pill px-3 py-1">✓ {t.confirmed}</span>
+                  : <>
+                      <span className="text-[12px] font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded-pill px-3 py-1">{t.notConfirmed}</span>
+                      <button type="button" onClick={resendConfirm} disabled={cBusy} className="text-[12.5px] font-semibold underline disabled:opacity-50">{t.resend}</button>
+                    </>}
+                {!emOpen && <button type="button" onClick={() => { setEmOpen(true); setEmMsg(null); }} className="text-[12.5px] font-semibold underline" data-testid="change-email-open">{t.emailSec}</button>}
+              </div>
             </div>
-            {prof.email_confirmed
-              ? <span className="shrink-0 text-[12px] font-bold text-green-800 bg-green-50 border border-green-200 rounded-pill px-3 py-1">✓ {t.confirmed}</span>
-              : <div className="shrink-0 flex items-center gap-2">
-                  <span className="text-[12px] font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded-pill px-3 py-1">{t.notConfirmed}</span>
-                  <button type="button" onClick={resendConfirm} disabled={cBusy} className="text-[12.5px] font-semibold underline disabled:opacity-50">{t.resend}</button>
-                </div>}
+            {emOpen && (
+              <form onSubmit={emailStep} className="flex flex-col gap-3 mt-3" data-testid="change-email">
+                <div><label className={labelCls}>{t.newEmail}</label><input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} className={inputCls} disabled={emStage === 'code'} autoComplete="email" /></div>
+                {emStage === 'code' && <div><label className={labelCls}>{t.code}</label><input value={emCode} onChange={(e) => setEmCode(e.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" placeholder="000000" className={`${inputCls} tracking-[6px] font-mono text-center`} /></div>}
+                <div className="flex items-center gap-3">
+                  <button type="submit" disabled={emBusy} className={btn}>{emStage === 'code' ? t.verify : t.sendCode}</button>
+                  <button type="button" onClick={() => { setEmOpen(false); setEmStage('idle'); setNewEmail(''); setEmCode(''); setEmMsg(null); }} className="text-[13px] font-semibold text-ink/60">{t.cancel}</button>
+                </div>
+              </form>
+            )}
+            <Msg {...(emMsg || {})} text={emMsg?.text} />
           </div>
           {waBlock('sign')}
         </div>
