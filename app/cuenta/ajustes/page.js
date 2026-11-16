@@ -1,9 +1,10 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
 import ProfilePhotoCard from '@/components/account/ProfilePhotoCard';
 import { ERRORS as PRO_ERRORS, normalizeWebsite, websiteLabel } from '@/lib/sellerProfile';
+import { profileCompletion } from '@/lib/profileCompletion';
 
 const T = {
   es: {
@@ -13,6 +14,8 @@ const T = {
     waConfirmed: 'WhatsApp confirmado', waNone: 'Todavía no confirmaste tu WhatsApp. Confirmalo para que los compradores te escriban con confianza.',
     proSaved: 'Perfil guardado ✓ Ya se muestra en tus publicaciones.', proPending: 'Guardamos tu nombre. El cargo, la empresa y el sitio web se van a poder guardar muy pronto (pendiente de migración).', proFix: 'Revisá los campos marcados.',
     preview: 'Así te ven los compradores', listedBy: 'Publicado por',
+    progTitle: 'Tu perfil está completo al', progDone: '¡Perfil completo! Los compradores ven todos tus datos.', progMissing: 'Te falta:', progSave: 'Acordate de guardar los cambios.',
+    items: { photo: 'Foto o logo', first_name: 'Nombre', last_name: 'Apellido', job_title: 'Cargo', company_name: 'Empresa', company_website: 'Sitio web', whatsapp: 'WhatsApp confirmado' },
     emailSec: 'Cambiar email', currentEmail: 'Email actual', newEmail: 'Nuevo email', sendCode: 'Enviar código', code: 'Código', verify: 'Verificar y cambiar', codeSent: 'Enviamos un código al nuevo email.', emailChanged: 'Email actualizado ✓',
     signSec: 'Cómo ingresás', signText: 'Ingresás con un código que te enviamos por email o por WhatsApp, o con Google / Apple. No necesitás contraseña.',
     emailRow: 'Email', waRow: 'WhatsApp', confirmed: 'Confirmado', notConfirmed: 'Sin confirmar', resend: 'Reenviar confirmación', resent: 'Te enviamos el enlace. Revisá tu email.',
@@ -30,6 +33,8 @@ const T = {
     waConfirmed: 'Confirmed WhatsApp', waNone: "You haven't confirmed your WhatsApp yet. Confirm it so buyers can message you with confidence.",
     proSaved: 'Profile saved ✓ It now shows on your listings.', proPending: 'We saved your name. Title, company and website can be saved very soon (migration pending).', proFix: 'Check the highlighted fields.',
     preview: 'How buyers see you', listedBy: 'Listed by',
+    progTitle: 'Your profile is', progDone: 'Profile complete! Buyers see all your details.', progMissing: 'Still missing:', progSave: 'Remember to save your changes.',
+    items: { photo: 'Photo or logo', first_name: 'First name', last_name: 'Last name', job_title: 'Title', company_name: 'Company', company_website: 'Website', whatsapp: 'Confirmed WhatsApp' },
     emailSec: 'Change email', currentEmail: 'Current email', newEmail: 'New email', sendCode: 'Send code', code: 'Code', verify: 'Verify & change', codeSent: 'We sent a code to the new email.', emailChanged: 'Email updated ✓',
     signSec: 'How you sign in', signText: 'You sign in with a code we send by email or WhatsApp, or with Google / Apple. No password needed.',
     emailRow: 'Email', waRow: 'WhatsApp', confirmed: 'Confirmed', notConfirmed: 'Not confirmed', resend: 'Resend confirmation', resent: 'We sent the link. Check your email.',
@@ -47,6 +52,8 @@ const T = {
     waConfirmed: 'WhatsApp confirmado', waNone: 'Você ainda não confirmou seu WhatsApp. Confirme para que os compradores possam falar com você com confiança.',
     proSaved: 'Perfil salvo ✓ Ele já aparece nos seus anúncios.', proPending: 'Salvamos seu nome. Cargo, empresa e site poderão ser salvos em breve (migração pendente).', proFix: 'Confira os campos destacados.',
     preview: 'Como os compradores veem você', listedBy: 'Publicado por',
+    progTitle: 'Seu perfil está', progDone: 'Perfil completo! Os compradores veem todos os seus dados.', progMissing: 'Falta:', progSave: 'Lembre-se de salvar as alterações.',
+    items: { photo: 'Foto ou logo', first_name: 'Nome', last_name: 'Sobrenome', job_title: 'Cargo', company_name: 'Empresa', company_website: 'Site', whatsapp: 'WhatsApp confirmado' },
     emailSec: 'Alterar e‑mail', currentEmail: 'E‑mail atual', newEmail: 'Novo e‑mail', sendCode: 'Enviar código', code: 'Código', verify: 'Verificar e mudar', codeSent: 'Enviamos um código para o novo e‑mail.', emailChanged: 'E‑mail atualizado ✓',
     signSec: 'Como você entra', signText: 'Você entra com um código que enviamos por e‑mail ou WhatsApp, ou com Google / Apple. Não precisa de senha.',
     emailRow: 'E‑mail', waRow: 'WhatsApp', confirmed: 'Confirmado', notConfirmed: 'Não confirmado', resend: 'Reenviar confirmação', resent: 'Enviamos o link. Verifique seu e‑mail.',
@@ -111,6 +118,44 @@ function ProPreview({ t, prof, photo }) {
   );
 }
 
+// Profile Personalization progress: one horizontal bar, red → yellow → green, plus what's missing
+// (each missing item jumps to its field). Counts what's typed now, so it moves while filling in.
+const TONE = { red: { bar: 'bg-red-600', text: 'text-red-700' }, yellow: { bar: 'bg-amber-400', text: 'text-amber-700' }, green: { bar: 'bg-green-600', text: 'text-green-700' } };
+const ITEM_TARGET = { photo: 'pf-photo-card', first_name: 'pf-first', last_name: 'pf-last', job_title: 'pf-title', company_name: 'pf-company', company_website: 'pf-web', whatsapp: 'sign-in-methods' };
+function goTo(item) {
+  const el = document.getElementById(ITEM_TARGET[item]);
+  if (!el) return;
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  if (el.tagName === 'INPUT') setTimeout(() => el.focus({ preventScroll: true }), 350);
+}
+function ProfileProgress({ t, c, dirty }) {
+  const tone = TONE[c.tone];
+  return (
+    <section className="bg-card border border-ink/15 rounded-card p-5 mb-5" data-testid="profile-progress" aria-label={`${t.progTitle} ${c.pct}%`}>
+      <div className="flex items-baseline justify-between gap-3 mb-2.5">
+        <h2 className="text-[15px] font-bold tracking-head">{t.progTitle} <span className={tone.text}>{c.pct}%</span></h2>
+        <span className="text-[12.5px] font-semibold text-ink/50 tabular-nums">{c.count}/{c.total}</span>
+      </div>
+      <div className="h-3 w-full rounded-full bg-ink/10 overflow-hidden" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={c.pct}>
+        <div className={`h-full rounded-full ${tone.bar} transition-[width,background-color] duration-500 ease-out`} style={{ width: `${Math.max(c.pct, 4)}%` }} />
+      </div>
+      {c.missing.length ? (
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          <span className="text-[13px] font-semibold text-ink/70 mr-0.5">{t.progMissing}</span>
+          {c.missing.map((k) => (
+            <button key={k} type="button" onClick={() => goTo(k)} className="px-2.5 py-1 rounded-pill border border-ink/25 bg-paper text-[12.5px] font-semibold hover:border-ink">
+              + {t.items[k]}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-3 text-[13px] font-semibold text-green-700">{t.progDone}</p>
+      )}
+      {dirty && <p className="mt-2 text-[12.5px] text-ink/55">{t.progSave}</p>}
+    </section>
+  );
+}
+
 export default function SettingsPage() {
   const [lang] = useLang();
   const t = T[lang];
@@ -131,13 +176,19 @@ export default function SettingsPage() {
   const [pBusy, setPBusy] = useState(false); const [pMsg, setPMsg] = useState(null);
   const [newEmail, setNewEmail] = useState(''); const [emCode, setEmCode] = useState(''); const [emStage, setEmStage] = useState('idle'); const [emBusy, setEmBusy] = useState(false); const [emMsg, setEmMsg] = useState(null); const [emOpen, setEmOpen] = useState(false);
 
-  useEffect(() => { fetch('/api/account/profile').then((r) => r.json()).then((j) => { if (!j.error) setProf((p) => ({ ...p, ...j })); }).catch(() => {}); }, []);
+  useEffect(() => { fetch('/api/account/profile').then((r) => r.json()).then((j) => { if (!j.error) { setProf((p) => ({ ...p, ...j })); setSavedProf(j); } }).catch(() => {}); }, []);
   // the approved photo / logo, for the seller-card preview
   const [photo, setPhoto] = useState(null);
+  const [photoView, setPhotoView] = useState(null);   // ProfilePhotoCard's state (approved / checking / …)
+  const onPhotoView = useCallback((v) => { setPhotoView(v); setPhoto(v?.photo || null); }, []);
+  const [savedProf, setSavedProf] = useState(null);   // last saved values ("remember to save" hint)
   useEffect(() => { fetch('/api/account/profile-photo').then((r) => r.json()).then((j) => { if (j && !j.error) setPhoto(j.photo || null); }).catch(() => {}); }, []);
   const post = (url, body, method = 'POST') => fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
   const proErrors = PRO_ERRORS[lang] || PRO_ERRORS.es;
+  const completion = profileCompletion(prof, { photoStatus: photoView?.status, hasPhoto: !!photo });
+  const PRO_KEYS = ['first_name', 'last_name', 'job_title', 'company_name', 'company_website'];
+  const proDirty = !!savedProf && PRO_KEYS.some((k) => String(prof[k] ?? '').trim() !== String(savedProf[k] ?? '').trim());
   const setField = (k) => (e) => { const v = e.target.value; setProf((p) => ({ ...p, [k]: v })); if (proErr[k]) setProErr((x) => { const n = { ...x }; delete n[k]; return n; }); };
 
   // "Perfil profesional" → PATCH /api/account/profile (validated again on the server).
@@ -156,6 +207,7 @@ export default function SettingsPage() {
       if (r.status === 400 && j.fields) { setProErr(j.fields); setPMsg({ text: t.proFix }); return; }
       if (!r.ok) { setPMsg({ text: t.err }); return; }
       setProErr({});
+      if (j.profile) setSavedProf((s) => ({ ...(s || {}), ...j.profile }));
       if (j.profile) setProf((p) => ({ ...p, ...j.profile, ...(j.pending_migration ? { job_title: p.job_title, company_name: p.company_name, company_website: p.company_website } : {}) }));
       setPMsg(j.pending_migration ? { text: t.proPending, ok: true } : { text: t.proSaved, ok: true });
     } catch { setPMsg({ text: t.err }); } finally { setPBusy(false); }
@@ -245,8 +297,11 @@ export default function SettingsPage() {
     <div className="max-w-[560px]">
       <h1 className="text-[clamp(26px,4vw,36px)] font-bold tracking-display leading-tight mb-6">{t.title}</h1>
 
+      {/* How complete the Profile Personalization is (red / yellow / green) */}
+      <ProfileProgress t={t} c={completion} dirty={proDirty} />
+
       {/* The seller's photo or company logo on their listings (AI-checked): first thing in Settings */}
-      <ProfilePhotoCard />
+      <div id="pf-photo-card"><ProfilePhotoCard onView={onPhotoView} /></div>
 
       <Card title={t.pro}>
         <p className="text-[14px] text-ink/70 -mt-1 mb-4">{t.proIntro}</p>
@@ -269,7 +324,7 @@ export default function SettingsPage() {
       <Card title={t.signSec}>
         <p className="text-[14px] text-ink/70 mb-4">{t.signText}</p>
         {notice && <Msg text={notice === 'confirmed' ? t.confirmedNow : t.confirmBad} ok={notice === 'confirmed'} />}
-        <div className="flex flex-col divide-y divide-ink/10 mt-2" data-testid="sign-in-methods">
+        <div className="flex flex-col divide-y divide-ink/10 mt-2" data-testid="sign-in-methods" id="sign-in-methods">
           <div className="py-3">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">

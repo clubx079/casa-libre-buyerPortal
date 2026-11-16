@@ -79,10 +79,12 @@ function Avatar({ src, label, tone = 'ok', size = 96 }) {
   );
 }
 
-export default function ProfilePhotoCard() {
+// onView(v): told every time the photo state changes (Settings' completion bar counts the photo).
+export default function ProfilePhotoCard({ onView } = {}) {
   const [lang] = useLang();
   const t = T[lang] || T.es;
   const [v, setV] = useState(null);        // ownerView from the API
+  useEffect(() => { if (v && onView) onView(v); }, [v, onView]);
   const [busy, setBusy] = useState(null);  // 'upload' | 'remove'
   const [err, setErr] = useState(null);
   const [hidden, setHidden] = useState(false);
