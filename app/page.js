@@ -15,10 +15,11 @@ export default async function Landing() {
   // first-listing gifts, then the other Verified listings (rotated hourly), and only
   // if room is left, regular listings — a random blend of sale and rental, reshuffled
   // every load so the home never looks static.
-  // Real photos only: the "Todavía no tengo foto" placeholder (lib/noPhoto.js) never fills the home strip.
+  // RULE: the home page never shows a listing without a real photo — the "Todavía no tengo foto"
+  // placeholder (lib/noPhoto.js) never fills any home section, paid ones included.
   const withImg = listings.filter((l) => l.image && !l.no_photo);
   const promoted = new Map();
-  for (const l of [...(promotedRes?.listings || []), ...withImg]) if (l.image && l.verified && !promoted.has(String(l.id))) promoted.set(String(l.id), l);
+  for (const l of [...(promotedRes?.listings || []), ...withImg]) if (l.image && !l.no_photo && l.verified && !promoted.has(String(l.id))) promoted.set(String(l.id), l);
   const onHome = [...promoted.values()].filter((l) => l.onHome);
   const verifiedOnly = [...promoted.values()].filter((l) => !l.onHome);
   const shuffle = (arr) => {
