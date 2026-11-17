@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import { getStripePromise } from '@/lib/stripeClient';
 import { track } from '@/lib/analytics';
+import { planError } from '@/lib/profilePro';
 
 const T = {
   es: {
@@ -20,7 +21,7 @@ const T = {
     what: 'Mientras está activo, tu cargo, empresa y sitio web se muestran en tus publicaciones.',
     activeUntil: (dt) => `Activo hasta el ${dt}.`, expiredOn: (dt) => `Venció el ${dt}: tu cargo, empresa y sitio web ya no se muestran en tus publicaciones.`,
     activate: 'Activar', activateFree: 'Activar gratis', renewBtn: (p) => `Renovar por ${p}`, pay: (p) => `Pagar ${p}`, payWith: (p, c) => `Pagar ${p} con ${c}`, otherCard: 'Usar otra tarjeta',
-    processing: 'Procesando…', ok: (dt) => `¡Listo! Tu perfil profesional está activo hasta el ${dt}.`, fail: 'El pago no se completó.', cancel: 'Cancelar', locale: 'es',
+    processing: 'Procesando…', ok: (dt) => `¡Listo! Tu perfil profesional está activo hasta el ${dt}.`, fail: 'El pago no se completó.', unavailable: 'Los pagos no están disponibles en este momento. Probá de nuevo más tarde.', cancel: 'Cancelar', locale: 'es',
   },
   en: {
     free: (n, d) => `Free for ${d} days: you're among the first ${n} people to activate it.`,
@@ -30,7 +31,7 @@ const T = {
     what: 'While it is active, your title, company and website show on your listings.',
     activeUntil: (dt) => `Active until ${dt}.`, expiredOn: (dt) => `Expired on ${dt}: your title, company and website no longer show on your listings.`,
     activate: 'Activate', activateFree: 'Activate for free', renewBtn: (p) => `Renew for ${p}`, pay: (p) => `Pay ${p}`, payWith: (p, c) => `Pay ${p} with ${c}`, otherCard: 'Use another card',
-    processing: 'Processing…', ok: (dt) => `Done! Your professional profile is active until ${dt}.`, fail: 'Payment did not complete.', cancel: 'Cancel', locale: 'en-US',
+    processing: 'Processing…', ok: (dt) => `Done! Your professional profile is active until ${dt}.`, fail: 'Payment did not complete.', unavailable: 'Payments are not available right now. Please try again later.', cancel: 'Cancel', locale: 'en-US',
   },
   pt: {
     free: (n, d) => `Grátis por ${d} dias: você está entre as primeiras ${n} pessoas a ativar.`,
@@ -40,7 +41,7 @@ const T = {
     what: 'Enquanto estiver ativo, seu cargo, empresa e site aparecem nos seus anúncios.',
     activeUntil: (dt) => `Ativo até ${dt}.`, expiredOn: (dt) => `Venceu em ${dt}: seu cargo, empresa e site não aparecem mais nos seus anúncios.`,
     activate: 'Ativar', activateFree: 'Ativar grátis', renewBtn: (p) => `Renovar por ${p}`, pay: (p) => `Pagar ${p}`, payWith: (p, c) => `Pagar ${p} com ${c}`, otherCard: 'Usar outro cartão',
-    processing: 'Processando…', ok: (dt) => `Pronto! Seu perfil profissional está ativo até ${dt}.`, fail: 'Pagamento não concluído.', cancel: 'Cancelar', locale: 'pt-BR',
+    processing: 'Processando…', ok: (dt) => `Pronto! Seu perfil profissional está ativo até ${dt}.`, fail: 'Pagamento não concluído.', unavailable: 'Os pagamentos não estão disponíveis no momento. Tente novamente mais tarde.', cancel: 'Cancelar', locale: 'pt-BR',
   },
 };
 const brandLabel = (b) => ({ visa: 'Visa', mastercard: 'Mastercard', amex: 'American Express' }[b] || (b ? b[0].toUpperCase() + b.slice(1) : 'Card'));
@@ -85,12 +86,13 @@ export default function ProfileProPlan({ lang = 'es' }) {
     fetch('/api/account/payments').then((r) => r.json()).then((p) => setCard(p?.card?.last4 ? p.card : null)).catch(() => {});
   }, [plan]);
 
+  const errText = (j) => { const e = planError(j); return e === 'unavailable' ? t.unavailable : e === 'fail' ? t.fail : e; };
   const fmt = (iso) => { try { return new Date(iso).toLocaleDateString(t.locale, { day: 'numeric', month: 'long', year: 'numeric' }); } catch { return ''; } };
   const done = (until) => { track('profile_plan_activated', { kind: plan?.next?.kind }); setMsg(t.ok(fmt(until))); setPhase('done'); load(); };
   const confirm = async (piId) => {
     setPhase('processing');
     const j = await fetch('/api/profile-pro/confirm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paymentIntentId: piId }) }).then((r) => r.json()).catch(() => ({}));
-    if (j.status === 'succeeded') done(j.until); else { setMsg(j.error || t.fail); setPhase('error'); }
+    if (j.status === 'succeeded') done(j.until); else { setMsg(errText(j)); setPhase('error'); }
   };
   const start = async (useSavedCard) => {
     track('profile_plan_started', { kind: plan?.next?.kind, cents: plan?.next?.cents, saved_card: !!useSavedCard });
@@ -108,7 +110,7 @@ export default function ProfileProPlan({ lang = 'es' }) {
         const s = await getStripePromise();
         stripeRef.current = s; setStripeObj(s); setSecret(j.clientSecret); setPhase('card'); return;
       }
-      setMsg(j.error || t.fail); setPhase('error');
+      setMsg(errText(j)); setPhase('error');
     } catch { setMsg(t.fail); setPhase('error'); }
   };
 

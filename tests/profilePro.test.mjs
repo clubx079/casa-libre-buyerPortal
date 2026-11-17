@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DEFAULTS, profileProConfig, profileStatus, nextPeriod, periodUntil, showsProDetails, gateProfile, gateInfo, usd } from '../lib/profilePro.js';
+import { DEFAULTS, profileProConfig, profileStatus, nextPeriod, periodUntil, showsProDetails, gateProfile, gateInfo, planError, usd } from '../lib/profilePro.js';
 
 const NOW = new Date('2026-11-17T12:00:00Z');
 const D = 86400000;
@@ -69,4 +69,13 @@ test('gateInfo: the "Sobre el vendedor" seller_info hides the same paid details 
   assert.deepEqual(gateInfo(info, true), info);
   assert.deepEqual(gateInfo(info, false), { ...info, title: null, company: null, website: null, website_label: null });
   assert.equal(gateInfo(null, false), null);
+});
+
+test('planError: API codes never reach the seller raw; card messages pass through', () => {
+  assert.equal(planError({ error: 'stripe_not_configured' }), 'unavailable');
+  assert.equal(planError({ error: 'stripe_error', detail: 'x' }), 'unavailable');
+  assert.equal(planError({ error: 'not_enabled' }), 'fail');
+  assert.equal(planError({}), 'fail');
+  assert.equal(planError(null), 'fail');
+  assert.equal(planError({ status: 'failed', error: 'La tarjeta fue rechazada.' }), 'La tarjeta fue rechazada.');
 });
