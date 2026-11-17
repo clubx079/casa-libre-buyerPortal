@@ -1,5 +1,7 @@
 // Single listing for the mobile app. `id` is the property UUID (or slug).
 import { NextResponse } from 'next/server';
+import { withAbsolutePlaceholder } from '@/lib/noPhoto';
+import { publicOrigin } from '@/lib/publicOrigin';
 import { getListing } from '@/lib/listings';
 import { attachSellerPhoto } from '@/lib/sellerPhotos';
 
@@ -25,7 +27,8 @@ export async function GET(req, { params }) {
     if (!l || l.unverified) return NextResponse.json({ error: 'not_found' }, { status: 404, headers: CORS });
     // The seller's approved photo and "Perfil profesional" (name, title, company, website), only for
     // listings a seller published, exactly as the website's property page shows them.
-    return NextResponse.json({ listing: await attachSellerPhoto(l) }, { headers: CORS });
+    // the no-photo placeholder as an absolute URL the app can load (lib/noPhoto.js)
+    return NextResponse.json({ listing: withAbsolutePlaceholder(await attachSellerPhoto(l), publicOrigin(req)) }, { headers: CORS });
   } catch (e) {
     return NextResponse.json({ error: 'failed', detail: String(e?.message || e) }, { status: 500, headers: CORS });
   }

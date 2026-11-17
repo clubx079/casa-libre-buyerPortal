@@ -2,6 +2,8 @@
 // Reuses the same server-side query + shape + completeness gate as the website,
 // so the secret AiroBase key never leaves the server. CORS-open (public data).
 import { NextResponse } from 'next/server';
+import { withAbsolutePlaceholder } from '@/lib/noPhoto';
+import { publicOrigin } from '@/lib/publicOrigin';
 import { getListings, getMobileSlimListings } from '@/lib/listings';
 import { attachSellerPhotos } from '@/lib/sellerPhotos';
 
@@ -30,7 +32,8 @@ export async function GET(req) {
       const { rate, totalCount, listings } = await getMobileSlimListings(mode0);
       // seller_photo (the seller's approved profile photo) is attached after the cache, as on the website
       const withPhotos = await attachSellerPhotos(listings);
-      return NextResponse.json({ rate, count: withPhotos.length, total: totalCount, listings: withPhotos }, { headers: CORS });
+      const origin = publicOrigin(req);   // the no-photo placeholder as an absolute URL (lib/noPhoto.js)
+      return NextResponse.json({ rate, count: withPhotos.length, total: totalCount, listings: withPhotos.map((l) => withAbsolutePlaceholder(l, origin)) }, { headers: CORS });
     }
     // Clamp to the app's real need (≤600). Was 5000 — a single call that dumped
     // the whole catalog. The app requests 600, so this is invisible to it.
@@ -46,7 +49,8 @@ export async function GET(req) {
     // field we couldn't verify stay website-only for now.
     const shown = listings.filter((l) => !l.unverified);
     const withPhotos = await attachSellerPhotos(shown);
-    return NextResponse.json({ rate, count: withPhotos.length, total: totalCount, listings: withPhotos }, { headers: CORS });
+    const origin = publicOrigin(req);
+    return NextResponse.json({ rate, count: withPhotos.length, total: totalCount, listings: withPhotos.map((l) => withAbsolutePlaceholder(l, origin)) }, { headers: CORS });
   } catch (e) {
     return NextResponse.json({ error: 'failed', detail: String(e?.message || e) }, { status: 500, headers: CORS });
   }

@@ -6,6 +6,7 @@ import PropertyViewTracker from '@/components/PropertyViewTracker';
 import PropertyDetailView from '@/components/PropertyDetailView';
 import { SITE } from '@/lib/site';
 import { COUNTRY } from '@/lib/country';
+import { NO_PHOTO_OG_URL, NO_PHOTO_ALT } from '@/lib/noPhoto';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,10 +19,12 @@ export async function generateMetadata({ params }) {
   const title = l.usd != null ? `${listingTitle(l)} — ${fmtUsd(l.usd, 'es')}${l.mode === 'alquiler' ? '/mes' : ''}` : listingTitle(l);
   const description = (l.description || `${listingTitle(l)}. ${[l.area && `${l.area} m²`, l.baths && `${l.baths} baños`, l.parking && `${l.parking} cocheras`].filter(Boolean).join(', ')}. Ver en Casa Libre.`).slice(0, 160);
   const url = `${SITE}/propiedad/${l.id}`;
+  // No photo yet → the placeholder as a JPEG (WhatsApp/Facebook previews don't take webp).
+  const ogImage = l.no_photo ? { url: NO_PHOTO_OG_URL, alt: NO_PHOTO_ALT, width: 1200, height: 900 } : l.image ? { url: l.image, alt: title } : null;
   return {
     title, description, alternates: { canonical: url },
-    openGraph: { title, description, url, siteName: 'Casa Libre', type: 'website', locale: 'es_PY', images: l.image ? [{ url: l.image, alt: title }] : [] },
-    twitter: { card: 'summary_large_image', title, description, images: l.image ? [l.image] : [] },
+    openGraph: { title, description, url, siteName: 'Casa Libre', type: 'website', locale: 'es_PY', images: ogImage ? [ogImage] : [] },
+    twitter: { card: 'summary_large_image', title, description, images: ogImage ? [ogImage.url] : [] },
   };
 }
 
@@ -36,7 +39,8 @@ export default async function PropiedadPage({ params }) {
   const jsonLd = {
     '@context': 'https://schema.org', '@type': 'RealEstateListing',
     name: listingTitle(l), description: l.description || listingTitle(l), url,
-    image: (l.images || []).slice(0, 6),
+    // the placeholder isn't a photo of the property → left out of the structured data
+    ...(l.no_photo ? {} : { image: (l.images || []).slice(0, 6) }),
     ...(l.lat != null && l.lng != null ? { geo: { '@type': 'GeoCoordinates', latitude: l.lat, longitude: l.lng } } : {}),
     address: { '@type': 'PostalAddress', streetAddress: l.address || undefined, addressLocality: l.city || undefined, addressRegion: l.province || undefined, addressCountry: 'PY' },
     ...(l.beds ? { numberOfRooms: l.beds } : {}),
@@ -58,6 +62,7 @@ export default async function PropiedadPage({ params }) {
     property_id: l.id, slug: l.id, address: l.address || null, city: l.city || null,
     neighborhood: l.neighborhood || null, state: l.province || null, price: l.usd ?? null,
     currency: 'USD', mode: l.mode, type: l.type || null, lat: l.lat ?? null, lng: l.lng ?? null,
+    no_photo: !!l.no_photo,   // shown with the "Todavía no tengo foto" placeholder (lib/noPhoto.js)
   };
 
   return (
