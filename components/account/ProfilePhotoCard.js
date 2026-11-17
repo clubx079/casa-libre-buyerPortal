@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from 'react';
 import ConfirmModal from '@/components/ConfirmModal';
 import PhotoCropModal from './PhotoCropModal';
 import { useLang } from '@/lib/useLang';
+import { track } from '@/lib/analytics';
 
 const T = {
   es: {
@@ -94,6 +95,15 @@ export default function ProfilePhotoCard({ onView } = {}) {
   const [crop, setCrop] = useState(null);
   const fileRef = useRef(null);
   const polls = useRef(0);
+  // PostHog: photo upload started / succeeded (accepted, AI check running or done) / rejected
+  // (the upload failed or the AI check turned it down) — Settings' Profile Personalization funnel.
+  const uploading = useRef(false);
+  useEffect(() => {
+    if (!uploading.current || !v?.status || v.status === 'checking') return;
+    uploading.current = false;
+    if (v.status === 'rejected') track('profile_photo_rejected', { reason: v.category || null, stage: 'ai_check' });
+    else if (v.status === 'approved') track('profile_photo_approved', {});
+  }, [v]);
 
   const load = () => fetch(`/api/account/profile-photo?lang=${lang}`).then(async (r) => {
     const j = await r.json().catch(() => ({}));
@@ -124,15 +134,18 @@ export default function ProfilePhotoCard({ onView } = {}) {
   };
   const upload = async (blob) => {
     setBusy('upload'); setErr(null);
+    track('profile_photo_upload_started', { replace: !!v?.photo, recrop: !crop?.file });
     try {
       const fd = new FormData(); fd.set('photo', new File([blob], 'profile.jpg', { type: 'image/jpeg' }));
       if (crop?.file) fd.set('original', crop.file); else fd.set('reuse', '1');
       const r = await fetch(`/api/account/profile-photo?lang=${lang}`, { method: 'POST', body: fd });
       const j = await r.json().catch(() => ({}));
-      if (!r.ok) { setErr(t[ERR[j.error]] || t.err); return; }
+      if (!r.ok) { track('profile_photo_rejected', { reason: j.error || `http_${r.status}`, stage: 'upload' }); setErr(t[ERR[j.error]] || t.err); return; }
+      track('profile_photo_upload_succeeded', { status: j.status || null });
+      uploading.current = true;
       polls.current = 0;
       setV(j);
-    } catch { setErr(t.err); } finally { setBusy(null); closeCrop(); }
+    } catch { track('profile_photo_rejected', { reason: 'network', stage: 'upload' }); setErr(t.err); } finally { setBusy(null); closeCrop(); }
   };
   const removePhoto = async () => {
     setBusy('remove'); setErr(null);

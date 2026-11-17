@@ -4,7 +4,8 @@
 // reminders" (lib/automations/draftReminders.js), paid listings (lib/automations/paidListings.js) and "signed up but
 // never listed" (lib/automations/noListingNudge.js) and "listing not published"
 // (lib/automations/listingHeld.js) and "listing getting saved" (lib/automations/savesMilestone.js),
-// the referral program (lib/referrals/) and its promo emails (lib/automations/referralPromo.js).
+// the referral program (lib/referrals/) and its promo emails (lib/automations/referralPromo.js),
+// "personalize your profile" (lib/automations/profileNudge.js).
 // Schedule hourly with the
 // CRON_SECRET, like the other crons; also callable manually with ?secret=.
 // Each does nothing until an admin switches it on (Automations page).
@@ -30,6 +31,7 @@ import { sendPush } from '@/lib/push';
 import { runDeletedAsk } from '@/lib/listingDeleted';
 import { runOwnerPushes } from '@/lib/ownerPushes';
 import { runReferralsCron, runReferralPromoCron } from '@/lib/referrals/run';
+import { runProfileNudge, PROFILE_NUDGE_ID } from '@/lib/automations/profileNudge';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -49,7 +51,7 @@ async function handle(req) {
     ? { skipped: 'off' }
     : await runOwnerPushes(db, (o) => sendPush(db, o), { now: new Date(), countryCode: COUNTRY.code }).catch((e) => ({ error: e?.message || 'push_failed' }));
 
-  let automation, viewsAutomation, draftsAutomation, paidAutomation, noListingAutomation, heldAutomation, savesAutomation, payFollowAutomation, templates;
+  let profileAutomation, automation, viewsAutomation, draftsAutomation, paidAutomation, noListingAutomation, heldAutomation, savesAutomation, payFollowAutomation, templates;
   try {
     [automation] = await db.select('automations', `id=eq.${AUTOMATION_ID}&limit=1`);
     [viewsAutomation] = await db.select('automations', `id=eq.${VIEWS_AUTOMATION_ID}&limit=1`).catch(() => []);
@@ -59,6 +61,7 @@ async function handle(req) {
     [heldAutomation] = await db.select('automations', `id=eq.${LISTING_HELD_ID}&limit=1`).catch(() => []);
     [savesAutomation] = await db.select('automations', `id=eq.${SAVES_AUTOMATION_ID}&limit=1`).catch(() => []);
     [payFollowAutomation] = await db.select('automations', `id=eq.${PAYMENT_FOLLOWUP_ID}&limit=1`).catch(() => []);
+    [profileAutomation] = await db.select('automations', `id=eq.${PROFILE_NUDGE_ID}&limit=1`).catch(() => []);
     templates = await db.select('email_templates', 'select=*');
   } catch (e) {
     // Migration 005 not applied on this country's DB yet.
@@ -166,7 +169,15 @@ async function handle(req) {
     // (lib/automations/referralPromo.js). Off until switched on in the admin, and only while
     // the referral program itself is on.
     const referralPromo = await runReferralPromoCron({ frame }).catch((e) => ({ error: e?.message || 'referral_promo_failed' }));
-    return NextResponse.json({ ok: true, quietHours: frame.quiet, ...result, views, drafts, duplicates, paid, noListing, held, payFollow, saves, deletedAsk, referrals, referralPromo, pushes, at: new Date().toISOString() });
+    // "Personalize your profile": sign-up → +24 h → +48 h emails until the Perfil profesional is
+    // personalized (lib/automations/profileNudge.js). Row created by the admin's Automations page.
+    const profile = !profileAutomation
+      ? { skippedReason: 'not_set_up' }
+      : await runProfileNudge({
+        db, automation: profileAutomation, templates, now: new Date(), deliver: sendRenderedEmail, frame, siteUrl: site,
+        emailOverride: process.env.AUTOMATION_EMAIL_OVERRIDE || '',
+      }).catch((e) => ({ error: e?.message || 'profile_failed' }));
+    return NextResponse.json({ ok: true, quietHours: frame.quiet, ...result, views, drafts, duplicates, paid, noListing, held, payFollow, saves, deletedAsk, referrals, referralPromo, profile, pushes, at: new Date().toISOString() });
   } catch (e) {
     return NextResponse.json({ error: 'automation_failed', detail: e?.message }, { status: 500 });
   }

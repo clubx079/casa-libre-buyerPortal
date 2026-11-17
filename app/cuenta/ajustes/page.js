@@ -1,10 +1,12 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
 import ProfilePhotoCard from '@/components/account/ProfilePhotoCard';
 import { ERRORS as PRO_ERRORS, normalizeWebsite, websiteLabel } from '@/lib/sellerProfile';
-import { profileCompletion } from '@/lib/profileCompletion';
+import { profileCompletion, isPersonalized } from '@/lib/profileCompletion';
+import ProfileProPlan from '@/components/account/ProfileProPlan';
+import { track, setPersonProps } from '@/lib/analytics';
 
 const T = {
   es: {
@@ -182,14 +184,43 @@ export default function SettingsPage() {
   const [photoView, setPhotoView] = useState(null);   // ProfilePhotoCard's state (approved / checking / …)
   const onPhotoView = useCallback((v) => { setPhotoView(v); setPhoto(v?.photo || null); }, []);
   const [savedProf, setSavedProf] = useState(null);   // last saved values ("remember to save" hint)
-  useEffect(() => { fetch('/api/account/profile-photo').then((r) => r.json()).then((j) => { if (j && !j.error) setPhoto(j.photo || null); }).catch(() => {}); }, []);
+  const [photoLoaded, setPhotoLoaded] = useState(false);
+  useEffect(() => { fetch('/api/account/profile-photo').then((r) => r.json()).then((j) => { if (j && !j.error) setPhoto(j.photo || null); }).catch(() => {}).finally(() => setPhotoLoaded(true)); }, []);
   const post = (url, body, method = 'POST') => fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
   const proErrors = PRO_ERRORS[lang] || PRO_ERRORS.es;
   const completion = profileCompletion(prof, { photoStatus: photoView?.status, hasPhoto: !!photo });
   const PRO_KEYS = ['first_name', 'last_name', 'job_title', 'company_name', 'company_website'];
   const proDirty = !!savedProf && PRO_KEYS.some((k) => String(prof[k] ?? '').trim() !== String(savedProf[k] ?? '').trim());
-  const setField = (k) => (e) => { const v = e.target.value; setProf((p) => ({ ...p, [k]: v })); if (proErr[k]) setProErr((x) => { const n = { ...x }; delete n[k]; return n; }); };
+  // PostHog (lib/analytics.js): Profile Personalization funnel — opened the section, started
+  // editing (first field change), saved (with the completion), completed (7/7) — and the
+  // person property profile_completion_pct. Photo events: components/account/ProfilePhotoCard.js.
+  const tracked = useRef({ opened: false, edited: false, completed: false });
+  const progressProps = (c) => ({ completion_count: c.count, completion_pct: c.pct, personalized: isPersonalized(c) });
+  const personProps = (c) => setPersonProps({ profile_completion_pct: c.pct, profile_completion_count: c.count, profile_personalized: isPersonalized(c) });
+  useEffect(() => {
+    if (tracked.current.opened || !savedProf || !photoLoaded) return;
+    tracked.current.opened = true;
+    if (completion.count === completion.total) tracked.current.completed = true;   // already complete: no "completed" event
+    let source = null;
+    try { source = new URLSearchParams(window.location.search).get('utm_campaign'); } catch {}
+    track('profile_section_opened', { ...progressProps(completion), ...(source ? { source } : {}) });
+    personProps(completion);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedProf, photoLoaded]);
+  // 7/7 reached (after a save, an approved photo or a confirmed WhatsApp) — once.
+  useEffect(() => {
+    if (!tracked.current.opened || tracked.current.completed || proDirty || completion.count !== completion.total) return;
+    tracked.current.completed = true;
+    track('profile_completed', progressProps(completion));
+    personProps(completion);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [completion.count, proDirty]);
+  const setField = (k) => (e) => {
+    const v = e.target.value; setProf((p) => ({ ...p, [k]: v }));
+    if (!tracked.current.edited) { tracked.current.edited = true; track('profile_edit_started', { field: k, ...progressProps(completion) }); }
+    if (proErr[k]) setProErr((x) => { const n = { ...x }; delete n[k]; return n; });
+  };
 
   // "Perfil profesional" → PATCH /api/account/profile (validated again on the server).
   const saveProfile = async (e) => {
@@ -210,6 +241,9 @@ export default function SettingsPage() {
       if (j.profile) setSavedProf((s) => ({ ...(s || {}), ...j.profile }));
       if (j.profile) setProf((p) => ({ ...p, ...j.profile, ...(j.pending_migration ? { job_title: p.job_title, company_name: p.company_name, company_website: p.company_website } : {}) }));
       setPMsg(j.pending_migration ? { text: t.proPending, ok: true } : { text: t.proSaved, ok: true });
+      const after = profileCompletion({ ...prof, ...(j.profile || {}) }, { photoStatus: photoView?.status, hasPhoto: !!photo });
+      track('profile_saved', progressProps(after));
+      personProps(after);
     } catch { setPMsg({ text: t.err }); } finally { setPBusy(false); }
   };
 
@@ -305,6 +339,8 @@ export default function SettingsPage() {
 
       <Card title={t.pro}>
         <p className="text-[14px] text-ink/70 -mt-1 mb-4">{t.proIntro}</p>
+        {/* Paid plan box — only while the admin's Profile Personalization paid switch is ON */}
+        <ProfileProPlan lang={lang} />
         <form onSubmit={saveProfile} noValidate className="flex flex-col gap-3.5" data-testid="pro-profile">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <Field id="pf-first" label={t.firstName} value={prof.first_name} onChange={setField('first_name')} error={proErr.first_name && proErrors[proErr.first_name]} autoComplete="given-name" maxLength={60} />
