@@ -4,7 +4,11 @@
 //                    crossed out, the discount, what they pay (US$5.80) and for how long
 //                    (90 days), the local price in small print. The listing is already
 //                    saved; paying publishes it.
-//   kind 'extend'  — "Extend your listing": 30 more days for US$5.
+//   kind 'extend'  — "Extend your listing": 30 more days for US$5. The renewal pop-up for
+//                    paid AND free listings (free ones end too since 2026-11-17): the
+//                    listing (photo, title, price), the price, the new end date and the
+//                    Listing Agreement box — same words + link as the sell wizard — which
+//                    must be ticked before paying (saved on the listing by the server).
 // Prices come from the server (/api/listing-quota), set in the admin. Charged in US$.
 // 'publish': no in-between step — straight to the Stripe card form, or with a saved card it
 // charges at once (the seller already clicked a button showing the price).
@@ -24,7 +28,8 @@ const DICT = {
   es: {
     titlePublish: 'Ya usaste tus publicaciones gratis de este mes',
     subPublish: (n) => `Cada mes podés publicar ${n} ${n === 1 ? 'propiedad' : 'propiedades'} gratis. Tu publicación ya está guardada: publicala ahora.`,
-    titleExtend: 'Extendé tu publicación',
+    titleExtend: 'Extendé tu publicación', titleRenew: 'Volvé a publicar tu propiedad',
+    cCheck: 'Confirmo que mis datos son correctos y acepto el', cAgree: 'Acuerdo de publicación', errAgree: 'Marcá la casilla para continuar.',
     subExtend: (d) => `Tu propiedad vuelve a estar (o sigue) en el sitio ${d} días más.`,
     off: (p) => `${p}% OFF`, live: (d) => `Publicada ${d} días`, more: (d) => `+${d} días`,
     reset: 'Tus publicaciones gratis vuelven el 1.º del mes que viene.',
@@ -36,13 +41,14 @@ const DICT = {
     okPublish: '¡Pago recibido! Revisamos las fotos y la publicamos en un momento.', okExtend: '¡Listo! Tu publicación fue extendida.',
     okUntil: (d) => `Estará en el sitio hasta el ${d}.`, done: 'Listo',
     errTitle: 'El pago no se completó', retry: 'Reintentar', close: 'Cerrar',
-    err: { unauthorized: 'Iniciá sesión para pagar.', not_pending: 'Esta publicación ya fue pagada.', not_paid_listing: 'Esta publicación no se puede extender.', forbidden: 'No podés pagar esta publicación.', not_found: 'No encontramos la publicación.', stripe_not_configured: 'El pago no está disponible en este momento.' },
+    err: { unauthorized: 'Iniciá sesión para pagar.', not_pending: 'Esta publicación ya fue pagada.', not_paid_listing: 'Esta publicación no se puede extender.', forbidden: 'No podés pagar esta publicación.', not_found: 'No encontramos la publicación.', agreement_required: 'Aceptá el Acuerdo de publicación para continuar.', stripe_not_configured: 'El pago no está disponible en este momento.' },
     fail: 'El pago no se completó.', locale: 'es',
   },
   en: {
     titlePublish: "You've reached your free listings for this month",
     subPublish: (n) => `Each month you can publish ${n} ${n === 1 ? 'listing' : 'listings'} for free. Your listing is saved — publish it now.`,
-    titleExtend: 'Extend your listing',
+    titleExtend: 'Extend your listing', titleRenew: 'Bring your listing back',
+    cCheck: 'I confirm my details are correct and I agree to the', cAgree: 'Listing Agreement', errAgree: 'Tick the box to continue.',
     subExtend: (d) => `Your listing goes back on (or stays on) the site for ${d} more days.`,
     off: (p) => `${p}% OFF`, live: (d) => `Live for ${d} days`, more: (d) => `+${d} days`,
     reset: 'Your free listings come back on the 1st of next month.',
@@ -54,13 +60,14 @@ const DICT = {
     okPublish: 'Payment received! We check the photos and publish it in a moment.', okExtend: 'Done! Your listing was extended.',
     okUntil: (d) => `It stays on the site until ${d}.`, done: 'Done',
     errTitle: 'Payment did not complete', retry: 'Try again', close: 'Close',
-    err: { unauthorized: 'Log in to pay.', not_pending: 'This listing is already paid.', not_paid_listing: "This listing can't be extended.", forbidden: "You can't pay for this listing.", not_found: 'Listing not found.', stripe_not_configured: 'Payments are unavailable right now.' },
+    err: { unauthorized: 'Log in to pay.', not_pending: 'This listing is already paid.', not_paid_listing: "This listing can't be extended.", forbidden: "You can't pay for this listing.", not_found: 'Listing not found.', agreement_required: 'Accept the Listing Agreement to continue.', stripe_not_configured: 'Payments are unavailable right now.' },
     fail: 'Payment did not complete.', locale: 'en-US',
   },
   pt: {
     titlePublish: "Você chegou ao limite de anúncios gratuitos deste mês",
     subPublish: (n) => `A cada mês você pode anunciar ${n} ${n === 1 ? 'imóvel' : 'imóveis'} gratuitamente. Seu anúncio está salvo — publique agora.`,
-    titleExtend: "Estenda seu anúncio",
+    titleExtend: "Estenda seu anúncio", titleRenew: 'Republique seu imóvel',
+    cCheck: 'Confirmo que meus dados estão corretos e aceito o', cAgree: 'Acordo de publicação', errAgree: 'Marque a caixa para continuar.',
     subExtend: (d) => `Seu anúncio volta ao site (ou continua) por mais ${d} dias.`,
     off: (p) => `${p}% OFF`, live: (d) => `Publicado por ${d} dias`, more: (d) => `+${d} dias`,
     reset: "Seus anúncios gratuitos voltam no dia 1º do próximo mês.",
@@ -72,7 +79,7 @@ const DICT = {
     okPublish: "Pagamento recebido! Verificamos as fotos e publicamos em instantes.", okExtend: "Pronto! Seu anúncio foi estendido.",
     okUntil: (d) => `Fica no site até ${d}.`, done: "Concluído",
     errTitle: "Pagamento não concluído", retry: "Tentar novamente", close: "Fechar",
-    err: { unauthorized: "Faça login para pagar.", not_pending: "Este anúncio já foi pago.", not_paid_listing: "Este anúncio não pode ser estendido.", forbidden: "Você não pode pagar por este anúncio.", not_found: "Anúncio não encontrado.", stripe_not_configured: "Pagamentos indisponíveis no momento." },
+    err: { unauthorized: "Faça login para pagar.", not_pending: "Este anúncio já foi pago.", not_paid_listing: "Este anúncio não pode ser estendido.", forbidden: "Você não pode pagar por este anúncio.", not_found: "Anúncio não encontrado.", agreement_required: 'Aceite o Acordo de publicação para continuar.', stripe_not_configured: "Pagamentos indisponíveis no momento." },
     fail: "Pagamento não concluído.", locale: 'pt-BR',
   },
 };
@@ -102,7 +109,7 @@ function CardForm({ onDone, onFail, t, price }) {
 
 const brandLabel = (b) => ({ visa: 'Visa', mastercard: 'Mastercard', amex: 'American Express' }[b] || (b ? b[0].toUpperCase() + b.slice(1) : 'Card'));
 
-export default function ListingPaymentModal({ propertyId, kind = 'publish', lang = 'es', propertyLabel, until: currentUntil, onClose, onSuccess }) {
+export default function ListingPaymentModal({ propertyId, kind = 'publish', lang = 'es', propertyLabel, until: currentUntil, summary = null, onClose, onSuccess }) {
   const t = DICT[lang] || DICT.es;
   const [offer, setOffer] = useState(null);
   const [card, setCard] = useState(null);
@@ -111,6 +118,8 @@ export default function ListingPaymentModal({ propertyId, kind = 'publish', lang
   const [error, setError] = useState('');
   const [until, setUntil] = useState('');
   const [stripeObj, setStripeObj] = useState(undefined);
+  const [agree, setAgree] = useState(false);   // renewal: the Listing Agreement box (required before paying)
+  const [agreeErr, setAgreeErr] = useState(false);
   const stripeRef = useRef(null);
 
   // the payment funnel in PostHog: pay screen opened → payment started → succeeded
@@ -140,10 +149,11 @@ export default function ListingPaymentModal({ propertyId, kind = 'publish', lang
   }, [propertyId, t]);
 
   const start = useCallback(async (useSavedCard) => {
+    if (kind === 'extend' && !agree) { setAgreeErr(true); return; }
     track('payment_started', { property_id: propertyId, kind, saved_card: !!useSavedCard });
     setError(''); setPhase('processing');
     try {
-      const r = await fetch('/api/listing-payment/create-intent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ propertyId, kind, useSavedCard }) });
+      const r = await fetch('/api/listing-payment/create-intent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ propertyId, kind, useSavedCard, agree: kind === 'extend' ? agree : undefined }) });
       const j = await r.json().catch(() => ({}));
       if (j.status === 'succeeded') { ok(j.until); return; }
       if (j.status === 'requires_action' && j.clientSecret && stripeRef.current) {
@@ -155,7 +165,7 @@ export default function ListingPaymentModal({ propertyId, kind = 'publish', lang
       setError(t.err[j.error] || j.error || t.fail); setPhase('error');
     } catch { setError(t.fail); setPhase('error'); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [propertyId, kind, serverConfirm, t]);
+  }, [propertyId, kind, serverConfirm, t, agree]);
 
   const started = useRef(false);
   useEffect(() => {
@@ -168,6 +178,11 @@ export default function ListingPaymentModal({ propertyId, kind = 'publish', lang
   const newUntil = kind === 'extend' && offer ? new Date(Math.max(Date.now(), currentUntil ? Date.parse(currentUntil) || 0 : 0) + offer.extendDays * 86400000).toISOString() : null;
   const fmt = (iso) => { try { return new Date(iso).toLocaleDateString(t.locale, { day: 'numeric', month: 'long', year: 'numeric' }); } catch { return ''; } };
   const local = kind === 'extend' ? offer?.local?.extend : offer?.local?.price;
+  const summaryPrice = (() => {
+    const n = Number(summary?.price);
+    if (!summary || !Number.isFinite(n) || n <= 0) return '';
+    try { return new Intl.NumberFormat(t.locale, { style: 'currency', currency: summary.currency || 'USD', maximumFractionDigits: 0 }).format(n); } catch { return String(n); }
+  })();
 
   return (
     <div className="fixed inset-0 z-[1000] overflow-y-auto cl-scroll bg-ink/60 backdrop-blur-sm" onClick={onClose} data-testid="listing-payment-modal">
@@ -186,8 +201,17 @@ export default function ListingPaymentModal({ propertyId, kind = 'publish', lang
           {/* Extend: the price + the new end date, then pay. */}
           {phase === 'offer' && kind === 'extend' && offer && (
             <div data-testid="lp-extend-offer">
-              <h2 className="text-[21px] font-bold tracking-head leading-tight mb-1 pr-8">{t.titleExtend}</h2>
-              {propertyLabel && <p className="text-[12.5px] font-medium text-ink/55 mb-4 truncate">{propertyLabel}</p>}
+              <h2 className="text-[21px] font-bold tracking-head leading-tight mb-3 pr-8">{summary?.ended ? t.titleRenew : t.titleExtend}</h2>
+              {/* the listing being renewed */}
+              {(propertyLabel || summary?.image) && (
+                <div className="flex items-center gap-3 mb-4" data-testid="lp-summary">
+                  {summary?.image && <img src={summary.image} alt="" className="w-14 h-14 rounded-[10px] object-cover shrink-0 border border-ink/10" />}
+                  <div className="min-w-0">
+                    {propertyLabel && <p className="text-[13.5px] font-semibold truncate">{propertyLabel}</p>}
+                    {summaryPrice && <p className="text-[12.5px] font-medium text-ink/55">{summaryPrice}</p>}
+                  </div>
+                </div>
+              )}
               <div className="rounded-[16px] border-[1.5px] border-ink bg-card px-4 py-4 mb-4">
                 <div className="flex items-center gap-2.5 flex-wrap">
                   <span className="text-[30px] font-bold tracking-head leading-none" data-testid="lp-extend-price">{offer.extendPrice}</span>
@@ -196,6 +220,12 @@ export default function ListingPaymentModal({ propertyId, kind = 'publish', lang
                 <div className="mt-2 text-[12.5px] font-semibold text-ink/60">{t.more(offer.extendDays)}</div>
                 {newUntil && <div className="mt-1 text-[12.5px] text-ink/60" data-testid="lp-extend-until">{t.newUntil(fmt(newUntil))}</div>}
               </div>
+              {/* Listing Agreement — same words + link as the sell wizard (components/SellFlow.js) */}
+              <label className={`flex items-start gap-2.5 mb-4 text-[13px] leading-snug cursor-pointer ${agreeErr && !agree ? 'text-red-700' : 'text-ink/80'}`} data-testid="lp-agree-label">
+                <input type="checkbox" checked={agree} onChange={(e) => { setAgree(e.target.checked); if (e.target.checked) setAgreeErr(false); }} className="mt-[2px] w-4 h-4 accent-ink shrink-0 cursor-pointer" data-testid="lp-agree" />
+                <span>{t.cCheck}{' '}<a href="/terminos#acuerdo-de-publicacion" target="_blank" rel="noopener" className="underline decoration-ink/40 hover:decoration-ink" data-testid="lp-agreement-link">{t.cAgree}</a></span>
+              </label>
+              {agreeErr && !agree && <p className="-mt-2 mb-3 text-[12px] font-medium text-red-700" data-testid="lp-agree-err">{t.errAgree}</p>}
               {card ? (
                 <>
                   <button onClick={() => start(true)} data-testid="lp-pay-saved" className="w-full py-3.5 bg-ink text-paper rounded-pill font-bold text-[15px]">{t.payWith(offer.extendPrice, `${brandLabel(card.brand)} •••• ${card.last4}`)}</button>

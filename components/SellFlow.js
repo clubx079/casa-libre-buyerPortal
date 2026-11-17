@@ -1020,6 +1020,7 @@ export default function SellFlowProvider({ children }) {
     try {
       const fd = new FormData();
       fd.set('id', editId);
+      fd.set('agreement', '1');   // the Listing Agreement box is ticked (required above) → saved on the listing
       fd.set('mode', f.mode); fd.set('ptype', f.ptype); fd.set('neighborhood', f.neighborhood); fd.set('city', f.city);
       fd.set('price', String(parsePrice(f.price))); fd.set('currency', priceCurrency); fd.set('area', f.area); fd.set('description', f.description);
       fd.set('contact_name', f.contact_name); fd.set('contact_phone', f.contact_phone); fd.set('seller_type', f.seller_type);
@@ -1066,6 +1067,7 @@ export default function SellFlowProvider({ children }) {
       fd.set('mode', f.mode); fd.set('ptype', f.ptype); fd.set('neighborhood', f.neighborhood); fd.set('city', f.city);
       fd.set('price', String(parsePrice(f.price))); fd.set('currency', priceCurrency); fd.set('area', f.area); fd.set('description', f.description);
       fd.set('contact_name', f.contact_name); fd.set('contact_phone', f.contact_phone); fd.set('seller_type', f.seller_type);
+      fd.set('agreement', '1');   // the Listing Agreement box is ticked (required above) → saved on the listing
       fd.set('wa_check', '1'); if (proof) fd.set('phone_proof', proof);   // the WhatsApp number is proven (lib/listingPhone.js)
       // the street + number and the map position of the address picked from the list
       if (f.street) fd.set('address', f.street);

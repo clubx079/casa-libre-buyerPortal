@@ -28,6 +28,8 @@ import { startListingScan, holdInQuarantine, releaseFromQuarantine } from '@/lib
 import { SCAN_STATUS } from '@/lib/scanVerdict';
 import { findDuplicateOf, DUPLICATE_STATUS } from '@/lib/duplicateCheck';
 import { dHash } from '@/lib/photoHash';
+import { agreed, agreementRecord } from '@/lib/listingAgreement';
+import { getClientIP } from '@/lib/ip';
 import { COUNTRY } from '@/lib/country';
 import { lockReason } from '@/lib/listingEdit';
 import { cleanPinSource } from '@/lib/pinLocate';
@@ -162,6 +164,8 @@ export async function POST(req) {
   const now = new Date().toISOString();
   const editLog = [...(p.raw_data?.edits || []), { at: now, fields: Object.keys(changes).filter((k) => JSON.stringify(changes[k]) !== JSON.stringify(p[k]) && !['updated_at', 'zone_canonical', 'dedupe_key', 'feature_image_url'].includes(k)), new_photos: newPhotos, removed_photos: current.length - (next.length - newPhotos) }].slice(-20);
   const raw = { ...(p.raw_data || {}), edits: editLog, photo_hashes: hashes.filter(Boolean) };
+  // "I agree to the Listing Agreement" ticked again before saving (lib/listingAgreement.js)
+  if (agreed(get('agreement'))) raw.listing_agreement = agreementRecord(p.raw_data?.listing_agreement, { ip: getClientIP(req), via: 'edit' });
   // where the pin came from: a moved listing with a position from the form → what the form says
   // (google / owner / approx); moved without one → the server looked it up → approx
   if (moved) raw.pin_source = v.coords ? (cleanPinSource(get('pin_source')) || 'google') : 'approx';

@@ -1,4 +1,5 @@
-// POST /api/listing-payment/create-intent { propertyId, kind: 'publish' | 'extend', useSavedCard }
+// POST /api/listing-payment/create-intent { propertyId, kind: 'publish' | 'extend', useSavedCard, agree }
+// 'extend' (renew a paid OR free listing) requires agree: true — the Listing Agreement checkbox.
 // Pay for a listing over the free monthly quota ('publish', US$5.80 by default) or for
 // 30 more days ('extend', US$5). Same two paths as the promotions (/api/highlight):
 // one-click on the saved card, or a new PaymentIntent the client confirms with the
@@ -7,7 +8,9 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { stripe } from '@/lib/stripe';
-import { checkPayable, applyListingPayment, recordListingFailure, getUserBillingRow, ensureStripeCustomer } from '@/lib/listingPayments';
+import { checkPayable, applyListingPayment, recordListingFailure, recordListingAgreement, getUserBillingRow, ensureStripeCustomer } from '@/lib/listingPayments';
+import { agreed } from '@/lib/listingAgreement';
+import { getClientIP } from '@/lib/ip';
 import { recordCheckoutStarted } from '@/lib/billing';
 
 export const runtime = 'nodejs';
@@ -33,6 +36,12 @@ export async function POST(req) {
   const chk = await checkPayable(session.uid, propertyId, kind);
   if (!chk.ok) return NextResponse.json({ error: chk.error }, { status: chk.status });
   const { cents } = chk;
+  // Renewing (extend) needs the Listing Agreement ticked in the pop-up; it is saved on the
+  // listing before the charge (raw_data.listing_agreement — lib/listingAgreement.js).
+  if (kind === 'extend') {
+    if (!agreed(body.agree)) return NextResponse.json({ error: 'agreement_required' }, { status: 400 });
+    await recordListingAgreement(propertyId, { ip: getClientIP(req), via: 'renew' }).catch(() => {});
+  }
 
   const user = await getUserBillingRow(session.uid);
   if (!user) return NextResponse.json({ error: 'no_user' }, { status: 400 });

@@ -124,7 +124,7 @@ async function handle(req) {
         emailOverride: process.env.AUTOMATION_EMAIL_OVERRIDE || '',
         formatDate: (s) => { try { return new Date(s).toLocaleDateString(COUNTRY.locale, { day: 'numeric', month: 'long' }); } catch { return String(s).slice(0, 10); } },
       }).catch((e) => ({ error: e?.message || 'paid_failed' }));
-    if (paid.ended) revalidateTag('listings');
+    if (paid.ended || paid.freeEnded) revalidateTag('listings');
     // Signed up but never listed: welcome + "post your first listing free" email(s).
     // The row is created by the admin's Automations page; until then nothing is sent.
     const noListing = !noListingAutomation

@@ -103,7 +103,7 @@ const D = {
     scanningNote: 'Estamos revisando las fotos. Se publica en un momento.',
     reviewNote: 'En revisión: puede ser una publicación repetida. Tiene los mismos datos y fotos que otra de tus propiedades, así que no la publicamos. Te enviamos un email.',
     pendingNote: 'Guardada, pero no está en el sitio: ya usaste tus publicaciones gratis del mes. Pagala para publicarla.', payPublish: 'Pagar y publicar',
-    endedNote: (d) => `Terminó${d ? ` el ${d}` : ''} y ya no está en el sitio. Extendela para volver a publicarla.`, extend: 'Extender', paidChip: 'Publicación paga',
+    endedNote: (d) => `Terminó${d ? ` el ${d}` : ''} y ya no está en el sitio. Extendela para volver a publicarla.`, extend: 'Extender', paidChip: 'Publicación paga', freeChip: 'Publicación gratis',
     rejectedNote: 'No la publicamos: algunas fotos pueden tener contenido para adultos (+18), dañino, ofensivo o sin relación con la propiedad. Cambialas y enviala de nuevo.',
     fix: 'Cambiar fotos', edit: 'Editar',
     emptyDrafts: 'No tenés borradores. Si empezás a publicar y no terminás, lo guardamos acá.',
@@ -117,7 +117,7 @@ const D = {
     scanningNote: "We're checking the photos. It goes live in a moment.",
     reviewNote: "Under review: it might be a duplicate. It has the same details and photos as another of your listings, so we didn't publish it. We've emailed you.",
     pendingNote: "Saved, but not on the site: you've used this month's free listings. Pay to publish it.", payPublish: 'Pay and publish',
-    endedNote: (d) => `It ended${d ? ` on ${d}` : ''} and is off the site. Extend it to bring it back.`, extend: 'Extend', paidChip: 'Paid listing',
+    endedNote: (d) => `It ended${d ? ` on ${d}` : ''} and is off the site. Extend it to bring it back.`, extend: 'Extend', paidChip: 'Paid listing', freeChip: 'Free listing',
     rejectedNote: "We didn't publish it: some photos may show 18+, harmful, abusive or unrelated content. Replace them and submit again.",
     fix: 'Fix photos', edit: 'Edit',
     emptyDrafts: "No drafts. If you start a listing and don't finish, we keep it here.",
@@ -131,7 +131,7 @@ const D = {
     scanningNote: 'Estamos analisando as fotos. Seu anúncio será publicado em breve.',
     reviewNote: 'Em revisão: pode ser um anúncio duplicado. Tem os mesmos dados e fotos de outro seu imóvel, então não o publicamos. Enviamos um e‑mail para você.',
     pendingNote: 'Salvo, mas ainda não está no site: você já usou os anúncios gratuitos deste mês. Pague para publicá‑lo.', payPublish: 'Pagar e publicar',
-    endedNote: (d) => `Encerrado${d ? ` em ${d}` : ''} e fora do site. Estenda para trazê‑lo de volta.`, extend: 'Estender', paidChip: 'Anúncio pago',
+    endedNote: (d) => `Encerrado${d ? ` em ${d}` : ''} e fora do site. Estenda para trazê‑lo de volta.`, extend: 'Estender', paidChip: 'Anúncio pago', freeChip: 'Anúncio grátis',
     rejectedNote: 'Não publicamos: algumas fotos podem conter conteúdo adulto (+18), prejudicial, ofensivo ou sem relação com o imóvel. Substitua‑as e envie novamente.',
     fix: 'Corrigir fotos', edit: 'Editar',
     emptyDrafts: 'Nenhum rascunho. Se você começar a anunciar e não terminar, salvamos aqui.',
@@ -457,7 +457,7 @@ export default function MyListingsPage() {
               </div>
             ) : l.payState ? (
               <div className="flex flex-col gap-2.5" data-testid={`pay-card-${l.payState}`}>
-                <p className="text-[12.5px] leading-snug text-ink/70">{l.payState === 'payment_pending' ? x.pendingNote : x.endedNote(l.paid?.until ? new Date(l.paid.until).toLocaleDateString(localeFor(lang, 'es'), { day: 'numeric', month: 'long' }) : '')}</p>
+                <p className="text-[12.5px] leading-snug text-ink/70">{l.payState === 'payment_pending' ? x.pendingNote : x.endedNote((l.paid?.until || l.freeUntil) ? new Date(l.paid?.until || l.freeUntil).toLocaleDateString(localeFor(lang, 'es'), { day: 'numeric', month: 'long' }) : '')}</p>
                 {l.payState === 'payment_pending' && l.paid?.gift?.open && (() => {
                   const g = LGIFT[lang] || LGIFT.es;
                   let d = '';
@@ -485,6 +485,13 @@ export default function MyListingsPage() {
                   <div className="flex items-center gap-2" data-testid="paid-active">
                     <div className="flex-1 text-center py-2 rounded-pill bg-card text-ink text-[12px] font-bold border-[1.5px] border-ink/40">{x.paidChip} · {t.daysLeft(daysLeft(l.paid.until))}</div>
                     <button onClick={() => setLpay({ id: l.id, kind: 'extend' })} className="shrink-0 px-4 py-2 rounded-pill border-[1.5px] border-ink text-[13px] font-bold hover:bg-ink hover:text-paper">{x.extend}</button>
+                  </div>
+                )}
+                {/* A FREE listing ends too (lib/paidListings.js freeUntil) — renewing it is the paid extension. */}
+                {!l.paid?.until && l.freeUntil && (
+                  <div className="flex items-center gap-2" data-testid="free-active">
+                    <div className="flex-1 text-center py-2 rounded-pill bg-card text-ink text-[12px] font-bold border-[1.5px] border-ink/40">{x.freeChip} · {t.daysLeft(daysLeft(l.freeUntil))}</div>
+                    <button onClick={() => setLpay({ id: l.id, kind: 'extend' })} className="shrink-0 px-4 py-2 rounded-pill border-[1.5px] border-ink text-[13px] font-bold hover:bg-ink hover:text-paper" data-testid="free-extend">{x.extend}</button>
                   </div>
                 )}
                 {payingId === l.id ? (
@@ -554,7 +561,8 @@ export default function MyListingsPage() {
         <ListingPaymentModal
           propertyId={lpay.id}
           kind={lpay.kind}
-          until={(listings || []).find((v) => v.id === lpay.id)?.paid?.until || null}
+          until={(() => { const it = (listings || []).find((v) => v.id === lpay.id); return it?.paid?.until || it?.freeUntil || null; })()}
+          summary={(() => { const it = (listings || []).find((v) => v.id === lpay.id); return it ? { image: it.image || null, price: it.price, currency: it.currency, ended: it.payState === 'expired' } : null; })()}
           lang={lang}
           propertyLabel={(() => { const it = (listings || []).find((v) => v.id === lpay.id); return it ? [it.type, it.neighborhood, it.city].filter(Boolean).join(' · ') : ''; })()}
           onClose={() => { setLpay(null); polls.current = 0; load(); }}

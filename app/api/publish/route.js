@@ -21,6 +21,7 @@ import { SCAN_STATUS } from '@/lib/scanVerdict';
 import { COUNTRY } from '@/lib/country';
 import { genShortCode } from '@/lib/shortcode';
 import { getClientIP } from '@/lib/ip';
+import { agreed, agreementRecord } from '@/lib/listingAgreement';
 import { makeSignals } from '@/lib/samePerson';
 import { listingQuota } from '@/lib/listingQuota';
 import { usd } from '@/lib/paidListings';
@@ -147,6 +148,8 @@ export async function POST(req) {
     posted_by: session.uid,
     raw_data: { published_via: 'buyer-portal', user_id: session.uid, user_email: session.email, pin_source: pinSource, ...(entered ? { entered_price: entered } : {}), signals,
       photo_hashes: photoHashes.filter(Boolean),
+      // "I agree to the Listing Agreement" ticked on the last step (lib/listingAgreement.js)
+      ...(agreed(get('agreement')) ? { listing_agreement: agreementRecord(null, { ip: getClientIP(req), via: 'publish' }) } : {}),
       ...(dup ? { duplicate_of: dup.id } : {}),
       ...(payFirst ? { paid_listing: { state: 'pending', price_cents: quota.priceCents, list_cents: quota.listCents, discount_pct: quota.discountPct, days: quota.days } } : {}),
       moderation: dup ? { state: 'duplicate', duplicate_of: dup.id, same_photos: `${dup.matched}/${dup.total}` } : payFirst ? { state: 'awaiting_payment' } : { state: 'scanning', started_at: new Date().toISOString() } },
