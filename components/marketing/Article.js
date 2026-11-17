@@ -4,7 +4,7 @@ import { useLang } from '@/lib/useLang';
 import { Hero, CTABand, FeatureGrid } from './Parts';
 import { CITIES } from '@/lib/site';
 
-const PROSE = 'px-5 md:px-11 py-6 max-w-[760px] mx-auto text-[16px] leading-relaxed text-ink/80 [&>h2]:text-[26px] [&>h2]:font-bold [&>h2]:tracking-head [&>h2]:text-ink [&>h2]:mt-10 [&>h2]:mb-3 [&>p]:mb-4 [&>ul]:mb-4 [&>ul]:pl-5 [&>ul]:list-disc [&_a]:font-semibold [&_a]:underline [&_a]:decoration-ink/30 hover:[&_a]:decoration-ink';
+const PROSE = 'px-5 md:px-11 py-6 max-w-[760px] mx-auto text-[16px] leading-relaxed text-ink/80 [&>h2]:text-[26px] [&>h2]:font-bold [&>h2]:tracking-head [&>h2]:text-ink [&>h2]:mt-10 [&>h2]:mb-3 [&>h3]:text-[19px] [&>h3]:font-bold [&>h3]:text-ink [&>h3]:mt-6 [&>h3]:mb-2 [&>h3]:scroll-mt-24 [&>p]:mb-4 [&>ul]:mb-4 [&>ul]:pl-5 [&>ul]:list-disc [&_a]:font-semibold [&_a]:underline [&_a]:decoration-ink/30 hover:[&_a]:decoration-ink';
 
 // Renders one content block. `data` is the already-language-picked object.
 function Block({ b }) {
@@ -12,10 +12,13 @@ function Block({ b }) {
     case 'prose':
       return (
         <div className={PROSE}>
-          {b.nodes.map(([tag, html], i) =>
+          {/* node: [tag, html, attrs?]; attrs.id gives the block an anchor (e.g. /terminos#acuerdo-de-publicacion) */}
+          {b.nodes.map(([tag, html, attrs], i) =>
             tag === 'h2'
-              ? <h2 key={i} dangerouslySetInnerHTML={{ __html: html }} />
-              : <p key={i} dangerouslySetInnerHTML={{ __html: html }} />
+              ? <h2 key={i} id={attrs?.id} dangerouslySetInnerHTML={{ __html: html }} />
+              : tag === 'h3'
+                ? <h3 key={i} id={attrs?.id} dangerouslySetInnerHTML={{ __html: html }} />
+                : <p key={i} id={attrs?.id} dangerouslySetInnerHTML={{ __html: html }} />
           )}
         </div>
       );

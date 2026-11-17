@@ -7,7 +7,7 @@
 //   4) Details (price, area, description, photos)
 //   -> we confirm the account (Google, or a code by email or WhatsApp verified inline: the account is
 //      created + they're logged in on the spot — no password screen)
-//   5) Confirm: a short summary + "I confirm my details are correct" + optional
+//   5) Confirm: a short summary + "I confirm my details are correct and I agree to the Listing Agreement" + optional
 //      visibility plan -> Publish (then Stripe, or the saved card, for a plan)
 // The listing is posted from step 5; we never route to /publicar. A LOGGED-IN user
 // gets the same wizard, minus the parts we already know: their name and email are
@@ -76,7 +76,7 @@ const DICT = {
     codePh: 'Código de 6 dígitos', verify: 'Verificar', verifying: 'Verificando…', resend: 'Reenviar código', resent: 'Código reenviado',
     haveAccount: 'Ya existe una cuenta', existsSub: (e) => `${e} ya tiene una cuenta en Casa Libre. Ingresá con Google o te enviamos un código de 6 dígitos por email o WhatsApp.`, haveAccountSub: (e) => `Te enviamos un código a ${e}. Ingresalo para continuar.`, googleBtn: 'Continuar con Google', orText: 'o', login: 'Ingresar', errGeneric: 'Algo salió mal. Intentá de nuevo.', doneDash: 'Ir a mi panel',
     d4Title: 'Detalles de la propiedad', d4Sub: 'Completá los datos de tu propiedad.',
-    cTitle: 'Confirmá los datos', cSub: 'Revisá tu propiedad antes de publicarla.', cCheck: 'Confirmo que los datos son correctos', errConfirm: 'Confirmá que los datos son correctos para publicar.',
+    cTitle: 'Confirmá los datos', cSub: 'Revisá tu propiedad antes de publicarla.', cCheck: 'Confirmo que mis datos son correctos y acepto el', cAgree: 'Acuerdo de publicación', errConfirm: 'Confirmá que los datos son correctos para publicar.',
     cOp: 'Operación', cAddr: 'Dirección', cPhone: 'WhatsApp', cContact: 'Contacto', cPhotos: (n) => `${n} foto${n === 1 ? '' : 's'}`,
     fType: 'Tipo de propiedad', typePh: 'Seleccioná el tipo', types: typeOptions('es'),
     fPrice: (m) => (m === 'venta' ? 'Precio' : 'Alquiler mensual'), fPricePh: (m) => (m === 'venta' ? '145,000' : '4,500,000'),
@@ -144,7 +144,7 @@ const DICT = {
     codePh: '6-digit code', verify: 'Verify', verifying: 'Verifying…', resend: 'Resend code', resent: 'Code resent',
     haveAccount: 'Account already exists', existsSub: (e) => `${e} already has a Casa Libre account. Log in with Google or we'll send you a 6-digit code by email or WhatsApp.`, haveAccountSub: (e) => `We sent a code to ${e}. Enter it to continue.`, googleBtn: 'Continue with Google', orText: 'or', login: 'Log in', errGeneric: 'Something went wrong. Try again.', doneDash: 'Go to my dashboard',
     d4Title: 'Property details', d4Sub: 'Fill in your property\'s details.',
-    cTitle: 'Confirm the details', cSub: 'Check your property before you publish it.', cCheck: 'I confirm my details are correct', errConfirm: 'Please confirm your details are correct to publish.',
+    cTitle: 'Confirm the details', cSub: 'Check your property before you publish it.', cCheck: 'I confirm my details are correct and I agree to the', cAgree: 'Listing Agreement', errConfirm: 'Please confirm your details are correct to publish.',
     cOp: 'Operation', cAddr: 'Address', cPhone: 'WhatsApp', cContact: 'Contact', cPhotos: (n) => `${n} photo${n === 1 ? '' : 's'}`,
     fType: 'Property type', typePh: 'Select the type', types: typeOptions('en'),
     fPrice: (m) => (m === 'venta' ? 'Price' : 'Monthly rent'), fPricePh: (m) => (m === 'venta' ? '145,000' : '4,500,000'),
@@ -211,7 +211,7 @@ const DICT = {
     codePh: 'Código de 6 dígitos', verify: 'Verificar', verifying: 'Verificando…', resend: 'Reenviar código', resent: 'Código reenviado',
     haveAccount: 'Já existe uma conta', existsSub: (e) => `${e} já tem uma conta no Casa Libre. Entre com o Google ou enviaremos um código de 6 dígitos por e‑mail ou WhatsApp.`, haveAccountSub: (e) => `Enviamos um código para ${e}. Digite‑o para continuar.`, googleBtn: 'Continuar com Google', orText: 'ou', login: 'Entrar', errGeneric: 'Algo deu errado. Tente novamente.', doneDash: 'Ir ao meu painel',
     d4Title: 'Detalhes do imóvel', d4Sub: 'Preencha os detalhes do seu imóvel.',
-    cTitle: 'Confirme os detalhes', cSub: 'Verifique seu imóvel antes de publicá‑lo.', cCheck: 'Confirmo que os detalhes estão corretos', errConfirm: 'Confirme que os detalhes estão corretos para publicar.',
+    cTitle: 'Confirme os detalhes', cSub: 'Verifique seu imóvel antes de publicá‑lo.', cCheck: 'Confirmo que meus dados estão corretos e aceito o', cAgree: 'Acordo de publicação', errConfirm: 'Confirme que os detalhes estão corretos para publicar.',
     cOp: 'Operação', cAddr: 'Endereço', cPhone: 'WhatsApp', cContact: 'Contato', cPhotos: (n) => `${n} foto${n === 1 ? '' : 's'}`,
     fType: 'Tipo de imóvel', typePh: 'Selecione o tipo', types: typeOptions('pt'),
     fPrice: (m) => (m === 'venta' ? 'Preço' : 'Aluguel mensal'), fPricePh: (m) => (m === 'venta' ? '145.000' : '4.500.000'),
@@ -1474,7 +1474,8 @@ export default function SellFlowProvider({ children }) {
                     </div>
                     <label className="mt-4 flex items-start gap-2.5 text-[14px] font-semibold leading-snug cursor-pointer select-none">
                       <input type="checkbox" checked={confirmOk} onChange={(e) => { setConfirmOk(e.target.checked); if (e.target.checked && err === t.errConfirm) setErr(''); }} className="mt-[2px] w-4 h-4 accent-ink shrink-0 cursor-pointer" data-testid="sell-confirm" />
-                      <span>{t.cCheck}</span>
+                      {/* Listing Agreement (Terms §4) in a new tab. A link inside a <label> doesn't toggle the box (HTML spec). */}
+                      <span>{t.cCheck}{' '}<a href="/terminos#acuerdo-de-publicacion" target="_blank" rel="noopener" className="underline decoration-ink/40 hover:decoration-ink" data-testid="sell-agreement-link">{t.cAgree}</a></span>
                     </label>
 
                     {/* Free listings per month (lib/paidListings.js): the price, before publishing. */}
