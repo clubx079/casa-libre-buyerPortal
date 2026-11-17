@@ -17,6 +17,8 @@ import { OPS, TIPOS } from '@/lib/matrix';
 import { SITE, INDEXABLE, CITIES } from '@/lib/site';
 import { COUNTRY } from '@/lib/country';
 import { breadcrumbLd } from '@/lib/schema';
+import { dbGuide, guideStats, moneyFormatter } from '@/lib/seo';
+import { fillGuide, placeholderPaths, monthEs } from '@/lib/seoContent';
 
 // Runtime-rendered so robots/indexability read live env (a static prerender bakes
 // INDEXABLE=false — the bug that kept /comprar and /alquilar out of the index).
@@ -26,8 +28,19 @@ export function generateStaticParams() {
   return guideSlugs().map((slug) => ({ slug }));
 }
 
+// A guide written by the SEO pipeline (Admin → SEO → Drafts, approved by a person): stored in the
+// DB, its numbers are placeholders filled from live listings (refreshed monthly).
+async function pipelineGuide(slug) {
+  const d = await dbGuide(slug);
+  if (!d) return null;
+  const [stats, money] = await Promise.all([guideStats(placeholderPaths(d)), moneyFormatter()]);
+  const g = fillGuide(d, stats, money, monthEs());
+  return { ...g, related: Array.isArray(d.related) ? d.related : [], updated: (d.updated_at || d.approved_at || '').slice(0, 10) || UPDATED, fromPipeline: true };
+}
+const loadGuide = async (slug) => getGuide(slug) || pipelineGuide(slug);
+
 export async function generateMetadata({ params }) {
-  const g = getGuide(params.slug);
+  const g = await loadGuide(params.slug);
   if (!g) return {};
   return {
     title: g.title,
@@ -58,11 +71,12 @@ function relatedLinks(g) {
   }).filter(Boolean);
 }
 
-export default function Page({ params }) {
-  const g = getGuide(params.slug);
+export default async function Page({ params }) {
+  const g = await loadGuide(params.slug);
   if (!g) notFound();
-  const en = guideEn(params.slug);
-  const pt = guidePt(params.slug);
+  const en = g.fromPipeline ? null : guideEn(params.slug);
+  const pt = g.fromPipeline ? null : guidePt(params.slug);
+  const updated = g.updated || UPDATED;
   const url = `${SITE}/guias/${g.slug}`;
   const others = GUIDES.filter((x) => x.slug !== g.slug).slice(0, 4)
     .map((o) => ({ slug: o.slug, h1: o.h1, h1En: guideEn(o.slug)?.h1, h1Pt: guidePt(o.slug)?.h1 }));
@@ -75,7 +89,7 @@ export default function Page({ params }) {
       description: g.description,
       inLanguage: 'es',
       mainEntityOfPage: url,
-      dateModified: UPDATED,
+      dateModified: updated,
       author: { '@type': 'Organization', name: 'Casa Libre', url: SITE },
       publisher: { '@type': 'Organization', name: 'Casa Libre', url: SITE },
     },
@@ -97,7 +111,7 @@ export default function Page({ params }) {
       {!INDEXABLE ? <meta name="robots" content="noindex, nofollow" /> : null}
       <GuideArticle
         content={{ es: g, ...(en ? { en } : {}), ...(pt ? { pt } : {}) }}
-        updated={UPDATED}
+        updated={updated}
         related={relatedLinks(g)}
         others={others}
       />

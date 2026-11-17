@@ -9,6 +9,8 @@ import Bi from '@/components/marketing/Bi';
 import { SITE, INDEXABLE } from '@/lib/site';
 import { COUNTRY, COUNTRY_PT } from '@/lib/country';
 import { breadcrumbLd } from '@/lib/schema';
+import { dbGuides, guideStats, moneyFormatter } from '@/lib/seo';
+import { fillGuide, placeholderPaths, monthEs } from '@/lib/seoContent';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,7 +20,12 @@ export const metadata = {
   alternates: { canonical: '/guias' },
 };
 
-export default function Page() {
+export default async function Page() {
+  // + guides written by the SEO pipeline and approved in the admin (numbers filled from live listings)
+  const builtIn = new Set(GUIDES.map((g) => g.slug));
+  const fromDb = (await dbGuides()).filter((g) => !builtIn.has(g.slug));
+  const [stats, money] = await Promise.all([guideStats(fromDb.flatMap(placeholderPaths)), moneyFormatter()]);
+  const extra = fromDb.map((d) => fillGuide(d, stats, money, monthEs()));
   const ld = [
     {
       '@context': 'https://schema.org',
@@ -27,7 +34,7 @@ export default function Page() {
       description: metadata.description,
       url: `${SITE}/guias`,
       inLanguage: 'es',
-      hasPart: GUIDES.map((g) => ({ '@type': 'Article', headline: g.h1, url: `${SITE}/guias/${g.slug}`, dateModified: UPDATED })),
+      hasPart: [...GUIDES.map((g) => ({ '@type': 'Article', headline: g.h1, url: `${SITE}/guias/${g.slug}`, dateModified: UPDATED })), ...extra.map((g) => ({ '@type': 'Article', headline: g.h1, url: `${SITE}/guias/${g.slug}` }))],
     },
     breadcrumbLd([{ name: 'Casa Libre', url: SITE }, { name: 'Guías', url: `${SITE}/guias` }]),
   ];
@@ -59,6 +66,12 @@ export default function Page() {
               </p>
             </Link>
           ); })}
+          {extra.map((g) => (
+            <Link key={g.slug} href={`/guias/${g.slug}`} className="block bg-card border border-ink/15 rounded-card p-6 hover:border-ink transition-colors" data-seo="guide">
+              <h2 className="text-[19px] font-bold tracking-head mb-2">{g.h1}</h2>
+              <p className="text-[14.5px] leading-relaxed text-ink/65">{`${String(g.answer || '').slice(0, 150)}…`}</p>
+            </Link>
+          ))}
         </div>
 
         <section className="bg-ink text-paper rounded-card p-7 mt-10">

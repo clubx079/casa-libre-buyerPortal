@@ -10,6 +10,7 @@ import { SITE, SITE_NAME, SITE_TAGLINE, CITIES } from '@/lib/site';
 import { COUNTRY, ALL_COUNTRIES } from '@/lib/country';
 import { PLAY_STORE_URL, APP_STORE_URL } from '@/lib/appLinks';
 import { GUIDES } from '@/lib/guias';
+import { dbGuides } from '@/lib/seo';
 import { guideEn } from '@/lib/guias.en';
 import { displayPhone, supportEmail } from '@/lib/support';
 
@@ -19,7 +20,7 @@ import { displayPhone, supportEmail } from '@/lib/support';
 // (Paraguay). The CDN still caches it for a day via cache-control below.
 export const dynamic = 'force-dynamic';
 
-export function GET() {
+export async function GET() {
   const cities = CITIES.slice(0, 6).map((c) => c.name).join(', ');
   const capital = COUNTRY.capital || CITIES[0]?.name || COUNTRY.name;
   const C = COUNTRY.name;
@@ -73,7 +74,13 @@ export function GET() {
 
   // Link lists (the H2 sections).
   const siteLinks = ALL_COUNTRIES.map((c) => `- [${N} ${c.name}](${c.url}): ${c.code === COUNTRY.code ? `This site. Houses, apartments and land for sale and for rent in ${c.name}.` : `Houses, apartments and land for sale and for rent in ${c.name}.`}`).join('\n');
-  const guideLinks = GUIDES.map((g) => `- [${g.h1}](${SITE}/guias/${g.slug}): ${guideEn(g.slug)?.h1 || g.title}.`).join('\n');
+  // + guides written by the SEO pipeline and approved in Admin → SEO (their numbers are placeholders: left out here)
+  const builtIn = new Set(GUIDES.map((g) => g.slug));
+  const pipelineGuides = (await dbGuides().catch(() => [])).filter((g) => !builtIn.has(g.slug) && !/\{\{/.test(g.h1));
+  const guideLinks = [
+    ...GUIDES.map((g) => `- [${g.h1}](${SITE}/guias/${g.slug}): ${guideEn(g.slug)?.h1 || g.title}.`),
+    ...pipelineGuides.map((g) => `- [${g.h1}](${SITE}/guias/${g.slug}): ${String(g.description || g.h1).replace(/\{\{[^}]*\}\}/g, '').replace(/\s+/g, ' ').trim()}`),
+  ].join('\n');
   const cityLinks = CITIES.map((c) => `- [Propiedades en ${c.name}](${SITE}/propiedades-en/${c.slug}): Houses, apartments and land for sale and for rent in ${c.name}, ${C}.`).join('\n');
 
   const body = `# ${N}

@@ -1,7 +1,8 @@
 import { SITE, CITIES, COMPETITORS } from '@/lib/site';
 import { guideSlugs } from '@/lib/guias';
 import { select } from '@/lib/db';
-import { indexableCombos, indexableBarrioCombos } from '@/lib/matrix';
+import { indexableCombos, indexableBarrioCombos, MIN_LISTINGS } from '@/lib/matrix';
+import { enabledVariantPaths, pageStats, dbGuides } from '@/lib/seo';
 
 // Rendered on request from live data: the Docker build has no database, so a prerendered
 // sitemap would ship without listings/matrix pages.
@@ -37,5 +38,13 @@ export default async function sitemap() {
     const barrioCombos = await indexableBarrioCombos();
     barrioCombos.forEach((x) => entries.push({ url: `${SITE}/${x.op}/${x.tipo}/${x.ciudad}/${x.barrio}`, lastModified: now, changeFrequency: 'daily', priority: 0.6 }));
   } catch { /* inventory blip — ship the rest */ }
+  // SEO pipeline (Admin → SEO): page variants switched on that clear the 5-listing gate, and approved guides.
+  try {
+    for (const x of await enabledVariantPaths()) {
+      if ((await pageStats(x.path)).count >= MIN_LISTINGS) entries.push({ url: `${SITE}${x.path}`, lastModified: now, changeFrequency: 'daily', priority: 0.6 });
+    }
+    const builtIn = new Set(guideSlugs());
+    for (const g of await dbGuides()) if (!builtIn.has(g.slug)) entries.push({ url: `${SITE}/guias/${g.slug}`, lastModified: g.updated_at ? new Date(g.updated_at) : now, changeFrequency: 'monthly', priority: 0.6 });
+  } catch { /* SEO tables missing / blip — ship the rest */ }
   return entries;
 }

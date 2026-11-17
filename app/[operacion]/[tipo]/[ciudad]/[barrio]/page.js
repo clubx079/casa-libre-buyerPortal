@@ -8,6 +8,11 @@ import { isOp, tipoBySlug, OPS, TIPOS, resolveBarrio, barriosForCity, comboConte
 import { searchListings } from '@/lib/marketplace';
 import { cityBySlug, SITE, INDEXABLE } from '@/lib/site';
 import { collectionListingLd, breadcrumbLd } from '@/lib/schema';
+import VariantPage, { variantMetadata } from '@/components/seo/VariantPage';
+import SeoSections from '@/components/seo/SeoSections';
+import { isVariantSlug, fillCount } from '@/lib/seoVariants';
+import { getOverride, pageStats, moneyFormatter } from '@/lib/seo';
+import { statsLine, faqFor } from '@/lib/seoContent';
 
 // Level-4 SEO page: operation × type × city × NEIGHBORHOOD (e.g.
 // /venta/casas/asuncion/herrera). Runtime-rendered so robots/indexability read live
@@ -30,6 +35,8 @@ function resolveBase(params) {
 }
 
 export async function generateMetadata({ params }) {
+  // 4th segment = an SEO page variant (…/baratos, …/2-dormitorios), not a neighbourhood
+  if (isVariantSlug(params.barrio)) return variantMetadata(params);
   const v = resolveBase(params);
   if (!v) return {};
   const combo = await resolveBarrio({ op: v.op, tipo: params.tipo, ciudad: params.ciudad, barrio: params.barrio });
@@ -37,15 +44,17 @@ export async function generateMetadata({ params }) {
   const c = comboContentBarrio({ op: v.op, tipo: params.tipo, barrioName: combo.barrioName, cityName: v.city.name, count: combo.count });
   const url = `/${v.op}/${params.tipo}/${params.ciudad}/${params.barrio}`;
   const indexed = INDEXABLE && combo.count >= MIN_LISTINGS;
+  const ov = await getOverride(url);
   return {
-    title: c.title,
-    description: c.description,
+    title: fillCount(ov?.title, combo.count) || c.title,
+    description: fillCount(ov?.description, combo.count) || c.description,
     alternates: { canonical: url },
     robots: indexed ? { index: true, follow: true } : { index: false, follow: true },
   };
 }
 
 export default async function Page({ params }) {
+  if (isVariantSlug(params.barrio)) return VariantPage({ params });
   const v = resolveBase(params);
   if (!v) notFound();
   const combo = await resolveBarrio({ op: v.op, tipo: params.tipo, ciudad: params.ciudad, barrio: params.barrio });
@@ -65,6 +74,13 @@ export default async function Page({ params }) {
   const ce = comboContentBarrioEn({ op: v.op, tipo: params.tipo, barrioName: combo.barrioName, cityName: v.city.name, count: combo.count });
   const cp = comboContentBarrioPt({ op: v.op, tipo: params.tipo, barrioName: combo.barrioName, cityName: v.city.name, count: combo.count });
   const op = OPS[v.op], tp = v.tipo;
+  // SEO pipeline: override, live stats, data FAQ, extra links
+  const seoPath = `/${v.op}/${params.tipo}/${params.ciudad}/${params.barrio}`;
+  const [ov, stats, money] = await Promise.all([getOverride(seoPath), pageStats(seoPath), moneyFormatter()]);
+  const h1Es = fillCount(ov?.h1, combo.count) || c.h1;
+  const seoCtx = { op: v.op, sing: tp.sing, plural: tp.plural, opLabel: op.label, place: `${combo.barrioName}, ${v.city.name}`, stats, money };
+  const liveLine = statsLine(seoCtx);
+  const faq = faqFor(seoCtx);
   const cityUrl = `/${v.op}/${params.tipo}/${params.ciudad}`;
   const base = `${SITE}${cityUrl}/${params.barrio}`;
   const ldCollection = collectionListingLd({ name: c.h1, description: c.description, url: base, listings, site: SITE });
@@ -86,8 +102,9 @@ export default async function Page({ params }) {
           <Link href={cityUrl} className="hover:underline"><Bi es={`${op.short} de ${tp.plural} en ${v.city.name}`} en={`${tp.pluralEn} ${op.labelEn} in ${v.city.name}`} pt={`${capPt(tp.pluralPt)} ${op.labelPt} em ${v.city.name}`} /></Link>
           {' · '}{combo.barrioName}
         </nav>
-        <h1 className="text-[28px] font-bold tracking-tight text-ink md:text-[36px]"><Bi es={c.h1} en={ce.h1} pt={cp.h1} /></h1>
+        <h1 className="text-[28px] font-bold tracking-tight text-ink md:text-[36px]"><Bi es={h1Es} en={ce.h1} pt={cp.h1} /></h1>
         <p className="mt-3 max-w-3xl text-[15px] leading-relaxed text-ink/70"><Bi es={c.intro} en={ce.intro} pt={cp.intro} /></p>
+        {liveLine ? <p className="mt-2 max-w-3xl text-[14px] leading-relaxed text-ink/60" data-seo="stats">{liveLine}</p> : null}
 
         <div className="mt-6">
           <ListingGrid listings={listings} />
@@ -116,6 +133,7 @@ export default async function Page({ params }) {
             </ul>
           </section>
         ) : null}
+        <SeoSections faq={faq} links={Array.isArray(ov?.extra_links) ? ov.extra_links : []} />
       </div>
     </MarketingShell>
   );

@@ -8,6 +8,10 @@ import { isOp, tipoBySlug, OPS, TIPOS, comboCount, indexableCombos, comboContent
 import { searchListings } from '@/lib/marketplace';
 import { CITIES, cityBySlug, SITE, INDEXABLE } from '@/lib/site';
 import { collectionListingLd, breadcrumbLd } from '@/lib/schema';
+import { getOverride, pageStats, moneyFormatter, dbGuides } from '@/lib/seo';
+import { statsLine, faqFor } from '@/lib/seoContent';
+import { VARIANTS, fillCount } from '@/lib/seoVariants';
+import SeoSections from '@/components/seo/SeoSections';
 
 // Runtime-rendered so robots/indexability read live env + live inventory. Combos
 // are validated against known ops/types/cities; anything else is a 404. This is a
@@ -34,9 +38,11 @@ export async function generateMetadata({ params }) {
   const c = comboContent({ op: v.op, tipo: params.tipo, ciudad: params.ciudad, count });
   const url = `/${v.op}/${params.tipo}/${params.ciudad}`;
   const indexed = INDEXABLE && count >= MIN_LISTINGS;
+  // SEO pipeline override (Admin → SEO): title / description in the words people search
+  const ov = await getOverride(url);
   return {
-    title: c.title,
-    description: c.description,
+    title: fillCount(ov?.title, count) || c.title,
+    description: fillCount(ov?.description, count) || c.description,
     alternates: { canonical: url },
     // Below the min-listing gate → crawlable but not indexed (avoids thin pages
     // in the index). Above → follow the site's normal indexability.
@@ -73,6 +79,22 @@ export default async function Page({ params }) {
   const cp = comboContentPt({ op: v.op, tipo: params.tipo, ciudad: params.ciudad, count });
   const op = OPS[v.op], tp = v.tipo;
 
+  // SEO pipeline (Admin → SEO): overrides, live stats, data FAQ, variant + extra + guide links
+  const path = `/${v.op}/${params.tipo}/${params.ciudad}`;
+  const [ov, stats, money, guides] = await Promise.all([getOverride(path), pageStats(path), moneyFormatter(), dbGuides()]);
+  const h1Es = fillCount(ov?.h1, count) || c.h1;
+  const ctx = { op: v.op, sing: tp.sing, plural: tp.plural, opLabel: op.label, place: c.cityName, stats, money };
+  const liveLine = statsLine(ctx);
+  const faq = faqFor(ctx);
+  const variantLinks = [];
+  for (const slug of ov?.enabled_variants || []) {
+    if (!VARIANTS[slug]) continue;
+    const vs = await pageStats(`${path}/${slug}`);
+    if (vs.count >= MIN_LISTINGS) variantLinks.push({ href: `${path}/${slug}`, label: `${op.short} de ${tp.plural} ${VARIANTS[slug].es} en ${c.cityName} (${vs.count})` });
+  }
+  const guideLinks = guides.filter((g) => (g.related || []).some(([o, t]) => o === v.op && t === params.tipo)).slice(0, 4).map((g) => ({ href: `/guias/${g.slug}`, label: g.h1 }));
+  const seoLinks = [...variantLinks, ...(Array.isArray(ov?.extra_links) ? ov.extra_links : []), ...guideLinks];
+
   return (
     <MarketingShell>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ldCollection) }} />
@@ -81,8 +103,9 @@ export default async function Page({ params }) {
         <nav className="mb-3 text-[13px] text-ink/50">
           <Link href="/propiedades" className="hover:underline"><Bi es="Propiedades" en="Properties" pt="Imóveis" /></Link> · <Bi es={c.h1} en={ce.h1} pt={cp.h1} />
         </nav>
-        <h1 className="text-[28px] font-bold tracking-tight text-ink md:text-[36px]"><Bi es={c.h1} en={ce.h1} pt={cp.h1} /></h1>
+        <h1 className="text-[28px] font-bold tracking-tight text-ink md:text-[36px]"><Bi es={h1Es} en={ce.h1} pt={cp.h1} /></h1>
         <p className="mt-3 max-w-3xl text-[15px] leading-relaxed text-ink/70"><Bi es={c.intro} en={ce.intro} pt={cp.intro} /></p>
+        {liveLine ? <p className="mt-2 max-w-3xl text-[14px] leading-relaxed text-ink/60" data-seo="stats">{liveLine}</p> : null}
 
         <div className="mt-6">
           <ListingGrid listings={listings} />
@@ -147,6 +170,7 @@ export default async function Page({ params }) {
             </div>
           </section>
         ) : null}
+        <SeoSections faq={faq} links={seoLinks} />
       </div>
     </MarketingShell>
   );
