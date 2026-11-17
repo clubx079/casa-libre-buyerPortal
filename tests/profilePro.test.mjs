@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DEFAULTS, profileProConfig, profileStatus, nextPeriod, periodUntil, showsProDetails, gateProfile, usd } from '../lib/profilePro.js';
+import { DEFAULTS, profileProConfig, profileStatus, nextPeriod, periodUntil, showsProDetails, gateProfile, gateInfo, usd } from '../lib/profilePro.js';
 
 const NOW = new Date('2026-11-17T12:00:00Z');
 const D = 86400000;
@@ -62,4 +62,11 @@ test('showsProDetails + gateProfile: ON hides title/company/website without an a
   assert.equal(gateProfile({ ...p, name: null }, false), null);
   assert.equal(gateProfile(null, false), null);
   assert.equal(usd(580), 'US$5.80'); assert.equal(usd(1000), 'US$10');
+});
+
+test('gateInfo: the "Sobre el vendedor" seller_info hides the same paid details (no leak in the listing API)', () => {
+  const info = { name: 'Ana López', title: 'Agente', company: 'Inmo', website: 'https://inmo.com.py', website_label: 'inmo.com.py', member_since: '2026-01-01T00:00:00Z', wa_verified: true, active_listings: 3 };
+  assert.deepEqual(gateInfo(info, true), info);
+  assert.deepEqual(gateInfo(info, false), { ...info, title: null, company: null, website: null, website_label: null });
+  assert.equal(gateInfo(null, false), null);
 });
