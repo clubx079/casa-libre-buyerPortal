@@ -4,20 +4,25 @@
 import Link from 'next/link';
 import Bi from '@/components/marketing/Bi';
 
+// "<" inside JSON-LD is written as the 6 characters u003c with a backslash, so stored text can never close the <script> tag
+const LT_ESC = String.fromCharCode(92) + "u003c";
+
 export function faqLd(faq) {
   if (!faq?.length) return null;
   return { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: faq.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) };
 }
 
-export default function SeoSections({ faq = [], links = [] }) {
+export default function SeoSections({ faq: faqIn = [], links = [] }) {
+  const faq = (Array.isArray(faqIn) ? faqIn : []).filter((f) => f && f.q && f.a);
   const ld = faqLd(faq);
   const uniq = [];
   const seen = new Set();
-  for (const l of links) if (l?.href && !seen.has(l.href)) { seen.add(l.href); uniq.push(l); }
+  // only internal links with a text: a malformed stored link is skipped, never rendered
+  for (const l of Array.isArray(links) ? links : []) if (typeof l?.href === 'string' && l.href.startsWith('/') && !l.href.startsWith('//') && !seen.has(l.href)) { seen.add(l.href); uniq.push({ href: l.href, label: String(l.label || l.href) }); }
   if (!faq.length && !uniq.length) return null;
   return (
     <>
-      {ld ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} /> : null}
+      {ld ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld).replace(/</g, LT_ESC) }} /> : null}
       {uniq.length ? (
         <section className="mt-12 border-t-[1.5px] border-ink/10 pt-8" data-seo="links">
           <h2 className="text-[18px] font-bold text-ink"><Bi es="Más búsquedas" en="More searches" pt="Mais buscas" /></h2>

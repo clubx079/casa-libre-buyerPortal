@@ -30,12 +30,27 @@ export function generateStaticParams() {
 
 // A guide written by the SEO pipeline (Admin → SEO → Drafts, approved by a person): stored in the
 // DB, its numbers are placeholders filled from live listings (refreshed monthly).
+// Never crashes the page: a guide whose stored shape is off is cleaned, and if it still can't be built
+// the address answers "not found" (404) instead of an error page.
+const arr = (v) => (Array.isArray(v) ? v : []);
+const str = (v) => (v == null ? '' : String(v));
 async function pipelineGuide(slug) {
-  const d = await dbGuide(slug);
-  if (!d) return null;
-  const [stats, money] = await Promise.all([guideStats(placeholderPaths(d)), moneyFormatter()]);
-  const g = fillGuide(d, stats, money, monthEs());
-  return { ...g, related: Array.isArray(d.related) ? d.related : [], updated: (d.updated_at || d.approved_at || '').slice(0, 10) || UPDATED, fromPipeline: true };
+  try {
+    const raw = await dbGuide(slug);
+    if (!raw) return null;
+    const d = {
+      ...raw,
+      title: str(raw.title), h1: str(raw.h1), description: str(raw.description), answer: str(raw.answer),
+      sections: arr(raw.sections).filter((s) => s && typeof s === 'object').map((s) => ({ h2: str(s.h2), paras: arr(s.paras).map(str) })),
+      faq: arr(raw.faq).filter((x) => x && typeof x === 'object' && x.q && x.a).map((x) => ({ q: str(x.q), a: str(x.a) })),
+    };
+    if (!d.title || !d.h1 || !d.sections.length) return null;
+    const [stats, money] = await Promise.all([guideStats(placeholderPaths(d)), moneyFormatter()]);
+    const g = fillGuide(d, stats, money, monthEs());
+    return { ...g, related: arr(raw.related).filter((r) => Array.isArray(r) && r.length >= 2), updated: str(raw.updated_at || raw.approved_at).slice(0, 10) || UPDATED, fromPipeline: true };
+  } catch {
+    return null;
+  }
 }
 const loadGuide = async (slug) => getGuide(slug) || pipelineGuide(slug);
 
