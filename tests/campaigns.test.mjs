@@ -5,7 +5,7 @@ import { CAMPAIGNS, ALIASES, resolveSlug, campaignUrl } from '../lib/campaigns.j
 const O = 'https://casa-libre.com.py';
 
 test('one link per channel', () => {
-  assert.deepEqual(Object.keys(CAMPAIGNS), ['rd', 'fb', 'ig', 'x', 'tt', 'meta', 'gads', 'wa', 'mail', 'gbp']);
+  assert.deepEqual(Object.keys(CAMPAIGNS), ['rd', 'fb', 'ig', 'x', 'tt', 'meta', 'gads', 'wa', 'mail', 'gbp', 'chatgpt', 'gptads']);
   const sources = Object.values(CAMPAIGNS).map((c) => c.source);
   assert.equal(new Set(sources).size, sources.length, 'each channel has its own utm_source');
   for (const c of Object.values(CAMPAIGNS)) assert.ok(c.label, 'every channel has a label for the admin');
