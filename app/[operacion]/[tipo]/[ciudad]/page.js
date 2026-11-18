@@ -13,6 +13,9 @@ import { statsLine, faqFor } from '@/lib/seoContent';
 import { VARIANTS, fillCount } from '@/lib/seoVariants';
 import SeoSections from '@/components/seo/SeoSections';
 
+// '<' inside JSON-LD becomes the 6 characters backslash-u003c: stored text can never close the <script> tag
+const LT_ESC = String.fromCharCode(92) + 'u003c';
+
 // Runtime-rendered so robots/indexability read live env + live inventory. Combos
 // are validated against known ops/types/cities; anything else is a 404. This is a
 // strict 3-segment route, so it never shadows an existing static route.
@@ -97,8 +100,8 @@ export default async function Page({ params }) {
 
   return (
     <MarketingShell>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ldCollection) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ldCrumb) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ldCollection).replace(/</g, LT_ESC) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ldCrumb).replace(/</g, LT_ESC) }} />
       <div className="mx-auto max-w-6xl px-4 py-8 md:py-10">
         <nav className="mb-3 text-[13px] text-ink/50">
           <Link href="/propiedades" className="hover:underline"><Bi es="Propiedades" en="Properties" pt="Imóveis" /></Link> · <Bi es={c.h1} en={ce.h1} pt={cp.h1} />

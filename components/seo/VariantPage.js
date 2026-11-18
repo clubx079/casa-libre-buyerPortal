@@ -19,6 +19,9 @@ import { getOverride, pageStats, moneyFormatter } from '@/lib/seo';
 import { VARIANTS, variantState, variantFilter, fillCount } from '@/lib/seoVariants';
 import { statsLine, faqFor } from '@/lib/seoContent';
 
+// '<' inside JSON-LD becomes the 6 characters backslash-u003c: stored text can never close the <script> tag
+const LT_ESC = String.fromCharCode(92) + 'u003c';
+
 const getVariantListings = unstable_cache(
   async (op, type, cityName, filter) => searchListings({ op, type, q: cityName, page: 1, pageSize: 24, sort: 'precio_asc', ...filter }),
   ['cl-seo-variant-listings-v1'],
@@ -85,8 +88,8 @@ export default async function VariantPage({ params }) {
 
   return (
     <MarketingShell>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ldCollection) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ldCrumb) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ldCollection).replace(/</g, LT_ESC) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ldCrumb).replace(/</g, LT_ESC) }} />
       <div className="mx-auto max-w-6xl px-4 py-8 md:py-10">
         <nav className="mb-3 text-[13px] text-ink/50">
           <Link href="/propiedades" className="hover:underline"><Bi es="Propiedades" en="Properties" pt="Imóveis" /></Link>

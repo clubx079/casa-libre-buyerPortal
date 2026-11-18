@@ -14,6 +14,9 @@ import { isVariantSlug, fillCount } from '@/lib/seoVariants';
 import { getOverride, pageStats, moneyFormatter } from '@/lib/seo';
 import { statsLine, faqFor } from '@/lib/seoContent';
 
+// '<' inside JSON-LD becomes the 6 characters backslash-u003c: stored text can never close the <script> tag
+const LT_ESC = String.fromCharCode(92) + 'u003c';
+
 // Level-4 SEO page: operation × type × city × NEIGHBORHOOD (e.g.
 // /venta/casas/asuncion/herrera). Runtime-rendered so robots/indexability read live
 // env + live inventory. Strict 4-segment route: any invalid/thin combo → 404, so it
@@ -93,8 +96,8 @@ export default async function Page({ params }) {
 
   return (
     <MarketingShell>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ldCollection) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ldCrumb) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ldCollection).replace(/</g, LT_ESC) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ldCrumb).replace(/</g, LT_ESC) }} />
       <div className="mx-auto max-w-6xl px-4 py-8 md:py-10">
         <nav className="mb-3 text-[13px] text-ink/50">
           <Link href="/propiedades" className="hover:underline"><Bi es="Propiedades" en="Properties" pt="Imóveis" /></Link>

@@ -12,6 +12,9 @@ import { breadcrumbLd } from '@/lib/schema';
 import { dbGuides, guideStats, moneyFormatter } from '@/lib/seo';
 import { fillGuide, placeholderPaths, monthEs } from '@/lib/seoContent';
 
+// '<' inside JSON-LD becomes the 6 characters backslash-u003c: stored text can never close the <script> tag
+const LT_ESC = String.fromCharCode(92) + 'u003c';
+
 export const dynamic = 'force-dynamic';
 
 export const metadata = {
@@ -41,7 +44,7 @@ export default async function Page() {
 
   return (
     <MarketingShell>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld).replace(/</g, LT_ESC) }} />
       {!INDEXABLE ? <meta name="robots" content="noindex, nofollow" /> : null}
 
       <div className="px-5 md:px-11 py-12 max-w-[860px] mx-auto">

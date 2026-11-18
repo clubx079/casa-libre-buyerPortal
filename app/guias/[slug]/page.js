@@ -20,6 +20,9 @@ import { breadcrumbLd } from '@/lib/schema';
 import { dbGuide, guideStats, moneyFormatter } from '@/lib/seo';
 import { fillGuide, placeholderPaths, monthEs } from '@/lib/seoContent';
 
+// '<' inside JSON-LD becomes the 6 characters backslash-u003c: stored text can never close the <script> tag
+const LT_ESC = String.fromCharCode(92) + 'u003c';
+
 // Runtime-rendered so robots/indexability read live env (a static prerender bakes
 // INDEXABLE=false — the bug that kept /comprar and /alquilar out of the index).
 export const dynamic = 'force-dynamic';
@@ -122,7 +125,7 @@ export default async function Page({ params }) {
 
   return (
     <MarketingShell>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld).replace(/</g, LT_ESC) }} />
       {!INDEXABLE ? <meta name="robots" content="noindex, nofollow" /> : null}
       <GuideArticle
         content={{ es: g, ...(en ? { en } : {}), ...(pt ? { pt } : {}) }}
