@@ -388,8 +388,17 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
     // can restore the previous view instead of snapping to the filtered bounds).
     const pa = placeId ? placeAreaRef.current : null;
     if (n && !nearMe && !skipFitRef.current && !areaRef.current && (typeF !== 'all' || priceF !== 'all' || bedF !== 'all' || barrioF !== 'all' || heightF !== 'all' || q || placeId)) {
-      if (pa) moveCamera(() => fitBox(google, map, pa.bounds, { padding: 36, maxZoom: pa.kind === 'barrio' ? 16 : 15 }));
-      else fitPins();
+      if (pa) {
+        moveCamera(() => fitBox(google, map, pa.bounds, { padding: 36, maxZoom: pa.kind === 'barrio' ? 16 : 15 }));
+        // the list = the place's listings that are ON THE MAP (same as the desktop view)
+        google.maps.event.addListenerOnce(map, 'idle', () => {
+          if (nearMeRef.current) return;
+          const b = map.getBounds();
+          if (!b) return;
+          const ne = b.getNorthEast(); const sw = b.getSouthWest();
+          setArea(roundArea({ n: ne.lat(), s: sw.lat(), e: ne.lng(), w: sw.lng() }));
+        });
+      } else fitPins();
     }
     skipFitRef.current = false;
   }, [displayPins, nearMe, typeF, priceF, bedF, barrioF, heightF, q, placeId, placeArea]);

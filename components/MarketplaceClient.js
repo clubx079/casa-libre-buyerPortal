@@ -356,6 +356,18 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
     if (!nearMeRef.current && !areaRef.current) {
       didFit.current = true;
       moveCamera(() => fitBox(google, map, placeArea.bounds, { padding: 48, maxZoom: placeArea.kind === 'barrio' ? 16 : 15 }));
+      // The list = the picked place's listings THAT ARE ON THE MAP (Omar, Nov 22): once the map has
+      // settled on the place, its visible area becomes the list's area, exactly as if the visitor had
+      // moved the map. Listings of the place left off the map (no location, misplaced pin) drop out;
+      // dragging / zooming further narrows it the usual way (the 'idle' listener).
+      const once = google.maps.event.addListenerOnce(map, 'idle', () => {
+        if (nearMeRef.current) return;
+        const b = map.getBounds();
+        if (!b) return;
+        const ne = b.getNorthEast(); const sw = b.getSouthWest();
+        setArea(roundArea({ n: ne.lat(), s: sw.lat(), e: ne.lng(), w: sw.lng() }));
+      });
+      return () => { outline.remove(); google.maps.event.removeListener(once); };
     }
     return () => outline.remove();
     // eslint-disable-next-line react-hooks/exhaustive-deps
