@@ -15,6 +15,8 @@ import { fmtUsd, isUnverified, contactSellerFor } from '@/lib/ui';
 import { COUNTRY, COUNTRY_PT } from '@/lib/country';
 import VerifiedTag from '@/components/VerifiedTag';
 import AuthButton from '@/components/AuthButton';
+import PlaceAutocomplete, { submitSearch } from '@/components/PlaceAutocomplete';
+import { usePlaces, placeHref } from '@/lib/placesClient';
 
 const H = {
   es: {
@@ -80,7 +82,11 @@ export default function MobileHome({ featured = [], count = 0, tickerData = [] }
   // Typing only edits the box; the search runs on the arrow / Enter. The transition
   // keeps the arrow busy (spinner) until /propiedades has loaded.
   const [searching, startSearch] = useTransition();
-  const go = () => { if (searching) return; const query = q.trim(); startSearch(() => router.push(query ? `/propiedades?q=${encodeURIComponent(query)}` : '/propiedades')); };
+  // Place suggestions (barrio / city / departamento, lib/places.js): loaded on first focus.
+  const places = usePlaces();
+  const goTo = (href) => { if (searching) return; startSearch(() => router.push(href)); };
+  const goText = (text) => goTo(text ? `/propiedades?q=${encodeURIComponent(text)}` : '/propiedades');
+  const go = () => submitSearch(places.index, q, { onPick: (p) => goTo(placeHref(p)), onText: goText, lang });
   const ticker = tickerData.length ? tickerData : [`CASA LIBRE — PROPIEDADES EN ${(COUNTRY.name || 'Sudamérica').toUpperCase()}`];
   const price = (l) => (isUnverified(l, 'price') ? contactSellerFor('price', lang) : (fmtUsd(l.usd, lang) || '—') + (l.mode === 'alquiler' ? t.perMonth : ''));
   const fTitle = (l) => `${typeLabel(l.type, lang) || tr(lang, 'Propiedad', 'Property', 'Imóvel')}${l.beds ? ` · ${l.beds} ${t.bd}` : ''}`;
@@ -132,8 +138,13 @@ export default function MobileHome({ featured = [], count = 0, tickerData = [] }
 
       {/* SEARCH */}
       <div className="px-4 mt-3">
-        <form role="search" onSubmit={(e) => { e.preventDefault(); go(); }} className="flex items-center bg-card border-2 border-ink rounded-pill h-[60px] pl-5 pr-[5px] shadow-hard">
-          <input enterKeyHint="search" aria-label={t.searchPh} value={q} onChange={(e) => setQ(e.target.value)} placeholder={t.searchPh} className="flex-1 min-w-0 bg-transparent outline-none text-[16px] text-ink placeholder:text-ink/45" />
+        <form role="search" onSubmit={(e) => { e.preventDefault(); go(); }} className="relative flex items-center bg-card border-2 border-ink rounded-pill h-[60px] pl-5 pr-[5px] shadow-hard">
+          <PlaceAutocomplete
+            value={q} onChange={setQ} index={places.index} onNeedIndex={places.ensure} lang={lang}
+            onPick={(p) => { setQ(p.name); goTo(placeHref(p)); }} onText={(text) => { setQ(text); goText(text); }}
+            placeholder={t.searchPh} ariaLabel={t.searchPh}
+            className="flex-1 min-w-0 bg-transparent outline-none text-[16px] text-ink placeholder:text-ink/45"
+          />
           <button type="submit" aria-label={searching ? 'Buscando…' : 'Buscar'} disabled={searching} aria-busy={searching} className="w-12 h-12 flex-none rounded-pill bg-ink text-paper flex items-center justify-center text-[22px] touch-manipulation disabled:cursor-wait">{searching ? <SearchSpinner className="w-5 h-5" /> : <span aria-hidden="true">→</span>}</button>
         </form>
       </div>

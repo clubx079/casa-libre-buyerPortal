@@ -11,6 +11,8 @@ import { useRouter } from 'next/navigation';
 import { typeLabel } from '@/lib/propertyType';
 import { fmtUsd, fmtPyg, bathWord, isUnverified, contactSellerFor } from '@/lib/ui';
 import { COUNTRY, COUNTRY_PT } from '@/lib/country';
+import PlaceAutocomplete, { submitSearch } from '@/components/PlaceAutocomplete';
+import { usePlaces, placeHref } from '@/lib/placesClient';
 
 const DICT = {
   es: {
@@ -96,7 +98,11 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
   // Typing only edits the box; the search runs on the button / Enter. The transition
   // keeps the button busy (spinner) until /propiedades has loaded.
   const [searching, startSearch] = useTransition();
-  const goSearch = () => { if (searching) return; const query = q.trim(); startSearch(() => router.push(query ? `/propiedades?q=${encodeURIComponent(query)}` : '/propiedades')); };
+  // Place suggestions (barrio / city / departamento, lib/places.js): loaded on first focus.
+  const places = usePlaces();
+  const goTo = (href) => { if (searching) return; startSearch(() => router.push(href)); };
+  const goText = (text) => goTo(text ? `/propiedades?q=${encodeURIComponent(text)}` : '/propiedades');
+  const goSearch = () => submitSearch(places.index, q, { onPick: (p) => goTo(placeHref(p)), onText: goText, lang });
 
   const price = (l) => (isUnverified(l, 'price') ? contactSellerFor('price', lang) : (fmtUsd(l.usd, lang) || '—') + (l.mode === 'alquiler' ? t.perMonth : ''));
   const title = (l) => `${typeLabel(l.type, lang) || tr(lang, 'Propiedad', 'Property', 'Imóvel')}${l.beds ? ` · ${l.beds} ${t.beds}` : ''}`;
@@ -146,8 +152,13 @@ export default function LandingClient({ featured = [], count = 0, tickerData = [
               brand line, so the inventory claim needs a heading of its own. */}
           <h2 className="sr-only">{t.seoH2}</h2>
           <p className="text-[clamp(16px,2vw,19px)] leading-relaxed text-ink/60 max-w-[460px] mx-auto md:mx-0 mb-7 md:mb-9 max-[720px]:mb-6">{t.heroSub}</p>
-          <form role="search" onSubmit={(e) => { e.preventDefault(); goSearch(); }} className="flex items-center bg-card border-2 border-ink rounded-pill pl-[26px] pr-1.5 py-1.5 max-w-[560px] mx-auto md:mx-0 shadow-hard">
-            <input enterKeyHint="search" aria-label={t.searchPlaceholder} value={q} onChange={(e) => setQ(e.target.value)} placeholder={t.searchPlaceholder} className="flex-1 min-w-0 bg-transparent outline-none text-[16px] text-ink placeholder:text-ink/40" />
+          <form role="search" onSubmit={(e) => { e.preventDefault(); goSearch(); }} className="relative flex items-center bg-card border-2 border-ink rounded-pill pl-[26px] pr-1.5 py-1.5 max-w-[560px] mx-auto md:mx-0 shadow-hard">
+            <PlaceAutocomplete
+              value={q} onChange={setQ} index={places.index} onNeedIndex={places.ensure} lang={lang}
+              onPick={(p) => { setQ(p.name); goTo(placeHref(p)); }} onText={(text) => { setQ(text); goText(text); }}
+              placeholder={t.searchPlaceholder} ariaLabel={t.searchPlaceholder}
+              className="flex-1 min-w-0 bg-transparent outline-none text-[16px] text-ink placeholder:text-ink/40"
+            />
             <button
               type="submit" aria-label={t.searchBtn} disabled={searching} aria-busy={searching}
               className="flex-none flex items-center justify-center gap-2 bg-ink text-paper rounded-pill font-semibold whitespace-nowrap w-[46px] h-[46px] sm:w-auto sm:h-auto sm:py-3.5 sm:px-[clamp(18px,3vw,30px)] touch-manipulation disabled:cursor-wait"
