@@ -19,6 +19,7 @@ import SaveButton from '@/components/SaveButton';
 import ListingDescription from '@/components/ListingDescription';
 import ShareButton from '@/components/ShareButton';
 import { genToken, shortUrl, trackContact, markOpened } from '@/lib/contactTrack';
+import { rememberShareVisit } from '@/lib/shareVisit';
 import { COUNTRY } from '@/lib/country';
 import { inCountry } from '@/utils/gmap';
 import AuthButton from '@/components/AuthButton';
@@ -160,10 +161,14 @@ export default function PropertyDetailView({ l, url }) {
   const imgs = (l.images || []).filter(Boolean);
   const tiles = imgs.slice(0, 4);
 
+  const [shareCh, setShareCh] = useState(null);
+  useEffect(() => { setShareCh(rememberShareVisit(l.id)); }, [l.id]);
   const trackProps = {
     property_id: l.id, slug: l.id, address: l.address || null, city: l.city || null,
     neighborhood: l.neighborhood || null, state: l.province || null, price: l.usd ?? null,
     currency: 'USD', mode: l.mode, type: l.type || null, lat: l.lat ?? null, lng: l.lng ?? null,
+    // reached through the owner's share link (lib/shareVisit.js) → counted as the link's contact
+    ...(shareCh ? { share_channel: shareCh } : {}),
   };
 
   // wa digits — shared normalization (lib/ui.js) so the card and the mobile
@@ -232,7 +237,7 @@ export default function PropertyDetailView({ l, url }) {
       )}
       {main && (
         <div className="absolute top-2.5 right-2.5 z-10 flex items-center gap-1.5">
-          <ShareButton url={url} title={title} />
+          <ShareButton url={url} title={title} listingId={l.id} />
           <SaveButton id={l.id} mode={l.mode} />
         </div>
       )}
@@ -313,7 +318,10 @@ export default function PropertyDetailView({ l, url }) {
         <main>
           <div className="font-mono text-[11px] tracking-[.1em] uppercase text-ink/50">{modeLabel} · {t.ref} {listingRef}</div>
           <h1 className="text-[clamp(24px,3.4vw,34px)] font-bold tracking-head leading-[1.15] mt-1.5 mb-1">{title}</h1>
-          <div className="text-[14px] text-ink/55 mb-4">{zone}</div>
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div className="text-[14px] text-ink/55">{zone}</div>
+            <ShareButton url={url} title={title} listingId={l.id} variant="pill" className="shrink-0 px-3.5 py-1.5" />
+          </div>
           <div className="flex items-baseline gap-3.5 flex-wrap mb-1.5">
             <span className="text-[clamp(22px,3vw,28px)] font-bold tracking-head">{bigPrice}{priceSfx}</span>
             {altPrice && <span className="font-mono text-[13px] text-ink/50">{altPrice}</span>}

@@ -27,6 +27,7 @@ import { locatePin } from '@/components/pinGeocode';
 import { changedFromGoogle, zoomFor } from '@/lib/pinLocate';
 import HighlightModal from '@/components/HighlightModal';
 import ListingPaymentModal from '@/components/ListingPaymentModal';
+import ShareSheet from '@/components/ShareSheet';
 import StrikePrice from '@/components/StrikePrice';
 import { appendDeviceSignals, deviceId, deviceFingerprint } from '@/lib/deviceSignals';
 import RecommendedTag from '@/components/RecommendedTag';
@@ -89,7 +90,7 @@ const DICT = {
     dupTitle: 'En revisión: puede ser una publicación repetida', dupSub: 'Tiene los mismos datos y fotos que otra de tus propiedades, así que no la publicamos. Te enviamos un email.',
     pendTitle: 'Tu publicación está guardada', pendSub: 'Falta el pago para publicarla. Podés pagarla desde Mis publicaciones.', payNow: 'Pagar y publicar',
     backToApp: 'Volver a la app',
-    doneTitle: '¡Tu propiedad está publicada!', doneSub: 'Ya aparece en el marketplace de Casa Libre.', doneView: 'Ver mi propiedad', doneBrowse: 'Ver propiedades',
+    doneTitle: '¡Tu propiedad está publicada!', doneSub: 'Compartila y llegá a más compradores.', scanShare: 'Cuando se publique, compartila desde Mis publicaciones con el botón Compartir: te damos la imagen, el texto y un link para cada red.', doneView: 'Ver mi propiedad', doneBrowse: 'Ver propiedades',
     scanTitle: '¡Listo! Estamos revisando tus fotos', scanSub: 'Se publica en un momento. Seguila en Mis publicaciones.', scanView: 'Mis publicaciones',
     // Promotion plans (optional paid visibility at publish) — two boxes, pick one.
     planTitle: 'Sumá visibilidad',
@@ -156,7 +157,7 @@ const DICT = {
     dupTitle: 'Under review: it might be a duplicate', dupSub: "It has the same details and photos as another of your listings, so we didn't publish it. We've emailed you.",
     pendTitle: 'Your listing is saved', pendSub: 'It needs the payment to go live. You can pay from My listings.', payNow: 'Pay and publish',
     backToApp: 'Back to the app',
-    doneTitle: 'Your listing is live!', doneSub: 'It already shows in the Casa Libre marketplace.', doneView: 'View my listing', doneBrowse: 'Browse listings',
+    doneTitle: 'Your listing is live!', doneSub: 'Share it and reach more buyers.', scanShare: 'Once it is live, share it from My listings with the Share button: we give you the image, the text and a link for each network.', doneView: 'View my listing', doneBrowse: 'Browse listings',
     scanTitle: "Done! We're checking your photos", scanSub: 'It goes live in a moment. Follow it in My listings.', scanView: 'My listings',
     // Promotion plans (optional paid visibility at publish) — two boxes, pick one.
     planTitle: 'Add visibility',
@@ -223,7 +224,7 @@ const DICT = {
     dupTitle: 'Em revisão: pode ser um duplicado', dupSub: 'Ele tem os mesmos detalhes e fotos de outro dos seus anúncios, por isso não o publicamos. Enviamos um e‑mail.',
     pendTitle: 'Seu anúncio está salvo', pendSub: 'Precisa do pagamento para ficar ativo. Você pode pagar em Meus anúncios.', payNow: 'Pagar e publicar',
     backToApp: 'Voltar ao app',
-    doneTitle: 'Seu anúncio está ativo!', doneSub: 'Ele já aparece no marketplace do Casa Libre.', doneView: 'Ver meu anúncio', doneBrowse: 'Ver anúncios',
+    doneTitle: 'Seu anúncio está ativo!', doneSub: 'Compartilhe e alcance mais compradores.', scanShare: 'Quando estiver ativo, compartilhe em Meus anúncios com o botão Compartilhar: damos a imagem, o texto e um link para cada rede.', doneView: 'Ver meu anúncio', doneBrowse: 'Ver anúncios',
     scanTitle: 'Pronto! Estamos revisando suas fotos', scanSub: 'Ele ficará ativo em breve. Acompanhe em Meus anúncios.', scanView: 'Meus anúncios',
     planTitle: 'Adicionar visibilidade',
     v5Title: 'Selo Verificado no marketplace', v5Price: 'US$5 · 30 dias',
@@ -1156,6 +1157,16 @@ export default function SellFlowProvider({ children }) {
                 <h2 className="text-[24px] font-bold tracking-head mb-1.5">{result.duplicate ? t.dupTitle : result.payment ? t.pendTitle : result.scanning ? t.scanTitle : t.doneTitle}</h2>
                 <p className="text-[14px] text-ink/55 mb-1">{result.duplicate ? t.dupSub : result.payment ? t.pendSub : result.scanning ? t.scanSub : t.doneSub}</p>
                 <div className="font-mono text-[11px] text-ink/45 mb-5">REF: {result.ref}</div>
+
+                {/* The share kit, right after publishing (live listings only: one still being
+                    checked has no public page yet → a pointer to Mis publicaciones instead). */}
+                {!result.duplicate && !result.payment && (result.scanning ? (
+                  <p className="mb-5 text-[12.5px] text-ink/60 leading-snug" data-testid="sell-share-later">{t.scanShare}</p>
+                ) : result.id ? (
+                  <div className="mb-5 rounded-[16px] border-[1.5px] border-ink bg-card p-4 shadow-hard-sm" data-testid="sell-share-kit">
+                    <ShareSheet listingId={result.id} inline source="sell_success" />
+                  </div>
+                ) : null)}
 
                 {/* Promotion upsell — publish is already done (free); this is optional.
                     Waiting for the paid-listing payment → the pay button instead. */}

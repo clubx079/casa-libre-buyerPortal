@@ -7,6 +7,7 @@ import PropertyDetailView from '@/components/PropertyDetailView';
 import { SITE } from '@/lib/site';
 import { COUNTRY } from '@/lib/country';
 import { NO_PHOTO_OG_URL, NO_PHOTO_ALT } from '@/lib/noPhoto';
+import { imageUrls, imageVersion } from '@/lib/shareKit';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,11 +21,15 @@ export async function generateMetadata({ params }) {
   const description = (l.description || `${listingTitle(l)}. ${[l.area && `${l.area} m²`, l.baths && `${l.baths} baños`, l.parking && `${l.parking} cocheras`].filter(Boolean).join(', ')}. Ver en Casa Libre.`).slice(0, 160);
   const url = `${SITE}/propiedad/${l.id}`;
   // No photo yet → the placeholder as a JPEG (WhatsApp/Facebook previews don't take webp).
-  const ogImage = l.no_photo ? { url: NO_PHOTO_OG_URL, alt: NO_PHOTO_ALT, width: 1200, height: 900 } : l.image ? { url: l.image, alt: title } : null;
+  const photo = l.no_photo ? { url: NO_PHOTO_OG_URL, alt: NO_PHOTO_ALT, width: 1200, height: 900 } : l.image ? { url: l.image, alt: title } : null;
+  // First: the ready-made share card (photo + price + place + Casa-Libre brand, 1200×630 PNG,
+  // app/api/listings/[id]/share-image) so a pasted link previews well on WhatsApp / Facebook / X.
+  const card = { url: imageUrls(SITE, l.id, imageVersion(l)).og, alt: title, width: 1200, height: 630, type: 'image/png' };
+  const images = [card, ...(photo ? [photo] : [])];
   return {
     title, description, alternates: { canonical: url },
-    openGraph: { title, description, url, siteName: 'Casa Libre', type: 'website', locale: 'es_PY', images: ogImage ? [ogImage] : [] },
-    twitter: { card: 'summary_large_image', title, description, images: ogImage ? [ogImage.url] : [] },
+    openGraph: { title, description, url, siteName: 'Casa-Libre', type: 'website', locale: COUNTRY.ogLocale || 'es_PY', images },
+    twitter: { card: 'summary_large_image', title, description, images: [card.url] },
   };
 }
 

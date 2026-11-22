@@ -37,6 +37,9 @@ import { runPhotoFace, PHOTO_FACE_ID, PHOTO_WRONG_ID } from '@/lib/automations/p
 import { classifyMissingKinds } from '@/lib/profilePhotoKindScan';
 import { runNewsletter, NEWSLETTER_ID } from '@/lib/automations/newsletter';
 import { newsletterInsights } from '@/lib/newsletter/insights';
+import { runShareNudge, runShareReward } from '@/lib/automations/shareListing';
+import { SHARE_NUDGE_ID, SHARE_REWARD_ID } from '@/lib/shareReward';
+import { shareVisitsByListing } from '@/lib/shareStats';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -203,7 +206,28 @@ async function handle(req) {
         countryCode: COUNTRY.code, countryName: COUNTRY.name, insights: () => newsletterInsights({ fresh: true }),
         emailOverride: process.env.AUTOMATION_EMAIL_OVERRIDE || '',
       }).catch((e) => ({ error: e?.message || 'newsletter_failed' }));
-    return NextResponse.json({ ok: true, quietHours: frame.quiet, ...result, views, drafts, duplicates, paid, noListing, held, payFollow, saves, deletedAsk, referrals, referralPromo, profile, photoFace, newsletter, pushes, at: new Date().toISOString() });
+    // "Share your listing" (lib/automations/shareListing.js): the share emails after publishing
+    // + the low-views one, and the reward when the share links bring enough people. Rows
+    // 'share_nudge' / 'share_reward' (admin → Automations); each off until switched on.
+    const [[shareNudgeRow], [shareRewardRow]] = await Promise.all([
+      db.select('automations', `id=eq.${SHARE_NUDGE_ID}&limit=1`).catch(() => []),
+      db.select('automations', `id=eq.${SHARE_REWARD_ID}&limit=1`).catch(() => []),
+    ]);
+    let visitsOnce;
+    const shareVisits = () => (visitsOnce ||= shareVisitsByListing().catch(() => new Map()));
+    const shareNudge = await runShareNudge({
+      db, automation: shareNudgeRow || null, templates, now: new Date(), deliver: sendRenderedEmail, frame, siteUrl: site,
+      emailOverride: process.env.AUTOMATION_EMAIL_OVERRIDE || '',
+      fetchViews: viewsConfigured() ? fetchListingViews : null, shareVisits,
+    }).catch((e) => ({ error: e?.message || 'share_nudge_failed' }));
+    const shareReward = await runShareReward({
+      db, automation: shareRewardRow || null, templates, now: new Date(), deliver: sendRenderedEmail, frame, siteUrl: site,
+      emailOverride: process.env.AUTOMATION_EMAIL_OVERRIDE || '', shareVisits,
+      grant: (pid, plan, { days, extendFrom }) => grantPromotion(pid, plan, { days, extendFrom }),
+      formatDate: (s) => { try { return new Date(s).toLocaleDateString(COUNTRY.locale, { day: 'numeric', month: 'long' }); } catch { return String(s).slice(0, 10); } },
+    }).catch((e) => ({ error: e?.message || 'share_reward_failed' }));
+    if (shareReward.granted) revalidateTag('listings');
+    return NextResponse.json({ ok: true, quietHours: frame.quiet, ...result, views, drafts, duplicates, paid, noListing, held, payFollow, saves, deletedAsk, referrals, referralPromo, profile, photoFace, newsletter, shareNudge, shareReward, pushes, at: new Date().toISOString() });
   } catch (e) {
     return NextResponse.json({ error: 'automation_failed', detail: e?.message }, { status: 500 });
   }

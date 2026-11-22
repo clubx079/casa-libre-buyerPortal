@@ -6,6 +6,7 @@ import { select, remove } from '@/lib/db';
 import { releaseFromQuarantine } from '@/lib/listingScan';
 import { saveCounts } from '@/lib/favorites';
 import { fetchListingViews } from '@/lib/posthogViews';
+import { manyShareStats, statsConfigured } from '@/lib/shareStats';
 import { recordDeletion, askWhy } from '@/lib/listingDeleted';
 
 export const runtime = 'nodejs';
@@ -19,15 +20,19 @@ export async function GET() {
   // account, lib/favorites.js) and views (PostHog, the same count as the views email).
   // Each fails on its own — the page still loads without them.
   const ids = listings.map((l) => l.id);
-  const [saves, views] = await Promise.all([
+  const [saves, views, shares] = await Promise.all([
     saveCounts(ids).catch(() => null),
     Promise.race([fetchListingViews(ids), new Promise((r) => setTimeout(() => r(null), 4000))]).catch(() => null),
+    // what the owner's share links brought (lib/shareStats.js) — null when PostHog can't be read
+    statsConfigured() ? Promise.race([manyShareStats(ids), new Promise((r) => setTimeout(() => r(null), 4000))]).catch(() => null) : null,
   ]);
+  const noShare = { visits: 0, contacts: 0, last7: { visits: 0, contacts: 0 } };
   return NextResponse.json({
     listings: listings.map((l) => ({
       ...l,
       saves: saves ? saves.get(String(l.id)) || 0 : null,
       views: views ? Number(views.get(String(l.id)) || 0) : null,
+      share: shares ? shares.get(String(l.id).toLowerCase()) || noShare : null,
     })),
   });
 }

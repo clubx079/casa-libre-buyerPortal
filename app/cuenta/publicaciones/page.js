@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
 import { tr, localeFor } from '@/lib/i18n';
 import ListingCard from '@/components/account/ListingCard';
+import ShareButton from '@/components/ShareButton';
 import ConfirmModal from '@/components/ConfirmModal';
 import HighlightModal from '@/components/HighlightModal';
 import ListingPaymentModal from '@/components/ListingPaymentModal';
@@ -481,6 +482,20 @@ export default function MyListingsPage() {
               </div>
             ) : (
               <div className="flex flex-col gap-2">
+                {/* Share kit + what the owner's share links brought this week (lib/shareStats.js) */}
+                {(!l.admin_status || l.admin_status === 'active') && (
+                  <div className="flex flex-col gap-1.5" data-testid="share-row">
+                    <ShareButton listingId={l.id} source="account" variant="pill" className="w-full py-2" />
+                    {l.share && (
+                      <p className="text-[12px] text-center text-ink/65" data-testid="share-week">
+                        {tr(lang,
+                          `Tu link trajo ${l.share.last7.visits} ${l.share.last7.visits === 1 ? 'visita' : 'visitas'} y ${l.share.last7.contacts} ${l.share.last7.contacts === 1 ? 'contacto' : 'contactos'} esta semana`,
+                          `Your link brought ${l.share.last7.visits} ${l.share.last7.visits === 1 ? 'visit' : 'visits'} and ${l.share.last7.contacts} ${l.share.last7.contacts === 1 ? 'contact' : 'contacts'} this week`,
+                          `Seu link trouxe ${l.share.last7.visits} ${l.share.last7.visits === 1 ? 'visita' : 'visitas'} e ${l.share.last7.contacts} ${l.share.last7.contacts === 1 ? 'contato' : 'contatos'} esta semana`)}
+                      </p>
+                    )}
+                  </div>
+                )}
                 {l.paid?.state === 'active' && l.paid.until && (
                   <div className="flex items-center gap-2" data-testid="paid-active">
                     <div className="flex-1 text-center py-2 rounded-pill bg-card text-ink text-[12px] font-bold border-[1.5px] border-ink/40">{x.paidChip} · {t.daysLeft(daysLeft(l.paid.until))}</div>
