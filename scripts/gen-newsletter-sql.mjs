@@ -1,4 +1,4 @@
-// Writes migrations/023_newsletter.sql from lib/newsletter/content.js (the one source of the
+// Writes migrations/024_newsletter.sql from lib/newsletter/content.js (the one source of the
 // newsletter + "Personalize your profile" email copy). Run: node scripts/gen-newsletter-sql.mjs
 import fs from 'node:fs';
 import { NEWSLETTER_TEMPLATES, PROFILE_TEMPLATES, ISSUES, issueKey } from '../lib/newsletter/content.js';
@@ -47,5 +47,5 @@ select 'weekly_newsletter', false, 0, jsonb_build_array(jsonb_build_object(
   ), '[]'::jsonb))), now()
 on conflict (id) do nothing;
 `);
-fs.writeFileSync(new URL('../migrations/023_newsletter.sql', import.meta.url), out.join('\n') + '\n');
-console.log('wrote migrations/023_newsletter.sql');
+fs.writeFileSync(new URL('../migrations/024_newsletter.sql', import.meta.url), out.join('\n') + '\n');
+console.log('wrote migrations/024_newsletter.sql');
