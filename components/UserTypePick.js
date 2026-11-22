@@ -10,16 +10,19 @@ export const TYPE_DICT = {
     q: '¿Sos vendedor o comprador?', seller: 'Vendedor', buyer: 'Comprador',
     hint: 'Vendedor: vendés o alquilás una propiedad. Comprador: buscás para comprar o alquilar.',
     sub: 'Así te mostramos lo que te sirve.', optional: 'Opcional', saving: 'Guardando…', later: 'Ahora no',
+    first: 'Elegí una opción para continuar.', cont: 'Continuar', change: 'Cambiar', youAre: 'Entrás como',
   },
   en: {
     q: 'Are you a seller or a buyer?', seller: 'Seller', buyer: 'Buyer',
     hint: 'Seller: you sell or rent out a property. Buyer: you are looking to buy or rent.',
     sub: 'So we show you what is useful to you.', optional: 'Optional', saving: 'Saving…', later: 'Not now',
+    first: 'Choose one to continue.', cont: 'Continue', change: 'Change', youAre: 'Signing in as',
   },
   pt: {
     q: 'Você é vendedor ou comprador?', seller: 'Vendedor', buyer: 'Comprador',
     hint: 'Vendedor: você vende ou aluga um imóvel. Comprador: você procura para comprar ou alugar.',
     sub: 'Assim mostramos o que é útil para você.', optional: 'Opcional', saving: 'Salvando…', later: 'Agora não',
+    first: 'Escolha uma opção para continuar.', cont: 'Continuar', change: 'Mudar', youAre: 'Entrando como',
   },
 };
 
