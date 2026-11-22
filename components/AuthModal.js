@@ -92,8 +92,11 @@ const btnCls = 'w-full py-3.5 bg-ink text-paper rounded-pill font-bold text-[15p
 export default function AuthModal({ onAuthed, onClose, next = null }) {
   const [lang] = useLang();
   const t = DICT[lang];
-  const [step, setStep] = useState('email'); // email | code | type
-  const [userType, setUserType] = useState(null);       // picked on the first screen (optional)
+  // role → email → code (· type). "¿Sos vendedor o comprador?" comes FIRST and is required
+  // (Omar, Nov 22): the log-in options only show once one is picked; "Cambiar" goes back to it,
+  // where the pick can be switched but never cleared.
+  const [step, setStep] = useState('role'); // role | email | code | type
+  const [userType, setUserType] = useState(null);       // picked on the first screen (required)
   const [pendingUser, setPendingUser] = useState(null); // signed up, being asked buyer/seller
   const tt = TYPE_DICT[lang] || TYPE_DICT.es;
   const [method, setMethod] = useState(WHATSAPP_LOGIN ? 'whatsapp' : 'email'); // email | whatsapp — WhatsApp first when it's on
@@ -237,12 +240,20 @@ export default function AuthModal({ onAuthed, onClose, next = null }) {
         <button onClick={close} aria-label={t.close} className="absolute top-4 right-4 w-8 h-8 rounded-pill border border-ink/25 flex items-center justify-center text-ink/60 hover:border-ink hover:text-ink">×</button>
         <div className="text-[22px] font-bold tracking-head mb-5">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></div>
 
+        {step === 'role' && (
+          <div data-testid="auth-role-step">
+            <UserTypePick showHint={false} value={userType} onPick={(v) => { setUserType(v); savePick(v); setErr(''); }} />
+            <button type="button" disabled={!userType} onClick={() => { savePick(userType); setStep('email'); }} className={`${btnCls} mt-5`} data-testid="auth-role-continue">{tt.cont}</button>
+          </div>
+        )}
+
         {step === 'email' && (
           <form onSubmit={submitEmail}>
             <h2 className="text-[24px] font-bold tracking-head leading-tight">{t.emailTitle}</h2>
             <p className="text-[14px] text-ink/55 mt-1 mb-5">{method === 'whatsapp' ? t.waSub : t.emailSub}</p>
-            <div className="mb-5">
-              <UserTypePick compact showHint={false} value={userType} onPick={(v) => { const n = v === userType ? null : v; setUserType(n); savePick(n); }} />
+            <div className="mb-5 flex items-center justify-between gap-3 rounded-[12px] border border-ink/15 bg-card px-3.5 py-2.5 text-[13.5px]" data-testid="auth-role-chosen">
+              <span>{tt.youAre} <b>{userType === 'buyer' ? tt.buyer : tt.seller}</b></span>
+              <button type="button" onClick={() => { setStep('role'); setErr(''); }} className="font-semibold underline underline-offset-2 text-ink/70 hover:text-ink">{tt.change}</button>
             </div>
             {googleBtn}
             {WHATSAPP_LOGIN && (
