@@ -24,7 +24,7 @@ Hola {{name}}, esto es lo que miraron los compradores en Casa-Libre en los últi
 
 ## Qué significa para vos
 
-Si tenés una propiedad en ese rango o en esas ciudades, hay compradores mirando ahora. En Casa-Libre los interesados te escriben directo a tu WhatsApp y no cobramos comisión sobre tu operación.
+Si tenés una propiedad en ese rango o en esas ciudades, hay compradores mirando ahora. En Casa-Libre los interesados te escriben directo a tu WhatsApp.
 
 Casa-Libre es tecnología y experiencia inmobiliaria de Estados Unidos, hecha para {{country_name}}. Ya hay {{active_listings}} propiedades activas.
 
@@ -41,7 +41,7 @@ Hola {{name}}, ya tenés tu cuenta en Casa-Libre. Te falta un paso: publicar tu 
 
 ## Publicar te lleva unos minutos
 
-Fotos, precio y ubicación. Los interesados te escriben directo a tu WhatsApp, sin comisión sobre tu operación y sin exclusividad. Desde la web o desde la app de Casa-Libre para iPhone y Android.
+Fotos, precio y ubicación. Los interesados te escriben directo a tu WhatsApp, sin exclusividad. Desde la web o desde la app de Casa-Libre para iPhone y Android.
 
 [[Leer el newsletter completo]]({{newsletter_url}}#publicaciones-directas)$cl$, $cl$Publicar mi primera propiedad$cl$, $cl${{publish_url}}$cl$, true)
 on conflict (key) do nothing;
@@ -60,11 +60,11 @@ Publicalo con precio, fotos y ubicación: el inquilino sabe en segundos si es pa
 
 ## Lorena alquiló su departamento en 9 días, sin intermediarios
 
-**El desafío:** Su inquilino se iba a fin de mes y no quería pagar un mes de comisión ni tener el departamento vacío.
+**El desafío:** Su inquilino se iba a fin de mes y no quería tener el departamento vacío ni perder semanas buscando a alguien.
 
 **Lo que hizo:** Publicó el departamento desde la app con 12 fotos, el precio del alquiler y las expensas. Los interesados le escribieron directo a su WhatsApp.
 
-!! Alquilado en 9 días | 14 consultas en la primera semana, 4 visitas y contrato firmado el día 9. 0 % de comisión para Casa-Libre.
+!! Alquilado en 9 días | 14 consultas en la primera semana, 4 visitas y contrato firmado el día 9.
 
 "Contesté desde el celular, elegí a quién mostrarle y listo." — Lorena
 
@@ -75,17 +75,17 @@ Historias ilustrativas basadas en casos típicos de la plataforma.
 [[Leer el newsletter completo]]({{newsletter_url}}#alquileres)$cl$, $cl$Publicar mi alquiler$cl$, $cl${{publish_url}}$cl$, true)
 on conflict (key) do nothing;
 insert into public.email_templates (key, name, subject, heading, body, button_label, button_url, is_active)
-values ($cl$newsletter-historia-comision$cl$, $cl$Newsletter — Historia: US$10.000 en 3 semanas$cl$, $cl$Cómo Martín ganó US$10.000 de comisión en 3 semanas$cl$, $cl$Historia de éxito: US$10.000 en 3 semanas$cl$, $cl$>> Una casa que no se movía, fotos claras, su perfil completo y el WhatsApp a la vista.
+values ($cl$newsletter-historia-comision$cl$, $cl$Newsletter — Historia: vendida en 19 días$cl$, $cl$Cómo Martín vendió en 3 semanas una casa que llevaba 4 meses publicada$cl$, $cl$Historia de éxito: vendida en 19 días$cl$, $cl$>> Una casa que no se movía, fotos claras, su perfil completo y el WhatsApp a la vista.
 
 Hola {{name}}, esta semana te contamos cómo trabaja un agente en Casa-Libre.
 
-## Cómo Martín ganó US$10.000 de comisión en 3 semanas
+## Cómo Martín vendió en 3 semanas una casa que llevaba 4 meses publicada
 
 **El desafío:** Una casa de 3 dormitorios de US$340.000 llevaba cuatro meses publicada en otros portales. Pocas consultas, y casi todas de curiosos.
 
 **Lo que hizo:** La publicó en Casa-Libre con 18 fotos de día, el precio a la vista y su perfil completo: foto, nombre y cargo. Respondió cada WhatsApp en menos de una hora.
 
-!! US$10.000 de comisión | 23 consultas directas a su WhatsApp, 6 visitas y una oferta aceptada el día 19. Su comisión del 3 %: más de US$10.000.
+!! Vendida en 19 días | 23 consultas directas a su WhatsApp, 6 visitas y una oferta aceptada el día 19.
 
 "Los compradores me escribían sabiendo quién era. La primera conversación ya empezaba con confianza." — Martín
 
@@ -144,7 +144,6 @@ Hola {{name}}, te registraste en Casa-Libre pero todavía no publicaste. Esto es
 
 ## Cómo funciona
 
-**0 % de comisión** sobre tu operación.
 Los interesados te escriben **directo a tu WhatsApp**.
 **Sin exclusividad:** seguí publicando donde quieras.
 
