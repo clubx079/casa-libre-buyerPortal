@@ -5,7 +5,8 @@
 // never listed" (lib/automations/noListingNudge.js) and "listing not published"
 // (lib/automations/listingHeld.js) and "listing getting saved" (lib/automations/savesMilestone.js),
 // the referral program (lib/referrals/) and its promo emails (lib/automations/referralPromo.js),
-// "personalize your profile" (lib/automations/profileNudge.js).
+// "personalize your profile" (lib/automations/profileNudge.js) and the weekly newsletter
+// (lib/automations/newsletter.js).
 // Schedule hourly with the
 // CRON_SECRET, like the other crons; also callable manually with ?secret=.
 // Each does nothing until an admin switches it on (Automations page).
@@ -34,6 +35,8 @@ import { runReferralsCron, runReferralPromoCron } from '@/lib/referrals/run';
 import { runProfileNudge, PROFILE_NUDGE_ID } from '@/lib/automations/profileNudge';
 import { runPhotoFace, PHOTO_FACE_ID, PHOTO_WRONG_ID } from '@/lib/automations/photoFace';
 import { classifyMissingKinds } from '@/lib/profilePhotoKindScan';
+import { runNewsletter, NEWSLETTER_ID } from '@/lib/automations/newsletter';
+import { newsletterInsights } from '@/lib/newsletter/insights';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -53,7 +56,7 @@ async function handle(req) {
     ? { skipped: 'off' }
     : await runOwnerPushes(db, (o) => sendPush(db, o), { now: new Date(), countryCode: COUNTRY.code }).catch((e) => ({ error: e?.message || 'push_failed' }));
 
-  let profileAutomation, photoFaceAutomation, photoWrongAutomation, automation, viewsAutomation, draftsAutomation, paidAutomation, noListingAutomation, heldAutomation, savesAutomation, payFollowAutomation, templates;
+  let newsletterAutomation, profileAutomation, photoFaceAutomation, photoWrongAutomation, automation, viewsAutomation, draftsAutomation, paidAutomation, noListingAutomation, heldAutomation, savesAutomation, payFollowAutomation, templates;
   try {
     [automation] = await db.select('automations', `id=eq.${AUTOMATION_ID}&limit=1`);
     [viewsAutomation] = await db.select('automations', `id=eq.${VIEWS_AUTOMATION_ID}&limit=1`).catch(() => []);
@@ -66,6 +69,7 @@ async function handle(req) {
     [profileAutomation] = await db.select('automations', `id=eq.${PROFILE_NUDGE_ID}&limit=1`).catch(() => []);
     [photoFaceAutomation] = await db.select('automations', `id=eq.${PHOTO_FACE_ID}&limit=1`).catch(() => []);
     [photoWrongAutomation] = await db.select('automations', `id=eq.${PHOTO_WRONG_ID}&limit=1`).catch(() => []);
+    [newsletterAutomation] = await db.select('automations', `id=eq.${NEWSLETTER_ID}&limit=1`).catch(() => []);
     templates = await db.select('email_templates', 'select=*');
   } catch (e) {
     // Migration 005 not applied on this country's DB yet.
@@ -179,7 +183,7 @@ async function handle(req) {
       ? { skippedReason: 'not_set_up' }
       : await runProfileNudge({
         db, automation: profileAutomation, templates, now: new Date(), deliver: sendRenderedEmail, frame, siteUrl: site,
-        emailOverride: process.env.AUTOMATION_EMAIL_OVERRIDE || '',
+        countryName: COUNTRY.name, emailOverride: process.env.AUTOMATION_EMAIL_OVERRIDE || '',
       }).catch((e) => ({ error: e?.message || 'profile_failed' }));
     // "Show your face": the approved profile photo is a logo / text / something else → emails
     // until it is a real photo of the person (lib/automations/photoFace.js). Photos not checked
@@ -190,7 +194,16 @@ async function handle(req) {
         db, automation: photoFaceAutomation, wrongAutomation: photoWrongAutomation || null, templates, now: new Date(), deliver: sendRenderedEmail, frame, siteUrl: site,
         emailOverride: process.env.AUTOMATION_EMAIL_OVERRIDE || '', classifyMissing: () => classifyMissingKinds(20),
       }).catch((e) => ({ error: e?.message || 'photo_face_failed' }));
-    return NextResponse.json({ ok: true, quietHours: frame.quiet, ...result, views, drafts, duplicates, paid, noListing, held, payFollow, saves, deletedAsk, referrals, referralPromo, profile, photoFace, pushes, at: new Date().toISOString() });
+    // Weekly newsletter: on the chosen day/hour, the next template of the rotation to the chosen
+    // audience, with this week's measured numbers. Row created by the admin's Automations page.
+    const newsletter = !newsletterAutomation
+      ? { skippedReason: 'not_set_up' }
+      : await runNewsletter({
+        db, automation: newsletterAutomation, templates, now: new Date(), deliver: sendRenderedEmail, frame, siteUrl: site,
+        countryCode: COUNTRY.code, countryName: COUNTRY.name, insights: () => newsletterInsights({ fresh: true }),
+        emailOverride: process.env.AUTOMATION_EMAIL_OVERRIDE || '',
+      }).catch((e) => ({ error: e?.message || 'newsletter_failed' }));
+    return NextResponse.json({ ok: true, quietHours: frame.quiet, ...result, views, drafts, duplicates, paid, noListing, held, payFollow, saves, deletedAsk, referrals, referralPromo, profile, photoFace, newsletter, pushes, at: new Date().toISOString() });
   } catch (e) {
     return NextResponse.json({ error: 'automation_failed', detail: e?.message }, { status: 500 });
   }
