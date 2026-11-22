@@ -1,4 +1,5 @@
 import { SITE, CITIES, COMPETITORS } from '@/lib/site';
+import { EDITIONS } from '@/lib/newsletter/editions';
 import { guideSlugs } from '@/lib/guias';
 import { select } from '@/lib/db';
 import { indexableCombos, indexableBarrioCombos, MIN_LISTINGS } from '@/lib/matrix';
@@ -13,7 +14,7 @@ export default async function sitemap() {
   const entries = [];
   const staticPaths = [
     ['', 1.0, 'daily'], ['/propiedades', 0.9, 'daily'], ['/comprar', 0.8, 'daily'], ['/alquilar', 0.8, 'daily'],
-    ['/vender', 0.8, 'monthly'], ['/publicar', 0.7, 'monthly'], ['/nuestra-historia', 0.6, 'monthly'], ['/newsletter', 0.6, 'weekly'],
+    ['/vender', 0.8, 'monthly'], ['/publicar', 0.7, 'monthly'], ['/nuestra-historia', 0.6, 'monthly'], ['/newsletter', 0.6, 'weekly'], ...EDITIONS.slice(1).map((e) => [`/newsletter/${e.date}`, 0.4, 'yearly']),
     ['/como-funciona', 0.6, 'monthly'], ['/preguntas-frecuentes', 0.6, 'monthly'], ['/guias', 0.7, 'weekly'], ['/contacto', 0.5, 'monthly'],
     ['/terminos', 0.3, 'yearly'], ['/privacidad', 0.3, 'yearly'],
     ['/empresas', 0.7, 'monthly'], ['/administracion-de-propiedades', 0.6, 'monthly'], ['/descargar', 0.6, 'monthly'],

@@ -1,13 +1,9 @@
-// /newsletter — the Casa-Libre newsletter as web articles (lib/newsletter/page.js) + the success
-// stories (#historias). Same content as the weekly newsletter emails, filled with THIS country's
-// numbers of the last 30 days (lib/newsletter/insights.js), re-measured every 6 hours. An issue
-// whose number couldn't be measured isn't shown.
-import MarketingShell from '@/components/MarketingShell';
-import NewsletterContent from '@/components/NewsletterContent';
+// /newsletter — the LATEST edition of the Casa-Libre newsletter (lib/newsletter/editions.js):
+// its articles filled with THIS country's numbers of the last 30 days, its success stories, and
+// links to the previous editions (/newsletter/<date>). Re-measured every 6 hours.
+import NewsletterEditionPage from '@/components/NewsletterEditionPage';
 import { COUNTRY } from '@/lib/country';
-import { newsletterInsights } from '@/lib/newsletter/insights';
-import { pageIssues } from '@/lib/newsletter/page';
-import { siteLinks } from '@/lib/automations/newsletter';
+import { latestEdition } from '@/lib/newsletter/editions';
 
 export const revalidate = 21600;
 
@@ -17,18 +13,6 @@ export const metadata = {
   alternates: { canonical: '/newsletter' },
 };
 
-export default async function NewsletterPage() {
-  let measured = { vars: {}, measuredAt: null };
-  try { measured = await newsletterInsights(); } catch { /* the page shows the issues without numbers' */ }
-  const vars = { ...measured.vars, ...siteLinks(''), country_name: COUNTRY.name };
-  return (
-    <MarketingShell>
-      <NewsletterContent
-        es={pageIssues(vars, 'es')}
-        en={pageIssues(vars, 'en')}
-        measuredAt={measured.measuredAt}
-        countryName={COUNTRY.name}
-      />
-    </MarketingShell>
-  );
+export default function NewsletterPage() {
+  return <NewsletterEditionPage edition={latestEdition()} />;
 }

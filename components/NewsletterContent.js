@@ -10,8 +10,9 @@ import { STORIES, ILLUSTRATIVE_NOTE } from '@/lib/newsletter/content';
 const T = {
   es: {
     name: 'La Carta de Casa-Libre', tagline: 'Lo que buscan los compradores, con datos reales.',
-    edition: 'Edición', week: (d) => (d ? `Semana del ${d}` : 'Esta semana'),
-    data: 'Datos de los últimos 30 días en Casa-Libre',
+    article: 'Nota', editionNo: (n, d) => `Edición Nº ${n} · ${d}`, latest: 'Última edición',
+    data: 'Datos de los últimos 30 días en Casa-Libre', dataUntil: (d) => `Datos de los 30 días previos al ${d}`,
+    editions: 'Ediciones', older: 'Edición anterior', newer: 'Edición siguiente', current: 'estás acá',
     sub: (c) => `Precios, zonas y tipos de propiedad que más se miran en ${c}, consejos para publicar e historias de quienes ya venden y alquilan con Casa-Libre.`,
     toc: 'En este número', numbers: 'Los números de la semana', stories: 'Historias de éxito',
     storiesSub: 'Cómo trabajan dueños, agentes e inmobiliarias en Casa-Libre.',
@@ -23,8 +24,9 @@ const T = {
   },
   en: {
     name: 'The Casa-Libre Letter', tagline: 'What buyers are looking for, with real data.',
-    edition: 'Issue', week: (d) => (d ? `Week of ${d}` : 'This week'),
-    data: 'Data from the last 30 days on Casa-Libre',
+    article: 'Story', editionNo: (n, d) => `Issue No. ${n} · ${d}`, latest: 'Latest issue',
+    data: 'Data from the last 30 days on Casa-Libre', dataUntil: (d) => `Data from the 30 days before ${d}`,
+    editions: 'Issues', older: 'Previous issue', newer: 'Next issue', current: 'you are here',
     sub: (c) => `The prices, areas and property types people look at most in ${c}, tips for listing, and stories from people already selling and renting with Casa-Libre.`,
     toc: 'In this issue', numbers: 'Numbers of the week', stories: 'Success stories',
     storiesSub: 'How owners, agents and agencies work on Casa-Libre.',
@@ -113,7 +115,7 @@ function Article({ i, n, lang, lead = false }) {
     <article id={i.slug} className={`scroll-mt-24 ${lead ? '' : 'pt-10 mt-10 border-t border-ink/12'}`}>
       <div className="flex items-center gap-2 text-[12.5px] font-semibold">
         <span className="px-2.5 py-1 rounded-pill bg-ink text-paper">{t.cat[catOf(i.slug)]}</span>
-        <span className="text-ink/45 font-medium">{t.edition} {n}</span>
+        <span className="text-ink/45 font-medium">{t.article} {n}</span>
       </div>
       <h2 className={`${lead ? 'text-[clamp(30px,4.2vw,44px)]' : 'text-[clamp(24px,3vw,32px)]'} font-bold tracking-head leading-[1.08] mt-3`}>{i.title}</h2>
       {i.heading && i.heading !== i.title ? <p className="text-[18px] text-ink/55 font-serif italic mt-2">{i.heading}</p> : null}
@@ -124,12 +126,15 @@ function Article({ i, n, lang, lead = false }) {
   );
 }
 
-export default function NewsletterContent({ es = [], en = [], measuredAt, countryName }) {
+export default function NewsletterContent({ es = [], en = [], stories = null, edition = null, older = null, newer = null, editions = [], countryName }) {
   const [langRaw] = useLang();
   const lang = langRaw === 'en' ? 'en' : 'es';
   const t = T[lang];
   const issues = lang === 'en' ? en : es;
-  const date = measuredAt ? new Date(measuredAt).toLocaleDateString(lang === 'en' ? 'en-US' : 'es', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+  const fmt = (d) => (d ? new Date(`${d}T12:00:00Z`).toLocaleDateString(lang === 'en' ? 'en-US' : 'es', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }) : '');
+  const date = fmt(edition?.date);
+  // this edition's stories (lib/newsletter/editions.js), or all of them
+  const storyList = Array.isArray(stories) ? stories.map((slug) => STORIES.find((s) => s.slug === slug)).filter(Boolean) : STORIES;
   // the week's key figures for the sidebar: the first stat of each data issue
   const keyStats = issues.filter((i) => catOf(i.slug) !== 'story').map((i) => ({ slug: i.slug, s: i.blocks.find((b) => b.type === 'stat') })).filter((x) => x.s).slice(0, 4);
   const [lead, ...rest] = issues;
@@ -139,8 +144,11 @@ export default function NewsletterContent({ es = [], en = [], measuredAt, countr
       {/* masthead */}
       <header className="px-5 md:px-11 pt-12 md:pt-16 max-w-[1180px] mx-auto">
         <div className="flex flex-wrap items-center justify-between gap-2 text-[13px] text-ink/55 border-y-2 border-ink py-2.5">
-          <span className="font-semibold text-ink">{t.week(date)}</span>
-          <span>{t.data} · {countryName}</span>
+          <span className="font-semibold text-ink">
+            {edition ? t.editionNo(edition.number, date) : date}
+            {edition?.latest ? <span className="ml-2 px-2 py-0.5 rounded-pill bg-ink text-paper text-[11.5px] font-semibold align-middle">{t.latest}</span> : null}
+          </span>
+          <span>{edition && !edition.latest ? t.dataUntil(date) : t.data} · {countryName}</span>
         </div>
         <div className="text-center py-9 md:py-12 border-b border-ink/15">
           <h1 className="text-[clamp(38px,7vw,76px)] font-bold tracking-display leading-[0.98]">{t.name}</h1>
@@ -171,6 +179,29 @@ export default function NewsletterContent({ es = [], en = [], measuredAt, countr
                   <a href="#historias" className="hover:underline underline-offset-2">{t.stories}</a>
                 </li>
               </ol>
+            </nav>
+          ) : null}
+          {editions.length > 1 ? (
+            <nav aria-label={t.editions} className="bg-card border border-ink/12 rounded-[18px] p-5">
+              <h2 className="text-[13px] font-bold mb-3">{t.editions}</h2>
+              <ul className="flex flex-col gap-1.5">
+                {editions.map((e, i) => {
+                  const on = e.date === edition?.date;
+                  return (
+                    <li key={e.date}>
+                      {on ? (
+                        <span className="flex items-center justify-between gap-2 px-3 py-2 rounded-[10px] bg-ink text-paper text-[14px] font-semibold" aria-current="page">
+                          <span>{fmt(e.date)}</span><span className="text-[11.5px] font-medium text-paper/70">{i === 0 ? t.latest : t.current}</span>
+                        </span>
+                      ) : (
+                        <a href={e.href} className="flex items-center justify-between gap-2 px-3 py-2 rounded-[10px] text-[14px] hover:bg-ink/[0.05]">
+                          <span>{fmt(e.date)}</span>{i === 0 ? <span className="text-[11.5px] text-ink/50">{t.latest}</span> : null}
+                        </a>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
             </nav>
           ) : null}
           {keyStats.length ? (
@@ -206,11 +237,30 @@ export default function NewsletterContent({ es = [], en = [], measuredAt, countr
             <a href="#top" className="text-[13.5px] font-semibold underline underline-offset-2 text-ink/60 hover:text-ink">{t.top}</a>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {STORIES.map((s) => <StoryCard key={s.slug} s={s} lang={lang} />)}
+            {storyList.map((s) => <StoryCard key={s.slug} s={s} lang={lang} />)}
           </div>
           {ILLUSTRATIVE_NOTE[lang] ? <p className="text-[12px] text-ink/40 mt-6">{ILLUSTRATIVE_NOTE[lang]}</p> : null}
         </div>
       </section>
+
+      {(older || newer) ? (
+        <nav aria-label={t.editions} className="px-5 md:px-11 pt-10 max-w-[1180px] mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {older ? (
+              <a href={older.href} className="block border-[1.5px] border-ink rounded-[18px] px-6 py-5 hover:bg-ink hover:text-paper transition-colors">
+                <span className="block text-[13px] font-semibold opacity-60">← {t.older}</span>
+                <span className="block text-[18px] font-bold tracking-head mt-1">{fmt(older.date)}</span>
+              </a>
+            ) : <span />}
+            {newer ? (
+              <a href={newer.href} className="block border-[1.5px] border-ink rounded-[18px] px-6 py-5 text-right hover:bg-ink hover:text-paper transition-colors">
+                <span className="block text-[13px] font-semibold opacity-60">{t.newer} →</span>
+                <span className="block text-[18px] font-bold tracking-head mt-1">{fmt(newer.date)}</span>
+              </a>
+            ) : null}
+          </div>
+        </nav>
+      ) : null}
 
       <section className="px-5 md:px-11 py-14 md:py-16">
         <div className="max-w-[900px] mx-auto bg-ink text-paper rounded-section p-10 md:p-14 text-center">
