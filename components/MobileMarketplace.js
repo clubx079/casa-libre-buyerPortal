@@ -68,7 +68,7 @@ const SORTS = [
 const placeBox = (p) => (p?.bounds ? { n: p.bounds.n + 0.002, s: p.bounds.s - 0.002, e: p.bounds.e + 0.002, w: p.bounds.w - 0.002 } : null);
 const inBox = (box) => (o) => !!o && o.lat != null && o.lng != null && o.lat <= box.n && o.lat >= box.s && o.lng <= box.e && o.lng >= box.w;
 
-export default function MobileMarketplace({ initialListings = [], initialCount = 0, initialPins = [], totalCount = 0, initialOp = 'all', initialQuery = '', initialType = 'all', initialPlace = '', zoningOn = false }) {
+export default function MobileMarketplace({ initialListings = [], initialCount = 0, initialPins = [], totalCount = 0, initialOp = 'all', initialQuery = '', initialType = 'all', initialPlace = '', initialArea = null, zoningOn = false }) {
   const [lang, setLang] = useLang();
   const { openSell } = useSellFlow();
   const { isSaved, toggle } = useFavorites();
@@ -113,9 +113,10 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
   const [page, setPage] = useState(1);
   // Listings follow the map (lib/mapArea.js): after the visitor drags/zooms the map,
   // the list shows only listings inside the visible area. null = everything.
-  const [area, setArea] = useState(null);
+  const [area, setArea] = useState(initialArea);
   const areaRef = useRef(null);
   areaRef.current = area;
+  const placeBoxRef = useRef(!!initialArea);   // list area = the picked place's box (see desktop)
   const listReqRef = useRef(0);
   const userMovedRef = useRef(false);
   const camMoveUntil = useRef(0);  // our own camera moves (auto-fit, near me) aren't the visitor's
@@ -218,6 +219,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
     if (p.id === placeId && p.name === q) return;
     setSearching(true);
     const box = placeBox(p);
+    placeBoxRef.current = !!box;
     setArea(box ? roundArea(box) : null);
     if (box) {
       setPins((ps) => ps.filter(inBox(box)));
@@ -332,6 +334,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
       map.addListener('idle', () => {
         if (!userMovedRef.current) return;
         userMovedRef.current = false;
+        placeBoxRef.current = false;
         if (nearMeRef.current) return;
         const b = map.getBounds();
         if (!b) return;
@@ -402,11 +405,11 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
     // Don't refit while near-me is locked, nor on the toggle itself (so deselect
     // can restore the previous view instead of snapping to the filtered bounds).
     const pa = placeId ? placeAreaRef.current : null;
-    if (n && !nearMe && !skipFitRef.current && !areaRef.current && (typeF !== 'all' || priceF !== 'all' || bedF !== 'all' || barrioF !== 'all' || heightF !== 'all' || q || placeId)) {
+    if (n && !nearMe && !skipFitRef.current && (!areaRef.current || (placeBoxRef.current && pa)) && (typeF !== 'all' || priceF !== 'all' || bedF !== 'all' || barrioF !== 'all' || heightF !== 'all' || q || placeId)) {
       if (pa) {
         moveCamera(() => fitBox(google, map, pa.bounds, { padding: 36, maxZoom: pa.kind === 'barrio' ? 16 : 15 }));
         // the list = the place's listings that are ON THE MAP (same as the desktop view)
-        google.maps.event.addListenerOnce(map, 'idle', () => {
+        if (!placeBoxRef.current) google.maps.event.addListenerOnce(map, 'idle', () => {
           if (nearMeRef.current) return;
           const b = map.getBounds();
           if (!b) return;

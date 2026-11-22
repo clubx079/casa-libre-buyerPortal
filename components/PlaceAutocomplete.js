@@ -80,6 +80,16 @@ export default function PlaceAutocomplete({
   // parent's overflow / layout can clip it or push it off-screen; it opens below the box and its
   // height is capped to the space left under it. Re-measured on scroll and resize.
   const [pos, setPos] = useState(null);
+  // its own container under <body> (never <body> itself: Next.js swaps the page there while a
+  // pick navigates, and React must not insert into a node it doesn't own)
+  const [layer, setLayer] = useState(null);
+  useEffect(() => {
+    const el = document.createElement('div');
+    el.setAttribute('data-place-suggestions', '');
+    document.body.appendChild(el);
+    setLayer(el);
+    return () => { try { el.remove(); } catch {} };
+  }, []);
   useLayoutEffect(() => {
     if (!show) return undefined;
     const measure = () => {
@@ -154,7 +164,7 @@ export default function PlaceAutocomplete({
         onKeyDown={onKeyDown}
         className={className}
       />
-      {show && pos && typeof document !== 'undefined' && createPortal(
+      {show && pos && layer && createPortal(
         <div
           style={{ position: 'fixed', top: pos.top, left: pos.left, width: pos.width }}
           className={`z-[1200] bg-card text-ink text-left border-[1.5px] border-ink rounded-[18px] shadow-hard overflow-hidden ${dropdownClassName.replace(/min-w-\[[^\]]+\]/g, '')}`}
@@ -208,7 +218,7 @@ export default function PlaceAutocomplete({
             })}
           </ul>
         </div>,
-        document.body,
+        layer,
       )}
     </>
   );

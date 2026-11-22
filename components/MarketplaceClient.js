@@ -89,7 +89,7 @@ const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toL
 const placeBox = (p) => (p?.bounds ? { n: p.bounds.n + 0.002, s: p.bounds.s - 0.002, e: p.bounds.e + 0.002, w: p.bounds.w - 0.002 } : null);
 const inBox = (box) => (o) => !!o && o.lat != null && o.lng != null && o.lat <= box.n && o.lat >= box.s && o.lng <= box.e && o.lng >= box.w;
 
-export default function MarketplaceClient({ initialListings = [], initialCount = 0, initialPins = [], totalCount = 0, initialOp = 'all', initialQuery = '', initialType = 'all', initialPlace = '', zoningOn = false }) {
+export default function MarketplaceClient({ initialListings = [], initialCount = 0, initialPins = [], totalCount = 0, initialOp = 'all', initialQuery = '', initialType = 'all', initialPlace = '', initialArea = null, zoningOn = false }) {
   const [lang, setLang] = useLang();
   const { openSell } = useSellFlow();
   const [filter, setFilter] = useState(['all', 'venta', 'alquiler'].includes(initialOp) ? initialOp : 'all');
@@ -179,9 +179,12 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
   const listReqRef = useRef(0);   // list requests (filters and map area)
   // Listings follow the map: after the visitor drags or zooms, the list shows only
   // the listings inside the visible area (lib/mapArea.js). null = everything.
-  const [area, setArea] = useState(null);
+  const [area, setArea] = useState(initialArea);
   const areaRef = useRef(null);
   areaRef.current = area;
+  // true while the list area is the picked place's box (not a map the visitor moved): the map
+  // still flies to the place, and the visitor's first move replaces it with the visible area.
+  const placeBoxRef = useRef(!!initialArea);
   const userMovedRef = useRef(false);
   const camMoveUntil = useRef(0);  // our own camera moves (auto-fit, near me) aren't the visitor's
   const moveCamera = (fn) => { camMoveUntil.current = Date.now() + 1500; try { fn(); } catch {} };
@@ -317,6 +320,7 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
     if (p.id === placeId && p.name === query) return;
     setSearching(true);
     const box = placeBox(p);
+    placeBoxRef.current = !!box;
     setArea(box ? roundArea(box) : null);
     if (box) {
       setPins((ps) => ps.filter(inBox(box)));
@@ -368,9 +372,10 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
     if (!ref || !placeArea) return undefined;
     const { google, map } = ref;
     const outline = placeOutline(google, map, placeArea);
-    if (!nearMeRef.current && !areaRef.current) {
+    if (!nearMeRef.current && (!areaRef.current || placeBoxRef.current)) {
       didFit.current = true;
       moveCamera(() => fitBox(google, map, placeArea.bounds, { padding: 48, maxZoom: placeArea.kind === 'barrio' ? 16 : 15 }));
+      if (placeBoxRef.current) return () => outline.remove();   // the list area is already the place's box
       // The list = the picked place's listings THAT ARE ON THE MAP (Omar, Nov 22): once the map has
       // settled on the place, its visible area becomes the list's area, exactly as if the visitor had
       // moved the map. Listings of the place left off the map (no location, misplaced pin) drop out;
@@ -559,6 +564,7 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
       map.addListener('idle', () => {
         if (!userMovedRef.current) return;
         userMovedRef.current = false;
+        placeBoxRef.current = false;
         if (nearMeRef.current) return;
         const b = map.getBounds();
         if (!b) return;
