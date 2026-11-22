@@ -68,8 +68,6 @@ Publicalo con precio, fotos y ubicación: el inquilino sabe en segundos si es pa
 
 "Contesté desde el celular, elegí a quién mostrarle y listo." — Lorena
 
-Historias ilustrativas basadas en casos típicos de la plataforma.
-
 [[Ver más historias]]({{stories_url}})
 
 [[Leer el newsletter completo]]({{newsletter_url}}#alquileres)$cl$, $cl$Publicar mi alquiler$cl$, $cl${{publish_url}}$cl$, true)
@@ -88,8 +86,6 @@ Hola {{name}}, esta semana te contamos cómo trabaja un agente en Casa-Libre.
 !! Vendida en 19 días | 23 consultas directas a su WhatsApp, 6 visitas y una oferta aceptada el día 19.
 
 "Los compradores me escribían sabiendo quién era. La primera conversación ya empezaba con confianza." — Martín
-
-Historias ilustrativas basadas en casos típicos de la plataforma.
 
 ## Lo que podés copiar hoy
 
@@ -165,8 +161,6 @@ Hola {{name}}, si tenés muchas propiedades, esta historia es para vos.
 !! 60 consultas el primer mes | 60 consultas en el primer mes y 2 ventas cerradas en 45 días. Sigue publicando también donde publicaba antes.
 
 "Lo que más me sirvió fue no tener que cargar nada a mano." — Diego
-
-Historias ilustrativas basadas en casos típicos de la plataforma.
 
 ## ¿Tenés más de 10 propiedades?
 

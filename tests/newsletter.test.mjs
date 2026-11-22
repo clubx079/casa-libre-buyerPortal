@@ -33,8 +33,9 @@ test('content: banned claims and opt-out lines never appear; brand written Casa-
   for (const bad of [/mayor crecimiento/i, /gratis para siempre/i, /\bla mejor\b/i, /\bBAJA\b/, /unsubscribe/i, /darte de baja/i, /Casa Libre/]) assert.doesNotMatch(all, bad);
 });
 
-test('content: every story email carries the illustrative line', () => {
-  for (const t of NEWSLETTER_TEMPLATES.filter((x) => /El desafío/.test(x.body))) assert.ok(t.body.includes(ILLUSTRATIVE_NOTE.es), t.key);
+test('content: the illustrative line is off (user, Nov 22) and leaves no empty paragraph', () => {
+  assert.equal(ILLUSTRATIVE_NOTE.es, '');
+  for (const t of NEWSLETTER_TEMPLATES) assert.ok(!/\n\n\n\n/.test(t.body) && !/Historias ilustrativas/.test(t.body), t.key);
 });
 
 test('render: preheader hidden, stats, section titles, extra buttons, divider', () => {
