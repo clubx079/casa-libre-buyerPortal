@@ -181,29 +181,6 @@ export default function NewsletterContent({ es = [], en = [], stories = null, ed
               </ol>
             </nav>
           ) : null}
-          {editions.length > 1 ? (
-            <nav aria-label={t.editions} className="bg-card border border-ink/12 rounded-[18px] p-5">
-              <h2 className="text-[13px] font-bold mb-3">{t.editions}</h2>
-              <ul className="flex flex-col gap-1.5">
-                {editions.map((e, i) => {
-                  const on = e.date === edition?.date;
-                  return (
-                    <li key={e.date}>
-                      {on ? (
-                        <span className="flex items-center justify-between gap-2 px-3 py-2 rounded-[10px] bg-ink text-paper text-[14px] font-semibold" aria-current="page">
-                          <span>{fmt(e.date)}</span><span className="text-[11.5px] font-medium text-paper/70">{i === 0 ? t.latest : t.current}</span>
-                        </span>
-                      ) : (
-                        <a href={e.href} className="flex items-center justify-between gap-2 px-3 py-2 rounded-[10px] text-[14px] hover:bg-ink/[0.05]">
-                          <span>{fmt(e.date)}</span>{i === 0 ? <span className="text-[11.5px] text-ink/50">{t.latest}</span> : null}
-                        </a>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            </nav>
-          ) : null}
           {keyStats.length ? (
             <div className="bg-card border border-ink/12 rounded-[18px] p-5">
               <h2 className="text-[13px] font-bold mb-3">{t.numbers}</h2>
