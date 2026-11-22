@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { hopTarget } from './lib/waCountryHop.js';
 import { blockedCountries, isBlocked, isOpenPath, BLOCK_HTML } from './lib/geoBlock';
 import { blockedIps, clientIp } from './lib/ipBlock';
 
@@ -63,6 +64,9 @@ const refuse = (pathname) => (pathname.startsWith('/api/')
 
 export async function middleware(req, event) {
   const { pathname } = req.nextUrl;
+  // a WhatsApp button of another country (Paraguay's address is fixed in the approved templates):
+  // send it on to that country's site, same path and query (lib/waCountryHop.js)
+  if (SITE_COUNTRY === 'py') { const to = hopTarget(req.nextUrl); if (to) return NextResponse.redirect(to, 307); }
   const country = req.headers.get('cf-ipcountry') || '';
   // a single suspicious IP the admin's security watch blocked (lib/ipBlock.js) — webhooks and crons stay open
   const ip = clientIp(req.headers);
