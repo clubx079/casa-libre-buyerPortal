@@ -21,6 +21,11 @@ import { distanceKm, getUserLocation, NEAR_RADIUS_KM } from '@/utils/geo';
 import { COUNTRY } from '@/lib/country';
 import { CATEGORIES } from '@/lib/zoning/categories';
 import ZoningMapToggle, { useZoningOverlay } from '@/components/ZoningMapToggle';
+import PlaceAutocomplete, { submitSearch } from '@/components/PlaceAutocomplete';
+import { exactPlace } from '@/lib/places';
+import { usePlaces, loadPlaceArea } from '@/lib/placesClient';
+import { searchBounds } from '@/lib/areaGeom';
+import { fitBox, placeOutline, barrioLabelLayer } from '@/utils/placeOverlay';
 
 // Marketplace-specific bilingual strings (search / filters / sort).
 const M = {
@@ -77,7 +82,7 @@ const PER_PAGE = 24;
 // accent- and case-insensitive text for search ("asuncion" should match "Asunción")
 const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
-export default function MarketplaceClient({ initialListings = [], initialCount = 0, initialPins = [], totalCount = 0, initialOp = 'all', initialQuery = '', initialType = 'all', zoningOn = false }) {
+export default function MarketplaceClient({ initialListings = [], initialCount = 0, initialPins = [], totalCount = 0, initialOp = 'all', initialQuery = '', initialType = 'all', initialPlace = '', zoningOn = false }) {
   const [lang, setLang] = useLang();
   const { openSell } = useSellFlow();
   const [filter, setFilter] = useState(['all', 'venta', 'alquiler'].includes(initialOp) ? initialOp : 'all');
@@ -86,6 +91,14 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
   const [query, setQuery] = useState(initialQuery || '');
   const [queryInput, setQueryInput] = useState(initialQuery || '');
   const [searching, setSearching] = useState(false); // spinner in the search button
+  // A barrio / city / departamento picked from the suggestions (lib/places.js): the list and
+  // pins are that place's listings, the map fits to it and draws its outline.
+  const [placeSel, setPlaceSel] = useState(initialPlace ? { id: initialPlace, name: initialQuery } : null);
+  const placeId = placeSel ? placeSel.id : '';
+  const places = usePlaces(true);   // suggestions + barrio names on the map
+  const [placeArea, setPlaceArea] = useState(null);
+  const placeAreaRef = useRef(null);
+  placeAreaRef.current = placeArea;
   const [typeF, setTypeF] = useState(initialType || 'all');
   const [priceF, setPriceF] = useState('all');
   const [bedF, setBedF] = useState('all');
@@ -174,13 +187,14 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
     return priceF === 'p1' ? { priceMax: 100000 } : priceF === 'p2' ? { priceMin: 100000, priceMax: 200000 } : { priceMin: 200000 };
   };
   const bedsParam = bedF === 'all' ? undefined : bedF.replace(/\D/g, '');
-  const searchBody = (pageN) => ({ op: filter, type: typeF === 'all' ? undefined : typeF, beds: bedsParam, q: query || undefined, height: heightF === 'all' ? undefined : heightF, sort: sortBy, page: pageN, pageSize: PER_PAGE, ...priceBounds(), ...(area || {}) });
+  const searchBody = (pageN) => ({ op: filter, type: typeF === 'all' ? undefined : typeF, beds: bedsParam, q: query || undefined, place: placeId || undefined, height: heightF === 'all' ? undefined : heightF, sort: sortBy, page: pageN, pageSize: PER_PAGE, ...priceBounds(), ...(area || {}) });
   const pinsUrl = () => {
     const p = new URLSearchParams();
     if (filter !== 'all') p.set('op', filter);
     if (typeF !== 'all') p.set('type', typeF);
     if (bedsParam) p.set('beds', bedsParam);
     if (query) p.set('q', query);
+    if (placeId) p.set('place', placeId);
     if (heightF !== 'all') p.set('height', heightF);
     const pb = priceBounds();
     if (pb.priceMin != null) p.set('priceMin', pb.priceMin);
@@ -208,7 +222,7 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
     }, doSearch ? 220 : 0);
     return () => clearTimeout(tmo);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter, typeF, priceF, bedF, heightF, query, sortBy]);
+  }, [filter, typeF, priceF, bedF, heightF, query, placeId, sortBy]);
 
   // The visitor moved the map (or chose "Show all") → reload the list only; the pins
   // on the map stay as they are.
@@ -290,14 +304,69 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
 
   // Apply the typed search. Unchanged text = nothing to fetch. The spinner clears
   // when the list request it triggers settles (loadingList true -> false).
+  // A new search starts on the whole map again (not inside the area of the last one).
+  const pickPlace = (p) => {
+    setQueryInput(p.name);
+    if (p.id === placeId && p.name === query) return;
+    setSearching(true); setArea(null);
+    setPlaceSel({ id: p.id, name: p.name }); setQuery(p.name);
+  };
+  const applyText = (text) => {
+    const next = String(text || '').trim();
+    setQueryInput(next);
+    if (next === query && !placeId) return;
+    setSearching(true); setArea(null);
+    setPlaceSel(null); setQuery(next);
+  };
+  // Enter / the arrow: a text naming a place picks it (lib/places.js exactPlace), else a text search.
   const applySearch = (e) => {
     e?.preventDefault?.();
-    const next = queryInput.trim();
-    if (next === query) { if (next !== queryInput) setQueryInput(next); return; }
-    setQueryInput(next);
-    setSearching(true);
-    setQuery(next);
+    if (placeSel && queryInput.trim() === placeSel.name) return;   // the picked place, unchanged
+    submitSearch(places.index, queryInput, { onPick: pickPlace, onText: applyText, lang });
   };
+
+  // A search that arrived as text (?q=Villa Morra from a home chip / an old link, or Enter
+  // pressed before the suggestions loaded) and names a place outright → that place, so the
+  // map shows its area instead of every listing that mentions the words.
+  const upgradedRef = useRef(false);
+  useEffect(() => {
+    if (upgradedRef.current || !places.index) return;
+    upgradedRef.current = true;
+    if (placeId || !query || query !== initialQuery || queryInput.trim() !== query) return;
+    const p = exactPlace(places.index, query);
+    if (p) { setQueryInput(p.name); setPlaceSel({ id: p.id, name: p.name }); setQuery(p.name); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [places.index]);
+
+  // The picked place's outline / label / box (lib/placeIndex.js via /api/listings/places?id=).
+  useEffect(() => {
+    setPlaceArea(null);
+    if (!placeId) return undefined;
+    let on = true;
+    loadPlaceArea(placeId).then((a) => { if (on) setPlaceArea(a); });
+    return () => { on = false; };
+  }, [placeId]);
+  // Draw it and fit the map to it: the place's own box (misplaced pins left out, never
+  // smaller than a few blocks), not the bounds of every pin.
+  useEffect(() => {
+    const ref = mapRef.current;
+    if (!ref || !placeArea) return undefined;
+    const { google, map } = ref;
+    const outline = placeOutline(google, map, placeArea);
+    if (!nearMeRef.current && !areaRef.current) {
+      didFit.current = true;
+      moveCamera(() => fitBox(google, map, placeArea.bounds, { padding: 48, maxZoom: placeArea.kind === 'barrio' ? 16 : 15 }));
+    }
+    return () => outline.remove();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [placeArea, mapOn]);
+  // Barrio names on the map once zoomed in (the picked barrio has its own label).
+  useEffect(() => {
+    const ref = mapRef.current;
+    if (!ref || !places.labels) return undefined;
+    const layer = barrioLabelLayer(ref.google, ref.map, places.labels, { hide: () => (placeAreaRef.current && placeAreaRef.current.kind === 'barrio' ? placeAreaRef.current.id : null) });
+    return () => layer.remove();
+  }, [places.labels, mapOn]);
   useEffect(() => { if (!loadingList) setSearching(false); }, [loadingList]);
 
   // ---- display helpers ----
@@ -425,9 +494,9 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
     setArea(null);
     const ref = mapRef.current;
     if (!ref) return;
-    const b = new ref.google.maps.LatLngBounds();
-    displayPins.forEach((l) => { if (l.lat != null && l.lng != null && inParaguay(l.lat, l.lng)) b.extend({ lat: l.lat, lng: l.lng }); });
-    if (!b.isEmpty()) moveCamera(() => ref.map.fitBounds(b, 40));
+    // Lone pins far from all the others (a bad geocode) don't stretch the view.
+    const b = searchBounds(displayPins.filter((l) => l.lat != null && l.lng != null && inParaguay(l.lat, l.lng)).map((l) => [l.lat, l.lng]));
+    if (b) moveCamera(() => fitBox(ref.google, ref.map, b, { padding: 40, maxZoom: 16 }));
   };
 
   // ---- Google Maps init with marker clustering (Advanced Markers) ----
@@ -514,7 +583,7 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
     promotedMarkersRef.current = [];
     markersRef.current = {};
     const markers = [];
-    const bounds = new google.maps.LatLngBounds();
+    const pts = [];
     let n = 0;
     displayPins.forEach((l) => {
       if (!inParaguay(l.lat, l.lng)) return; // never plot mis-geocoded listings outside PY
@@ -544,16 +613,23 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
       // it's always visible; everything else goes through the clusterer as before.
       if (promoted) { marker.setMap(map); promotedMarkersRef.current.push(marker); }
       else markers.push(marker);
-      bounds.extend({ lat: l.lat, lng: l.lng });
+      pts.push([l.lat, l.lng]);
       n++;
     });
     cluster.addMarkers(markers);
     // Default view stays zoomed on Asunción; only auto-fit to the results once
     // the user actually filters/searches (Buy/Rent/All keep the default view).
-    const isFiltered = typeF !== 'all' || priceF !== 'all' || bedF !== 'all' || heightF !== 'all' || !!query;
+    const isFiltered = typeF !== 'all' || priceF !== 'all' || bedF !== 'all' || heightF !== 'all' || !!query || !!placeId;
     // Don't refit while near-me is locked, nor on the toggle itself (so deselect
     // can restore the previous view instead of snapping to the filtered bounds).
-    if (n && !didFit.current && isFiltered && !nearMe && !skipFitRef.current && !areaRef.current) { didFit.current = true; moveCamera(() => map.fitBounds(bounds, 40)); }
+    // A picked place with its outline loaded is fitted to its own box (placeArea effect).
+    // Otherwise: the matches, minus lone pins far from all the others (a flat geocoded into
+    // the Chaco), never closer than a couple of blocks (lib/areaGeom.js).
+    if (n && !didFit.current && isFiltered && !nearMe && !skipFitRef.current && !areaRef.current && !(placeId && placeAreaRef.current)) {
+      didFit.current = true;
+      const b = searchBounds(pts);
+      if (b) moveCamera(() => fitBox(google, map, b, { padding: 40, maxZoom: 16 }));
+    }
     skipFitRef.current = false;
   }
 
@@ -648,8 +724,14 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
 
       {/* FILTERS */}
       <div className="flex items-center gap-2.5 flex-wrap px-5 md:px-9 py-3 border-b border-ink/12">
-        <form role="search" onSubmit={applySearch} className="flex items-center gap-2 bg-card border-[1.5px] border-ink rounded-pill pl-4 pr-1 py-1 min-w-[min(300px,100%)]">
-          <input enterKeyHint="search" aria-label={m.searchPh} value={queryInput} onChange={(e) => { const v = e.target.value; setQueryInput(v); if (!v.trim() && query) { setSearching(true); setQuery(''); } }} placeholder={m.searchPh} className="flex-1 min-w-0 bg-transparent outline-none font-sans font-medium text-[14px] text-ink placeholder:text-[#757575] placeholder:font-normal" />
+        <form role="search" onSubmit={applySearch} className="relative flex items-center gap-2 bg-card border-[1.5px] border-ink rounded-pill pl-4 pr-1 py-1 min-w-[min(300px,100%)]">
+          <PlaceAutocomplete
+            value={queryInput}
+            onChange={(v) => { setQueryInput(v); if (!v.trim() && (query || placeId)) { setSearching(true); setPlaceSel(null); setQuery(''); } }}
+            index={places.index} onNeedIndex={places.ensure} lang={lang} onPick={pickPlace} onText={applyText}
+            placeholder={m.searchPh} ariaLabel={m.searchPh} dropdownClassName="min-w-[340px]"
+            className="flex-1 min-w-0 bg-transparent outline-none font-sans font-medium text-[14px] text-ink placeholder:text-[#757575] placeholder:font-normal"
+          />
           <button type="submit" aria-label={searching ? tr(lang, 'Buscando…', 'Searching…', 'Buscando…') : tr(lang, 'Buscar', 'Search', 'Buscar')} disabled={searching} aria-busy={searching} className="w-[34px] h-[34px] flex-none flex items-center justify-center rounded-pill bg-ink text-paper disabled:cursor-wait" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: '15px', fontWeight: 600, lineHeight: 1 }}>{searching ? <SearchSpinner className="w-[18px] h-[18px]" /> : <span aria-hidden="true">→</span>}</button>
         </form>
         {['all', 'venta', 'alquiler'].map((f) => (

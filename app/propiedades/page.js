@@ -14,15 +14,15 @@ export const dynamic = 'force-dynamic';
 // Cache the SSR first page per op/query (a small, high-hit set) so repeat loads
 // skip the count=exact — the page paints its initial listings near-instantly.
 const getInitialPage = unstable_cache(
-  async (op, q, type) => {
+  async (op, q, type, place) => {
     const mobileOp = op === 'alquiler' ? 'alquiler' : 'venta';
     const [dRes, mRes] = await Promise.all([
-      searchListings({ op, q, type, page: 1, pageSize: 24, sort: 'relevancia' }),
-      searchListings({ op: mobileOp, q, type, page: 1, pageSize: 24, sort: 'relevancia' }),
+      searchListings({ op, q, type, place, page: 1, pageSize: 24, sort: 'relevancia' }),
+      searchListings({ op: mobileOp, q, type, place, page: 1, pageSize: 24, sort: 'relevancia' }),
     ]);
     return { dRes, mRes };
   },
-  ['cl-initial-marketplace-v2'],
+  ['cl-initial-marketplace-v3'],
   { revalidate: 120, tags: ['listings'] },
 );
 
@@ -34,6 +34,8 @@ export default async function PropiedadesPage({ searchParams }) {
   const initialOp = searchParams?.op === 'alquiler' ? 'alquiler' : searchParams?.op === 'venta' ? 'venta' : 'all';
   const initialQuery = typeof searchParams?.q === 'string' ? searchParams.q : '';
   const initialType = typeof searchParams?.type === 'string' ? searchParams.type : 'all';
+  // ?place= = a barrio / city / departamento picked from the search suggestions (lib/places.js ids).
+  const initialPlace = typeof searchParams?.place === 'string' && /^[bcd]:/.test(searchParams.place) ? searchParams.place.slice(0, 200) : '';
   // The marketplace fetches server-side (all ~25k). We SSR the FIRST page + pins
   // so the initial paint already has results — no client loading wait. Desktop
   // starts on `initialOp`; mobile's segmented always starts on venta/alquiler.
@@ -41,7 +43,7 @@ export default async function PropiedadesPage({ searchParams }) {
   // right after mount (cached endpoint), so the visible content is instant.
   const [{ dRes: dCached, mRes: mCached }, totalCount] = await Promise.all([
     // ?type= (SEO pages link here) filters the first page too, not just the pins.
-    getInitialPage(initialOp, initialQuery, initialType === 'all' ? undefined : initialType), getActiveCountCached(),
+    getInitialPage(initialOp, initialQuery, initialType === 'all' ? undefined : initialType, initialPlace || undefined), getActiveCountCached(),
   ]);
   // Sellers' approved profile photos, attached after the cache (lib/sellerPhotos.js).
   const [dRes, mRes] = await Promise.all([withSellerPhotosPage(dCached), withSellerPhotosPage(mCached)]);
@@ -64,10 +66,10 @@ export default async function PropiedadesPage({ searchParams }) {
       <h1 className="sr-only">{h1} — Casa Libre</h1>
       {/* Mobile: the app-style listing UI. Desktop: the existing marketplace (unchanged). */}
       <div className="md:hidden">
-        <MobileMarketplace initialListings={mRes.listings} initialCount={mRes.count} totalCount={totalCount} initialOp={initialOp} initialQuery={initialQuery} initialType={initialType} zoningOn={zoningOn} />
+        <MobileMarketplace initialListings={mRes.listings} initialCount={mRes.count} totalCount={totalCount} initialOp={initialOp} initialQuery={initialQuery} initialType={initialType} initialPlace={initialPlace} zoningOn={zoningOn} />
       </div>
       <div className="hidden md:block">
-        <MarketplaceClient initialListings={dRes.listings} initialCount={dRes.count} totalCount={totalCount} initialOp={initialOp} initialQuery={initialQuery} initialType={initialType} zoningOn={zoningOn} />
+        <MarketplaceClient initialListings={dRes.listings} initialCount={dRes.count} totalCount={totalCount} initialOp={initialOp} initialQuery={initialQuery} initialType={initialType} initialPlace={initialPlace} zoningOn={zoningOn} />
       </div>
     </>
   );

@@ -25,6 +25,11 @@ import AuthButton from '@/components/AuthButton';
 import { track } from '@/lib/analytics';
 import { priceBand } from '@/lib/dataLayer';
 import SearchSpinner from '@/components/SearchSpinner';
+import PlaceAutocomplete, { submitSearch } from '@/components/PlaceAutocomplete';
+import { exactPlace } from '@/lib/places';
+import { usePlaces, loadPlaceArea } from '@/lib/placesClient';
+import { searchBounds } from '@/lib/areaGeom';
+import { fitBox, placeOutline, barrioLabelLayer } from '@/utils/placeOverlay';
 
 const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const PER_PAGE = 24;
@@ -56,7 +61,7 @@ const SORTS = [
   { k: 'area_desc', es: 'Superficie: mayor primero', en: 'Area: largest first', pt: 'Área: maior primeiro', esS: 'Mayor', enS: 'Largest', ptS: 'Maior' },
 ];
 
-export default function MobileMarketplace({ initialListings = [], initialCount = 0, initialPins = [], totalCount = 0, initialOp = 'all', initialQuery = '', initialType = 'all', zoningOn = false }) {
+export default function MobileMarketplace({ initialListings = [], initialCount = 0, initialPins = [], totalCount = 0, initialOp = 'all', initialQuery = '', initialType = 'all', initialPlace = '', zoningOn = false }) {
   const [lang, setLang] = useLang();
   const { openSell } = useSellFlow();
   const { isSaved, toggle } = useFavorites();
@@ -69,6 +74,14 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
   const [q, setQ] = useState(initialQuery || '');
   const [qInput, setQInput] = useState(initialQuery || '');
   const [searching, setSearching] = useState(false); // spinner in the arrow button
+  // A barrio / city / departamento picked from the suggestions (lib/places.js): the list and
+  // pins are that place's listings, the map fits to it and draws its outline.
+  const [placeSel, setPlaceSel] = useState(initialPlace ? { id: initialPlace, name: initialQuery } : null);
+  const placeId = placeSel ? placeSel.id : '';
+  const places = usePlaces(true);   // suggestions + barrio names on the map
+  const [placeArea, setPlaceArea] = useState(null);
+  const placeAreaRef = useRef(null);
+  placeAreaRef.current = placeArea;
   const [typeF, setTypeF] = useState(initialType || 'all');
   const [priceF, setPriceF] = useState('all');
   const [bedF, setBedF] = useState('all');
@@ -128,12 +141,13 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
       : { p1: { priceMax: 80000 }, p2: { priceMin: 80000, priceMax: 200000 }, p3: { priceMin: 200000, priceMax: 400000 }, p4: { priceMin: 400000 } };
     return bands[priceF] || {};
   };
-  const searchBody = (pageN) => ({ op: mode, type: typeF === 'all' ? undefined : typeF, beds: bedF === 'all' ? undefined : bedF, q: q || undefined, barrio: barrioF === 'all' ? undefined : barrioF, seller: sellerF === 'all' ? undefined : sellerF, height: heightF === 'all' ? undefined : heightF, sort, page: pageN, pageSize: PER_PAGE, ...priceBoundsFor(), ...(area || {}) });
+  const searchBody = (pageN) => ({ op: mode, type: typeF === 'all' ? undefined : typeF, beds: bedF === 'all' ? undefined : bedF, q: q || undefined, place: placeId || undefined, barrio: barrioF === 'all' ? undefined : barrioF, seller: sellerF === 'all' ? undefined : sellerF, height: heightF === 'all' ? undefined : heightF, sort, page: pageN, pageSize: PER_PAGE, ...priceBoundsFor(), ...(area || {}) });
   const pinsUrl = () => {
     const p = new URLSearchParams(); p.set('op', mode);
     if (typeF !== 'all') p.set('type', typeF);
     if (bedF !== 'all') p.set('beds', bedF);
     if (q) p.set('q', q);
+    if (placeId) p.set('place', placeId);
     if (barrioF !== 'all') p.set('barrio', barrioF);
     if (sellerF !== 'all') p.set('seller', sellerF);
     if (heightF !== 'all') p.set('height', heightF);
@@ -163,7 +177,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
     }, doSearch ? 220 : 0);
     return () => clearTimeout(tmo);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, typeF, priceF, bedF, barrioF, sellerF, heightF, q, sort]);
+  }, [mode, typeF, priceF, bedF, barrioF, sellerF, heightF, q, placeId, sort]);
 
   // The visitor moved the map (or chose "Show all") → reload the list only.
   const areaFirstRun = useRef(true);
@@ -184,17 +198,26 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
 
   // Apply a search term. Unchanged text = nothing to fetch. The spinner clears when
   // the list request it triggers settles (loadingList true -> false).
+  // A new search starts on the whole map again (not inside the area of the last one).
   const applySearch = (raw) => {
     const next = String(raw ?? '').trim();
     setQInput(next);
-    if (next === q) return;
-    setSearching(true);
-    setQ(next);
+    if (next === q && !placeId) return;
+    setSearching(true); setArea(null);
+    setPlaceSel(null); setQ(next);
   };
+  const pickPlace = (p) => {
+    setQInput(p.name);
+    if (p.id === placeId && p.name === q) return;
+    setSearching(true); setArea(null);
+    setPlaceSel({ id: p.id, name: p.name }); setQ(p.name);
+  };
+  // Enter / the arrow: a text naming a place picks it (lib/places.js exactPlace), else a text search.
   const onSearchSubmit = (e) => {
     e.preventDefault();
     try { e.currentTarget.querySelector('input')?.blur(); } catch {} // close the phone keyboard
-    applySearch(qInput);
+    if (placeSel && qInput.trim() === placeSel.name) return;   // the picked place, unchanged
+    submitSearch(places.index, qInput, { onPick: pickPlace, onText: applySearch, lang });
   };
   // ✕ is an explicit "remove my search": clears the box AND the applied term.
   const clearSearch = () => applySearch('');
@@ -322,9 +345,9 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
     setArea(null);
     const ref = mapRef.current;
     if (!ref || view !== 'map') { fitAllRef.current = true; return; }
-    const b = new ref.google.maps.LatLngBounds();
-    displayPins.forEach((l) => { if (l.lat != null && l.lng != null && inParaguay(l.lat, l.lng)) b.extend({ lat: l.lat, lng: l.lng }); });
-    if (!b.isEmpty()) moveCamera(() => ref.map.fitBounds(b, 40));
+    // Lone pins far from all the others (a bad geocode) don't stretch the view.
+    const b = searchBounds(displayPins.filter((l) => l.lat != null && l.lng != null && inParaguay(l.lat, l.lng)).map((l) => [l.lat, l.lng]));
+    if (b) moveCamera(() => fitBox(ref.google, ref.map, b, { padding: 40, maxZoom: 16 }));
   };
 
   const drawMarkers = useCallback(() => {
@@ -335,7 +358,7 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
     promotedMarkersRef.current.forEach((m) => { try { m.setMap(null); } catch {} });
     promotedMarkersRef.current = [];
     const markers = [];
-    const bounds = new google.maps.LatLngBounds();
+    const pts = [];
     let n = 0;
     displayPins.forEach((l) => {
       if (!inParaguay(l.lat, l.lng)) return; // never plot mis-geocoded listings outside PY
@@ -353,16 +376,60 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
       // A paid listing is never swallowed by a cluster — add it straight to the map.
       if (promoted) { mk.setMap(map); promotedMarkersRef.current.push(mk); }
       else markers.push(mk);
-      bounds.extend({ lat: l.lat, lng: l.lng }); n++;
+      pts.push([l.lat, l.lng]); n++;
     });
     cluster.addMarkers(markers);
-    if (fitAllRef.current && n && !areaRef.current) { fitAllRef.current = false; moveCamera(() => map.fitBounds(bounds, 36)); skipFitRef.current = false; return; }   // after "Show all"
+    // Fits use the matches minus lone pins far from all the others (a flat geocoded into the
+    // Chaco), never closer than a couple of blocks (lib/areaGeom.js); a picked place uses its
+    // own box (misplaced pins left out).
+    const fitPins = () => { const b = searchBounds(pts); if (b) moveCamera(() => fitBox(google, map, b, { padding: 36, maxZoom: 16 })); };
+    if (fitAllRef.current && n && !areaRef.current) { fitAllRef.current = false; fitPins(); skipFitRef.current = false; return; }   // after "Show all"
     // Don't refit while near-me is locked, nor on the toggle itself (so deselect
     // can restore the previous view instead of snapping to the filtered bounds).
-    if (n && !nearMe && !skipFitRef.current && !areaRef.current && (typeF !== 'all' || priceF !== 'all' || bedF !== 'all' || barrioF !== 'all' || heightF !== 'all' || q)) { moveCamera(() => map.fitBounds(bounds, 36)); }
+    const pa = placeId ? placeAreaRef.current : null;
+    if (n && !nearMe && !skipFitRef.current && !areaRef.current && (typeF !== 'all' || priceF !== 'all' || bedF !== 'all' || barrioF !== 'all' || heightF !== 'all' || q || placeId)) {
+      if (pa) moveCamera(() => fitBox(google, map, pa.bounds, { padding: 36, maxZoom: pa.kind === 'barrio' ? 16 : 15 }));
+      else fitPins();
+    }
     skipFitRef.current = false;
-  }, [displayPins, nearMe, typeF, priceF, bedF, barrioF, heightF, q]);
+  }, [displayPins, nearMe, typeF, priceF, bedF, barrioF, heightF, q, placeId, placeArea]);
   useEffect(() => { if (view === 'map') drawMarkers(); }, [view, drawMarkers, mapOn]);
+
+  // A search that arrived as text (?q=Villa Morra from a home chip / an old link, or Enter
+  // pressed before the suggestions loaded) and names a place outright → that place, so the
+  // map shows its area instead of every listing that mentions the words.
+  const upgradedRef = useRef(false);
+  useEffect(() => {
+    if (upgradedRef.current || !places.index) return;
+    upgradedRef.current = true;
+    if (placeId || !q || q !== initialQuery || qInput.trim() !== q) return;
+    const p = exactPlace(places.index, q);
+    if (p) { setQInput(p.name); setPlaceSel({ id: p.id, name: p.name }); setQ(p.name); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [places.index]);
+
+  // The picked place's outline / label / box (lib/placeIndex.js via /api/listings/places?id=);
+  // drawMarkers fits the map to its box.
+  useEffect(() => {
+    setPlaceArea(null);
+    if (!placeId) return undefined;
+    let on = true;
+    loadPlaceArea(placeId).then((a) => { if (on) setPlaceArea(a); });
+    return () => { on = false; };
+  }, [placeId]);
+  useEffect(() => {
+    const ref = mapRef.current;
+    if (!ref || !placeArea) return undefined;
+    const outline = placeOutline(ref.google, ref.map, placeArea);
+    return () => outline.remove();
+  }, [placeArea, mapOn]);
+  // Barrio names on the map once zoomed in (the picked barrio has its own label).
+  useEffect(() => {
+    const ref = mapRef.current;
+    if (!ref || !places.labels) return undefined;
+    const layer = barrioLabelLayer(ref.google, ref.map, places.labels, { hide: () => (placeAreaRef.current && placeAreaRef.current.kind === 'barrio' ? placeAreaRef.current.id : null) });
+    return () => layer.remove();
+  }, [places.labels, mapOn]);
 
   // A price we couldn't verify (lib/unverified.js; pins carry nv) reads "Contact seller for price".
   const noPrice = (l) => !!l.nv || isUnverified(l, 'price');
@@ -516,8 +583,14 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
 
       {/* SEARCH */}
       <div className="px-4 pb-3">
-        <form role="search" onSubmit={onSearchSubmit} className="flex items-center bg-card border-[1.5px] border-ink/12 rounded-pill h-[54px] pl-[18px] pr-[5px]">
-          <input enterKeyHint="search" aria-label={X.searchPh} value={qInput} onChange={(e) => { const v = e.target.value; setQInput(v); if (!v.trim() && q) applySearch(''); }} placeholder={X.searchPh} className="flex-1 min-w-0 bg-transparent outline-none text-[15px] text-ink placeholder:text-ink/45" />
+        <form role="search" onSubmit={onSearchSubmit} className="relative flex items-center bg-card border-[1.5px] border-ink/12 rounded-pill h-[54px] pl-[18px] pr-[5px]">
+          <PlaceAutocomplete
+            value={qInput}
+            onChange={(v) => { setQInput(v); if (!v.trim() && (q || placeId)) applySearch(''); }}
+            index={places.index} onNeedIndex={places.ensure} lang={lang} onPick={pickPlace} onText={applySearch}
+            placeholder={X.searchPh} ariaLabel={X.searchPh}
+            className="flex-1 min-w-0 bg-transparent outline-none text-[15px] text-ink placeholder:text-ink/45"
+          />
           {qInput && <button type="button" onClick={clearSearch} aria-label={tr(lang, 'Borrar búsqueda', 'Clear search', 'Limpar busca')} className="w-9 h-11 flex-none flex items-center justify-center text-ink/30 text-[18px] leading-none touch-manipulation">✕</button>}
           <button type="submit" aria-label={searching ? tr(lang, 'Buscando…', 'Searching…', 'Buscando…') : tr(lang, 'Buscar', 'Search', 'Buscar')} disabled={searching} aria-busy={searching} className="w-11 h-11 flex-none rounded-pill bg-ink text-paper flex items-center justify-center text-[20px] touch-manipulation disabled:cursor-wait">{searching ? <SearchSpinner className="w-5 h-5" /> : <span aria-hidden="true">→</span>}</button>
         </form>

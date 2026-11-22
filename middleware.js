@@ -10,7 +10,7 @@ import { blockedIps, clientIp } from './lib/ipBlock';
 // per session and replay the token before it expires — which kills cheap bulk
 // scraping and is easy to rate-limit. Signed with SESSION_SECRET via HMAC-SHA256
 // on Web Crypto (edge-runtime safe).
-const GATED = ['/api/listings/search', '/api/listings/pins', '/api/listings/images'];
+const GATED = ['/api/listings/search', '/api/listings/pins', '/api/listings/images', '/api/listings/places'];
 const COOKIE = 'cl_api';
 const TTL_MS = 12 * 60 * 60 * 1000; // 12h — comfortably longer than any real session
 const SECRET = process.env.SESSION_SECRET || 'insecure-dev-secret';
