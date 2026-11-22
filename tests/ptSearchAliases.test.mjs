@@ -26,7 +26,7 @@ function finds(q, { place = '', type = '', rent = false, op = 'all' } = {}) {
 test('marketplace search runs the aliases before accentRegex and parses the query', () => {
   assert.match(src, /import \{ ptAlias, parseSearch \} from '\.\/searchAliases'/);
   assert.match(src, /const t = ptAlias\(v\)/);
-  assert.match(src, /const qs = has\(p\.q\) \? parseSearch\(p\.q\) : null;/);
+  assert.match(src, /const qs = !place && has\(p\.q\) \? parseSearch\(p\.q\) : null;/);   // a picked place (lib/placeFilter.js) replaces the text
   assert.match(src, /if \(op === 'all' && qs\?\.op\) op = qs\.op;/);
 });
 

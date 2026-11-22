@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 // 'listings' tag). Ad traffic lands on a handful of identical searches, so this keeps
 // a spike off the database — only the first request per combo per minute queries it.
 // n/s/e/w = the visible map area (lib/mapArea.js), rounded to ~100 m by the client.
-const SEARCH_KEYS = ['op', 'type', 'beds', 'q', 'barrio', 'seller', 'height', 'sort', 'page', 'pageSize', 'priceMin', 'priceMax', 'n', 's', 'e', 'w'];
+const SEARCH_KEYS = ['op', 'type', 'beds', 'q', 'place', 'barrio', 'seller', 'height', 'sort', 'page', 'pageSize', 'priceMin', 'priceMax', 'n', 's', 'e', 'w'];
 const cachedSearch = unstable_cache(
   async (key, p) => searchListings(p),
   ['cl-listing-search-v1'],
