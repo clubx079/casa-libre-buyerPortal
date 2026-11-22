@@ -6,7 +6,8 @@
 //
 // Renders the <input> plus the dropdown; the dropdown is positioned against the nearest
 // `relative` ancestor (the search form). Matching/ranking: lib/places.js.
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { suggestPlaces, exactPlace, placeSubtitle, matchRange } from '@/lib/places';
 import { readRecents, saveRecent, clearRecents } from '@/lib/placesClient';
 
@@ -75,6 +76,28 @@ export default function PlaceAutocomplete({
 
   useEffect(() => { setActive(-1); }, [q, index]);
 
+  // The list is drawn in its own layer (portal, position: fixed) under the search box, so no
+  // parent's overflow / layout can clip it or push it off-screen; it opens below the box and its
+  // height is capped to the space left under it. Re-measured on scroll and resize.
+  const [pos, setPos] = useState(null);
+  useLayoutEffect(() => {
+    if (!show) return undefined;
+    const measure = () => {
+      const el = inputRef.current;
+      if (!el) return;
+      const box = (el.closest('form') || el.parentElement || el).getBoundingClientRect();
+      const vw = window.innerWidth; const vh = window.innerHeight;
+      const width = Math.min(Math.max(box.width, 340), vw - 16);
+      const left = Math.max(8, Math.min(box.left, vw - width - 8));
+      const top = box.bottom + 8;
+      setPos({ top, left, width, maxList: Math.max(160, Math.min(380, vh - top - 70)) });
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    window.addEventListener('scroll', measure, true);
+    return () => { window.removeEventListener('resize', measure); window.removeEventListener('scroll', measure, true); };
+  }, [show, inputRef]);
+
   const close = () => { setOpen(false); setActive(-1); };
   const done = () => { close(); try { inputRef.current?.blur(); } catch {} };
 
@@ -131,9 +154,10 @@ export default function PlaceAutocomplete({
         onKeyDown={onKeyDown}
         className={className}
       />
-      {show && (
+      {show && pos && typeof document !== 'undefined' && createPortal(
         <div
-          className={`absolute left-0 right-0 top-[calc(100%+8px)] z-[1200] bg-card text-ink text-left border-[1.5px] border-ink rounded-[18px] shadow-hard overflow-hidden ${dropdownClassName}`}
+          style={{ position: 'fixed', top: pos.top, left: pos.left, width: pos.width }}
+          className={`z-[1200] bg-card text-ink text-left border-[1.5px] border-ink rounded-[18px] shadow-hard overflow-hidden ${dropdownClassName.replace(/min-w-\[[^\]]+\]/g, '')}`}
           // Keep the focus in the box while a row is clicked (no blur before the click lands).
           onMouseDown={(e) => e.preventDefault()}
         >
@@ -146,7 +170,7 @@ export default function PlaceAutocomplete({
           {typed && index && !items.length && (
             <div className="px-4 pt-3 pb-1 text-[13px] text-ink/60" aria-hidden="true">{s.none}</div>
           )}
-          <ul id={listId} role="listbox" aria-label={ariaLabel || placeholder} className="max-h-[min(380px,55vh)] overflow-y-auto overscroll-contain m-0 p-0 list-none">
+          <ul id={listId} role="listbox" aria-label={ariaLabel || placeholder} style={{ maxHeight: pos.maxList }} className="overflow-y-auto overscroll-contain m-0 p-0 list-none">
             {rows.map((row, i) => {
               const sep = i > 0 ? 'border-t border-ink/[0.08]' : '';
               if (row.kind === 'place') {
@@ -183,7 +207,8 @@ export default function PlaceAutocomplete({
               );
             })}
           </ul>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );
