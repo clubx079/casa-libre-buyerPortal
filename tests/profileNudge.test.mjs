@@ -155,3 +155,35 @@ test('run: override address, onlyUserIds, opt-out rows, off / no template', asyn
   assert.equal(q.sent, 0);
   assert.equal(quiet.sent.length, 0);
 });
+
+// ── buyer or seller (lib/userType.js) ─────────────────────────────────────────
+
+test('pick: buyers who never listed are skipped; sellers, buyers who listed and unknown types are kept', () => {
+  const users = [
+    user('s', 1, { user_type: 'seller' }),
+    user('b', 1, { user_type: 'buyer' }),
+    user('bl', 1, { user_type: 'buyer', first_listed_at: iso(NOW - H) }),
+    user('bp', 1, { user_type: 'buyer' }),
+    user('u', 1, { user_type: null }),
+    user('old', 1),   // no column at all (migration not run) → as before
+  ];
+  const due = pickProfileNudges({ users, listings: new Map([['bp', 2]]), nowMs: NOW });
+  assert.deepEqual(due.map((d) => d.user.id).sort(), ['bl', 'bp', 'old', 's', 'u']);
+});
+
+test('run: a buyer is not emailed, a buyer owning a listing is; works when the type columns are missing', async () => {
+  const s = setup({ users: [user('s', 1, { user_type: 'seller' }), user('b', 1, { user_type: 'buyer' }), user('bp', 1, { user_type: 'buyer' })] });
+  s.db.seed('properties', [{ id: 'p1', created_by: 'bp' }]);
+  const r = await s.run();
+  assert.equal(r.sent, 2);
+  assert.deepEqual(s.sent.map((m) => m.to).sort(), ['bp@x.com', 's@x.com']);
+
+  // a DB without user_type / first_listed_at: the first select throws → falls back, everyone as before
+  const t = setup({ users: [user('a', 1), user('c', 1)] });
+  const realSelect = t.db.select.bind(t.db);
+  t.db.select = async (table, q) => {
+    if (table === 'users' && /user_type/.test(q)) throw Object.assign(new Error('column users.user_type does not exist'), { status: 400 });
+    return realSelect(table, q);
+  };
+  assert.equal((await t.run()).sent, 2);
+});

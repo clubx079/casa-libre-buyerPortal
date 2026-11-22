@@ -7,6 +7,7 @@ import { findUserByEmail, createUser, verifyExistingUser, publicUser } from '@/l
 import { setSessionCookie } from '@/lib/auth';
 import { getClientIP } from '@/lib/ip';
 import { sendWelcomeEmail } from '@/lib/email';
+import { applyUserType } from '@/lib/userTypeStore';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -40,6 +41,8 @@ export async function POST(req) {
   // Welcome email — awaited (serverless freezes the function after the response,
   // which would kill a fire-and-forget send). Wrapped so it never blocks signup.
   await sendWelcomeEmail(email, fullName).catch(() => {});
+  // Only the sell wizard signs up here → the account is a seller (lib/userType.js).
+  user = await applyUserType(user, 'seller', 'sell_funnel', { isNew: true });
   setSessionCookie(user);
   return NextResponse.json({ ok: true, user: publicUser(user) });
 }

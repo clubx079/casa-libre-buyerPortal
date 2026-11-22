@@ -8,6 +8,7 @@ import { recordSignup, FIRST_TOUCH } from '@/lib/signupAttribution';
 import { getClientIP } from '@/lib/ip';
 import { sendWelcomeEmail } from '@/lib/email';
 import { SIGNUP_COOKIE } from '@/lib/signupSignal';
+import { applyUserType } from '@/lib/userTypeStore';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -51,7 +52,12 @@ export async function GET(req) {
     if (!g.email) throw new Error('no_email');
 
     const fullName = g.name || [g.given_name, g.family_name].filter(Boolean).join(' ') || null;
-    const user = await findOrCreateGoogleUser({ email: g.email, googleId: g.id, fullName, ip: getClientIP(req) });
+    let user = await findOrCreateGoogleUser({ email: g.email, googleId: g.id, fullName, ip: getClientIP(req) });
+    // Coming back to the sell wizard (?sell=resume, /publicar, a draft link) = the sell funnel
+    // → seller (lib/userType.js); a new account keeps _isNew, an existing one only fills an
+    // empty type. Log-in modal sign-ups are asked afterwards (components/UserTypePrompt.js).
+    const fromSell = dest.startsWith('/publicar') || dest.includes('sell=resume') || dest.includes('tab=borradores');
+    if (fromSell) user = { ...(await applyUserType(user, 'seller', 'sell_funnel', { isNew: !!user._isNew })), _isNew: user._isNew };
 
     if (user.blocked || user.suspended) return NextResponse.redirect(`${base}/?auth_error=blocked`);
 
@@ -83,7 +89,7 @@ export async function GET(req) {
     // Not for sellers signing up from the sell flow — owner-side, not a buyer/renter
     // conversion (casa-libre-tracking-instructions.md) — nor for a guest seller coming
     // back to finish a draft from the reminder email (tab=borradores).
-    const sellerSignup = dest.startsWith('/publicar') || dest.includes('sell=resume') || dest.includes('tab=borradores');
+    const sellerSignup = fromSell;
     if (user._isNew && !sellerSignup) {
       res.cookies.set(SIGNUP_COOKIE, 'google', {
         httpOnly: false, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: 60 * 10,

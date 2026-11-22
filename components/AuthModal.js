@@ -7,10 +7,15 @@
 // WhatsApp (NEXT_PUBLIC_WHATSAPP_LOGIN=1): the same two steps with the code sent to
 // WhatsApp by Relay — /api/auth/whatsapp/send + /verify. New people then give their
 // name and email instead of a phone.
+// Buyer or seller (lib/userType.js): the first screen offers "¿Sos vendedor o comprador?"
+// (optional, sent with the code as userType); a NEW account that didn't pick gets the
+// question as one more step ('type') before the modal closes. Google sign-ups keep the
+// pick in localStorage and are asked on the page they land on (UserTypePrompt).
 import { useEffect, useRef, useState } from 'react';
 import { useLang } from '@/lib/useLang';
 import { track } from '@/lib/analytics';
 import { COUNTRY } from '@/lib/country';
+import UserTypePick, { TYPE_DICT, savePick, postUserType, LATER_KEY } from './UserTypePick';
 
 const DICT = {
   es: {
@@ -87,7 +92,10 @@ const btnCls = 'w-full py-3.5 bg-ink text-paper rounded-pill font-bold text-[15p
 export default function AuthModal({ onAuthed, onClose, next = null }) {
   const [lang] = useLang();
   const t = DICT[lang];
-  const [step, setStep] = useState('email'); // email | code
+  const [step, setStep] = useState('email'); // email | code | type
+  const [userType, setUserType] = useState(null);       // picked on the first screen (optional)
+  const [pendingUser, setPendingUser] = useState(null); // signed up, being asked buyer/seller
+  const tt = TYPE_DICT[lang] || TYPE_DICT.es;
   const [method, setMethod] = useState(WHATSAPP_LOGIN ? 'whatsapp' : 'email'); // email | whatsapp — WhatsApp first when it's on
   const [waPhone, setWaPhone] = useState('');    // E.164 the code went to (from the server)
   const [devCode, setDevCode] = useState('');    // test key only
@@ -102,11 +110,23 @@ export default function AuthModal({ onAuthed, onClose, next = null }) {
   const [resent, setResent] = useState(false);
   const firstField = useRef(null);
 
+  useEffect(() => { savePick(null); }, []);   // a fresh modal: no pick carried over
+
+  // Closing on the buyer/seller step keeps the new session (the question is just skipped).
+  const finishWithout = () => {
+    try { sessionStorage.setItem(LATER_KEY, '1'); } catch {}
+    savePick(null);
+    onAuthed(pendingUser);
+  };
+  const close = () => (step === 'type' && pendingUser ? finishWithout() : onClose());
+  const closeRef = useRef(close);
+  closeRef.current = close;
+
   useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    const onKey = (e) => { if (e.key === 'Escape') closeRef.current(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, []);
   useEffect(() => { firstField.current?.focus(); }, [step, mode]);
 
   const post = (url, body) => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -171,9 +191,9 @@ export default function AuthModal({ onAuthed, onClose, next = null }) {
     setBusy(true);
     try {
       const r = wa
-        ? await post('/api/auth/whatsapp/verify', { phone: waPhone, code, ...(mode === 'signup' ? { fullName: fullName.trim(), email: email.trim() } : {}) })
+        ? await post('/api/auth/whatsapp/verify', { phone: waPhone, code, ...(userType ? { userType } : {}), ...(mode === 'signup' ? { fullName: fullName.trim(), email: email.trim() } : {}) })
         : await post('/api/auth/code/verify', {
-          email: email.trim(), code,
+          email: email.trim(), code, ...(userType ? { userType } : {}),
           ...(mode === 'signup' ? { fullName: fullName.trim(), phone: phone.trim() || undefined } : {}),
         });
       const j = await r.json().catch(() => ({}));
@@ -184,8 +204,21 @@ export default function AuthModal({ onAuthed, onClose, next = null }) {
       const m = wa ? 'whatsapp_otp' : 'email_otp';
       if (j.mode === 'signup') track('user_signed_up', { method: m });   // value agreed with the ads agency
       else track('user_logged_in', { method: m });
+      if (userType) track('user_type_chosen', { type: userType, where: 'login_screen' });
+      // New account, no pick on the first screen → ask before closing.
+      if (j.mode === 'signup' && !userType && j.user?.ask_user_type) { setPendingUser(j.user); setErr(''); setStep('type'); return; }
+      savePick(null);
       onAuthed(j.user);
     } catch { setErr(t.errGeneric); } finally { setBusy(false); }
+  };
+
+  const chooseType = async (v) => {
+    setBusy(true);
+    await postUserType(v, 'signup_choice');
+    track('user_type_chosen', { type: v, where: 'after_signup' });
+    setBusy(false);
+    savePick(null);
+    onAuthed({ ...pendingUser, user_type: v, ask_user_type: false });
   };
 
   const resend = async () => {
@@ -199,15 +232,18 @@ export default function AuthModal({ onAuthed, onClose, next = null }) {
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4" role="dialog" aria-modal="true">
-      <div className="absolute inset-0 bg-ink/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-ink/40 backdrop-blur-sm" onClick={close} />
       <div className="relative w-full max-w-[420px] max-h-[92vh] overflow-y-auto bg-paper border-[1.5px] border-ink rounded-[24px] shadow-hard p-7 md:p-8">
-        <button onClick={onClose} aria-label={t.close} className="absolute top-4 right-4 w-8 h-8 rounded-pill border border-ink/25 flex items-center justify-center text-ink/60 hover:border-ink hover:text-ink">×</button>
+        <button onClick={close} aria-label={t.close} className="absolute top-4 right-4 w-8 h-8 rounded-pill border border-ink/25 flex items-center justify-center text-ink/60 hover:border-ink hover:text-ink">×</button>
         <div className="text-[22px] font-bold tracking-head mb-5">casa-libre<em className="font-serif italic font-normal">{COUNTRY.tld}</em></div>
 
         {step === 'email' && (
           <form onSubmit={submitEmail}>
             <h2 className="text-[24px] font-bold tracking-head leading-tight">{t.emailTitle}</h2>
             <p className="text-[14px] text-ink/55 mt-1 mb-5">{method === 'whatsapp' ? t.waSub : t.emailSub}</p>
+            <div className="mb-5">
+              <UserTypePick compact showHint={false} value={userType} onPick={(v) => { const n = v === userType ? null : v; setUserType(n); savePick(n); }} />
+            </div>
             {googleBtn}
             {WHATSAPP_LOGIN && (
               <div className="grid grid-cols-2 gap-1 p-1 mb-4 rounded-pill border-[1.5px] border-ink/20" data-testid="auth-method">
@@ -277,6 +313,14 @@ export default function AuthModal({ onAuthed, onClose, next = null }) {
               <button type="button" onClick={resend} className="text-[13px] font-medium text-ink/55 hover:text-ink">{resent ? t.resent : t.resend}</button>
             </div>
           </form>
+        )}
+
+        {step === 'type' && (
+          <div data-testid="auth-type-step">
+            <UserTypePick value={null} onPick={chooseType} disabled={busy} />
+            <p className="text-[13px] text-ink/55 mt-3">{busy ? tt.saving : tt.sub}</p>
+            <button type="button" onClick={finishWithout} className="mt-4 text-[13px] font-medium text-ink/55 hover:text-ink">{tt.later}</button>
+          </div>
         )}
 
         {err && err !== t.errName && <div className="mt-4 text-[13px] font-medium text-red-700 bg-red-50 border border-red-200 rounded-[12px] px-3.5 py-2.5">{err}</div>}

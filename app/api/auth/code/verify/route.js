@@ -12,6 +12,8 @@ import { findUserByEmail, createUser, verifyExistingUser, touchLogin, publicUser
 import { setSessionCookie } from '@/lib/auth';
 import { reviewCodeMatches } from '@/lib/reviewLogin';
 import { sendWelcomeEmail } from '@/lib/email';
+import { typeFromAuthBody } from '@/lib/userType';
+import { applyUserType } from '@/lib/userTypeStore';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -51,6 +53,10 @@ export async function POST(req) {
   }
 
   if (!user) return NextResponse.json({ error: 'create_failed' }, { status: 500 });
+  // Buyer or seller (lib/userType.js): a new account takes the pick / the sell funnel; a
+  // log-in only fills an empty type.
+  const picked = typeFromAuthBody(body);
+  if (picked) user = await applyUserType(user, picked.type, picked.source, { isNew: !isLogin });
   // New account: welcome email, as the old password sign-up sent. Awaited (the
   // function is frozen after the response) and never blocks the sign-in.
   if (!isLogin) await sendWelcomeEmail(email, user.full_name || fullName || null).catch(() => {});

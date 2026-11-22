@@ -8,6 +8,8 @@ import { findOrCreateAppleUser, publicUser } from '@/lib/users';
 import { setSessionCookie } from '@/lib/auth';
 import { getClientIP } from '@/lib/ip';
 import { sendWelcomeEmail } from '@/lib/email';
+import { typeFromAuthBody } from '@/lib/userType';
+import { applyUserType } from '@/lib/userTypeStore';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -38,6 +40,9 @@ export async function POST(req) {
   if (user.blocked || user.suspended || user.active === false) return fail('account_unavailable', 403);
 
   if (user._isNew) await sendWelcomeEmail(user.email, user.full_name || fullName).catch(() => {});
+  // Buyer or seller (lib/userType.js): the app sends userType (log-in screen) or signupSource.
+  const picked = typeFromAuthBody(body);
+  if (picked) user = { ...(await applyUserType(user, picked.type, picked.source, { isNew: !!user._isNew })), _isNew: user._isNew };
   setSessionCookie(user);
   return NextResponse.json({ ok: true, mode: user._isNew ? 'signup' : 'login', user: publicUser(user) });
 }

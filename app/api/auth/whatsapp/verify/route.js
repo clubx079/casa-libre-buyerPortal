@@ -17,6 +17,9 @@ import { sendWelcomeConfirmEmail } from '@/lib/email';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+import { typeFromAuthBody } from '@/lib/userType';
+import { applyUserType } from '@/lib/userTypeStore';
+
 const emailOk = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || '').trim());
 const fail = (error, status = 400, extra = {}) => NextResponse.json({ error, ...extra }, { status });
 
@@ -70,6 +73,10 @@ export async function POST(req) {
     // The WhatsApp code proved the number, not the email: welcome + "confirm your email".
     await sendWelcomeConfirmEmail({ id: user.id, email, full_name: user.full_name || fullName }).catch(() => {});
   }
+
+  // Buyer or seller (lib/userType.js): the sell wizard sends signupSource 'sell'.
+  const picked = typeFromAuthBody(body);
+  if (picked) user = await applyUserType(user, picked.type, picked.source, { isNew: !isLogin });
 
   setSessionCookie(user);
   return NextResponse.json({ ok: true, mode: isLogin ? 'login' : 'signup', user: publicUser(user) });
