@@ -61,6 +61,13 @@ const SORTS = [
   { k: 'area_desc', es: 'Superficie: mayor primero', en: 'Area: largest first', pt: 'Área: maior primeiro', esS: 'Mayor', enS: 'Largest', ptS: 'Maior' },
 ];
 
+// A picked place → its box right away (Omar, Nov 22: "the zoom and the list should change at
+// once"): the map flies to it, the list's area is that box (so the FIRST request is already
+// "this place, on the map"), and pins / cards outside it go at once instead of after the reply.
+// The box is the place's own (misplaced pins left out) plus ~200 m so its edge listings stay in.
+const placeBox = (p) => (p?.bounds ? { n: p.bounds.n + 0.002, s: p.bounds.s - 0.002, e: p.bounds.e + 0.002, w: p.bounds.w - 0.002 } : null);
+const inBox = (box) => (o) => !!o && o.lat != null && o.lng != null && o.lat <= box.n && o.lat >= box.s && o.lng <= box.e && o.lng >= box.w;
+
 export default function MobileMarketplace({ initialListings = [], initialCount = 0, initialPins = [], totalCount = 0, initialOp = 'all', initialQuery = '', initialType = 'all', initialPlace = '', zoningOn = false }) {
   const [lang, setLang] = useLang();
   const { openSell } = useSellFlow();
@@ -209,7 +216,15 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
   const pickPlace = (p) => {
     setQInput(p.name);
     if (p.id === placeId && p.name === q) return;
-    setSearching(true); setArea(null);
+    setSearching(true);
+    const box = placeBox(p);
+    setArea(box ? roundArea(box) : null);
+    if (box) {
+      setPins((ps) => ps.filter(inBox(box)));
+      setRows((rs) => rs.filter(inBox(box)));
+      const ref = mapRef.current;
+      if (ref) moveCamera(() => fitBox(ref.google, ref.map, p.bounds, { padding: 36, maxZoom: p.kind === 'barrio' ? 16 : 15 }));
+    }
     setPlaceSel({ id: p.id, name: p.name }); setQ(p.name);
   };
   // Enter / the arrow: a text naming a place picks it (lib/places.js exactPlace), else a text search.
