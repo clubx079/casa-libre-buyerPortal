@@ -51,7 +51,7 @@ test('first upload → checking, nothing shown to buyers yet', () => {
   assert.deepEqual(s.deleteKeys, []);
   const row = apply({}, s);
   assert.equal(publicPhoto(row), null);
-  assert.deepEqual(ownerView(row), { status: 'checking', photo: null, pending: A.url, category: null, reason: null, checked_at: null, updated_at: NOW.toISOString(), edit_src: null, edit_fallback: null });
+  assert.deepEqual(ownerView(row), { status: 'checking', photo: null, pending: A.url, category: null, reason: null, checked_at: null, updated_at: NOW.toISOString(), edit_src: null, edit_fallback: null, last_rejected: null });
 });
 
 test('checking → approved: the pending photo becomes the photo', () => {

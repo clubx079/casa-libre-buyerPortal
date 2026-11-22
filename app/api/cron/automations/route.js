@@ -32,7 +32,7 @@ import { runDeletedAsk } from '@/lib/listingDeleted';
 import { runOwnerPushes } from '@/lib/ownerPushes';
 import { runReferralsCron, runReferralPromoCron } from '@/lib/referrals/run';
 import { runProfileNudge, PROFILE_NUDGE_ID } from '@/lib/automations/profileNudge';
-import { runPhotoFace, PHOTO_FACE_ID } from '@/lib/automations/photoFace';
+import { runPhotoFace, PHOTO_FACE_ID, PHOTO_WRONG_ID } from '@/lib/automations/photoFace';
 import { classifyMissingKinds } from '@/lib/profilePhotoKindScan';
 
 export const runtime = 'nodejs';
@@ -53,7 +53,7 @@ async function handle(req) {
     ? { skipped: 'off' }
     : await runOwnerPushes(db, (o) => sendPush(db, o), { now: new Date(), countryCode: COUNTRY.code }).catch((e) => ({ error: e?.message || 'push_failed' }));
 
-  let profileAutomation, photoFaceAutomation, automation, viewsAutomation, draftsAutomation, paidAutomation, noListingAutomation, heldAutomation, savesAutomation, payFollowAutomation, templates;
+  let profileAutomation, photoFaceAutomation, photoWrongAutomation, automation, viewsAutomation, draftsAutomation, paidAutomation, noListingAutomation, heldAutomation, savesAutomation, payFollowAutomation, templates;
   try {
     [automation] = await db.select('automations', `id=eq.${AUTOMATION_ID}&limit=1`);
     [viewsAutomation] = await db.select('automations', `id=eq.${VIEWS_AUTOMATION_ID}&limit=1`).catch(() => []);
@@ -65,6 +65,7 @@ async function handle(req) {
     [payFollowAutomation] = await db.select('automations', `id=eq.${PAYMENT_FOLLOWUP_ID}&limit=1`).catch(() => []);
     [profileAutomation] = await db.select('automations', `id=eq.${PROFILE_NUDGE_ID}&limit=1`).catch(() => []);
     [photoFaceAutomation] = await db.select('automations', `id=eq.${PHOTO_FACE_ID}&limit=1`).catch(() => []);
+    [photoWrongAutomation] = await db.select('automations', `id=eq.${PHOTO_WRONG_ID}&limit=1`).catch(() => []);
     templates = await db.select('email_templates', 'select=*');
   } catch (e) {
     // Migration 005 not applied on this country's DB yet.
@@ -186,7 +187,7 @@ async function handle(req) {
     const photoFace = !photoFaceAutomation
       ? { skippedReason: 'not_set_up' }
       : await runPhotoFace({
-        db, automation: photoFaceAutomation, templates, now: new Date(), deliver: sendRenderedEmail, frame, siteUrl: site,
+        db, automation: photoFaceAutomation, wrongAutomation: photoWrongAutomation || null, templates, now: new Date(), deliver: sendRenderedEmail, frame, siteUrl: site,
         emailOverride: process.env.AUTOMATION_EMAIL_OVERRIDE || '', classifyMissing: () => classifyMissingKinds(20),
       }).catch((e) => ({ error: e?.message || 'photo_face_failed' }));
     return NextResponse.json({ ok: true, quietHours: frame.quiet, ...result, views, drafts, duplicates, paid, noListing, held, payFollow, saves, deletedAsk, referrals, referralPromo, profile, photoFace, pushes, at: new Date().toISOString() });

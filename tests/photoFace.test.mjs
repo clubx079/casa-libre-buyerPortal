@@ -30,7 +30,7 @@ test('kind belongs to one photo: a new photo (other key) needs a new check; face
   assert.equal(kindIsCurrent(user('a', 1)), true);
   assert.equal(kindIsCurrent(user('a', 1, 'logo', { profile_photo_key: 'avatars/a/k2.jpg' })), false);
   assert.equal(needsFace(user('a', 1, 'logo')), true);
-  assert.equal(needsFace(user('a', 1, 'other')), true);
+  assert.equal(needsFace(user('a', 1, 'other')), false);   // "?" photos → the wrong-photo emails
   assert.equal(needsFace(user('a', 1, 'face')), false);
   assert.equal(needsFace(user('a', 1, 'logo', { profile_photo_status: 'rejected' })), false);
   assert.equal(needsFace(user('a', 1, 'logo', { profile_photo_key: 'avatars/a/k2.jpg' })), false);   // not checked yet
@@ -54,7 +54,7 @@ test('pick: only verified, open accounts with a logo/other photo, on schedule', 
 });
 
 test('lines and link', () => {
-  assert.match(photoLine('logo'), /logo o un texto/);
+  assert.match(photoLine('logo'), /tenés un logo/);
   assert.match(photoLine('other'), /no muestra tu cara/);
   assert.match(settingsLink(SITE, 2), /\/cuenta\/ajustes\?utm_source=email&utm_medium=automation&utm_campaign=profile_photo_face&utm_content=email2$/);
 });
@@ -81,7 +81,7 @@ test('run: day 1, day 3, day 7 — each once; checked again before each; stops w
   const r1 = await s.run();
   assert.equal(r1.sent, 1);
   assert.equal(s.sent[0].to, 'a@x.com');
-  assert.match(s.sent[0].html || s.sent[0].text || JSON.stringify(s.sent[0]), /logo o un texto/);
+  assert.match(s.sent[0].html || s.sent[0].text || JSON.stringify(s.sent[0]), /tenés un logo/);
   assert.equal((await s.run()).sent, 0);                      // same step never twice
   assert.equal((await s.run(NOW + 48 * H)).sent, 1);           // day 3 → reminder
   // a uploads a real photo before day 7 → no more emails

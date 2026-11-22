@@ -1,6 +1,11 @@
 // /api/account/profile-photo — the seller's profile photo (Mi cuenta → "Tu foto de perfil").
 //   GET                  → the photo and its check status (lib/profilePhoto.js ownerView)
-//   POST multipart photo → upload or replace: saved at once as the pending photo
+//   POST multipart photo → first the AI looks at it (≤12 s, lib/profilePhotoKind.js uploadDecision):
+//                          neither a face nor a logo (a house, an apartment, an object…) →
+//                          422 { error: 'wrong_photo', what, label, message } — NOTHING is saved,
+//                          the current photo stays, the attempt is recorded for the follow-up
+//                          emails (lib/automations/photoFace.js). AI down/slow → accepted.
+//                          Then: upload or replace: saved at once as the pending photo
 //                          ('checking'), checked by the AI in the background
 //                          (lib/profilePhotoScan.js); the approved one keeps showing meanwhile
 //   DELETE               → remove the photo (approved and pending) and its files
@@ -9,7 +14,8 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { update } from '@/lib/db';
 import { MAX_PROFILE_PHOTO_BYTES, onUpload, onRemove, ownerView, isStale } from '@/lib/profilePhoto';
-import { getPhotoRow, storeProfilePhoto, deletePhotoFiles, startProfilePhotoScan, photoChanged } from '@/lib/profilePhotoScan';
+import { getPhotoRow, storeProfilePhoto, deletePhotoFiles, startProfilePhotoScan, photoChanged, checkUploadKind, recordRejectedUpload } from '@/lib/profilePhotoScan';
+import { uploadDecision, knownGoodKind, whatLabel, wrongPhotoMessage } from '@/lib/profilePhotoKind';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -59,9 +65,26 @@ export async function POST(req) {
   if (!row) return NextResponse.json({ error: 'not_found' }, { status: 404 });
   if (tooMany(s.uid)) return NextResponse.json({ error: 'too_many' }, { status: 429 });
 
+  const lang = langOf(req);
+  const reuseKey = form.get('reuse') === '1' ? row.profile_photo_key || null : null;
+  // Re-cropping a photo already known to be a face / logo needs no new look.
+  let kind = reuseKey ? knownGoodKind(row) : null;
+  if (!kind) {
+    let bytes = null;
+    try { bytes = Buffer.from(await file.arrayBuffer()); } catch { bytes = null; }
+    const d = bytes ? uploadDecision(await checkUploadKind(s.uid, bytes)) : { action: 'accept', kind: null };
+    if (d.action === 'reject') {
+      await recordRejectedUpload(row, d.what);
+      return NextResponse.json({
+        ...ownerView(row, lang),
+        error: 'wrong_photo', what: d.what, label: whatLabel(d.what, lang), message: wrongPhotoMessage(d.what, lang), kept: !!row.profile_photo_url,
+      }, { status: 422 });
+    }
+    kind = d.kind;
+  }
+
   let stored;
   const original = form.get('original');
-  const reuseKey = form.get('reuse') === '1' ? row.profile_photo_key || null : null;
   try {
     stored = await storeProfilePhoto(s.uid, file, {
       original: original && typeof original.arrayBuffer === 'function' && original.size <= MAX_PROFILE_PHOTO_BYTES ? original : null,
@@ -80,8 +103,8 @@ export async function POST(req) {
     return NextResponse.json({ error: 'save_failed' }, { status: 500 });
   }
   await deletePhotoFiles(deleteKeys);
-  startProfilePhotoScan(s.uid, stored.bytes);   // the seller doesn't wait; the page polls GET
-  return NextResponse.json(ownerView({ ...row, ...patch }, langOf(req)));
+  startProfilePhotoScan(s.uid, stored.bytes, { kind });   // the seller doesn't wait; the page polls GET
+  return NextResponse.json(ownerView({ ...row, ...patch }, lang));
 }
 
 export async function DELETE(req) {

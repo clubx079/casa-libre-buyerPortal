@@ -14,7 +14,7 @@ const T = {
   es: {
     title: 'Tu foto o logo de perfil',
     intro: 'Los compradores confían más cuando ven quién vende. Tu foto o el logo de tu inmobiliaria aparece en todas tus publicaciones, junto a tu nombre.',
-    rules: 'Podés subir una foto tuya o el logo de tu empresa. No se aceptan imágenes para adultos, violentas u ofensivas, ni memes o capturas de pantalla.',
+    rules: 'Podés subir una foto tuya (tu cara) o el logo de tu empresa. No se aceptan fotos de propiedades u objetos, imágenes para adultos, violentas u ofensivas, ni memes o capturas de pantalla.',
     upload: 'Subir foto', replace: 'Cambiar foto', another: 'Subir otra foto', remove: 'Quitar foto', removing: 'Quitando…', uploading: 'Subiendo…',
     checking: 'Estamos revisando tu foto', checkingSub: 'Tarda unos segundos. Podés seguir usando el sitio.',
     checkingKeep: 'Mientras tanto se sigue mostrando tu foto actual.',
@@ -27,11 +27,13 @@ const T = {
     errTooLarge: 'La foto es muy pesada (máximo 15 MB).', errType: 'Ese archivo no es una foto. Probá con JPG o PNG.',
     errMany: 'Subiste muchas fotos seguidas. Probá de nuevo en unos minutos.', errSetup: 'Esta función todavía no está disponible.',
     err: 'Algo salió mal. Intentá de nuevo.',
+    wrongTitle: 'Esta imagen no se pudo usar', wrongKeep: 'Tu foto actual se sigue mostrando.',
+    rulesFace: 'Subí una foto tuya (tu cara) o el logo de tu empresa.',
   },
   en: {
     title: 'Your profile photo or logo',
     intro: 'Buyers trust a seller more when they can see who is selling. Your photo or your agency logo shows on all your listings, next to your name.',
-    rules: 'Upload a photo of yourself or your company logo. Adult, violent or offensive images, memes and screenshots are not accepted.',
+    rules: 'Upload a photo of yourself (your face) or your company logo. Photos of properties or objects, adult, violent or offensive images, memes and screenshots are not accepted.',
     upload: 'Upload photo', replace: 'Change photo', another: 'Upload another photo', remove: 'Remove photo', removing: 'Removing…', uploading: 'Uploading…',
     checking: "We're checking your photo", checkingSub: 'It takes a few seconds. You can keep using the site.',
     checkingKeep: 'Meanwhile your current photo keeps showing.',
@@ -44,11 +46,13 @@ const T = {
     errTooLarge: 'The photo is too large (15 MB max).', errType: "That file isn't a photo. Try a JPG or PNG.",
     errMany: 'You uploaded many photos in a row. Try again in a few minutes.', errSetup: 'This feature is not available yet.',
     err: 'Something went wrong. Try again.',
+    wrongTitle: "This image can't be used", wrongKeep: 'Your current photo keeps showing.',
+    rulesFace: 'Upload a photo of yourself (your face) or your company logo.',
   },
   pt: {
     title: 'Sua foto de perfil ou logo',
     intro: 'Os compradores confiam mais quando veem quem está vendendo. Sua foto ou o logo da sua imobiliária aparece em todos os seus anúncios, ao lado do seu nome.',
-    rules: 'Envie uma foto sua ou o logo da sua empresa. Não aceitamos imagens adultas, violentas ou ofensivas, memes nem capturas de tela.',
+    rules: 'Envie uma foto sua (seu rosto) ou o logo da sua empresa. Não aceitamos fotos de imóveis ou objetos, imagens adultas, violentas ou ofensivas, memes nem capturas de tela.',
     upload: 'Enviar foto', replace: 'Trocar foto', another: 'Enviar outra foto', remove: 'Remover foto', removing: 'Removendo…', uploading: 'Enviando…',
     checking: 'Estamos verificando sua foto', checkingSub: 'Leva alguns segundos. Você pode continuar usando o site.',
     checkingKeep: 'Enquanto isso, sua foto atual continua aparecendo.',
@@ -61,6 +65,8 @@ const T = {
     errTooLarge: 'A foto é grande demais (máx. 15 MB).', errType: 'Esse arquivo não é uma foto. Tente um JPG ou PNG.',
     errMany: 'Você enviou muitas fotos seguidas. Tente de novo em alguns minutos.', errSetup: 'Este recurso ainda não está disponível.',
     err: 'Algo deu errado. Tente novamente.',
+    wrongTitle: 'Esta imagem não pode ser usada', wrongKeep: 'Sua foto atual continua aparecendo.',
+    rulesFace: 'Envie uma foto sua (seu rosto) ou o logo da sua empresa.',
   },
 };
 
@@ -88,6 +94,8 @@ export default function ProfilePhotoCard({ onView } = {}) {
   useEffect(() => { if (v && onView) onView(v); }, [v, onView]);
   const [busy, setBusy] = useState(null);  // 'upload' | 'remove'
   const [err, setErr] = useState(null);
+  // the upload just turned down (neither a face nor a logo): { message, kept } — nothing was saved
+  const [wrong, setWrong] = useState(null);
   const [hidden, setHidden] = useState(false);
   const [askRemove, setAskRemove] = useState(false);
   // The crop dialog: { src, fallback, file } — file = a newly picked photo (sent as the original too);
@@ -120,7 +128,7 @@ export default function ProfilePhotoCard({ onView } = {}) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [v]);
 
-  const pick = () => { setErr(null); fileRef.current?.click(); };
+  const pick = () => { setErr(null); setWrong(null); fileRef.current?.click(); };
   const closeCrop = () => { if (crop?.file && crop.src) URL.revokeObjectURL(crop.src); setCrop(null); };
   const recrop = () => { if (v?.edit_src && !busy) { setErr(null); setCrop({ src: v.edit_src, fallback: v.edit_fallback, file: null }); } };
   const onFile = (e) => {
@@ -133,13 +141,18 @@ export default function ProfilePhotoCard({ onView } = {}) {
     setCrop({ src: URL.createObjectURL(f), fallback: null, file: f });   // the upload happens on "Save photo"
   };
   const upload = async (blob) => {
-    setBusy('upload'); setErr(null);
+    setBusy('upload'); setErr(null); setWrong(null);
     track('profile_photo_upload_started', { replace: !!v?.photo, recrop: !crop?.file });
     try {
       const fd = new FormData(); fd.set('photo', new File([blob], 'profile.jpg', { type: 'image/jpeg' }));
       if (crop?.file) fd.set('original', crop.file); else fd.set('reuse', '1');
       const r = await fetch(`/api/account/profile-photo?lang=${lang}`, { method: 'POST', body: fd });
       const j = await r.json().catch(() => ({}));
+      if (r.status === 422 && j.error === 'wrong_photo') {
+        track('profile_photo_rejected', { reason: `wrong_photo:${j.what || 'other'}`, stage: 'upload_kind' });
+        setWrong({ message: j.message || t.rulesFace, kept: !!j.kept });
+        return;
+      }
       if (!r.ok) { track('profile_photo_rejected', { reason: j.error || `http_${r.status}`, stage: 'upload' }); setErr(t[ERR[j.error]] || t.err); return; }
       track('profile_photo_upload_succeeded', { status: j.status || null });
       uploading.current = true;
@@ -159,6 +172,8 @@ export default function ProfilePhotoCard({ onView } = {}) {
 
   if (hidden) return null;
   const st = v?.status || null;
+  // just now, or the last turned-down upload (also after coming back from the app)
+  const wrongNote = wrong || (v?.last_rejected ? { message: v.last_rejected.message, kept: v.last_rejected.kept } : null);
   const hasAny = !!(v?.photo || v?.pending);
 
   return (
@@ -198,7 +213,14 @@ export default function ProfilePhotoCard({ onView } = {}) {
               {v.photo && <p className="text-[12px] text-ink/55 mt-1">{t.rejectedKeep}</p>}
             </div>
           )}
-          {!st && v && <p className="text-[13.5px] text-ink/60">{t.none}</p>}
+          {wrongNote && st !== 'checking' && (
+            <div className="rounded-[12px] border-[1.5px] border-red-200 bg-red-50 px-4 py-3 mb-3" role="alert" data-testid="profile-photo-wrong">
+              <div className="text-[14px] font-bold text-red-800">{t.wrongTitle}</div>
+              <p className="text-[13px] text-red-700 mt-1" data-testid="profile-photo-wrong-message">{wrongNote.message}</p>
+              {wrongNote.kept && <p className="text-[12px] text-ink/55 mt-1">{t.wrongKeep}</p>}
+            </div>
+          )}
+          {!st && v && !wrongNote && <p className="text-[13.5px] text-ink/60">{t.none}</p>}
 
           {/* Once the photo is approved the card stays clean: just the photo and the buttons. */}
           {st !== 'approved' && <p className="text-[12px] text-ink/50 mt-3 max-w-[520px]">{t.rules}</p>}
