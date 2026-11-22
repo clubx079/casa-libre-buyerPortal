@@ -66,7 +66,6 @@ const SORTS = [
 // "this place, on the map"), and pins / cards outside it go at once instead of after the reply.
 // The box is the place's own (misplaced pins left out) plus ~200 m so its edge listings stay in.
 const placeBox = (p) => (p?.bounds ? { n: p.bounds.n + 0.002, s: p.bounds.s - 0.002, e: p.bounds.e + 0.002, w: p.bounds.w - 0.002 } : null);
-const inBox = (box) => (o) => !!o && o.lat != null && o.lng != null && o.lat <= box.n && o.lat >= box.s && o.lng <= box.e && o.lng >= box.w;
 
 export default function MobileMarketplace({ initialListings = [], initialCount = 0, initialPins = [], totalCount = 0, initialOp = 'all', initialQuery = '', initialType = 'all', initialPlace = '', initialArea = null, zoningOn = false }) {
   const [lang, setLang] = useLang();
@@ -117,6 +116,8 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
   const areaRef = useRef(null);
   areaRef.current = area;
   const placeBoxRef = useRef(!!initialArea);   // list area = the picked place's box (see desktop)
+  // place pick: only the place's listings first, then the zoom (see desktop MarketplaceClient)
+  const pendingFitRef = useRef(initialArea ? { bounds: initialArea, kind: String(initialPlace).startsWith('b:') ? 'barrio' : 'city' } : null);
   const listReqRef = useRef(0);
   const userMovedRef = useRef(false);
   const camMoveUntil = useRef(0);  // our own camera moves (auto-fit, near me) aren't the visitor's
@@ -221,12 +222,8 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
     const box = placeBox(p);
     placeBoxRef.current = !!box;
     setArea(box ? roundArea(box) : null);
-    if (box) {
-      setPins((ps) => ps.filter(inBox(box)));
-      setRows((rs) => rs.filter(inBox(box)));
-      const ref = mapRef.current;
-      if (ref) moveCamera(() => fitBox(ref.google, ref.map, p.bounds, { padding: 36, maxZoom: p.kind === 'barrio' ? 16 : 15 }));
-    }
+    pendingFitRef.current = p.bounds ? { bounds: p.bounds, kind: p.kind } : null;
+    setPins([]); setRows([]);        // nothing from outside the place, not even for a moment
     setPlaceSel({ id: p.id, name: p.name }); setQ(p.name);
   };
   // Enter / the arrow: a text naming a place picks it (lib/places.js exactPlace), else a text search.
@@ -404,6 +401,13 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
     if (fitAllRef.current && n && !areaRef.current) { fitAllRef.current = false; fitPins(); skipFitRef.current = false; return; }   // after "Show all"
     // Don't refit while near-me is locked, nor on the toggle itself (so deselect
     // can restore the previous view instead of snapping to the filtered bounds).
+    // a picked place: its pins are on the map now → zoom to it
+    if (n && pendingFitRef.current && placeId) {
+      const f = pendingFitRef.current; pendingFitRef.current = null;
+      moveCamera(() => fitBox(google, map, f.bounds, { padding: 36, maxZoom: f.kind === 'barrio' ? 16 : 15 }));
+      skipFitRef.current = false;
+      return;
+    }
     const pa = placeId ? placeAreaRef.current : null;
     if (n && !nearMe && !skipFitRef.current && (!areaRef.current || (placeBoxRef.current && pa)) && (typeF !== 'all' || priceF !== 'all' || bedF !== 'all' || barrioF !== 'all' || heightF !== 'all' || q || placeId)) {
       if (pa) {

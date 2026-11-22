@@ -87,7 +87,6 @@ const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toL
 // "this place, on the map"), and pins / cards outside it go at once instead of after the reply.
 // The box is the place's own (misplaced pins left out) plus ~200 m so its edge listings stay in.
 const placeBox = (p) => (p?.bounds ? { n: p.bounds.n + 0.002, s: p.bounds.s - 0.002, e: p.bounds.e + 0.002, w: p.bounds.w - 0.002 } : null);
-const inBox = (box) => (o) => !!o && o.lat != null && o.lng != null && o.lat <= box.n && o.lat >= box.s && o.lng <= box.e && o.lng >= box.w;
 
 export default function MarketplaceClient({ initialListings = [], initialCount = 0, initialPins = [], totalCount = 0, initialOp = 'all', initialQuery = '', initialType = 'all', initialPlace = '', initialArea = null, zoningOn = false }) {
   const [lang, setLang] = useLang();
@@ -185,6 +184,10 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
   // true while the list area is the picked place's box (not a map the visitor moved): the map
   // still flies to the place, and the visitor's first move replaces it with the visible area.
   const placeBoxRef = useRef(!!initialArea);
+  // Order on a place pick (Omar, Nov 22): FIRST only that place's listings (pins + list cleared,
+  // then filled from the place-filtered reply), THEN the map zooms to it — so nothing from outside
+  // the place ever shows during the zoom. The zoom waits here until the place's pins are drawn.
+  const pendingFitRef = useRef(initialArea ? { bounds: initialArea, kind: String(initialPlace).startsWith('b:') ? 'barrio' : 'city' } : null);
   const userMovedRef = useRef(false);
   const camMoveUntil = useRef(0);  // our own camera moves (auto-fit, near me) aren't the visitor's
   const moveCamera = (fn) => { camMoveUntil.current = Date.now() + 1500; try { fn(); } catch {} };
@@ -322,12 +325,9 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
     const box = placeBox(p);
     placeBoxRef.current = !!box;
     setArea(box ? roundArea(box) : null);
-    if (box) {
-      setPins((ps) => ps.filter(inBox(box)));
-      setRows((rs) => rs.filter(inBox(box)));
-      const ref = mapRef.current;
-      if (ref) { didFit.current = true; moveCamera(() => fitBox(ref.google, ref.map, p.bounds, { padding: 48, maxZoom: p.kind === 'barrio' ? 16 : 15 })); }
-    }
+    pendingFitRef.current = p.bounds ? { bounds: p.bounds, kind: p.kind } : null;
+    didFit.current = true;           // no fit to the old pins in between
+    setPins([]); setRows([]);        // nothing from outside the place, not even for a moment
     setPlaceSel({ id: p.id, name: p.name }); setQuery(p.name);
   };
   const applyText = (text) => {
@@ -372,7 +372,7 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
     if (!ref || !placeArea) return undefined;
     const { google, map } = ref;
     const outline = placeOutline(google, map, placeArea);
-    if (!nearMeRef.current && (!areaRef.current || placeBoxRef.current)) {
+    if (!nearMeRef.current && !areaRef.current && !placeBoxRef.current) {
       didFit.current = true;
       moveCamera(() => fitBox(google, map, placeArea.bounds, { padding: 48, maxZoom: placeArea.kind === 'barrio' ? 16 : 15 }));
       if (placeBoxRef.current) return () => outline.remove();   // the list area is already the place's box
@@ -658,6 +658,11 @@ export default function MarketplaceClient({ initialListings = [], initialCount =
     // A picked place with its outline loaded is fitted to its own box (placeArea effect).
     // Otherwise: the matches, minus lone pins far from all the others (a flat geocoded into
     // the Chaco), never closer than a couple of blocks (lib/areaGeom.js).
+    // a picked place: its pins are on the map now → zoom to it
+    if (n && pendingFitRef.current && placeId) {
+      const f = pendingFitRef.current; pendingFitRef.current = null; didFit.current = true;
+      moveCamera(() => fitBox(google, map, f.bounds, { padding: 48, maxZoom: f.kind === 'barrio' ? 16 : 15 }));
+    }
     if (n && !didFit.current && isFiltered && !nearMe && !skipFitRef.current && !areaRef.current && !(placeId && placeAreaRef.current)) {
       didFit.current = true;
       const b = searchBounds(pts);
