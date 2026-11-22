@@ -6,6 +6,7 @@
 // (a full-page redirect, so cb can't run) — e.g. the draft link of a reminder email.
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import AuthModal from './AuthModal';
+import UserTypePrompt from './UserTypePrompt';
 import { identifyUser, resetUser } from '@/lib/analytics';
 
 const AuthContext = createContext(null);
@@ -79,6 +80,8 @@ export default function AuthProvider({ children }) {
     <AuthContext.Provider value={{ user, loading, openAuth, closeAuth, logout, refreshUser }}>
       {children}
       {open && <AuthModal onAuthed={handleAuthed} onClose={closeAuth} next={next} />}
+      {/* "¿Sos vendedor o comprador?" for new accounts the modal could not ask (Google) */}
+      <UserTypePrompt user={user} blocked={open} onSaved={(v) => setUser((u) => (u ? { ...u, user_type: v, ask_user_type: false } : u))} />
     </AuthContext.Provider>
   );
 }

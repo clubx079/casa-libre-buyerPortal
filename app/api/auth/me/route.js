@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSession, clearSessionCookie } from '@/lib/auth';
 import { getUserById } from '@/lib/users';
+import { normalizeUserType, shouldAskUserType } from '@/lib/userType';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -13,5 +14,6 @@ export async function GET() {
     try { clearSessionCookie(); } catch {}
     return NextResponse.json({ user: null });
   }
-  return NextResponse.json({ user: { id: u.id, email: u.email, full_name: u.full_name || null } });
+  return NextResponse.json({ user: { id: u.id, email: u.email, full_name: u.full_name || null,
+    user_type: normalizeUserType(u.user_type), ask_user_type: shouldAskUserType(u) } });
 }

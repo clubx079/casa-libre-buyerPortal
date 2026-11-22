@@ -35,6 +35,7 @@ import { holdInQuarantine } from '@/lib/listingScan';
 import { sendDuplicateNotice } from '@/lib/duplicateNotice';
 import { readListingFields } from '@/lib/listingFields';
 import { geocode } from '@/lib/geocodeListing';
+import { markListed } from '@/lib/userTypeStore';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -172,6 +173,8 @@ export async function POST(req) {
   const propertyId = created?.id;
   // The listing's phone becomes the profile phone when the profile has none (lib/profilePhone.js).
   await saveListingPhoneToProfile(dbApi, session.uid, contactPhone, COUNTRY.phonePrefix).catch(() => {});
+  // Buyer or seller: the account has listed (users.first_listed_at); no type yet → seller.
+  await markListed(session.uid).catch(() => {});
 
   // Upload photos to B2 and link them — CONCURRENTLY (was one-at-a-time, the main
   // cause of slow publishes). Non-fatal: a listing publishes even if a photo fails.

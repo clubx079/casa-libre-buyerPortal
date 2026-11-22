@@ -870,7 +870,7 @@ export default function SellFlowProvider({ children }) {
     if (String(waCode).length !== 6) { setErr(t.errCode); return; }
     setBusy(true); setErr('');
     try {
-      const res = await fetch('/api/auth/whatsapp/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: waPhone, code: waCode, fullName: f.contact_name, email: f.email }) });
+      const res = await fetch('/api/auth/whatsapp/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: waPhone, code: waCode, fullName: f.contact_name, email: f.email, signupSource: 'sell' }) });   // signupSource: the account is a seller (lib/userType.js)
       const j = await res.json().catch(() => ({}));
       if (j.error === 'email_taken') { setErr(t.errWaNotLinked); return; }
       if (!res.ok || !j.ok) { setErr(t.errCode); return; }
@@ -917,7 +917,7 @@ export default function SellFlowProvider({ children }) {
     if (String(loginCode).length !== 6) { setErr(t.errCode); return; }
     setBusy(true); setErr('');
     try {
-      const res = await fetch('/api/auth/code/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: f.email, code: loginCode }) });
+      const res = await fetch('/api/auth/code/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: f.email, code: loginCode, signupSource: 'sell' }) });
       const j = await res.json().catch(() => ({}));
       if (!res.ok || !j.ok) { setErr(t.errCode); return; }
       track('user_logged_in', { method: 'email_otp' });
