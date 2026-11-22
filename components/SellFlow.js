@@ -15,6 +15,7 @@
 import { typeOptions, normalizeTypeKey, areaRange } from '@/lib/propertyTypeOptions';
 import { createContext, useContext, useState, useCallback, useRef, useEffect, Fragment } from 'react';
 import { useRouter } from 'next/navigation';
+import WaDeliveryNote from './WaDeliveryNote';
 import { useLang } from '@/lib/useLang';
 import { tr, localeFor } from '@/lib/i18n';
 import { useAuth } from '@/components/AuthProvider';
@@ -374,6 +375,7 @@ export default function SellFlowProvider({ children }) {
   const [channel, setChannel] = useState('email');   // where the confirm code went: email | whatsapp
   const [waPhone, setWaPhone] = useState('');        // E.164 the WhatsApp code went to
   const [waCode, setWaCode] = useState('');
+  const [waSentAt, setWaSentAt] = useState(0);     // when the WhatsApp code went out (WaDeliveryNote)
   const [waDev, setWaDev] = useState('');            // test key only: the code itself
   // The listing's WhatsApp must be proven before publishing (lib/listingPhone.js): the account's
   // own verified number, or a code sent to it → phoneProof (sent to /api/publish).
@@ -862,7 +864,7 @@ export default function SellFlowProvider({ children }) {
       if (res.status === 429) { setErr(t.errSendOtp); return; }
       if (j.error === 'invalid_phone') { setErr(t.errPhone); return; }
       if (!res.ok || !j.ok) { setErr(t.errWaSend); return; }
-      setWaPhone(j.phone); setWaDev(j.devCode || ''); setWaCode(''); setChannel('whatsapp'); setCodeSent(true);
+      setWaPhone(j.phone); setWaDev(j.devCode || ''); setWaCode(''); setChannel('whatsapp'); setCodeSent(true); setWaSentAt(Date.now());
       track('sell_otp_sent', { channel: 'whatsapp' });
     } catch { setErr(t.errWaSend); } finally { setBusy(false); setSendingWa(false); }
   };
@@ -990,7 +992,7 @@ export default function SellFlowProvider({ children }) {
       const j = await res.json().catch(() => ({}));
       if (j.proof) { setPhoneProof({ phone: f.contact_phone, proof: j.proof }); afterWhatsApp(j.proof); return; }   // already the account's own number
       if (!res.ok || !j.sent) { setErr(t.errWaCheck); return; }
-      setLp({ sent: true, code: '', dev: j.devCode || '', phone: j.phone });
+      setLp({ sent: true, code: '', dev: j.devCode || '', phone: j.phone, at: Date.now() });
       track('sell_wa_check_sent', {});
     } catch { setErr(t.errWaCheck); } finally { setBusy(false); }
   };
@@ -1218,6 +1220,7 @@ export default function SellFlowProvider({ children }) {
                   <>
                     <p className="text-[14px] text-ink/55 mb-4">{t.waCheckCode(lp.phone)}</p>
                     {lp.dev && <div className="mb-3 text-[12.5px] font-medium bg-amber-50 border border-amber-200 rounded-[12px] px-3.5 py-2.5">{t.waTest(lp.dev)}</div>}
+                    <WaDeliveryNote phone={lp.phone} sentAt={lp.at} lang={lang} className="mb-3" />
                     <input value={lp.code} onChange={(e) => setLp((x) => ({ ...x, code: e.target.value.replace(/\D/g, '').slice(0, 6) }))} placeholder={t.codePh} inputMode="numeric" autoComplete="one-time-code" className={`${inputCls} text-center tracking-[0.3em] text-[18px] font-semibold`} onKeyDown={(e) => { if (e.key === 'Enter') verifyLpCode(); }} data-testid="sell-wa-check-code" autoFocus />
                     <button onClick={verifyLpCode} disabled={busy} className="w-full mt-4 px-7 py-3.5 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60 inline-flex items-center justify-center min-h-[48px]" data-testid="sell-wa-check-verify">{busy ? <Spinner /> : t.verify}</button>
                     <button type="button" onClick={sendLpCode} disabled={busy} className="w-full mt-2 text-[13px] font-medium text-ink/55 hover:text-ink">{t.resend}</button>
@@ -1259,6 +1262,7 @@ export default function SellFlowProvider({ children }) {
                     <h2 className="text-[22px] font-bold tracking-head mb-1">{t.otpTitle}</h2>
                     <p className="text-[14px] text-ink/55 mb-4">{t.waOtpSub(waPhone)}</p>
                     {waDev && <div className="mb-3 text-[12.5px] font-medium bg-amber-50 border border-amber-200 rounded-[12px] px-3.5 py-2.5">{t.waTest(waDev)}</div>}
+                    <WaDeliveryNote phone={waPhone} sentAt={waSentAt} lang={lang} className="mb-3" />
                     <input value={waCode} onChange={(e) => setWaCode(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder={t.codePh} inputMode="numeric" autoComplete="one-time-code" className={`${inputCls} text-center tracking-[0.3em] text-[18px] font-semibold`} onKeyDown={(e) => { if (e.key === 'Enter') verifyWaCode(); }} data-testid="sell-wa-code" autoFocus />
                     <button onClick={verifyWaCode} disabled={busy} className="w-full mt-4 px-7 py-3.5 bg-ink text-paper rounded-pill font-bold text-[14px] shadow-hard-soft disabled:opacity-60 inline-flex items-center justify-center min-h-[48px]">{busy ? <Spinner /> : t.verify}</button>
                     <button type="button" onClick={sendWaCode} disabled={busy} className="w-full mt-2 text-[13px] font-medium text-ink/55 hover:text-ink">{t.resend}</button>
