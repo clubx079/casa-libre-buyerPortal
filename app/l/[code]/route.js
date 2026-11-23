@@ -13,7 +13,7 @@ import * as db from '@/lib/db';
 import { publicOrigin } from '@/lib/publicOrigin';
 import { getSession } from '@/lib/auth';
 import { COUNTRY_CODE } from '@/lib/country';
-import { codeRange, isShareCode, channelOf, shareTarget, CHANNEL_NAMES } from '@/lib/shareLinks';
+import { codeRange, isShareCode, channelOf, shareTarget, sharerCode, CHANNEL_NAMES } from '@/lib/shareLinks';
 import { referralConfig, parseRefCookie, makeRefCookie, REF_COOKIE, DAY } from '@/lib/referrals/core';
 import { ensureCode } from '@/lib/referrals/store';
 import { referralRow } from '@/lib/referrals/run';
@@ -42,6 +42,14 @@ function recordClick(req, props) {
   }).catch(() => {});
 }
 
+// sharer code → the user's id (same uuid-range trick as listings), or null
+async function findSharer(code) {
+  const r = codeRange(code);
+  if (!r) return null;
+  const rows = await db.select('users', `select=id&id=gte.${r.lo}&id=lte.${r.hi}&limit=1`).catch(() => []);
+  return rows[0]?.id || null;
+}
+
 async function findListing(code) {
   const r = codeRange(code);
   if (!r) return null;
@@ -53,6 +61,9 @@ export async function GET(req, { params }) {
   const origin = publicOrigin(req);
   const code = String(params?.code || '').toLowerCase();
   const channel = channelOf(new URL(req.url).searchParams.get('c'));
+  // who shared (…&s=<sharer>, lib/shareLinks.js withSharer) — kept on the visit as utm_term
+  const sharerRaw = String(new URL(req.url).searchParams.get('s') || '').toLowerCase();
+  const sharer = isShareCode(sharerRaw) ? sharerRaw : null;
   const listing = isShareCode(code) ? await findListing(code) : null;
   if (!listing) return NextResponse.redirect(new URL('/propiedades', origin), 307);
 
@@ -74,12 +85,14 @@ export async function GET(req, { params }) {
     } catch { refCode = null; }
   }
 
-  const res = NextResponse.redirect(shareTarget(origin, listing.id, { code, channel, refCode }), 307);
-  if (bot || isOwner) return res;
+  const res = NextResponse.redirect(shareTarget(origin, listing.id, { code, channel, refCode, sharer }), 307);
+  // the owner, or the sharer opening their own link, is not a click
+  const isSharer = !!(session && sharer && sharerCode(String(session.uid)) === sharer);
+  if (bot || isOwner || isSharer) return res;
 
   if (refCode && !session && !parseRefCookie(req.cookies.get(REF_COOKIE)?.value, Date.now(), cfg.attributionDays)) {
     res.cookies.set(REF_COOKIE, makeRefCookie(refCode, Date.now()), { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: Math.round((cfg.attributionDays * DAY) / 1000) });
   }
-  await recordClick(req, { listing_id: listing.id, channel, owner_id: ownerId, code, ref: refCode || undefined });
+  await recordClick(req, { listing_id: listing.id, channel, owner_id: ownerId, code, ref: refCode || undefined, sharer: sharer || undefined, sharer_id: (sharer && await findSharer(sharer)) || undefined, sharer_is_owner: sharer && ownerId ? sharerCode(ownerId) === sharer : undefined });
   return res;
 }

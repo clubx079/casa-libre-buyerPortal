@@ -55,7 +55,7 @@ export default function ShareButton({ url, title, listingId, source = 'listing',
           {icon}
         </button>
       )}
-      {open && <ShareSheet listingId={listingId} open onClose={() => setOpen(false)} source={source} />}
+      {open && <ShareSheet listingId={listingId} title={title} open onClose={() => setOpen(false)} source={source} />}
     </>
   );
 }

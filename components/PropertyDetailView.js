@@ -237,7 +237,7 @@ export default function PropertyDetailView({ l, url }) {
       )}
       {main && (
         <div className="absolute top-2.5 right-2.5 z-10 flex items-center gap-1.5">
-          <ShareButton url={url} title={title} listingId={l.id} />
+          <ShareButton url={url} title={title} listingId={l.id} variant="pill" className="h-9 px-3.5 bg-paper/90 backdrop-blur" />
           <SaveButton id={l.id} mode={l.mode} />
         </div>
       )}
@@ -320,7 +320,6 @@ export default function PropertyDetailView({ l, url }) {
           <h1 className="text-[clamp(24px,3.4vw,34px)] font-bold tracking-head leading-[1.15] mt-1.5 mb-1">{title}</h1>
           <div className="flex items-center justify-between gap-3 mb-4">
             <div className="text-[14px] text-ink/55">{zone}</div>
-            <ShareButton url={url} title={title} listingId={l.id} variant="pill" className="shrink-0 px-3.5 py-1.5" />
           </div>
           <div className="flex items-baseline gap-3.5 flex-wrap mb-1.5">
             <span className="text-[clamp(22px,3vw,28px)] font-bold tracking-head">{bigPrice}{priceSfx}</span>

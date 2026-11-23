@@ -51,7 +51,7 @@ test('shareTarget: the listing with the share UTMs and the referral code', () =>
   const noRef = new URL(shareTarget('https://casa-libre.com.py', ID, { channel: 'tt' }));
   assert.equal(noRef.searchParams.get('utm_source'), 'tiktok');
   assert.equal(noRef.searchParams.get('ref'), null);
-  assert.deepEqual(CHANNEL_NAMES, { ig: 'instagram', fb: 'facebook', wa: 'whatsapp', x: 'x', tt: 'tiktok', li: 'linkedin', copy: 'copy', qr: 'qr' });
+  assert.deepEqual(CHANNEL_NAMES, { ig: 'instagram', fb: 'facebook', wa: 'whatsapp', x: 'x', tt: 'tiktok', li: 'linkedin', em: 'gmail', copy: 'copy', qr: 'qr' });
 });
 
 test('networkUrls: WhatsApp with the caption, Facebook/LinkedIn link only, X text + url', () => {
@@ -59,7 +59,8 @@ test('networkUrls: WhatsApp with the caption, Facebook/LinkedIn link only, X tex
   const u = networkUrls({ links, captions: { wa: `Hola ${links.wa}`, x: `Vendo casa ${links.x}` } });
   assert.equal(u.wa, `https://wa.me/?text=${encodeURIComponent(`Hola ${links.wa}`)}`);
   assert.equal(u.fb, `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(links.fb)}`);
-  assert.equal(u.li, `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(links.li)}`);
+  assert.ok(u.li.startsWith('https://www.linkedin.com/feed/?shareActive=true&text='));
+  assert.ok(decodeURIComponent(u.li).includes(links.li));
   assert.equal(u.x, `https://x.com/intent/tweet?text=${encodeURIComponent('Vendo casa')}&url=${encodeURIComponent(links.x)}`);
   assert.equal(u.ig, undefined);
 });
@@ -68,4 +69,22 @@ test('shareVisit: the channel back from the landing query', () => {
   assert.equal(shareChannelFromQuery('?utm_source=instagram&utm_medium=share&utm_content=x'), 'ig');
   assert.equal(shareChannelFromQuery('?utm_source=whatsapp&utm_medium=mensaje'), null);
   assert.equal(shareChannelFromQuery('?utm_medium=share'), 'copy');
+});
+
+test('who shared: links and captions carry &s=<sharer>, the redirect passes it on as utm_term', async () => {
+  const { withSharer, sharerCode, shareUrl, shareTarget, networkUrls } = await import('../lib/shareLinks.js');
+  const lid = '1cee193f-f2d3-4cc6-83ad-3e8442f8fcf7';
+  const sh = sharerCode('d9654e2f-25c5-4562-b9cb-ed74bbc4a1c8');
+  assert.match(sh, /^[0-9a-z]{8}$/);
+  const link = shareUrl('https://casa-libre.com.py', lid, 'wa');
+  assert.equal(withSharer(link, sh), `${link}&s=${sh}`);
+  assert.equal(withSharer(withSharer(link, sh), sh), `${link}&s=${sh}`);            // never twice
+  assert.deepEqual(withSharer({ wa: `Mirá ${link}` }, sh), { wa: `Mirá ${link}&s=${sh}` });
+  assert.equal(withSharer(link, 'nope'), link);
+  assert.equal(shareUrl('https://x.com', lid, 'em', sh), `https://x.com/l/${link.split('/l/')[1].split('?')[0]}?c=em&s=${sh}`);
+  const t = new URL(shareTarget('https://casa-libre.com.py', lid, { code: 'abc12345', channel: 'em', sharer: sh }));
+  assert.equal(t.searchParams.get('utm_source'), 'gmail');
+  assert.equal(t.searchParams.get('utm_term'), sh);
+  const em = networkUrls({ links: { em: 'E', wa: 'W' }, captions: { wa: 'hola W' }, subject: 'Casa' }).em;
+  assert.equal(em, 'https://mail.google.com/mail/?view=cm&fs=1&su=Casa&body=hola%20E');
 });

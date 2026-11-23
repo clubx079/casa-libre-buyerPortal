@@ -19,7 +19,7 @@ import { COUNTRY } from '@/lib/country';
 import { typeLabel } from '@/lib/propertyType';
 import { fmtUsd, fmtPyg, isUnverified } from '@/lib/ui';
 import { tr } from '@/lib/i18n';
-import { shareCode, shareUrl } from '@/lib/shareLinks';
+import { shareCode, shareUrl, channelOf, isShareCode } from '@/lib/shareLinks';
 import { shareCard, SIZES, photoBox } from '@/lib/shareImageCard';
 
 export const runtime = 'nodejs';
@@ -67,9 +67,13 @@ export async function GET(req, { params }) {
   const l = await getListing(String(params?.id || ''));
   if (!l) return new Response('not found', { status: 404 });
   const origin = publicOrigin(req);
+  // the picture's QR = the tracked link of the network it is posted on, and who shared it
+  // (?c=ig&s=<sharer>; the app's Instagram button asks for it) — default: the QR channel
+  const qrChannel = sp.get('c') ? channelOf(sp.get('c')) : 'qr';
+  const sharer = isShareCode(String(sp.get('s') || '')) ? String(sp.get('s')) : null;
 
   const memo = (globalThis.__clShareImg ||= new Map());
-  const key = [l.id, format, lang, l.usd, l.image, l.type, l.beds, l.area, l.neighborhood, l.city, l.mode, origin].join('|');
+  const key = [l.id, format, lang, l.usd, l.image, l.type, l.beds, l.area, l.neighborhood, l.city, l.mode, origin, qrChannel, sharer].join('|');
   const hit = memo.get(key);
   if (hit) return new Response(hit, { headers: { 'Content-Type': 'image/png', 'Cache-Control': CACHE } });
 
@@ -88,7 +92,7 @@ export async function GET(req, { params }) {
     title: `${typeLabel(l.type, lang) || tr(lang, 'Propiedad', 'Property', 'Imóvel')}${beds}${l.area ? ` · ${Math.round(l.area)} m²` : ''}`,
     place: [...new Set([l.neighborhood, l.city].filter(Boolean))].join(', ') || COUNTRY.name,
     shortLink: `${origin.replace(/^https?:\/\//, '')}/l/${shareCode(l.id)}`,
-    qrLink: shareUrl(origin, l.id, 'qr'),
+    qrLink: shareUrl(origin, l.id, qrChannel, sharer),
     scan: tr(lang, 'Escaneá para ver fotos y escribir al dueño', 'Scan to see the photos and message the owner', 'Escaneie para ver as fotos e falar com o dono'),
   });
 

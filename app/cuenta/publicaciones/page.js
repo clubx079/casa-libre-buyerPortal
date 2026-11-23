@@ -483,7 +483,7 @@ export default function MyListingsPage() {
             ) : (
               <div className="flex flex-col gap-2">
                 {/* Share kit + what the owner's share links brought this week (lib/shareStats.js) */}
-                {(!l.admin_status || l.admin_status === 'active') && (
+                {(!l.status || l.status === 'published') && (!l.admin_status || l.admin_status === 'active') && (
                   <div className="flex flex-col gap-1.5" data-testid="share-row">
                     <ShareButton listingId={l.id} source="account" variant="pill" className="w-full py-2" />
                     {l.share && (
