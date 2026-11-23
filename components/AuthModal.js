@@ -15,6 +15,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useLang } from '@/lib/useLang';
 import { track } from '@/lib/analytics';
 import { COUNTRY } from '@/lib/country';
+import WaDeliveryNote from './WaDeliveryNote';
 import UserTypePick, { TYPE_DICT, savePick, postUserType, LATER_KEY } from './UserTypePick';
 
 const DICT = {
@@ -100,6 +101,7 @@ export default function AuthModal({ onAuthed, onClose, next = null }) {
   const [pendingUser, setPendingUser] = useState(null); // signed up, being asked buyer/seller
   const tt = TYPE_DICT[lang] || TYPE_DICT.es;
   const [method, setMethod] = useState(WHATSAPP_LOGIN ? 'whatsapp' : 'email'); // email | whatsapp — WhatsApp first when it's on
+  const [waSentAt, setWaSentAt] = useState(0);   // when the WhatsApp code went out (WaDeliveryNote)
   const [waPhone, setWaPhone] = useState('');    // E.164 the code went to (from the server)
   const [devCode, setDevCode] = useState('');    // test key only
   const [mode, setMode] = useState('login'); // what the code will do: login | signup
@@ -166,7 +168,7 @@ export default function AuthModal({ onAuthed, onClose, next = null }) {
     if (r.status === 429 || j.error === 'rate_limited' || j.error === 'cooldown') return { error: t.errRate };
     if (wa && j.error === 'invalid_phone') return { error: t.errPhone };
     if (!r.ok || !j.ok) return { error: wa ? t.errWaSend : t.errSend };
-    if (wa) { setWaPhone(j.phone || phone.trim()); setDevCode(j.devCode || ''); }
+    if (wa) { setWaPhone(j.phone || phone.trim()); setDevCode(j.devCode || ''); setWaSentAt(Date.now()); }
     return { mode: j.mode === 'signup' ? 'signup' : 'login' };
   };
 
@@ -284,6 +286,7 @@ export default function AuthModal({ onAuthed, onClose, next = null }) {
             <h2 className="text-[24px] font-bold tracking-head leading-tight">{mode === 'signup' ? t.signupTitle : t.loginTitle}</h2>
             <p className="text-[14px] text-ink/55 mt-1 mb-5">{method === 'whatsapp' ? t.waCodeSub(waPhone) : t.codeSub(email.trim())}</p>
             {devCode && <div className="mb-4 text-[12.5px] font-medium bg-amber-50 border border-amber-200 rounded-[12px] px-3.5 py-2.5" data-testid="auth-dev-code">{t.testCode(devCode)}</div>}
+            {method === 'whatsapp' && <WaDeliveryNote phone={waPhone} sentAt={waSentAt} lang={lang} className="mb-4" />}
             {mode === 'signup' && (
               <div className="flex flex-col gap-3 mb-3">
                 <div>

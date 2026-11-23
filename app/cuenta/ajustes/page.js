@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/useLang';
+import WaDeliveryNote from '@/components/WaDeliveryNote';
 import ProfilePhotoCard from '@/components/account/ProfilePhotoCard';
 import { ERRORS as PRO_ERRORS, normalizeWebsite, websiteLabel } from '@/lib/sellerProfile';
 import { profileCompletion, isPersonalized } from '@/lib/profileCompletion';
@@ -267,7 +268,7 @@ export default function SettingsPage() {
         setWa((w) => ({ open: false, where: w.where, phone: '', code: '', stage: 'phone', busy: false, msg: { text: changed && !j.already ? t.waChanged : t.waAdded, ok: true }, dev: '' }));
         return;
       }
-      setWa((w) => ({ ...w, busy: false, stage: 'code', phone: j.phone || w.phone, dev: j.devCode || '' }));
+      setWa((w) => ({ ...w, busy: false, stage: 'code', phone: j.phone || w.phone, dev: j.devCode || '', at: Date.now() }));
     } catch { setWa((w) => ({ ...w, busy: false, msg: { text: t.err } })); }
   };
 
@@ -315,6 +316,7 @@ export default function SettingsPage() {
               <label className={labelCls}>{t.waCode}</label>
               <input value={wa.code} onChange={(e) => setWa((w) => ({ ...w, code: e.target.value.replace(/\D/g, '').slice(0, 6) }))} inputMode="numeric" placeholder="000000" className={`${inputCls} tracking-[6px] font-mono text-center`} />
               {wa.dev && <p className="text-[11px] text-ink/40 mt-1 font-mono">test: {wa.dev}</p>}
+              {wa.stage === 'code' && <WaDeliveryNote phone={wa.phone} sentAt={wa.at} lang={lang} className="mt-2" />}
             </div>
           )}
           <div className="flex items-center gap-3">
