@@ -40,27 +40,40 @@ export function placeOutline(google, map, area) {
 // Barrio names ([{ id, name, lat, lng }]) on the map from `minZoom`, at most `max` in view
 // (the ones nearest the centre). Redrawn when the map settles. Returns { update(), remove() }.
 export function barrioLabelLayer(google, map, labels, { minZoom = 14, max = 60, hide = () => null } = {}) {
-  const shown = new Map();   // id → Marker
-  const clear = (keep) => { for (const [id, mk] of shown) if (!keep || !keep.has(id)) { mk.setMap(null); shown.delete(id); } };
+  // Drawn in the map's OWN layer (an OverlayView in the 'overlayLayer' pane), below every marker:
+  // as marker labels they were painted above the price pins and clusters and mixed with them
+  // (Omar, Nov 23). Light, small text with a white halo — a map hint, never on top of a pin.
+  const box = document.createElement('div');
+  box.style.cssText = 'position:absolute;left:0;top:0;pointer-events:none;';
+  let current = [];
+  const ov = new google.maps.OverlayView();
+  ov.onAdd = () => { ov.getPanes().overlayLayer.appendChild(box); };
+  ov.onRemove = () => { box.remove(); };
+  ov.draw = () => {
+    const proj = ov.getProjection();
+    if (!proj) return;
+    box.textContent = '';
+    for (const l of current) {
+      const pt = proj.fromLatLngToDivPixel(new google.maps.LatLng(l.lat, l.lng));
+      if (!pt) continue;
+      const el = document.createElement('div');
+      el.className = 'cl-barrio-label';
+      el.textContent = l.name;
+      el.style.cssText = `position:absolute;left:${pt.x}px;top:${pt.y}px;transform:translate(-50%,-50%);color:rgba(17,17,17,0.45);font-size:10.5px;font-weight:600;`;
+      box.appendChild(el);
+    }
+  };
+  ov.setMap(map);
   const update = () => {
     const z = map.getZoom(), b = map.getBounds();
-    if (!b || z < minZoom || !labels || !labels.length) { clear(); return; }
+    if (!b || z < minZoom || !labels || !labels.length) { current = []; ov.draw(); return; }
     const c = b.getCenter(), skip = hide();
-    const inView = labels.filter((l) => l.id !== skip && b.contains({ lat: l.lat, lng: l.lng }))
+    current = labels.filter((l) => l.id !== skip && b.contains({ lat: l.lat, lng: l.lng }))
       .map((l) => [(l.lat - c.lat()) ** 2 + (l.lng - c.lng()) ** 2, l])
-      .sort((a, b2) => a[0] - b2[0]).slice(0, max).map((x) => x[1]);
-    const keep = new Set(inView.map((l) => l.id));
-    clear(keep);
-    for (const l of inView) {
-      if (shown.has(l.id)) continue;
-      shown.set(l.id, new google.maps.Marker({
-        map, position: { lat: l.lat, lng: l.lng }, clickable: false, zIndex: 0,
-        icon: { url: BLANK, size: new google.maps.Size(1, 1), anchor: new google.maps.Point(0, 0), labelOrigin: new google.maps.Point(0, 0) },
-        label: { text: l.name, color: 'rgba(17,17,17,0.62)', fontSize: '11px', fontWeight: '600', className: 'cl-barrio-label' },
-      }));
-    }
+      .sort((a2, b2) => a2[0] - b2[0]).slice(0, max).map((x) => x[1]);
+    ov.draw();
   };
   const listener = map.addListener('idle', update);
   update();
-  return { update, remove: () => { try { listener.remove(); } catch {} clear(); } };
+  return { update, remove: () => { try { listener.remove(); } catch {} current = []; ov.setMap(null); } };
 }

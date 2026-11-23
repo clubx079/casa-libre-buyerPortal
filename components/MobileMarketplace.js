@@ -67,6 +67,8 @@ const SORTS = [
 // The box is the place's own (misplaced pins left out) plus ~200 m so its edge listings stay in.
 const placeBox = (p) => (p?.bounds ? { n: p.bounds.n + 0.002, s: p.bounds.s - 0.002, e: p.bounds.e + 0.002, w: p.bounds.w - 0.002 } : null);
 
+const SHOW_BARRIO_NAMES = false;
+
 export default function MobileMarketplace({ initialListings = [], initialCount = 0, initialPins = [], totalCount = 0, initialOp = 'all', initialQuery = '', initialType = 'all', initialPlace = '', initialArea = null, zoningOn = false }) {
   const [lang, setLang] = useLang();
   const { openSell } = useSellFlow();
@@ -454,10 +456,11 @@ export default function MobileMarketplace({ initialListings = [], initialCount =
     const outline = placeOutline(ref.google, ref.map, placeArea);
     return () => outline.remove();
   }, [placeArea, mapOn]);
-  // Barrio names on the map once zoomed in (the picked barrio has its own label).
+  // Barrio names on the map: OFF (Omar, Nov 23) — Google's own map already names the
+  // neighborhoods, ours doubled them and mixed with the pins. The picked barrio keeps its pill.
   useEffect(() => {
     const ref = mapRef.current;
-    if (!ref || !places.labels) return undefined;
+    if (!ref || !places.labels || !SHOW_BARRIO_NAMES) return undefined;
     const layer = barrioLabelLayer(ref.google, ref.map, places.labels, { hide: () => (placeAreaRef.current && placeAreaRef.current.kind === 'barrio' ? placeAreaRef.current.id : null) });
     return () => layer.remove();
   }, [places.labels, mapOn]);
