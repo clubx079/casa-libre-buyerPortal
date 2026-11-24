@@ -152,6 +152,27 @@ function ago(iso, lang) {
   return tr(lang, `hace ${d} ${d === 1 ? 'día' : 'días'}`, `${d} ${d === 1 ? 'day' : 'days'} ago`, `há ${d} ${d === 1 ? 'dia' : 'dias'}`);
 }
 
+// "More options" panel for a listing card: a bottom sheet on phones, a centred card on larger
+// screens. Esc or a tap outside closes it.
+function ListingMore({ title, onClose, closeLabel, children }) {
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+  return (
+    <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center bg-ink/40 p-0 sm:p-4" onClick={onClose} role="presentation">
+      <div role="dialog" aria-modal="true" aria-label={title} onClick={(e) => e.stopPropagation()} className="w-full sm:max-w-[400px] bg-paper rounded-t-[20px] sm:rounded-[20px] p-4 pb-6 sm:pb-4 shadow-xl max-h-[85vh] overflow-y-auto" data-testid="listing-more-panel">
+        <div className="flex items-center justify-between gap-3 px-1 pb-3">
+          <div className="font-bold text-[15px] truncate">{title}</div>
+          <button onClick={onClose} aria-label={closeLabel} className="shrink-0 w-8 h-8 rounded-full border border-ink/20 grid place-items-center text-[16px] leading-none hover:bg-ink/[0.05]">×</button>
+        </div>
+        <div className="flex flex-col gap-1">{children}</div>
+      </div>
+    </div>
+  );
+}
+
 function DraftCard({ d, lang, onContinue, onDelete }) {
   const x = D[lang] || D.es;
   const data = d.data || {};
@@ -194,6 +215,7 @@ export default function MyListingsPage() {
   const [confirmDraft, setConfirmDraft] = useState(null);
   const [listings, setListings] = useState(null);
   const [confirmId, setConfirmId] = useState(null);
+  const [moreId, setMoreId] = useState(null);      // the listing whose "More options" panel is open
   const [busy, setBusy] = useState(false);
   const [promo, setPromo] = useState(null);     // { id, plan } — open the payment modal (no card / 3DS)
   const [payingId, setPayingId] = useState(null); // id being charged silently on a saved card
@@ -481,13 +503,14 @@ export default function MyListingsPage() {
                 <button onClick={() => setConfirmId(l.id)} className="py-2 rounded-pill border-[1.5px] border-red-300 text-red-700 text-[13px] font-semibold">{t.del}</button>
               </div>
             ) : (
-              <div className="flex flex-col gap-2">
-                {/* Share kit + what the owner's share links brought this week (lib/shareStats.js) */}
+              /* Card actions (Nov 25, "show few buttons, the rest in a panel"): Share + its numbers,
+                 then Edit and More options. More opens ListingMore (plan + Extend, promote, View, Delete). */
+              <div className="flex flex-col gap-3">
                 {(!l.status || l.status === 'published') && (!l.admin_status || l.admin_status === 'active') && (
                   <div className="flex flex-col gap-1.5" data-testid="share-row">
                     <ShareButton listingId={l.id} source="account" variant="pill" className="w-full py-2" />
                     {l.share && (
-                      <p className="text-[12px] text-center text-ink/65" data-testid="share-week">
+                      <p className="text-[12px] text-center text-ink/60" data-testid="share-week">
                         {tr(lang,
                           `Tu link trajo ${l.share.last7.visits} ${l.share.last7.visits === 1 ? 'visita' : 'visitas'} y ${l.share.last7.contacts} ${l.share.last7.contacts === 1 ? 'contacto' : 'contactos'} esta semana`,
                           `Your link brought ${l.share.last7.visits} ${l.share.last7.visits === 1 ? 'visit' : 'visits'} and ${l.share.last7.contacts} ${l.share.last7.contacts === 1 ? 'contact' : 'contacts'} this week`,
@@ -496,43 +519,17 @@ export default function MyListingsPage() {
                     )}
                   </div>
                 )}
-                {l.paid?.state === 'active' && l.paid.until && (
-                  <div className="flex items-center gap-2" data-testid="paid-active">
-                    <div className="flex-1 text-center py-2 rounded-pill bg-card text-ink text-[12px] font-bold border-[1.5px] border-ink/40">{x.paidChip} · {t.daysLeft(daysLeft(l.paid.until))}</div>
-                    <button onClick={() => setLpay({ id: l.id, kind: 'extend' })} className="shrink-0 px-4 py-2 rounded-pill border-[1.5px] border-ink text-[13px] font-bold hover:bg-ink hover:text-paper">{x.extend}</button>
-                  </div>
-                )}
-                {/* A FREE listing ends too (lib/paidListings.js freeUntil) — renewing it is the paid extension. */}
-                {!l.paid?.until && l.freeUntil && (
-                  <div className="flex items-center gap-2" data-testid="free-active">
-                    <div className="flex-1 text-center py-2 rounded-pill bg-card text-ink text-[12px] font-bold border-[1.5px] border-ink/40">{x.freeChip} · {t.daysLeft(daysLeft(l.freeUntil))}</div>
-                    <button onClick={() => setLpay({ id: l.id, kind: 'extend' })} className="shrink-0 px-4 py-2 rounded-pill border-[1.5px] border-ink text-[13px] font-bold hover:bg-ink hover:text-paper" data-testid="free-extend">{x.extend}</button>
-                  </div>
-                )}
-                {payingId === l.id ? (
+                {payingId === l.id && (
                   <div className="text-center py-2 rounded-pill bg-card text-ink text-[12.5px] font-bold border-[1.5px] border-ink">{t.paying}</div>
-                ) : l.verified ? (
-                  <>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 text-center py-2 rounded-pill bg-card text-ink text-[12px] font-bold border-[1.5px] border-ink">{(l.plan === 'home' ? t.homeChip : t.verifiedChip)}{l.promotion_expires_at ? ` · ${t.daysLeft(daysLeft(l.promotion_expires_at))}` : ''}</div>
-                      <button onClick={() => payFor(l.id, l.plan || 'verified')} className="shrink-0 px-4 py-2 rounded-pill bg-ink text-paper text-[13px] font-bold hover:bg-ink/90">{t.renew}</button>
-                    </div>
-                    {l.plan !== 'home' && (
-                      <button onClick={() => payFor(l.id, 'home')} className="w-full py-2 rounded-pill border-[1.5px] border-ink text-[12.5px] font-bold hover:bg-ink hover:text-paper transition-colors">{t.upgradeHome}</button>
-                    )}
-                  </>
-                ) : (
-                  <div className="grid grid-cols-2 gap-2">
-                    <button onClick={() => payFor(l.id, 'verified')} disabled={!!(l.admin_status && l.admin_status !== 'active')} className="py-2 rounded-pill border-[1.5px] border-ink text-[12.5px] font-bold hover:bg-ink hover:text-paper transition-colors disabled:opacity-40 disabled:cursor-not-allowed">{t.promoteVerify}</button>
-                    <button onClick={() => payFor(l.id, 'home')} disabled={!!(l.admin_status && l.admin_status !== 'active')} className="py-2 rounded-pill bg-ink text-paper text-[12.5px] font-bold hover:bg-ink/90 disabled:opacity-40 disabled:cursor-not-allowed">{t.promoteHome}</button>
-                  </div>
                 )}
                 <div className="flex gap-2">
-                  <Link href={`/propiedad/${l.id}`} className="flex-1 text-center py-2 rounded-pill border-[1.5px] border-ink text-[13px] font-semibold">{t.view}</Link>
                   {(!l.admin_status || l.admin_status === 'active') && (
                     <button onClick={() => openSell({ edit: l.id })} className="flex-1 py-2 rounded-pill bg-ink text-paper text-[13px] font-bold hover:bg-ink/90" data-testid="edit-listing">{x.edit}</button>
                   )}
-                  <button onClick={() => setConfirmId(l.id)} className="flex-1 py-2 rounded-pill border-[1.5px] border-red-300 text-red-700 text-[13px] font-semibold">{t.del}</button>
+                  <button onClick={() => setMoreId(l.id)} className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 rounded-pill border-[1.5px] border-ink/70 text-[13px] font-semibold hover:bg-ink hover:text-paper transition-colors" data-testid="listing-more" aria-haspopup="dialog">
+                    {tr(lang, 'Más opciones', 'More options', 'Mais opções')}
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" /></svg>
+                  </button>
                 </div>
               </div>
             )} />
@@ -540,6 +537,44 @@ export default function MyListingsPage() {
         </div>
       )}
 
+      {(() => {
+        const l = moreId ? (listings || []).find((r) => r.id === moreId) : null;
+        if (!l) return null;
+        const close = () => setMoreId(null);
+        const run = (fn) => () => { close(); fn(); };
+        const active = !l.admin_status || l.admin_status === 'active';
+        const paid = !!(l.paid?.state === 'active' && l.paid.until);
+        const planUntil = paid ? l.paid.until : (!l.paid?.until && l.freeUntil) || null;
+        const row = 'w-full flex items-center justify-between gap-3 px-4 py-3 rounded-[12px] text-left text-[14px] hover:bg-ink/[0.05] transition-colors disabled:opacity-40 disabled:cursor-not-allowed';
+        return (
+          <ListingMore title={[l.type, l.neighborhood || l.city].filter(Boolean).join(' · ')} onClose={close} closeLabel={t.cancel}>
+            {planUntil && (
+              <div className="flex items-center justify-between gap-3 rounded-[12px] bg-ink/[0.04] pl-4 pr-2 py-2" data-testid={paid ? 'paid-active' : 'free-active'}>
+                <span className="text-[13px] text-ink/80"><span className="font-semibold text-ink">{paid ? x.paidChip : x.freeChip}</span> · {t.daysLeft(daysLeft(planUntil))}</span>
+                <button onClick={run(() => setLpay({ id: l.id, kind: 'extend' }))} className="shrink-0 px-4 py-1.5 rounded-pill bg-ink text-paper text-[13px] font-bold hover:bg-ink/90" data-testid={paid ? undefined : 'free-extend'}>{x.extend}</button>
+              </div>
+            )}
+            <div className="text-[12px] font-semibold text-ink/50 px-1 pt-2">{tr(lang, 'Destacá tu publicación', 'Promote your listing', 'Destaque seu anúncio')}</div>
+            {l.verified ? (
+              <>
+                <button onClick={run(() => payFor(l.id, l.plan || 'verified'))} className={row}>
+                  <span><span className="font-semibold">{l.plan === 'home' ? t.homeChip : t.verifiedChip}</span>{l.promotion_expires_at ? ` · ${t.daysLeft(daysLeft(l.promotion_expires_at))}` : ''}</span>
+                  <span className="text-[13px] font-bold">{t.renew}</span>
+                </button>
+                {l.plan !== 'home' && <button onClick={run(() => payFor(l.id, 'home'))} className={row}><span>{t.upgradeHome}</span><span aria-hidden="true">›</span></button>}
+              </>
+            ) : (
+              <>
+                <button onClick={run(() => payFor(l.id, 'verified'))} disabled={!active} className={row}><span>{t.promoteVerify}</span><span aria-hidden="true">›</span></button>
+                <button onClick={run(() => payFor(l.id, 'home'))} disabled={!active} className={row}><span>{t.promoteHome}</span><span aria-hidden="true">›</span></button>
+              </>
+            )}
+            <div className="border-t border-ink/10 my-1" />
+            <Link href={`/propiedad/${l.id}`} onClick={close} className={row}><span>{tr(lang, 'Ver publicación', 'View listing', 'Ver anúncio')}</span><span aria-hidden="true">›</span></Link>
+            <button onClick={run(() => setConfirmId(l.id))} className={`${row} text-red-700 hover:bg-red-50`}><span>{t.del}</span></button>
+          </ListingMore>
+        );
+      })()}
       <ConfirmModal
         open={!!confirmId}
         title={t.confirmT}
