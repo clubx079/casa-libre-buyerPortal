@@ -40,6 +40,7 @@ import { newsletterInsights } from '@/lib/newsletter/insights';
 import { runShareNudge, runShareReward } from '@/lib/automations/shareListing';
 import { SHARE_NUDGE_ID, SHARE_REWARD_ID } from '@/lib/shareReward';
 import { shareVisitsByListing } from '@/lib/shareStats';
+import { runShareFeatureCron } from '@/lib/shareFeatureRun';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -227,7 +228,11 @@ async function handle(req) {
       formatDate: (s) => { try { return new Date(s).toLocaleDateString(COUNTRY.locale, { day: 'numeric', month: 'long' }); } catch { return String(s).slice(0, 10); } },
     }).catch((e) => ({ error: e?.message || 'share_reward_failed' }));
     if (shareReward.granted) revalidateTag('listings');
-    return NextResponse.json({ ok: true, quietHours: frame.quiet, ...result, views, drafts, duplicates, paid, noListing, held, payFollow, saves, deletedAsk, referrals, referralPromo, profile, photoFace, newsletter, shareNudge, shareReward, pushes, at: new Date().toISOString() });
+    // "New: share your listing" announcement (lib/automations/shareFeature.js): every N hours to
+    // verified members, up to N times (0 = no limit); test / team accounts never. Row
+    // 'share_feature_promo' (admin → Automations); off until switched on.
+    const shareFeature = await runShareFeatureCron({ frame }).catch((e) => ({ error: e?.message || 'share_feature_failed' }));
+    return NextResponse.json({ ok: true, quietHours: frame.quiet, ...result, views, drafts, duplicates, paid, noListing, held, payFollow, saves, deletedAsk, referrals, referralPromo, profile, photoFace, newsletter, shareNudge, shareReward, shareFeature, pushes, at: new Date().toISOString() });
   } catch (e) {
     return NextResponse.json({ error: 'automation_failed', detail: e?.message }, { status: 500 });
   }
