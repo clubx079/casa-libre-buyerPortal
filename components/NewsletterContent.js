@@ -42,7 +42,9 @@ const BTN_EN = {
   'Publicar mis propiedades': 'List my properties', 'Completar mi perfil': 'Complete my profile', 'Ver lo que buscan los compradores': 'See what buyers search for',
   'Descargar la app': 'Get the app',
 };
-const catOf = (slug) => (slug.startsWith('historia') ? 'story' : slug === 'fotos' ? 'tips' : slug === 'alquileres' ? 'rent'
+// a generated (stored) issue names its category; the hand-made ones are known by slug
+const catOf = (i) => (T.es.cat[i.cat] ? i.cat : catBySlug(i.slug));
+const catBySlug = (slug) => (slug.startsWith('historia') ? 'story' : slug === 'fotos' ? 'tips' : slug === 'alquileres' ? 'rent'
   : slug === 'experiencia-estados-unidos' ? 'app' : ['publicaciones-directas', 'tu-cuenta-esta-lista'].includes(slug) ? 'sellers' : 'data');
 const btnLabel = (label, lang) => (lang === 'en' ? BTN_EN[label] || label : label);
 
@@ -114,7 +116,7 @@ function Article({ i, n, lang, lead = false }) {
   return (
     <article id={i.slug} className={`scroll-mt-24 ${lead ? '' : 'pt-10 mt-10 border-t border-ink/12'}`}>
       <div className="flex items-center gap-2 text-[12.5px] font-semibold">
-        <span className="px-2.5 py-1 rounded-pill bg-ink text-paper">{t.cat[catOf(i.slug)]}</span>
+        <span className="px-2.5 py-1 rounded-pill bg-ink text-paper">{t.cat[catOf(i)]}</span>
         <span className="text-ink/45 font-medium">{t.article} {n}</span>
       </div>
       <h2 className={`${lead ? 'text-[clamp(30px,4.2vw,44px)]' : 'text-[clamp(24px,3vw,32px)]'} font-bold tracking-head leading-[1.08] mt-3`}>{i.title}</h2>
@@ -133,10 +135,10 @@ export default function NewsletterContent({ es = [], en = [], stories = null, ed
   const issues = lang === 'en' ? en : es;
   const fmt = (d) => (d ? new Date(`${d}T12:00:00Z`).toLocaleDateString(lang === 'en' ? 'en-US' : 'es', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }) : '');
   const date = fmt(edition?.date);
-  // this edition's stories (lib/newsletter/editions.js), or all of them
-  const storyList = Array.isArray(stories) ? stories.map((slug) => STORIES.find((s) => s.slug === slug)).filter(Boolean) : STORIES;
+  // this edition's stories (objects; slugs of STORIES also work), or all of them
+  const storyList = Array.isArray(stories) ? stories.map((s) => (typeof s === 'string' ? STORIES.find((x) => x.slug === s) : s)).filter(Boolean) : STORIES;
   // the week's key figures for the sidebar: the first stat of each data issue
-  const keyStats = issues.filter((i) => catOf(i.slug) !== 'story').map((i) => ({ slug: i.slug, s: i.blocks.find((b) => b.type === 'stat') })).filter((x) => x.s).slice(0, 4);
+  const keyStats = issues.filter((i) => catOf(i) !== 'story').map((i) => ({ slug: i.slug, s: i.blocks.find((b) => b.type === 'stat') })).filter((x) => x.s).slice(0, 4);
   const [lead, ...rest] = issues;
 
   return (

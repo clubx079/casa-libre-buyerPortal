@@ -37,6 +37,7 @@ import { runPhotoFace, PHOTO_FACE_ID, PHOTO_WRONG_ID } from '@/lib/automations/p
 import { classifyMissingKinds } from '@/lib/profilePhotoKindScan';
 import { runNewsletter, NEWSLETTER_ID } from '@/lib/automations/newsletter';
 import { newsletterInsights } from '@/lib/newsletter/insights';
+import { allEditions } from '@/lib/newsletter/editionStore';
 import { runShareNudge, runShareReward } from '@/lib/automations/shareListing';
 import { SHARE_NUDGE_ID, SHARE_REWARD_ID } from '@/lib/shareReward';
 import { shareVisitsByListing } from '@/lib/shareStats';
@@ -206,6 +207,8 @@ async function handle(req) {
         db, automation: newsletterAutomation, templates, now: new Date(), deliver: sendRenderedEmail, frame, siteUrl: site,
         countryCode: COUNTRY.code, countryName: COUNTRY.name, insights: () => newsletterInsights({ fresh: true }),
         emailOverride: process.env.AUTOMATION_EMAIL_OVERRIDE || '',
+        // the newest weekly generated edition (admin -> Auto-generate); used when it is this week's
+        edition: await allEditions({ fresh: true }).then((list) => list.find((e) => e.stored) || null).catch(() => null),
       }).catch((e) => ({ error: e?.message || 'newsletter_failed' }));
     // "Share your listing" (lib/automations/shareListing.js): the share emails after publishing
     // + the low-views one, and the reward when the share links bring enough people. Rows
