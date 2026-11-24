@@ -5,7 +5,7 @@ import { CAMPAIGNS, ALIASES, resolveSlug, campaignUrl } from '../lib/campaigns.j
 const O = 'https://casa-libre.com.py';
 
 test('one link per channel', () => {
-  assert.deepEqual(Object.keys(CAMPAIGNS), ['rd', 'fb', 'ig', 'x', 'tt', 'meta', 'gads', 'wa', 'mail', 'gbp', 'chatgpt', 'gptads']);
+  assert.deepEqual(Object.keys(CAMPAIGNS), ['rd', 'fb', 'ig', 'x', 'tt', 'meta', 'gads', 'wa', 'mail', 'gbp', 'bing', 'chatgpt', 'gptads']);
   const sources = Object.values(CAMPAIGNS).map((c) => c.source);
   assert.equal(new Set(sources).size, sources.length, 'each channel has its own utm_source');
   for (const c of Object.values(CAMPAIGNS)) assert.ok(c.label, 'every channel has a label for the admin');
@@ -52,4 +52,12 @@ test('Google Business Profile link: /r/gbp lands on the home page tagged gbp', (
     assert.equal(u.searchParams.get('utm_source'), 'gbp');
     assert.equal(u.searchParams.get('utm_campaign'), 'google_business_profile');
   }
+});
+
+test('Bing Places: its own link /r/bing, tagged bing_places', () => {
+  assert.equal(resolveSlug('bing'), 'bing');
+  const u = new URL(campaignUrl(O, 'bing'));
+  assert.equal(u.searchParams.get('utm_source'), 'bing_places');
+  assert.equal(u.searchParams.get('utm_medium'), 'organic');
+  assert.equal(u.searchParams.get('utm_campaign'), 'bing_places');
 });

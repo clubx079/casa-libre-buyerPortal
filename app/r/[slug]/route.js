@@ -100,8 +100,13 @@ export function GET(req, { params }) {
     recordClick(req, asked, { source: 'whatsapp', medium: 'mensaje', name: `${aud}_lanzamiento` }, asked, '', who);
     return NextResponse.redirect(publishLink(aud, base, who, SHORT_CONTENT[asked] || 'respuesta_si'), 302);
   }
-  const slug = resolveSlug(asked); // 'rda' → 'rd'; unknown → null
   const sp = new URL(req.url).searchParams;
+  // A channel link can carry ANOTHER channel's utm_source and that one wins: Bing Places copies the
+  // website link from Google (/r/gbp) and adds its own tag (?utm_source=bing_places…), so the visit
+  // counts as Bing Places, not Google. Only known channels; WhatsApp batches keep their own logic.
+  const tagged = String(sp.get('utm_source') || '').toLowerCase();
+  const bySource = tagged ? Object.keys(CAMPAIGNS).find((k) => CAMPAIGNS[k].source === tagged) : null;
+  const slug = (bySource && resolveSlug(asked) !== 'wa') ? bySource : resolveSlug(asked); // 'rda' → 'rd'; unknown → null
   const batch = slug === 'wa' ? batchOf(sp.get('b')) : '';
   const ref = batch ? refOf(sp.get('r')) : '';
   const url = slug ? campaignUrl(base, slug, { batch, sell: sp.get('sell') === '1', ref }) : null;
