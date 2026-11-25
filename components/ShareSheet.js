@@ -183,7 +183,6 @@ export default function ShareSheet({ listingId, title = '', open = true, onClose
     setTimeout(() => window.open(c === 'ig' ? 'https://www.instagram.com/' : 'https://www.tiktok.com/upload', '_blank', 'noopener,noreferrer'), 600);
   };
 
-  const stats = kit?.stats;
   // Compact (Omar, Nov 23): title, then one row — the five networks + Copy link, all the same round
   // buttons. The image / caption kit is gone from the sheet; the owner still sees what the links brought.
   // a standard filled chain-link glyph (Material "link"), centred, same fill weight as the brand marks
@@ -200,11 +199,10 @@ export default function ShareSheet({ listingId, title = '', open = true, onClose
         <p className="text-[12.5px] text-ink/55 mt-0.5">{kit?.owner ? t.subOwner : t.sub}</p>
       </div>
 
-      {kit?.owner && (stats || kit.reward?.active) && (
+      {/* Visits / WhatsApp contacts from the owner's link are NOT shown (user's call, Nov 25) — only the share reward. */}
+      {kit?.owner && kit.reward?.active && (
         <div className="rounded-[12px] border border-ink/15 bg-card px-3 py-2 text-[12.5px] flex flex-col gap-0.5" data-testid="share-stats">
-          {stats && <div className="font-bold">{t.week(stats.last7?.visits || 0, stats.last7?.contacts || 0)}</div>}
-          {stats && (stats.visits > 0 || stats.contacts > 0) && <div className="text-ink/60">{t.total(stats.visits, stats.contacts)}</div>}
-          {kit.reward?.active && <div className="font-semibold">{kit.reward.earned ? t.earned : (kit.reward[lang] || kit.reward.es)}</div>}
+          <div className="font-semibold">{kit.reward.earned ? t.earned : (kit.reward[lang] || kit.reward.es)}</div>
         </div>
       )}
 

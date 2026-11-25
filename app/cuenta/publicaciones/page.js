@@ -563,14 +563,6 @@ export default function MyListingsPage() {
                 {(!l.status || l.status === 'published') && (!l.admin_status || l.admin_status === 'active') && (
                   <div className="flex flex-col gap-1.5" data-testid="share-row">
                     <ShareButton listingId={l.id} source="account" variant="pill" className="w-full py-2" />
-                    {l.share && (
-                      <p className="text-[12px] text-center text-ink/60" data-testid="share-week">
-                        {tr(lang,
-                          `Tu link trajo ${l.share.last7.visits} ${l.share.last7.visits === 1 ? 'visita' : 'visitas'} y ${l.share.last7.contacts} ${l.share.last7.contacts === 1 ? 'contacto' : 'contactos'} esta semana`,
-                          `Your link brought ${l.share.last7.visits} ${l.share.last7.visits === 1 ? 'visit' : 'visits'} and ${l.share.last7.contacts} ${l.share.last7.contacts === 1 ? 'contact' : 'contacts'} this week`,
-                          `Seu link trouxe ${l.share.last7.visits} ${l.share.last7.visits === 1 ? 'visita' : 'visitas'} e ${l.share.last7.contacts} ${l.share.last7.contacts === 1 ? 'contato' : 'contatos'} esta semana`)}
-                      </p>
-                    )}
                   </div>
                 )}
                 {payingId === l.id && (
