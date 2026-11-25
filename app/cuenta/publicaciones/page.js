@@ -16,9 +16,9 @@ import { draftMissing } from '@/lib/drafts';
 import { track } from '@/lib/analytics';
 
 const T = {
-  es: { title: 'Mis publicaciones', sub: (n) => `${n} ${n === 1 ? 'propiedad publicada' : 'propiedades publicadas'}`, empty: 'Todavía no publicaste ninguna propiedad.', publish: 'Publicar propiedad', del: 'Eliminar', confirmT: 'Eliminar publicación', confirm: 'Sale del sitio y de la app ahora. Durante 3 días la podés recuperar desde «Eliminadas», con todo lo que tenía.', cancel: 'Cancelar', deleting: 'Eliminando…', view: 'Ver', loading: 'Cargando…', promoteVerify: 'Verificar · US$5', promoteHome: 'Portada · US$20', renew: 'Renovar', verifiedChip: 'Verificada', homeChip: 'En portada', upgradeHome: 'Subir a portada · US$20', paying: 'Procesando…', daysLeft: (n) => `faltan ${n} ${n === 1 ? 'día' : 'días'}` },
-  en: { title: 'My listings', sub: (n) => `${n} published ${n === 1 ? 'property' : 'properties'}`, empty: "You haven't published any properties yet.", publish: 'List a property', del: 'Delete', confirmT: 'Delete listing', confirm: 'It leaves the site and the app now. For 3 days you can recover it from "Deleted", with everything it had.', cancel: 'Cancel', deleting: 'Deleting…', view: 'View', loading: 'Loading…', promoteVerify: 'Verify · US$5', promoteHome: 'Landing · US$20', renew: 'Renew', verifiedChip: 'Verified', homeChip: 'On landing', upgradeHome: 'Move to Landing · US$20', paying: 'Processing…', daysLeft: (n) => `${n} ${n === 1 ? 'day' : 'days'} left` },
-  pt: { title: 'Meus anúncios', sub: (n) => `${n} ${n === 1 ? 'imóvel publicado' : 'imóveis publicados'}`, empty: "Você ainda não publicou nenhum imóvel.", publish: 'Anunciar imóvel', del: 'Excluir', confirmT: 'Excluir anúncio', confirm: 'Sai do site e do app agora. Por 3 dias você pode recuperá-lo em «Excluídos», com tudo o que tinha.', cancel: 'Cancelar', deleting: 'Excluindo…', view: 'Ver', loading: 'Carregando…', promoteVerify: 'Verificar · US$5', promoteHome: 'Em destaque · US$20', renew: 'Renovar', verifiedChip: 'Verificado', homeChip: 'Em destaque', upgradeHome: 'Mover para destaque · US$20', paying: 'Processando…', daysLeft: (n) => `${n} ${n === 1 ? 'dia' : 'dias'} restantes` },
+  es: { title: 'Mis publicaciones', sub: (n) => `${n} ${n === 1 ? 'propiedad publicada' : 'propiedades publicadas'}`, empty: 'Todavía no publicaste ninguna propiedad.', publish: 'Publicar propiedad', del: 'Eliminar', confirmT: 'Eliminar publicación', confirm: 'Sale del sitio y de la app ahora. La podés recuperar cuando quieras desde «Eliminadas».', cancel: 'Cancelar', deleting: 'Eliminando…', view: 'Ver', loading: 'Cargando…', promoteVerify: 'Verificar · US$5', promoteHome: 'Portada · US$20', renew: 'Renovar', verifiedChip: 'Verificada', homeChip: 'En portada', upgradeHome: 'Subir a portada · US$20', paying: 'Procesando…', daysLeft: (n) => `faltan ${n} ${n === 1 ? 'día' : 'días'}` },
+  en: { title: 'My listings', sub: (n) => `${n} published ${n === 1 ? 'property' : 'properties'}`, empty: "You haven't published any properties yet.", publish: 'List a property', del: 'Delete', confirmT: 'Delete listing', confirm: 'It leaves the site and the app now. You can recover it anytime from "Deleted".', cancel: 'Cancel', deleting: 'Deleting…', view: 'View', loading: 'Loading…', promoteVerify: 'Verify · US$5', promoteHome: 'Landing · US$20', renew: 'Renew', verifiedChip: 'Verified', homeChip: 'On landing', upgradeHome: 'Move to Landing · US$20', paying: 'Processing…', daysLeft: (n) => `${n} ${n === 1 ? 'day' : 'days'} left` },
+  pt: { title: 'Meus anúncios', sub: (n) => `${n} ${n === 1 ? 'imóvel publicado' : 'imóveis publicados'}`, empty: "Você ainda não publicou nenhum imóvel.", publish: 'Anunciar imóvel', del: 'Excluir', confirmT: 'Excluir anúncio', confirm: 'Sai do site e do app agora. Você pode recuperá-lo quando quiser em «Excluídos».', cancel: 'Cancelar', deleting: 'Excluindo…', view: 'Ver', loading: 'Carregando…', promoteVerify: 'Verificar · US$5', promoteHome: 'Em destaque · US$20', renew: 'Renovar', verifiedChip: 'Verificado', homeChip: 'Em destaque', upgradeHome: 'Mover para destaque · US$20', paying: 'Processando…', daysLeft: (n) => `${n} ${n === 1 ? 'dia' : 'dias'} restantes` },
 };
 
 // The first-listing gift email's "Verificar mi publicación" button lands here
@@ -224,9 +224,9 @@ export default function MyListingsPage() {
   const [lpay, setLpay] = useState(null);         // { id, kind: 'publish' | 'extend' } — the paid-listing pop-up
   const [lgift, setLgift] = useState(null);       // { state, id } — the "on us" gift result
   const [claimingId, setClaimingId] = useState(null);
-  const [trash, setTrash] = useState(null);        // "Recently deleted": listings still recoverable (lib/listingTrash.js)
+  const [trash, setTrash] = useState(null);        // "Eliminadas": deleted listings, recoverable (lib/listingTrash.js)
   const [recoveringId, setRecoveringId] = useState(null);
-  const [recovered, setRecovered] = useState(null); // id just brought back → banner
+  const [recovered, setRecovered] = useState(null); // { id, ended } just brought back → banner
 
   const load = () => {
     fetch('/api/account/listings').then((r) => r.json()).then((j) => { setListings(j.listings || []); setTrash(j.deleted || []); }).catch(() => { setListings([]); setTrash([]); });
@@ -366,12 +366,13 @@ export default function MyListingsPage() {
     } finally { setBusy(false); setConfirmId(null); }
   };
 
-  // "Recently deleted" → Recover: back live exactly as it was (same plan, paid period, badges).
+  // "Eliminadas" → Recover: back as it was; paid features keep their original end dates (ended → comes back ended).
   const recover = async (id) => {
     setRecoveringId(id);
     try {
       const r = await fetch('/api/account/listings/recover', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
-      if (r.ok) { setTrash((ts) => (ts || []).filter((l) => l.id !== id)); setRecovered(id); setTab('active'); track('listing_recovered', { property_id: id }); load(); }
+      const j = await r.json().catch(() => ({}));
+      if (r.ok) { setTrash((ts) => (ts || []).filter((l) => l.id !== id)); setRecovered({ id, ended: !!j.ended }); setTab('active'); track('listing_recovered', { property_id: id, ended: !!j.ended }); load(); }
     } finally { setRecoveringId(null); }
   };
 
@@ -439,7 +440,9 @@ export default function MyListingsPage() {
           <span aria-hidden className="shrink-0 w-9 h-9 rounded-full bg-ink text-paper inline-flex items-center justify-center text-[18px] font-bold">✓</span>
           <div className="flex-1 min-w-0">
             <p className="font-bold text-[16px] leading-tight">{tr(lang, 'Publicación recuperada', 'Listing recovered', 'Anúncio recuperado')}</p>
-            <p className="text-[14px] leading-snug text-ink/70 mt-1">{tr(lang, 'Volvió a estar en línea con todo lo que tenía, incluidas las mejoras pagas.', 'It is live again with everything it had, including paid features.', 'Voltou a ficar no ar com tudo o que tinha, inclusive os recursos pagos.')}</p>
+            <p className="text-[14px] leading-snug text-ink/70 mt-1">{recovered.ended
+              ? tr(lang, 'Su período de publicación terminó mientras estaba eliminada. Extendela para volver a publicarla.', 'Its listing period ended while it was deleted. Extend it to publish it again.', 'O período do anúncio terminou enquanto estava excluído. Estenda para publicá-lo de novo.')
+              : tr(lang, 'Volvió a estar en línea como estaba, con sus mejoras pagas hasta la misma fecha de vencimiento.', 'It is live again as it was, with its paid features until the same end date.', 'Voltou a ficar no ar como estava, com os recursos pagos até a mesma data de vencimento.')}</p>
           </div>
           <button onClick={() => setRecovered(null)} aria-label={t.cancel} className="shrink-0 text-ink/40 hover:text-ink text-[20px] leading-none">×</button>
         </div>
@@ -448,24 +451,18 @@ export default function MyListingsPage() {
       {tab === 'deleted' && (
         <div data-testid="trash-tab">
           <p className="text-[13.5px] text-ink/60 mb-4 max-w-[640px]">{tr(lang,
-            'Las publicaciones que eliminás quedan acá 3 días. Ya no se ven en el sitio ni en la app; si fue un error, recuperala con un clic y vuelve tal como estaba.',
-            'Listings you delete stay here for 3 days. They no longer show on the site or in the app; if it was a mistake, recover it in one click and it comes back exactly as it was.',
-            'Os anúncios que você exclui ficam aqui por 3 dias. Eles não aparecem mais no site nem no app; se foi um engano, recupere com um clique e ele volta exatamente como estava.')}</p>
+            'Las publicaciones que eliminás quedan acá. Ya no se ven en el sitio ni en la app; si fue un error, recuperala con un clic.',
+            'Listings you delete stay here. They no longer show on the site or in the app; if it was a mistake, recover it in one click.',
+            'Os anúncios que você exclui ficam aqui. Eles não aparecem mais no site nem no app; se foi um engano, recupere com um clique.')}</p>
           {!trash || trash.length === 0 ? (
             <div className="bg-card border border-ink/15 rounded-card p-10 text-center font-mono text-[12px] text-ink/45">{tr(lang, 'No hay publicaciones eliminadas.', 'No deleted listings.', 'Nenhum anúncio excluído.')}</div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {trash.map((l) => {
-                const n = l.trash?.days_left ?? 0;
-                const perks = [l.verified ? (l.plan === 'home' ? t.homeChip : t.verifiedChip) : null, l.paid?.until ? tr(lang, 'Período pago', 'Paid period', 'Período pago') : null].filter(Boolean);
                 return (
                   <div key={l.id} className="opacity-90">
                     <ListingCard l={l} action={
                       <div className="flex flex-col gap-2.5" data-testid="trash-card">
-                        <p className="text-[12.5px] leading-snug text-red-700 font-semibold">{n <= 1
-                          ? tr(lang, 'Se elimina para siempre en menos de 1 día', 'Deleted for good in less than 1 day', 'Excluído para sempre em menos de 1 dia')
-                          : tr(lang, `Se elimina para siempre en ${n} días`, `Deleted for good in ${n} days`, `Excluído para sempre em ${n} dias`)}</p>
-                        {perks.length > 0 && <p className="text-[12px] text-ink/60">{tr(lang, 'Vuelve con: ', 'Comes back with: ', 'Volta com: ')}{perks.join(' · ')}</p>}
                         <button onClick={() => recover(l.id)} disabled={recoveringId === l.id} className="py-2 rounded-pill bg-ink text-paper text-[13px] font-bold hover:bg-ink/90 disabled:opacity-60" data-testid="recover-listing">
                           {recoveringId === l.id ? tr(lang, 'Recuperando…', 'Recovering…', 'Recuperando…') : tr(lang, 'Recuperar publicación', 'Recover listing', 'Recuperar anúncio')}
                         </button>

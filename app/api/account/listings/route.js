@@ -8,7 +8,7 @@ import { saveCounts } from '@/lib/favorites';
 import { fetchListingViews } from '@/lib/posthogViews';
 import { manyShareStats, statsConfigured } from '@/lib/shareStats';
 import { recordDeletion, askWhy } from '@/lib/listingDeleted';
-import { trashPatch, DELETED_STATUS, TRASH_DAYS } from '@/lib/listingTrash';
+import { trashPatch, DELETED_STATUS } from '@/lib/listingTrash';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -40,14 +40,12 @@ export async function GET() {
       share: shares ? shares.get(String(l.id).toLowerCase()) || noShare : null,
     })),
     deleted,
-    trashDays: TRASH_DAYS,
   });
 }
 
 // Delete one of the user's own listings. It is NOT removed from the database: it leaves the
-// site and the app now and waits TRASH_DAYS in the owner's "Recently deleted" list, where
-// one click brings it back (POST ./recover). The purge cron removes it for good after that
-// (lib/listingTrash.js). The deletion record + "ask why" email still go out now.
+// site and the app now and stays in the owner's "Eliminadas" tab, where one click brings it back
+// (POST ./recover, lib/listingTrash.js). The deletion record + "ask why" email still go out now.
 export async function DELETE(req) {
   const s = getSession();
   if (!s) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
@@ -69,5 +67,5 @@ export async function DELETE(req) {
   const views = await Promise.race([fetchListingViews([id]), new Promise((r) => setTimeout(() => r(null), 3000))]).catch(() => null);
   await recordDeletion(prop, { email: s.email, views: views ? views.get(String(id)) || 0 : null }).catch((e) => console.error('[listings] deletion record', e?.message || e));
   await askWhy(prop, { email: s.email, name: s.name }).catch(() => {});
-  return NextResponse.json({ ok: true, recoverDays: TRASH_DAYS });
+  return NextResponse.json({ ok: true });
 }
