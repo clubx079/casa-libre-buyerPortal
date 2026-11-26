@@ -14,7 +14,7 @@ const nextConfig = {
   // covers client-rendered pages too; robots.txt no longer blocks /cuenta, so Google can read it.
   async headers() {
     const noindex = [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }];
-    return ['/cuenta', '/cuenta/:path*', '/eliminar-cuenta', '/guardadas'].map((source) => ({ source, headers: noindex }));
+    return ['/cuenta', '/cuenta/:path*', '/eliminar-cuenta', '/guardadas', '/casa-limpia', '/casa-limpia/:path*'].map((source) => ({ source, headers: noindex }));
   },
   async redirects() {
     return [
