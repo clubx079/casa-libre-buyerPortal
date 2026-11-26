@@ -1,0 +1,148 @@
+/* Service-partner preview page (/casa-limpia). Everything is scoped under .clp. */
+.clp{ --ink:#111111; --paper:#F9F4EE; --bone:#FAF7F1; --card:#FFFFFF;
+  --i70:rgba(17,17,17,.7); --i55:rgba(17,17,17,.55); --i45:rgba(17,17,17,.45); --i30:rgba(17,17,17,.3); --i12:rgba(17,17,17,.12); --i06:rgba(17,17,17,.06);
+  --hard:5px 5px 0 #111; --hard-sm:4px 4px 0 #111; --wa:#25D366;
+  background:var(--paper);color:var(--ink);font-family:'Space Grotesk',system-ui,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased;min-height:100vh;padding-bottom:40px}
+.clp *{box-sizing:border-box}
+.clp a{color:inherit;text-decoration:none}
+.clp svg.i{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.clp em{font-family:'Instrument Serif',serif;font-style:italic;font-weight:400}
+.clp .mono{font-family:'IBM Plex Mono',monospace}
+.clp .label{font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--i55)}
+.clp .wrap{max-width:1240px;margin:0 auto;padding:0 20px}
+.clp .pill{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--ink);border-radius:999px;padding:10px 18px;font-size:14px;font-weight:500;background:transparent;white-space:nowrap;cursor:pointer;font-family:inherit;color:inherit}
+.clp .pill.dark{background:var(--ink);color:var(--paper);font-weight:600}
+.clp .pill.lg{padding:14px 24px;font-size:15px}
+.clp .pill.wa{background:var(--wa);border-color:#128C4A;color:#06331b;font-weight:700}
+.clp .pill.block{width:100%}
+.clp .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--ink);border-radius:999px;padding:5px 11px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.clp .chip.fill{background:var(--ink);color:var(--paper)}
+.clp .chip.dash{border-style:dashed;border-color:var(--i30);color:var(--i55)}
+.clp .card{background:var(--card);border:1.5px solid var(--ink);border-radius:20px;box-shadow:var(--hard)}
+.clp .soft{background:var(--card);border:1px solid var(--i12);border-radius:20px}
+/* preview strip + ticker */
+.clp .note{background:var(--ink);color:var(--paper);text-align:center;font-size:13px;padding:9px 16px}
+.clp .note b{font-weight:700}
+.clp .ticker{border-bottom:1px solid var(--i12);overflow:hidden;white-space:nowrap;font-family:'IBM Plex Mono',monospace;font-size:12px;padding:8px 0;color:var(--i70)}
+.clp .ticker .run{display:inline-flex;animation:clp-mq 45s linear infinite}
+.clp .ticker span{padding:0 24px;border-right:1px solid var(--i12)}
+@keyframes clp-mq{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@media (prefers-reduced-motion:reduce){.clp .ticker .run{animation:none}}
+/* nav */
+.clp nav.top{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:16px 44px;border-bottom:1px solid var(--i12)}
+.clp .wordmark{font-size:22px;font-weight:700;letter-spacing:-.03em}
+.clp .navend{display:flex;align-items:center;gap:12px}
+.clp .lang{display:flex;border:1px solid var(--i30);border-radius:999px;padding:3px}
+.clp .lang button{padding:6px 12px;border-radius:999px;color:var(--i55);font:inherit;font-size:12px;font-weight:600;border:0;background:transparent;cursor:pointer}
+.clp .lang button.on{background:var(--ink);color:var(--paper)}
+.clp .crumbs{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:22px 0 18px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--i55)}
+/* step headers */
+.clp .stephead{display:flex;gap:14px;align-items:baseline;margin:46px 0 16px}
+.clp .stephead .n{font-family:'IBM Plex Mono',monospace;font-size:12px;border:1px solid var(--ink);border-radius:999px;padding:3px 10px;white-space:nowrap}
+.clp .stephead h2{font-size:clamp(26px,3.4vw,38px);letter-spacing:-.045em;line-height:1.05;margin:0;font-weight:700}
+.clp .stephead p{margin:6px 0 0;color:var(--i55);font-size:15px;max-width:680px}
+/* profile head */
+.clp .cover{height:280px;border-radius:19px 19px 0 0;background:center/cover no-repeat;border-bottom:1.5px solid var(--ink)}
+.clp .head{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap;padding:0 30px}
+.clp .mark{margin-top:-54px;width:150px;height:108px;border-radius:24px;background:#fff;border:4px solid var(--card);box-shadow:var(--hard-sm);outline:1.5px solid var(--ink);display:grid;place-items:center;flex:none;padding:10px}
+.clp .mark img{width:100%;height:100%;object-fit:contain}
+.clp .head .info{flex:1;min-width:240px;padding-top:22px}
+.clp .head h1{margin:0;font-size:clamp(30px,3.8vw,44px);letter-spacing:-.045em;line-height:1.02;font-weight:700}
+.clp .head .tagline{color:var(--i70);margin:6px 0 10px;font-size:15px}
+.clp .chips{display:flex;flex-wrap:wrap;gap:6px}
+.clp .head .cta{display:flex;gap:8px;padding-top:30px;flex-wrap:wrap}
+.clp .stats{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--i12);margin-top:26px}
+.clp .stats div{padding:16px 30px;border-right:1px solid var(--i12)}
+.clp .stats div:last-child{border-right:0}
+.clp .stats b{display:block;font-size:20px;letter-spacing:-.02em}
+/* body */
+.clp .grid{display:grid;grid-template-columns:1.55fr 1fr;gap:28px;margin-top:28px}
+.clp .block{padding:26px 28px;margin-bottom:22px}
+.clp .block h2{font-size:24px;letter-spacing:-.03em;margin:6px 0 14px;font-weight:700}
+.clp .block p.txt{margin:0;color:var(--i70)}
+.clp .svc{display:flex;gap:14px;align-items:flex-start;padding:16px 0;border-bottom:1px solid var(--i12)}
+.clp .svc:last-child{border-bottom:0;padding-bottom:0}
+.clp .svc .ic{width:42px;height:42px;border-radius:12px;border:1px solid var(--ink);display:grid;place-items:center;flex:none}
+.clp .svc .t{flex:1} .clp .svc .t b{font-size:16px} .clp .svc .t p{margin:2px 0 0;color:var(--i55);font-size:14px}
+.clp .svc .pr{text-align:right;white-space:nowrap} .clp .svc .pr small{display:block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--i45)} .clp .svc .pr b{font-size:16px}
+.clp .gallery{display:grid;grid-template-columns:2fr 1fr 1fr;grid-template-rows:150px 150px;gap:10px}
+.clp .gallery div{border-radius:14px;background:center/cover;border:1px solid var(--i12)}
+.clp .gallery div:first-child{grid-row:span 2}
+.clp .fine{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--i45);margin:10px 0 0}
+.clp .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.clp .steps div{border:1px dashed var(--i30);border-radius:16px;padding:16px}
+.clp .steps .n{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--i45)}
+.clp .steps b{display:block;margin:6px 0 4px;font-size:15px}
+.clp .steps p{margin:0;color:var(--i55);font-size:13.5px}
+.clp .team{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.clp .team div{text-align:center;font-size:14px}
+.clp .team img{width:84px;height:84px;border-radius:50%;object-fit:cover;border:1.5px solid var(--ink);display:block;margin:0 auto 8px}
+.clp .team small{display:block;color:var(--i55);font-size:12.5px}
+.clp .side .block{padding:22px}
+.clp .zones{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.clp .zones span{border:1px solid var(--i30);border-radius:999px;padding:6px 12px;font-size:13px}
+.clp .kv{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--i06);font-size:14px}
+.clp .kv:last-child{border-bottom:0}
+.clp .kv .k{color:var(--i55);flex:1}
+.clp .kv .v{text-align:right}
+.clp .contact{background:var(--ink);color:var(--paper);border-radius:20px;padding:24px;margin-bottom:22px}
+.clp .contact h3{margin:6px 0 0;font-size:22px;letter-spacing:-.03em}
+.clp .contact p{margin:6px 0 16px;color:rgba(249,244,238,.68);font-size:14px}
+.clp .contact .label{color:rgba(249,244,238,.55)}
+.clp .contact .pill{border-color:var(--paper);color:var(--paper);margin-top:8px}
+.clp .contact .pill.wa{color:#06331b;border-color:#128C4A;margin-top:0}
+/* how a lead reaches them */
+.clp .flow{display:grid;grid-template-columns:1fr 1fr;gap:22px;padding:24px;align-items:center}
+.clp .phone{max-width:300px;margin:0 auto;border:1.5px solid var(--ink);border-radius:30px;padding:12px;background:#ECE5DD;box-shadow:var(--hard-sm)}
+.clp .phone .bar{display:flex;gap:10px;align-items:center;background:#075E54;color:#fff;border-radius:18px 18px 6px 6px;padding:10px 12px;font-size:14px;font-weight:600}
+.clp .phone .bar span.av{width:30px;height:30px;border-radius:50%;background:#fff center/contain no-repeat;flex:none}
+.clp .phone .msgs{padding:16px 6px 10px;min-height:170px;display:flex;flex-direction:column;gap:8px}
+.clp .bub{max-width:88%;padding:8px 11px;border-radius:10px;font-size:13.5px;line-height:1.4;box-shadow:0 1px 1px rgba(0,0,0,.12)}
+.clp .bub.out{align-self:flex-end;background:#DCF8C6}
+.clp .bub.in{align-self:flex-start;background:#fff}
+.clp .bub small{display:block;text-align:right;font-size:10.5px;color:rgba(0,0,0,.45);margin-top:2px}
+.clp .flow ol{margin:12px 0 18px;padding-left:20px;color:var(--i70);font-size:15px}
+.clp .flow ol li{margin-bottom:8px}
+/* listing ad */
+.clp .lst{display:grid;grid-template-columns:1.4fr 1fr;gap:22px;padding:20px}
+.clp .lst .ph{border-radius:14px;aspect-ratio:16/10;background:center/cover;border:1px solid var(--i12)}
+.clp .lst .price{font-size:28px;font-weight:700;letter-spacing:-.03em;margin:14px 0 0}
+.clp .lst .meta{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--i55);margin-top:4px}
+.clp .pc{border:1.5px solid var(--ink);border-radius:18px;padding:16px;background:var(--bone)}
+.clp .pc .row{display:flex;gap:12px;align-items:center}
+.clp .pc .m{width:64px;height:46px;border-radius:12px;background:#fff;border:1px solid var(--i12);display:grid;place-items:center;flex:none;padding:5px}
+.clp .pc .m img{width:100%;height:100%;object-fit:contain}
+.clp .pc .acts{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.clp .pc .acts .pill{flex:1;padding:10px 12px;font-size:13.5px}
+.clp .cat{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 14px}
+/* pricing */
+.clp .pricing{display:grid;grid-template-columns:1fr auto;gap:28px;align-items:stretch;padding:30px;scroll-margin-top:20px}
+.clp .pricing ul{list-style:none;padding:0;margin:14px 0 0;display:grid;grid-template-columns:1fr 1fr;gap:10px 18px;font-size:14.5px;color:var(--i70)}
+.clp .pricing li{display:flex;gap:9px;align-items:flex-start}
+.clp .pricing h2{font-size:clamp(24px,3vw,34px);letter-spacing:-.04em;margin:6px 0 6px;font-weight:700;line-height:1.05}
+.clp .price-box{text-align:center;border-left:1px dashed var(--i30);padding-left:28px;min-width:280px;display:flex;flex-direction:column;justify-content:center}
+.clp .price-box .big{font-size:54px;font-weight:700;letter-spacing:-.05em;line-height:1;margin-top:6px}
+.clp .price-box s{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--i45)}
+.clp .price-box .pill{margin-top:18px}
+.clp .secure{display:flex;gap:6px;align-items:center;justify-content:center;font-size:12px;color:var(--i55);margin-top:10px}
+.clp .banner{border:1.5px solid var(--ink);border-radius:16px;padding:16px 18px;margin:0 0 16px;background:var(--card);font-size:15px}
+.clp .banner.ok{background:var(--ink);color:var(--paper)}
+.clp .banner .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.clp .banner.ok .pill{border-color:var(--paper);color:var(--paper)}
+.clp .banner.ok .pill.wa{color:#06331b;border-color:#128C4A}
+.clp footer{border-top:1px solid var(--i12);margin-top:44px;padding:30px 44px 20px;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;font-size:14px}
+.clp footer .fineprint{width:100%;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--i45)}
+@media (max-width:960px){
+  .clp .grid,.clp .lst,.clp .flow{grid-template-columns:1fr}
+  .clp .pricing{grid-template-columns:1fr}
+  .clp .price-box{border-left:0;border-top:1px dashed var(--i30);padding:20px 0 0;min-width:0}
+  .clp nav.top{padding:14px 20px}
+  .clp .stats{grid-template-columns:1fr 1fr} .clp .stats div:nth-child(2){border-right:0} .clp .stats div:nth-child(-n+2){border-bottom:1px solid var(--i12)}
+}
+@media (max-width:560px){
+  .clp .head{padding:0 18px} .clp .block{padding:20px} .clp .steps{grid-template-columns:1fr} .clp .pricing ul{grid-template-columns:1fr}
+  .clp .cover{height:190px}
+  .clp .gallery{grid-template-columns:1fr 1fr;grid-template-rows:140px 140px 140px} .clp .gallery div:first-child{grid-column:span 2;grid-row:auto}
+  .clp .stats div{padding:14px 18px} .clp footer{padding:26px 20px} .clp .pricing{padding:22px}
+  .clp .team img{width:64px;height:64px}
+}
