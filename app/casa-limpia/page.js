@@ -13,7 +13,7 @@ const SLUG = 'casa-limpia';
 
 export const metadata = {
   title: 'CasaLimpia en Casa-Libre · Socio de servicios',
-  description: 'Vista previa del perfil de CasaLimpia como socio de servicios de Casa-Libre.',
+  description: 'CasaLimpia, socio de servicios de limpieza en Casa-Libre.',
   robots: { index: false, follow: false, googleBot: { index: false, follow: false } },
   alternates: { canonical: `/${SLUG}` },
 };

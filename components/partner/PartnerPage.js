@@ -108,10 +108,6 @@ export default function PartnerPage({ partner: p, payState, contact }) {
   return (
     <div className="clp" lang={lang}>
       <Icons />
-      <div className="note">
-        <b>{t(`Vista previa para ${p.name}`, `Preview for ${p.name}`)}</b>{' · '}
-        {t('Así se vería su empresa en Casa-Libre. Logo, textos y fotos se reemplazan por los que ustedes elijan.', 'This is how your company would look on Casa-Libre. Logo, texts and photos are replaced with the ones you choose.')}
-      </div>
       <div className="ticker" aria-hidden="true"><div className="run">{[...ticker, ...ticker].map((s, i) => <span key={i}>{s}</span>)}</div></div>
 
       <nav className="top">
@@ -184,9 +180,7 @@ export default function PartnerPage({ partner: p, payState, contact }) {
             <div className="soft block">
               <div className="label">{t('Fotos', 'Photos')}</div>
               <h2>{t('Así queda ', 'How your ')}<em>{t('tu casa', 'home looks')}</em></h2>
-              <div className="gallery">{p.gallery.map((g) => <div key={g} style={{ backgroundImage: `url('${g}')` }} />)}</div>
-              <p className="fine">{t('Al activar el perfil pueden sumar fotos de sus trabajos.', 'When the profile goes live you can add photos of your own jobs.')}</p>
-            </div>
+              <div className="gallery">{p.gallery.map((g) => <div key={g} style={{ backgroundImage: `url('${g}')` }} />)}</div>            </div>
 
             <div className="soft block">
               <div className="label">{t('Cómo funciona', 'How it works')}</div>
@@ -364,7 +358,7 @@ export default function PartnerPage({ partner: p, payState, contact }) {
           <div style={{ color: 'var(--i55)', marginTop: 4 }}>{t('El marketplace inmobiliario de Paraguay · App para iPhone y Android', "Paraguay's real estate marketplace · App for iPhone and Android")}</div>
         </div>
         <div style={{ color: 'var(--i55)' }}>{t('¿Preguntas? ', 'Questions? ')}<a href={`mailto:${contact.email}`} style={{ textDecoration: 'underline' }}>{contact.email}</a></div>
-        <div className="fineprint">{t(`© 2026 Casa-Libre · Vista previa preparada para ${p.name}.`, `© 2026 Casa-Libre · Preview prepared for ${p.name}.`)}</div>
+        <div className="fineprint">© 2026 Casa-Libre</div>
       </footer>
     </div>
   );
