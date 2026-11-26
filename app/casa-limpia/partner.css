@@ -146,3 +146,20 @@
   .clp .stats div{padding:14px 18px} .clp footer{padding:26px 20px} .clp .pricing{padding:22px}
   .clp .team img{width:64px;height:64px}
 }
+/* why / reviews / faq / guarantee */
+.clp .why{display:grid;gap:12px}
+.clp .why div{display:flex;gap:10px;align-items:flex-start;font-size:14.5px;color:var(--i70)}
+.clp .why b{color:var(--ink)}
+.clp .why svg.i{margin-top:2px}
+.clp .reviews{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.clp .reviews figure{margin:0;border:1px dashed var(--i30);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:8px}
+.clp .reviews .stars{letter-spacing:2px;font-size:14px}
+.clp .reviews blockquote{margin:0;font-size:14.5px;color:var(--i70)}
+.clp .reviews figcaption{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--i55);text-transform:uppercase;letter-spacing:.06em}
+.clp .faq details{border-bottom:1px solid var(--i12);padding:12px 0}
+.clp .faq details:last-child{border-bottom:0}
+.clp .faq summary{cursor:pointer;font-weight:600;font-size:15px;list-style-position:outside}
+.clp .faq details p{margin:8px 0 0;color:var(--i70);font-size:14.5px}
+.clp .guarantee h3{margin:6px 0 4px;font-size:20px;letter-spacing:-.02em}
+.clp .guarantee p{margin:0;color:var(--i70);font-size:14px}
+@media (max-width:560px){.clp .reviews{grid-template-columns:1fr}}

@@ -28,6 +28,9 @@ function Icons() {
       <symbol id="clp-chart" viewBox="0 0 24 24"><path d="M4 20V4M4 20h16M8 16v-4M12 16V8M16 16v-6" /></symbol>
       <symbol id="clp-zero" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M8 16L16 8" /></symbol>
       <symbol id="clp-chat" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z" /></symbol>
+      <symbol id="clp-bed" viewBox="0 0 24 24"><path d="M3 18V6M3 13h18v5M21 13a3 3 0 0 0-3-3h-7v3" /><circle cx="7" cy="10.5" r="1.8" /></symbol>
+      <symbol id="clp-rug" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="1" /><path d="M8 9h8M8 12h8M8 15h8" /></symbol>
+      <symbol id="clp-home" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7" /><path d="M5 10v10h14V10M10 20v-6h4v6" /></symbol>
       <symbol id="clp-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" /></symbol>
     </svg>
   );
@@ -88,7 +91,6 @@ export default function PartnerPage({ partner: p, payState, contact }) {
   };
   const wa = waLink(p, lang);
   const onWa = (placement) => () => ev('partner_whatsapp_clicked', { placement });
-  const onWeb = () => ev('partner_website_clicked');
 
   const ticker = [t('CASA-LIBRE — SOCIOS DE SERVICIOS', 'CASA-LIBRE — SERVICE PARTNERS'), t('LIMPIEZA', 'CLEANING'), t('MUDANZAS', 'MOVING'), t('MANTENIMIENTO', 'MAINTENANCE'), t('PINTURA', 'PAINTING'), t('CONTACTO DIRECTO POR WHATSAPP', 'DIRECT CONTACT ON WHATSAPP'), t('SIN COMISIÓN', 'NO COMMISSION')];
   const logoWa = `https://wa.me/${contact.whatsapp}?text=${encodeURIComponent(t(`Hola Casa-Libre, ya pagamos el plan de socio fundador de ${p.name}. Les enviamos el logo y los textos.`, `Hi Casa-Libre, we paid the founding partner plan for ${p.name}. Here are our logo and texts.`))}`;
@@ -129,17 +131,12 @@ export default function PartnerPage({ partner: p, payState, contact }) {
             <div className="info">
               <div className="label">{L(p.area)}</div>
               <h1>{p.name}</h1>
-              <p className="tagline">{L(p.tagline)}</p>
+              <p className="tagline"><b>{L(p.headline)}.</b> {L(p.tagline)}</p>
               <div className="chips">
                 <span className="chip fill"><I n="check" s={13} />{t('Socio fundador', 'Founding partner')}</span>
                 {p.chips.map((c, i) => <span className="chip" key={i}>{L(c)}</span>)}
               </div>
-            </div>
-            <div className="cta">
-              <a className="pill" href={p.website} target="_blank" rel="noopener" onClick={onWeb}><I n="globe" />{t('Sitio web', 'Website')}</a>
-              <a className="pill wa" href={wa} target="_blank" rel="noopener" onClick={onWa('profile_head')}><I n="wa" />{t('Escribir por WhatsApp', 'Message on WhatsApp')}</a>
-            </div>
-          </div>
+            </div>          </div>
           <div className="stats">
             {p.stats.map((s, i) => <div key={i}><span className="label">{L(s.k)}</span><b>{L(s.v)}</b></div>)}
           </div>
@@ -149,13 +146,14 @@ export default function PartnerPage({ partner: p, payState, contact }) {
           <div>
             <div className="soft block">
               <div className="label">{t('Sobre la empresa', 'About the company')}</div>
-              <h2>{t('Limpieza con ', 'Cleaning with a ')}<em>{t('precio claro', 'clear price')}</em></h2>
+              <h2>{L(p.aboutTitle)[0]}<em>{L(p.aboutTitle)[1]}</em></h2>
               <p className="txt">{L(p.about)}</p>
             </div>
 
             <div className="soft block">
               <div className="label">{t('Servicios', 'Services')}</div>
-              <h2>{t('Qué ', 'What they ')}<em>{t('hacen', 'do')}</em></h2>
+              <h2>{L(p.servicesTitle)[0]}<em>{L(p.servicesTitle)[1]}</em></h2>
+              <p className="txt" style={{ marginTop: -6 }}>{L(p.servicesSub)}</p>
               {p.services.map((s, i) => (
                 <div className="svc" key={i}>
                   <div className="ic"><I n={s.icon} /></div>
@@ -166,23 +164,61 @@ export default function PartnerPage({ partner: p, payState, contact }) {
             </div>
 
             <div className="soft block">
-              <div className="label">{t('Trabajos realizados', 'Their work')}</div>
-              <h2>{t('Fotos de ', 'Photos of ')}<em>{t('sus trabajos', 'their jobs')}</em></h2>
-              <div className="gallery">{p.gallery.map((g) => <div key={g} style={{ backgroundImage: `url('${g}')` }} />)}</div>
-              <p className="fine">{t('Fotos de muestra. Al activar el perfil se reemplazan por fotos de trabajos de ', 'Sample photos. When the profile goes live they are replaced with job photos from ')}{p.name}.</p>
+              <div className="label">{t('Por qué elegirlos', 'Why choose them')}</div>
+              <h2>{L(p.whyTitle)[0]}<em>{L(p.whyTitle)[1]}</em></h2>
+              <div className="why">
+                {p.why.map((w, i) => <div key={i}><I n="check" /><span><b>{L(w.t)}</b> {L(w.d)}</span></div>)}
+              </div>
             </div>
 
             <div className="soft block">
-              <div className="label">{t('Cómo trabajan', 'How they work')}</div>
-              <h2>{t('En tres ', 'In three ')}<em>{t('pasos', 'steps')}</em></h2>
+              <div className="label">{t('Fotos', 'Photos')}</div>
+              <h2>{t('Así queda ', 'How your ')}<em>{t('tu casa', 'home looks')}</em></h2>
+              <div className="gallery">{p.gallery.map((g) => <div key={g} style={{ backgroundImage: `url('${g}')` }} />)}</div>
+              <p className="fine">{t('Al activar el perfil pueden sumar fotos de sus trabajos.', 'When the profile goes live you can add photos of your own jobs.')}</p>
+            </div>
+
+            <div className="soft block">
+              <div className="label">{t('Cómo funciona', 'How it works')}</div>
+              <h2>{L(p.stepsTitle)[0]}<em>{L(p.stepsTitle)[1]}</em></h2>
               <div className="steps">
                 {p.steps.map((s, i) => <div key={i}><span className="n">0{i + 1}</span><b>{L(s.t)}</b><p>{L(s.d)}</p></div>)}
               </div>
             </div>
 
             <div className="soft block">
+              <div className="label">{t('Reseñas', 'Reviews')}</div>
+              <h2>5,0 <em>{t('en Google', 'on Google')}</em></h2>
+              <p className="txt" style={{ marginTop: -6 }}>{t('6 reseñas, todas de 5 estrellas.', '6 reviews, all 5 stars.')}</p>
+              <div className="reviews">
+                {p.reviews.map((r) => (
+                  <figure key={r.name}>
+                    <div className="stars" aria-label={t('5 estrellas', '5 stars')}>★★★★★</div>
+                    <blockquote>“{r.text}”</blockquote>
+                    <figcaption>{r.name}</figcaption>
+                  </figure>
+                ))}
+              </div>
+            </div>
+
+            <div className="soft block">
+              <div className="label">{t('Empresas y organizaciones', 'Companies and organizations')}</div>
+              <h2>{L(p.sectorsTitle)[0]}<em>{L(p.sectorsTitle)[1]}</em></h2>
+              <p className="txt" style={{ marginTop: -6 }}>{L(p.sectorsSub)}</p>
+              <div className="zones">{p.sectors.map((s, i) => <span key={i}>{L(s)}</span>)}</div>
+            </div>
+
+            <div className="soft block">
+              <div className="label">{t('Preguntas frecuentes', 'FAQ')}</div>
+              <h2>{t('Lo que ', 'What people ')}<em>{t('más nos preguntan', 'ask most')}</em></h2>
+              <div className="faq">
+                {p.faq.map((f, i) => <details key={i}><summary>{L(f.q)}</summary><p>{L(f.a)}</p></details>)}
+              </div>
+            </div>
+
+            <div className="soft block">
               <div className="label">{t('Equipo', 'Team')}</div>
-              <h2>{t('Quiénes ', 'Who ')}<em>{t('atienden', 'you deal with')}</em></h2>
+              <h2>{t('Quiénes ', 'Who ')}<em>{t('somos', 'we are')}</em></h2>
               <div className="team">{p.team.map((m) => <div key={m.name}><img src={m.img} alt={m.name} /><b>{m.name}</b><small>{L(m.role)}</small></div>)}</div>
             </div>
           </div>
@@ -190,13 +226,18 @@ export default function PartnerPage({ partner: p, payState, contact }) {
           <aside className="side">
             <div className="contact">
               <div className="label">{t('Contacto directo', 'Direct contact')}</div>
-              <h3>{t('¿Necesitás ', 'Need ')}<em>{t('limpieza?', 'cleaning?')}</em></h3>
-              <p>{t(`Escribile directo a ${p.name}. Casa-Libre no cobra comisión por el trabajo.`, `Message ${p.name} directly. Casa-Libre charges no commission on the job.`)}</p>
+              <h3>{L(p.contactTitle)[0]}<em>{L(p.contactTitle)[1]}</em></h3>
+              <p>{L(p.contactSub)} {t('Casa-Libre no cobra comisión por el trabajo.', 'Casa-Libre charges no commission on the job.')}</p>
               <a className="pill wa block" href={wa} target="_blank" rel="noopener" onClick={onWa('profile_side')}><I n="wa" />{t('Escribir por WhatsApp', 'Message on WhatsApp')}</a>
-              <a className="pill block" href={p.website} target="_blank" rel="noopener" onClick={onWeb}><I n="globe" />{p.websiteLabel}</a>
+            </div>
+            <div className="soft block guarantee">
+              <div className="label">{t('Garantía', 'Guarantee')}</div>
+              <h3>{L(p.guarantee.t)}</h3>
+              <p>{L(p.guarantee.d)}</p>
             </div>
             <div className="soft block">
               <div className="label">{t('Zonas', 'Areas')}</div>
+              <p className="txt" style={{ margin: '8px 0 0', fontSize: 14 }}>{L(p.zonesNote)}</p>
               <div className="zones">{p.zones.map((z) => <span key={z}>{z}</span>)}</div>
             </div>
             <div className="soft block">
@@ -218,7 +259,6 @@ export default function PartnerPage({ partner: p, payState, contact }) {
             <div className="bar"><span className="av" style={{ backgroundImage: `url('${p.logo}')` }} />{p.name}</div>
             <div className="msgs">
               <div className="bub out">{L(p.waText)}<small>10:42 ✓✓</small></div>
-              <div className="bub in">{t('¡Hola! Gracias por escribirnos. ¿Cuántos dormitorios tiene la propiedad y en qué zona está?', 'Hi! Thanks for writing. How many bedrooms does the property have and where is it?')}<small>10:44</small></div>
             </div>
           </div>
           <div>
@@ -228,8 +268,6 @@ export default function PartnerPage({ partner: p, payState, contact }) {
               <li>{t(`Ve a ${p.name} como socio recomendado de limpieza.`, `They see ${p.name} as the recommended cleaning partner.`)}</li>
               <li>{t(`Toca "Escribir por WhatsApp" y le llega el mensaje directo a ${p.name}.`, `They tap "Message on WhatsApp" and the message goes straight to ${p.name}.`)}</li>
             </ol>
-            <a className="pill wa lg" href={wa} target="_blank" rel="noopener" onClick={onWa('flow_demo')}><I n="wa" />{t('Probar el botón de WhatsApp', 'Try the WhatsApp button')}</a>
-            <p className="fine">{t(`Abre WhatsApp con ${p.name} (${p.whatsappLabel}), igual que para un cliente.`, `Opens WhatsApp with ${p.name} (${p.whatsappLabel}), exactly as it would for a client.`)}</p>
           </div>
         </div>
 
@@ -255,9 +293,8 @@ export default function PartnerPage({ partner: p, payState, contact }) {
                 <div className="m"><img src={p.logo} alt="" /></div>
                 <div><b style={{ fontSize: 16 }}>{p.name}</b><div className="mono" style={{ fontSize: 11.5, color: 'var(--i55)', marginTop: 2 }}>{t('SOCIO FUNDADOR · LIMPIEZA', 'FOUNDING PARTNER · CLEANING')}</div></div>
               </div>
-              <p style={{ margin: '12px 0 0', fontSize: 14, color: 'var(--i70)' }}>{t('Limpieza antes de entregar o alquilar y al salir el inquilino. Precio fijo y factura legal.', 'Cleaning before handover or renting and when tenants leave. Fixed price and official invoice.')}</p>
+              <p style={{ margin: '12px 0 0', fontSize: 14, color: 'var(--i70)' }}>{L(p.ad)}</p>
               <div className="acts">
-                <a className="pill wa" href={wa} target="_blank" rel="noopener" onClick={onWa('listing_ad')}><I n="wa" s={16} />WhatsApp</a>
                 <a className="pill" href="#top" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); ev('partner_view_profile_clicked'); }}><I n="eye" s={16} />{t('Ver perfil', 'View profile')}</a>
               </div>
             </div>
@@ -317,7 +354,7 @@ export default function PartnerPage({ partner: p, payState, contact }) {
           <div style={{ color: 'var(--i55)', marginTop: 4 }}>{t('El marketplace inmobiliario de Paraguay · App para iPhone y Android', "Paraguay's real estate marketplace · App for iPhone and Android")}</div>
         </div>
         <div style={{ color: 'var(--i55)' }}>{t('¿Preguntas? ', 'Questions? ')}<a href={`mailto:${contact.email}`} style={{ textDecoration: 'underline' }}>{contact.email}</a></div>
-        <div className="fineprint">{t(`© 2026 Casa-Libre · Vista previa preparada para ${p.name}. Datos de la empresa tomados de ${p.websiteLabel}.`, `© 2026 Casa-Libre · Preview prepared for ${p.name}. Company details taken from ${p.websiteLabel}.`)}</div>
+        <div className="fineprint">{t(`© 2026 Casa-Libre · Vista previa preparada para ${p.name}.`, `© 2026 Casa-Libre · Preview prepared for ${p.name}.`)}</div>
       </footer>
     </div>
   );
