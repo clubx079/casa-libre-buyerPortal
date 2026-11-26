@@ -27,5 +27,7 @@ export default async function CasaLimpiaPage({ searchParams }) {
     const r = await confirmPartnerPayment(partner, sp.session_id);
     payState = r.paid ? 'paid' : 'pending';
   }
-  return <PartnerPage partner={partner} payState={payState} contact={{ whatsapp: COUNTRY.businessWhatsApp, email: COUNTRY.supportEmail }} />;
+  // The short-link list (code → person) stays on the server.
+  const { links, ...pagePartner } = partner;
+  return <PartnerPage partner={pagePartner} payState={payState} contact={{ whatsapp: COUNTRY.businessWhatsApp, email: COUNTRY.supportEmail }} />;
 }

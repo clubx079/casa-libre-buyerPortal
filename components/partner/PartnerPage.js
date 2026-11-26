@@ -38,11 +38,21 @@ function Icons() {
 
 const I = ({ n, s }) => <svg className="i" style={s ? { width: s, height: s } : undefined}><use href={`#clp-${n}`} /></svg>;
 
+// UTM tags from the URL; remembered in this browser so a later visit through the plain link
+// still counts as the same person (e.g. Tomas returning without his short link).
+const UTM_STORE = 'clp_utm';
 function utmFromUrl() {
+  let fromUrl = {};
   try {
     const q = new URLSearchParams(window.location.search);
-    return Object.fromEntries(UTM_KEYS.map((k) => [k, q.get(k)]).filter(([, v]) => v));
-  } catch { return {}; }
+    fromUrl = Object.fromEntries(UTM_KEYS.map((k) => [k, q.get(k)]).filter(([, v]) => v));
+  } catch { /* ignore */ }
+  try {
+    if (fromUrl.utm_campaign) { localStorage.setItem(UTM_STORE, JSON.stringify(fromUrl)); return fromUrl; }
+    const saved = JSON.parse(localStorage.getItem(UTM_STORE) || 'null');
+    if (saved && typeof saved === 'object') return { ...saved, utm_returning: '1' };
+  } catch { /* storage blocked */ }
+  return fromUrl;
 }
 function distinctId() {
   try { return posthog.__loaded ? posthog.get_distinct_id() || '' : ''; } catch { return ''; }

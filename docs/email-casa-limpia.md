@@ -6,7 +6,7 @@ Hola Tomas,
 
 Preparamos cómo se vería CasaLimpia en Casa-Libre, con sus servicios, precios, zonas y su equipo:
 
-👉 Ver el perfil de CasaLimpia: https://casa-libre.com.py/casa-limpia?utm_source=email&utm_medium=email&utm_campaign=socios_casa_limpia&utm_content=perfil_v1
+👉 Ver el perfil de CasaLimpia: https://casa-libre.com.py/casa-limpia/4bmex
 
 En la página van a ver su perfil de empresa, el anuncio que aparece en las publicaciones de propiedades y cómo les llegan los clientes: un toque en el botón verde y la persona les escribe directo a su WhatsApp (0972 993 999).
 
@@ -22,7 +22,7 @@ Cada propiedad que se alquila, se entrega o se desocupa necesita limpieza. Ahí 
 
 Para activarlo pueden tocar "Pagar ahora" al final de la página, o seguir este link para hacer el pago:
 
-👉 Pagar ahora: https://casa-libre.com.py/casa-limpia/pagar?from=email&utm_source=email&utm_medium=email&utm_campaign=socios_casa_limpia&utm_content=pagar_v1
+👉 Pagar ahora: https://casa-libre.com.py/casa-limpia/4bmex/pagar
 
 Después solo envíennos el logo y los textos que prefieran, y su marketing queda activo.
 
@@ -64,3 +64,9 @@ Roland
 
 ---
 Stats checked 2026-11-26 (live PY database + PostHog, last 30 days, rounded down): 5,743 visitors · 3,747 active listings (703 rentals) · 6,967 listing views · 187 WhatsApp/call contacts.
+
+---
+Tracked short links (code = utm_content; who owns each code is only in lib/partners.js):
+- 4bmex = Tomas (send this one): /casa-limpia/4bmex and /casa-limpia/4bmex/pagar
+- p54wp = Roland (test)
+- p4bs3 = Omar (test)
